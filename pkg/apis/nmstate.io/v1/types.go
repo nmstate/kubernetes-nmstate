@@ -18,6 +18,8 @@ type NodeNetworkState struct {
 	Status            NodeNetworkStateStatus `json:"status"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // NodeNetworkStateList is a list of NodeNetworkState.
 type NodeNetworkStateList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -43,12 +45,18 @@ type NodeNetworkStateStatus struct {
 	OperationalState OperationalStateInfo `json:"operationalState"`
 }
 
+// +genclient
+// +genclient:noStatus
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // NodeNetConfPolicy network configuration policy in the cluster
 type NodeNetConfPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	Spec              NodeNetConfPolicySpec `json:"spec"`
 }
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // NodeNetConfPolicyList is a list of NodeNetConfPolicy
 type NodeNetConfPolicyList struct {

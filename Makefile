@@ -16,3 +16,6 @@ clean-dep:
 	rm -f ./Gopkg.lock
 	rm -rf ./vendor
 
+clean-generate:
+	rm -f pkg/apis/nmstate.io/v1/zz_generated.deepcopy.go
+	rm -rf pkg/client

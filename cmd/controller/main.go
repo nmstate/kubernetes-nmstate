@@ -45,7 +45,9 @@ func main() {
 
 	controller := NewController(kubeClient, nmstateClient,
 		kubeInformerFactory.Apps().V1().Nodes(),
-		nmstateInformerFactory.NmstateController().V1().NodeNetConfPolicy())
+		nmstateInformerFactory.NmstateController().V1().NodeNetConfPolicy(),
+		nmstateInformerFactory.NmstateController().V1().NodeNetworkState(),
+	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
 	// Start method is non-blocking and runs all registered informers in a dedicated goroutine.
