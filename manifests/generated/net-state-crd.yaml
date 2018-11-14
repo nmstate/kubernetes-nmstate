@@ -5,12 +5,15 @@ metadata:
   creationTimestamp: null
   labels:
     nmstate.io: ""
-  name: node-network-states.nmstate.io
+  name: nodenetworkstates.nmstate.io
 spec:
   group: nmstate.io
   names:
     kind: NodeNetworkState
-    plural: node-network-states
-    singular: node-network-state
+    plural: nodenetworkstates
+    shortNames:
+    - net-state
+    - net-states
+    singular: nodenetworkstate
   scope: Namespaced
   version: v1

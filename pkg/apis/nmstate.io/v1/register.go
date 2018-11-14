@@ -21,9 +21,9 @@ var SchemeGroupVersionNodeNetConfPolicy = schema.GroupVersionKind{
 	Kind: "NodeNetConfPolicy"}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
-//func Resource(resource string) schema.GroupResource {
-//	return SchemeGroupVersion.WithResource(resource).GroupResource()
-//}
+func Resource(resource string) schema.GroupResource {
+	return SchemeGroupVersion.WithResource(resource).GroupResource()
+}
 
 var (
 	// localSchemeBuilder and AddToScheme will stay in k8s.io/kubernetes.

@@ -50,7 +50,7 @@ func generateBlankCrd() *extensionsv1.CustomResourceDefinition {
 func generateNodeNetConfPolicyCrd() {
 	crd := generateBlankCrd()
 
-	pluralForm := "node-net-conf-policies"
+	pluralForm := "nodenetconfpolicies"
 	crd.ObjectMeta.Name = pluralForm + "." + v1.SchemeGroupVersionNodeNetConfPolicy.Group
 	crd.Spec = extensionsv1.CustomResourceDefinitionSpec{
 		Group:   v1.SchemeGroupVersionNodeNetConfPolicy.Group,
@@ -58,10 +58,10 @@ func generateNodeNetConfPolicyCrd() {
 		Scope:   "Namespaced",
 
 		Names: extensionsv1.CustomResourceDefinitionNames{
-			Plural:   pluralForm,
-			Singular: "node-net-conf-policy",
-			Kind:     v1.SchemeGroupVersionNodeNetConfPolicy.Kind,
-			//ShortNames: []string{"net-conf", "net-confs"},
+			Plural:     pluralForm,
+			Singular:   "nodenetconfpolicy",
+			Kind:       v1.SchemeGroupVersionNodeNetConfPolicy.Kind,
+			ShortNames: []string{"net-conf", "net-confs"},
 		},
 	}
 
@@ -71,7 +71,7 @@ func generateNodeNetConfPolicyCrd() {
 func generateNodeNetworkStateCrd() {
 	crd := generateBlankCrd()
 
-	pluralForm := "node-network-states"
+	pluralForm := "nodenetworkstates"
 	crd.ObjectMeta.Name = pluralForm + "." + v1.SchemeGroupVersionNodeNetworkState.Group
 	crd.Spec = extensionsv1.CustomResourceDefinitionSpec{
 		Group:   v1.SchemeGroupVersionNodeNetworkState.Group,
@@ -79,10 +79,10 @@ func generateNodeNetworkStateCrd() {
 		Scope:   "Namespaced",
 
 		Names: extensionsv1.CustomResourceDefinitionNames{
-			Plural:   pluralForm,
-			Singular: "node-network-state",
-			Kind:     v1.SchemeGroupVersionNodeNetworkState.Kind,
-			//ShortNames: []string{"net-state", "net-states"},
+			Plural:     pluralForm,
+			Singular:   "nodenetworkstate",
+			Kind:       v1.SchemeGroupVersionNodeNetworkState.Kind,
+			ShortNames: []string{"net-state", "net-states"},
 		},
 	}
 

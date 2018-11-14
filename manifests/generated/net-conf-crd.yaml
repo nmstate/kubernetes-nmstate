@@ -5,12 +5,15 @@ metadata:
   creationTimestamp: null
   labels:
     nmstate.io: ""
-  name: node-net-conf-policies.nmstate.io
+  name: nodenetconfpolicies.nmstate.io
 spec:
   group: nmstate.io
   names:
     kind: NodeNetConfPolicy
-    plural: node-net-conf-policies
-    singular: node-net-conf-policy
+    plural: nodenetconfpolicies
+    shortNames:
+    - net-conf
+    - net-confs
+    singular: nodenetconfpolicy
   scope: Namespaced
   version: v1
