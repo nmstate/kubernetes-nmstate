@@ -1,8 +1,8 @@
 package v1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
@@ -33,16 +33,17 @@ type NodeNetworkStateList struct {
 // but that it should not to attempt to change the operational network state.
 type NodeNetworkStateSpec struct {
 	Managed bool `json:"managed"`
-}
-
-// NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
-type NodeNetworkStateStatus struct {
 	// Name of the node reporting this state
 	NodeName string `json:"nodeName"`
 	// The desired configuration for the node derived from the NodeNetConfPolicy
 	DesiredState ConfigurationState `json:"desiredState"`
-	// The operational state of the node
-	OperationalState OperationalStateInfo `json:"operationalState"`
+}
+
+// NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
+type NodeNetworkStateStatus struct {
+	Capabilities CapabilityList `json:"capabilities"`
+	// Current configuration as well as operational state of the interfaces
+	Interfaces InterfaceInfoList `json:"interfaces"`
 }
 
 // +genclient
@@ -255,13 +256,6 @@ type IPv6Spec struct {
 	DupAddrDetectTransmit int `json:"dupAddressDetectTransmit"`
 }
 
-// OperationalStateInfo holds the operational state of the node
-type OperationalStateInfo struct {
-	// The current configuration state of the node
-	Capabilities CapabilityList    `json:"capabilities"`
-	Interfaces   InterfaceInfoList `json:"interfaces"`
-}
-
 // CapabilityList TODO: description
 type CapabilityList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -361,6 +355,7 @@ const (
 	InterfaceTypeEthernet  = "ethernet"
 	InterfaceTypeBond      = "bond"
 	InterfaceTypeOVSBridge = "ovs-bridge"
+	InterfaceTypeDummy     = "dummy"
 )
 
 // InterfaceState is the state of the interface. One of:

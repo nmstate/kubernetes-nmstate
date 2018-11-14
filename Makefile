@@ -11,6 +11,8 @@ generate:
 	mkdir -p manifests/generated
 	tools/crd-generator -crd-type net-state > $(GENERATED_MANIFEST_DIR)/net-state-crd.yaml
 	tools/crd-generator -crd-type net-conf > $(GENERATED_MANIFEST_DIR)/net-conf-crd.yaml
+	tools/crd-generator -crd-type net-conf-sample > $(GENERATED_MANIFEST_DIR)/net-conf-sample.yaml
+	tools/crd-generator -crd-type net-state-sample > $(GENERATED_MANIFEST_DIR)/net-state-sample.yaml
 
 test:
 	hack/test.sh

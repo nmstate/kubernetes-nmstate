@@ -1,0 +1,93 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkState
+metadata:
+  creationTimestamp: null
+  name: node1-network-state
+spec:
+  desiredState:
+    interfaces:
+      items:
+      - autoNegotiation: true
+        description: Production Network
+        duplex: full
+        ipv4:
+          addresses:
+            items:
+            - ip: 10.0.0.2
+              prefixLength: 24
+            metadata: {}
+          dhcp: false
+          enabled: true
+          forwarding: false
+          neighbors:
+            items:
+            - ip: 10.0.0.1
+              linkLayerAddress: 00:25:96:FF:FE:12:34:56
+            metadata: {}
+        ipv6:
+          addresses:
+            items:
+            - ip: 2001:db8::1:1
+              prefixLength: 64
+            metadata: {}
+          autoConf: false
+          dhcp: false
+          dupAddressDetectTransmit: 0
+          enabled: true
+          forwarding: false
+          neighbors:
+            items: null
+            metadata: {}
+        mtu: 1400
+        name: eth0
+        state: up
+        type: ethernet
+      - autoNegotiation: true
+        description: Production Network
+        duplex: full
+        ipv4:
+          addresses:
+            items: null
+            metadata: {}
+          dhcp: true
+          enabled: true
+          forwarding: false
+          neighbors:
+            items: null
+            metadata: {}
+        ipv6:
+          addresses:
+            items: null
+            metadata: {}
+          autoConf: false
+          dhcp: true
+          dupAddressDetectTransmit: 0
+          enabled: true
+          forwarding: false
+          neighbors:
+            items: null
+            metadata: {}
+        mtu: 1400
+        name: eth1
+        state: up
+        type: ethernet
+      - autoNegotiation: null
+        description: Deprecated Bridge
+        name: old-br
+        state: down
+        type: ovs-bridge
+      - autoNegotiation: null
+        description: Another Deprecated Bridge
+        name: dummy0
+        state: absent
+        type: dummy
+      metadata: {}
+  managed: true
+  nodeName: node1
+status:
+  capabilities:
+    metadata: {}
+  interfaces:
+    items: null
+    metadata: {}
+

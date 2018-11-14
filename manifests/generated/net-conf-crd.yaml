@@ -5,7 +5,7 @@ metadata:
   creationTimestamp: null
   labels:
     nmstate.io: ""
-  name: nodenetconfpolicies.nmstate.io
+  name: node-net-conf-policies.nmstate.io
 spec:
   group: nmstate.io
   names:

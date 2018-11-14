@@ -10,10 +10,10 @@ import (
 
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: nmstateio.GroupName, Version: "v1"}
-var SchemeGroupVersionNodeNetworkSate = schema.GroupVersionKind{
+var SchemeGroupVersionNodeNetworkState = schema.GroupVersionKind{
 	Group: SchemeGroupVersion.Group,
 	Version: SchemeGroupVersion.Version,
-	Kind: "NodeNetworkSate",
+	Kind: "NodeNetworkState",
 	}
 var SchemeGroupVersionNodeNetConfPolicy = schema.GroupVersionKind{
 	Group: SchemeGroupVersion.Group,

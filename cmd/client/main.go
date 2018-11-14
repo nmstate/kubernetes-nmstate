@@ -14,6 +14,7 @@ import (
 var (
 	kuberconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	master      = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	namespace   = flag.String("n", "default", "The namespace where the CRDs are created")
 )
 
 func main() {
@@ -29,9 +30,9 @@ func main() {
 		klog.Fatalf("Error building nmstate clientset: %v", err)
 	}
 
-	list, err := nmstateClient.NmstateV1().NodeNetConfPolicies("default").List(metav1.ListOptions{})
+	list, err := nmstateClient.NmstateV1().NodeNetConfPolicies(*namespace).List(metav1.ListOptions{})
 	if err != nil {
-		klog.Fatalf("Error listing all net conf policies: %v", err)
+		klog.Fatalf("Error listing all net conf policies (in %s): %v", *namespace, err)
 	}
 
 	for _, policy := range list.Items {
