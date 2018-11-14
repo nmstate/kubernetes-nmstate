@@ -1,1 +1,3 @@
 Gopkg.lock
+cmd/client/client
+tools/crd-generator

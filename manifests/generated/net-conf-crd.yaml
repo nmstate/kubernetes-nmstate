@@ -1,0 +1,16 @@
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  creationTimestamp: null
+  labels:
+    nmstate.io: ""
+  name: nodenetconfpolicies.nmstate.io
+spec:
+  group: nmstate.io
+  names:
+    kind: NodeNetConfPolicy
+    plural: node-net-conf-policies
+    singular: node-net-conf-policy
+  scope: Namespaced
+  version: v1
