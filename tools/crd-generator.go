@@ -135,53 +135,45 @@ func generateNodeNetworkStateSample() {
 			Managed:  true,
 			NodeName: "node1",
 			DesiredState: v1.ConfigurationState{
-				Interfaces: v1.InterfaceSpecList{
-					Items: []v1.InterfaceSpec{
-						{
-							// setting ethernet interface with static IPs
-							Name: "eth0", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
-							Description: "Production Network", AutoNegotiation: &AutoNegotiate, Duplex: v1.DuplexTypeFull,
-							IPv4: &v1.IPv4Spec{
-								Enabled: true,
-								DHCP:    false,
-								Addresses: v1.AddressList{
-									Items: []v1.CIDR{{IP: "10.0.0.2", PrefixLength: 24}},
-								},
-								Neighbors: v1.NeighborList{
-									Items: []v1.Neighbor{{IP: "10.0.0.1", LinkLayerAddress: "00:25:96:FF:FE:12:34:56"}},
-								},
-							},
-							IPv6: &v1.IPv6Spec{
-								Enabled: true,
-								DHCP:    false,
-								Addresses: v1.AddressList{
-									Items: []v1.CIDR{{IP: "2001:db8::1:1", PrefixLength: 64}},
-								},
-							},
+				Interfaces: []v1.InterfaceSpec{
+					{
+						// setting ethernet interface with static IPs
+						Name: "eth0", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
+						Description: "Production Network", AutoNegotiation: &AutoNegotiate, Duplex: v1.DuplexTypeFull,
+						IPv4: &v1.IPv4Spec{
+							Enabled:   true,
+							DHCP:      false,
+							Addresses: []v1.CIDR{{IP: "10.0.0.2", PrefixLength: 24}},
+							Neighbors: []v1.Neighbor{{IP: "10.0.0.1", LinkLayerAddress: "00:25:96:FF:FE:12:34:56"}},
 						},
-						{
-							// setting ethernet interface with DHCP
-							Name: "eth1", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
-							Description: "Production Network", AutoNegotiation: &AutoNegotiate, Duplex: v1.DuplexTypeFull,
-							IPv4: &v1.IPv4Spec{
-								Enabled: true,
-								DHCP:    true,
-							},
-							IPv6: &v1.IPv6Spec{
-								Enabled: true,
-								DHCP:    true,
-							},
+						IPv6: &v1.IPv6Spec{
+							Enabled:   true,
+							DHCP:      false,
+							Addresses: []v1.CIDR{{IP: "2001:db8::1:1", PrefixLength: 64}},
 						},
-						{
-							// setting interface down
-							Name: "old-br", Type: v1.InterfaceTypeOVSBridge, State: v1.InterfaceStateDown,
-							Description: "Deprecated Bridge",
+					},
+					{
+						// setting ethernet interface with DHCP
+						Name: "eth1", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
+						Description: "Production Network", AutoNegotiation: &AutoNegotiate, Duplex: v1.DuplexTypeFull,
+						IPv4: &v1.IPv4Spec{
+							Enabled: true,
+							DHCP:    true,
 						},
-						{
-							// removing an interface
-							Name: "dummy0", Type: v1.InterfaceTypeDummy, State: v1.InterfaceStateAbsent,
-							Description: "Another Deprecated Bridge",
+						IPv6: &v1.IPv6Spec{
+							Enabled: true,
+							DHCP:    true,
 						},
+					},
+					{
+						// setting interface down
+						Name: "old-br", Type: v1.InterfaceTypeOVSBridge, State: v1.InterfaceStateDown,
+						Description: "Deprecated Bridge",
+					},
+					{
+						// removing an interface
+						Name: "dummy0", Type: v1.InterfaceTypeDummy, State: v1.InterfaceStateAbsent,
+						Description: "Another Deprecated Bridge",
 					},
 				},
 			},

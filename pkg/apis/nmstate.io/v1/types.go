@@ -41,9 +41,14 @@ type NodeNetworkStateSpec struct {
 
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 type NodeNetworkStateStatus struct {
-	Capabilities CapabilityList `json:"capabilities"`
+	CurrentState ConfAndOperationalState `json:"currentState"`
+}
+
+// ConfAndOperationalState is the operational state of a node. This includes both configuration and state
+type ConfAndOperationalState struct {
+	Capabilities []string `json:"capabilities"`
 	// Current configuration as well as operational state of the interfaces
-	Interfaces InterfaceInfoList `json:"interfaces"`
+	Interfaces []InterfaceInfo `json:"interfaces"`
 }
 
 // +genclient
@@ -76,7 +81,7 @@ type NodeNetConfPolicySpec struct {
 	Tolerations []k8sv1.Toleration `json:"tolerations,omitempty"`
 	// List of interfaces on which the configuration should be applied.
 	// List must include at least one interface matching rule.
-	Match MatchRules `json:"match"`
+	MatchRules []InterfaceMatchRule `json:"matchRules"`
 	// Specification for auto configuration of the matched interfaces.
 	// Mutually exclusive with DesiredState.
 	AutoConfig *AutoConfigSpec `json:"autoconfig"`
@@ -88,14 +93,7 @@ type NodeNetConfPolicySpec struct {
 // ConfigurationState holding a list of interfaces and their configuration.
 // Used both as desired configuration and actual configuration.
 type ConfigurationState struct {
-	Interfaces InterfaceSpecList `json:"interfaces"`
-}
-
-// InterfaceSpecList list of interfaces and their configuration.
-type InterfaceSpecList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []InterfaceSpec `json:"items"`
+	Interfaces []InterfaceSpec `json:"interfaces"`
 }
 
 // InterfaceSpec configuration of an interface
@@ -139,16 +137,9 @@ type LinkAggregationSpec struct {
 	// Link aggregation mode
 	Mode LinkAggregationMode `json:"mode"`
 	// List of slave interfaces aggregated by the interface
-	Slaves *SlaveList `json:"slaves,omitempty"`
+	Slaves []string `json:"slaves,omitempty"`
 	// TODO: description
 	Options *LinkAggregationOptions `json:"options,omitempty"`
-}
-
-// SlaveList is the list of slave interfaces aggregated by the interface
-type SlaveList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []string `json:"items,omitempty"`
 }
 
 // LinkAggregationOptions TODO: description
@@ -166,14 +157,7 @@ type LinkAggregationOptions struct {
 // BridgeSpec holds the configuration of the bridge connected to the interface
 type BridgeSpec struct {
 	// Port configuration on the bridge
-	Ports BridgePortList `json:"ports"`
-}
-
-// BridgePortList hold the list of ports on the bridge
-type BridgePortList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []BridgePort `json:"items"`
+	Ports []BridgePort `json:"ports"`
 }
 
 // BridgePort TODO: description
@@ -201,33 +185,19 @@ type IPv4Spec struct {
 	// Whether IPv4 addresses are dynamically configured
 	DHCP bool `json:"dhcp"`
 	// List of IPv4 addresses
-	Addresses AddressList `json:"addresses"`
+	Addresses []CIDR `json:"addresses"`
 	// TODO: description
 	// TODO: Mandatory?
-	Neighbors NeighborList `json:"neighbors"`
+	Neighbors []Neighbor `json:"neighbors"`
 	// TODO: description
 	// TODO: Mandatory?
 	Forwarding bool `json:"forwarding"`
-}
-
-// AddressList list of CIDRs
-type AddressList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []CIDR `json:"items"`
 }
 
 // CIDR has IP and prefix length
 type CIDR struct {
 	IP           string `json:"ip"`
 	PrefixLength uint8  `json:"prefixLength"`
-}
-
-// NeighborList TODO: add description
-type NeighborList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []Neighbor `json:"items"`
 }
 
 // Neighbor TODO: add description
@@ -245,29 +215,17 @@ type IPv6Spec struct {
 	// IPv6 autoconf
 	AutoConf bool `json:"autoConf"`
 	// List of IPv4 addresses
-	Addresses AddressList `json:"addresses"`
+	//Addresses AddressList `json:"addresses"`
+	Addresses []CIDR `json:"addresses"`
 	// TODO: description
 	// TODO: Mandatory?
-	Neighbors NeighborList `json:"neighbors"`
+	//Neighbors NeighborList `json:"neighbors"`
+	Neighbors []CIDR `json:"neighbors"`
 	// TODO: description
 	// TODO: Mandatory?
 	Forwarding bool `json:"forwarding"`
 	// TODO: description?
 	DupAddrDetectTransmit int `json:"dupAddressDetectTransmit"`
-}
-
-// CapabilityList TODO: description
-type CapabilityList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []string `json:"items,omitempty"`
-}
-
-// InterfaceInfoList list of interfaces and their configuration.
-type InterfaceInfoList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []InterfaceInfo `json:"items"`
 }
 
 // InterfaceInfo holds the operational status of an interface
@@ -305,13 +263,6 @@ type InterfaceStatistics struct {
 	OutMulticastPackets uint64 `json:"outMulticastPackets"`
 	OutOctets           uint64 `json:"outOctets"`
 	OutUnicastPackets   uint64 `json:"outUnicastPackets"`
-}
-
-// MatchSpec is a list of InterfaceMatchRule
-type MatchRules struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata"`
-	Items           []InterfaceMatchRule `json:"items"`
 }
 
 // InterfaceMatchRule is a rule describing a match on a specifc interface.

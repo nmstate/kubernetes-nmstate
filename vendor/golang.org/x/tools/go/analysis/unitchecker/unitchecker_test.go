@@ -12,19 +12,16 @@ package unitchecker_test
 
 import (
 	"flag"
-	"log"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 	"testing"
 
-	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/analysistest"
-	"golang.org/x/tools/go/analysis/internal/analysisflags"
-	"golang.org/x/tools/go/analysis/internal/unitchecker"
 	"golang.org/x/tools/go/analysis/passes/findcall"
 	"golang.org/x/tools/go/analysis/passes/printf"
+	"golang.org/x/tools/go/analysis/unitchecker"
 )
 
 func TestMain(m *testing.M) {
@@ -40,65 +37,56 @@ func TestMain(m *testing.M) {
 }
 
 func main() {
-	findcall.Analyzer.Flags.Set("name", "MyFunc123")
-
-	var analyzers = []*analysis.Analyzer{
+	unitchecker.Main(
 		findcall.Analyzer,
 		printf.Analyzer,
-	}
-
-	if err := analysis.Validate(analyzers); err != nil {
-		log.Fatal(err)
-	}
-	analyzers = analysisflags.Parse(analyzers, true)
-
-	args := flag.Args()
-	if len(args) != 1 || !strings.HasSuffix(args[0], ".cfg") {
-		log.Fatalf("invalid command: want .cfg file")
-	}
-
-	unitchecker.Main(args[0], analyzers)
+	)
 }
 
 // This is a very basic integration test of modular
 // analysis with facts using unitchecker under "go vet".
 // It fork/execs the main function above.
 func TestIntegration(t *testing.T) {
-	t.Skip("skipping broken test; golang.org/issue/28676")
-
 	if runtime.GOOS != "linux" {
 		t.Skipf("skipping fork/exec test on this platform")
 	}
 
 	testdata := analysistest.TestData()
 
-	cmd := exec.Command("go", "vet", "-vettool="+os.Args[0], "b")
-	cmd.Env = append(os.Environ(),
-		"UNITCHECKER_CHILD=1",
-		"GOPATH="+testdata,
-	)
-
-	out, err := cmd.CombinedOutput()
-	exitcode := -1
-	if exitErr, ok := err.(*exec.ExitError); ok {
-		exitcode = exitErr.ExitCode()
-	}
-	if exitcode != 2 {
-		t.Errorf("got exit code %d, want 2", exitcode)
-	}
-
-	want := `
-# a
+	const wantA = `# a
 testdata/src/a/a.go:4:11: call of MyFunc123(...)
-# b
+`
+	const wantB = `# b
 testdata/src/b/b.go:6:13: call of MyFunc123(...)
 testdata/src/b/b.go:7:11: call of MyFunc123(...)
-`[1:]
-	if got := string(out); got != want {
-		t.Errorf("got <<%s>>, want <<%s>>", got, want)
-	}
+`
 
-	if t.Failed() {
-		t.Logf("err=%v stderr=<<%s>", err, cmd.Stderr)
+	for _, test := range []struct {
+		args string
+		want string
+	}{
+		{args: "a", want: wantA},
+		{args: "b", want: wantB},
+		{args: "a b", want: wantA + wantB},
+	} {
+		cmd := exec.Command("go", "vet", "-vettool="+os.Args[0], "-findcall.name=MyFunc123")
+		cmd.Args = append(cmd.Args, strings.Fields(test.args)...)
+		cmd.Env = append(os.Environ(),
+			"UNITCHECKER_CHILD=1",
+			"GOPATH="+testdata,
+		)
+
+		out, err := cmd.CombinedOutput()
+		exitcode := -1
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitcode = exitErr.ExitCode()
+		}
+		if exitcode != 2 {
+			t.Errorf("%s: got exit code %d, want 2", test.args, exitcode)
+		}
+
+		if got := string(out); got != test.want {
+			t.Errorf("%s: got <<%s>>, want <<%s>>", test.args, got, test.want)
+		}
 	}
 }

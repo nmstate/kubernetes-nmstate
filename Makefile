@@ -2,12 +2,12 @@ all: build
 
 build:
 	cd cmd/client && go fmt && go build
-	cd tools && go fmt && go build -o crd-generator
 
 GENERATED_MANIFEST_DIR=manifests/generated
 
 generate:
 	hack/update-codegen.sh
+	cd tools && go fmt && go build -o crd-generator
 	mkdir -p manifests/generated
 	tools/crd-generator -crd-type net-state > $(GENERATED_MANIFEST_DIR)/net-state-crd.yaml
 	tools/crd-generator -crd-type net-conf > $(GENERATED_MANIFEST_DIR)/net-conf-crd.yaml

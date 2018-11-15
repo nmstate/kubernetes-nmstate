@@ -6,7 +6,5 @@ metadata:
 spec:
   autoconfig: null
   desiredState: null
-  match:
-    items: null
-    metadata: {}
+  matchRules: null
 

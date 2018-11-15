@@ -7,7 +7,6 @@ package lsp
 import (
 	"context"
 	"go/token"
-	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -28,21 +27,10 @@ func testLSP(t *testing.T, exporter packagestest.Exporter) {
 	const dir = "testdata"
 
 	files := packagestest.MustCopyFileTree(dir)
-	subdirs, err := ioutil.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, subdir := range subdirs {
-		if !subdir.IsDir() {
-			continue
-		}
-		dirpath := filepath.Join(dir, subdir.Name())
-		if testFiles, err := ioutil.ReadDir(dirpath); err == nil {
-			for _, file := range testFiles {
-				if trimmed := strings.TrimSuffix(file.Name(), ".in"); trimmed != file.Name() {
-					files[filepath.Join(subdir.Name(), trimmed)] = packagestest.Copy(filepath.Join(dirpath, file.Name()))
-				}
-			}
+	for fragment, operation := range files {
+		if trimmed := strings.TrimSuffix(fragment, ".in"); trimmed != fragment {
+			delete(files, fragment)
+			files[trimmed] = operation
 		}
 	}
 	modules := []packagestest.Module{
@@ -78,6 +66,14 @@ func testLSP(t *testing.T, exporter packagestest.Exporter) {
 			expectedDiagnostics[filename] = []protocol.Diagnostic{}
 			dirs[filepath.Dir(filename)] = true
 		}
+	}
+	// Do a first pass to collect special markers
+	if err := exported.Expect(map[string]interface{}{
+		"item": func(name string, r packagestest.Range, _, _ string) {
+			exported.Mark(name, r)
+		},
+	}); err != nil {
+		t.Fatal(err)
 	}
 	// Collect any data that needs to be used by subsequent tests.
 	if err := exported.Expect(map[string]interface{}{

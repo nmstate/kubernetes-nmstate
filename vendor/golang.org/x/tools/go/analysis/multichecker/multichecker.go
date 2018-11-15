@@ -13,18 +13,13 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/internal/analysisflags"
 	"golang.org/x/tools/go/analysis/internal/checker"
+	"golang.org/x/tools/go/analysis/unitchecker"
 )
-
-// TODO(adonovan): document (and verify) the exit codes:
-// "Vet's exit code is 2 for erroneous invocation of the tool, 1 if a
-// problem was reported, and 0 otherwise. Note that the tool does not
-// check every possible problem and depends on unreliable heuristics
-// so it should be used as guidance only, not as a firm indicator of
-// program correctness."
 
 func Main(analyzers ...*analysis.Analyzer) {
 	progname := filepath.Base(os.Args[0])
@@ -41,10 +36,13 @@ func Main(analyzers ...*analysis.Analyzer) {
 
 	args := flag.Args()
 	if len(args) == 0 {
-		analysisflags.PrintUsage(os.Stderr)
-		fmt.Fprintf(os.Stderr, "Run '%[1]s help' for more detail,\n"+
-			" or '%[1]s help name' for details and flags of a specific analyzer.\n",
-			progname)
+		fmt.Fprintf(os.Stderr, `%[1]s is a tool for static analysis of Go programs.
+
+Usage: %[1]s [-flag] [package]
+
+Run '%[1]s help' for more detail,
+ or '%[1]s help name' for details and flags of a specific analyzer.
+`, progname)
 		os.Exit(1)
 	}
 
@@ -53,7 +51,10 @@ func Main(analyzers ...*analysis.Analyzer) {
 		os.Exit(0)
 	}
 
-	if err := checker.Run(args, analyzers); err != nil {
-		log.Fatal(err)
+	if len(args) == 1 && strings.HasSuffix(args[0], ".cfg") {
+		unitchecker.Run(args[0], analyzers)
+		panic("unreachable")
 	}
+
+	os.Exit(checker.Run(args, analyzers))
 }
