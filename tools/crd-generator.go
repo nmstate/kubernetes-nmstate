@@ -121,7 +121,8 @@ func generateNodeNetConfPolicySample() {
 // based on: https://nmstate.github.io/examples.html
 func generateNodeNetworkStateSample() {
 	MTU1400 := uint(1400)
-	AutoNegotiate := true
+	TrueValue := true
+	FalseValue := false
 
 	sample := v1.NodeNetworkState{
 		TypeMeta: metav1.TypeMeta{
@@ -139,30 +140,39 @@ func generateNodeNetworkStateSample() {
 					{
 						// setting ethernet interface with static IPs
 						Name: "eth0", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
-						Description: "Production Network", AutoNegotiation: &AutoNegotiate, Duplex: v1.DuplexTypeFull,
+						Description: "Production Network",
+						Ethernet: &v1.EthernetSpec{
+							AutoNegotiation: true,
+							Duplex:          v1.DuplexTypeFull,
+							Speed:           1000,
+						},
 						IPv4: &v1.IPv4Spec{
 							Enabled:   true,
-							DHCP:      false,
-							Addresses: []v1.CIDR{{IP: "10.0.0.2", PrefixLength: 24}},
+							DHCP:      &TrueValue,
+							Address:   []v1.CIDR{{IP: "10.0.0.2", PrefixLength: 24}},
 							Neighbors: []v1.Neighbor{{IP: "10.0.0.1", LinkLayerAddress: "00:25:96:FF:FE:12:34:56"}},
 						},
 						IPv6: &v1.IPv6Spec{
-							Enabled:   true,
-							DHCP:      false,
-							Addresses: []v1.CIDR{{IP: "2001:db8::1:1", PrefixLength: 64}},
+							Enabled: true,
+							DHCP:    &FalseValue,
+							Address: []v1.CIDR{{IP: "2001:db8::1:1", PrefixLength: 64}},
 						},
 					},
 					{
 						// setting ethernet interface with DHCP
 						Name: "eth1", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
-						Description: "Production Network", AutoNegotiation: &AutoNegotiate, Duplex: v1.DuplexTypeFull,
+						Description: "Production Network",
+						Ethernet: &v1.EthernetSpec{
+							AutoNegotiation: false,
+							Duplex:          v1.DuplexTypeFull,
+						},
 						IPv4: &v1.IPv4Spec{
 							Enabled: true,
-							DHCP:    true,
+							DHCP:    &TrueValue,
 						},
 						IPv6: &v1.IPv6Spec{
 							Enabled: true,
-							DHCP:    true,
+							DHCP:    &TrueValue,
 						},
 					},
 					{

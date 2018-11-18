@@ -71,7 +71,7 @@ func main() {
 					if _, err := nmstateClient.NmstateV1().NodeNetworkStates(*namespace).Update(&state); err != nil {
 						fmt.Printf("Failed to update state: %v\n", err)
 					} else {
-						fmt.Printf("Successfully update state '%s' on node '%s'", state.Name, nodeName)
+						fmt.Printf("Successfully update state '%s' on node '%s'\n", state.Name, nodeName)
 					}
 				}
 			}

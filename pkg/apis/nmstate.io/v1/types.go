@@ -110,19 +110,15 @@ type InterfaceSpec struct {
 	MACAddress string `json:"macAddress,omitempty"`
 	// MTU size in bytes set on the interface
 	MTU *uint `json:"mtu,omitempty"`
-	// auto-negotiation setting of the interface
-	AutoNegotiation *bool `json:"autoNegotiation"`
-	// duplex settings of the interface
-	Duplex DuplexType `json:"duplex,omitempty"`
-	// Link speed in TODO: which units
-	LinkSpeed *uint `json:"linkSpeed,omitempty"`
+	// Ethernet holds configuration of interface of type ethernet
+	Ethernet *EthernetSpec `json:"ethernet,omitempty"`
 	// Flow control setting of the interface
 	FlowControl *bool `json:"flowControl,omitempty"`
 	// VLAN ID set on the interface
 	VlanID *uint `json:"vlanID,omitempty"`
 	// The interface on which the VLAN was created
 	VlanBase string `json:"vlanbase,omitempty"`
-	// Link aggregation spec of the interface
+	// Link aggregation (bond) spec of the interface
 	LinkAggregation *LinkAggregationSpec `json:"linkaggregation,omitempty"`
 	// Configuration of a bridge connected to the interface
 	Bridge *BridgeSpec `json:"bridge,omitempty"`
@@ -132,6 +128,15 @@ type InterfaceSpec struct {
 	IPv6 *IPv6Spec `json:"ipv6,omitempty"`
 }
 
+// EthernetSpec configuration of interface of type ethernet
+type EthernetSpec struct {
+	// auto-negotiation setting of the interface
+	AutoNegotiation bool `json:"auto-negotiation"`
+	// duplex settings of the interface
+	Duplex DuplexType `json:"duplex"`
+	// Link speed in TODO: which units
+	Speed uint `json:"speed"`
+}
 // LinkAggregationSpec aggregation spec of an interface
 type LinkAggregationSpec struct {
 	// Link aggregation mode
@@ -183,21 +188,19 @@ type IPv4Spec struct {
 	// Indication whether IPv4 is enabled
 	Enabled bool `json:"enabled"`
 	// Whether IPv4 addresses are dynamically configured
-	DHCP bool `json:"dhcp"`
+	DHCP *bool `json:"dhcp,omitempty"`
 	// List of IPv4 addresses
-	Addresses []CIDR `json:"addresses"`
+	Address []CIDR `json:"address,omitempty"`
 	// TODO: description
-	// TODO: Mandatory?
-	Neighbors []Neighbor `json:"neighbors"`
+	Neighbors []Neighbor `json:"neighbors,omitempty"`
 	// TODO: description
-	// TODO: Mandatory?
-	Forwarding bool `json:"forwarding"`
+	Forwarding *bool `json:"forwarding,omitempty"`
 }
 
 // CIDR has IP and prefix length
 type CIDR struct {
 	IP           string `json:"ip"`
-	PrefixLength uint8  `json:"prefixLength"`
+	PrefixLength uint8  `json:"prefix-length"`
 }
 
 // Neighbor TODO: add description
@@ -211,21 +214,17 @@ type IPv6Spec struct {
 	// Indication whether IPv4 is enabled
 	Enabled bool `json:"enabled"`
 	// Whether IPv4 addresses are dynamically configured
-	DHCP bool `json:"dhcp"`
+	DHCP *bool `json:"dhcp,omitempty"`
 	// IPv6 autoconf
-	AutoConf bool `json:"autoConf"`
+	AutoConf *bool `json:"autoConf,omitempty"`
 	// List of IPv4 addresses
-	//Addresses AddressList `json:"addresses"`
-	Addresses []CIDR `json:"addresses"`
+	Address []CIDR `json:"address,omitempty"`
 	// TODO: description
-	// TODO: Mandatory?
-	//Neighbors NeighborList `json:"neighbors"`
-	Neighbors []CIDR `json:"neighbors"`
+	Neighbors []CIDR `json:"neighbors,omitempty"`
 	// TODO: description
-	// TODO: Mandatory?
-	Forwarding bool `json:"forwarding"`
+	Forwarding *bool `json:"forwarding,omitempty"`
 	// TODO: description?
-	DupAddrDetectTransmit int `json:"dupAddressDetectTransmit"`
+	DupAddrDetectTransmit *int `json:"dupAddressDetectTransmit,omitempty"`
 }
 
 // InterfaceInfo holds the operational status of an interface
@@ -235,18 +234,18 @@ type InterfaceInfo struct {
 	// Interface index
 	IFIndex uint `json:"ifIndex"`
 	// TODO: list of possible values
-	AdminStatus string `json:"adminStatus"`
+	AdminStatus string `json:"adminStatus,omitempty"`
 	// TODO: list of possible values
-	LinkStatus string `json:"linkStatus"`
+	LinkStatus string `json:"linkStatus,omitempty"`
 	// Physical address
 	// TODO: do we need that on top of the MAC address from InterfaceSpec?
-	PhysAddress string `json:"physAddress"`
+	PhysAddress string `json:"physAddress,omitempty"`
 	// Name of the higher layer interface
 	HigherLayerIF string `json:"higherLayerInterface,omitempty"`
 	// Name of the lower layer interface
 	LowerLayerIF string `json:"lowerLayerInterface,omitempty"`
 	// Statistics of the interface
-	Statistics InterfaceStatistics `json:"statistics"`
+	Statistics *InterfaceStatistics `json:"statistics,omitempty"`
 }
 
 // InterfaceStatistics holds the counters on the interface
