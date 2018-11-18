@@ -13,6 +13,7 @@ generate:
 	tools/crd-generator -crd-type net-conf > $(GENERATED_MANIFEST_DIR)/net-conf-crd.yaml
 	tools/crd-generator -crd-type net-conf-sample > $(GENERATED_MANIFEST_DIR)/net-conf-sample.yaml
 	tools/crd-generator -crd-type net-state-sample > $(GENERATED_MANIFEST_DIR)/net-state-sample.yaml
+	tools/crd-generator -crd-type net-state-ethernet > $(GENERATED_MANIFEST_DIR)/net-state-ethernet.yaml
 
 test:
 	hack/test.sh

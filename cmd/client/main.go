@@ -59,12 +59,22 @@ func main() {
 		}
 
 		if !nmstatectl.ValidateNodeName(cfg, *namespace, nodeName) {
-			//klog.Warningf("Hostname '%s' was not found to be a valid node name", nodeName)
-			fmt.Printf("Hostname '%s' was not found to be a valid node name\n", nodeName)
+			fmt.Printf("Warning: hostname '%s' was not found to be a valid node name\n", nodeName)
 		}
 
+		nodeFound := false
 		for _, state := range list.Items {
 			if nodeName == state.Spec.NodeName {
+				nodeFound = true
+				if state.Spec.Managed {
+					if err = nmstatectl.Set(&state.Spec.DesiredState); err != nil {
+						fmt.Printf("Failed set state on node: %v\n", err)
+					}
+				} else {
+					fmt.Printf("Node '%s' is unmanaged by state '%s'\n", nodeName, state.Name)
+				}
+
+				// TODO: should we update current state for unmanaged nodes?
 				if err = nmstatectl.Show(&state.Status.CurrentState); err != nil {
 					fmt.Printf("Failed to fetch current state: %v\n", err)
 				} else {
@@ -75,6 +85,9 @@ func main() {
 					}
 				}
 			}
+		}
+		if !nodeFound {
+			fmt.Printf("Warning: could not find state which apply to '%s'\n", nodeName)
 		}
 	} else {
 		klog.Fatalf("Unknown CRD type to fetch: %s\n", *crdType)

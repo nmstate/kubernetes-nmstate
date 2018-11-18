@@ -16,7 +16,6 @@ func Show(currentState *v1.ConfAndOperationalState) error {
 	if buff, err := cmd.CombinedOutput(); err != nil {
 		fmt.Printf("Failed to execute nmstate: '%v'\n'%s'\n ", err, string(buff))
 	} else {
-		fmt.Printf("nmstate output is: %s\n", string(buff))
 		if err = json.Unmarshal(buff, currentState); err != nil {
 			fmt.Printf("Failed to decode JSON output: %v\n", err)
 		} 
@@ -42,10 +41,10 @@ func Set(desiredState *v1.ConfigurationState) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Printf("%s\n", out)
 		fmt.Printf("Failed to execute nmstate: %v\n", err)
 		return err
 	}
 
-	fmt.Printf("%s\n", out)
 	return nil
 }

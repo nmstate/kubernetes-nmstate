@@ -121,9 +121,6 @@ func generateNodeNetConfPolicySample() {
 // based on: https://nmstate.github.io/examples.html
 func generateNodeNetworkStateSample() {
 	MTU1400 := uint(1400)
-	TrueValue := true
-	FalseValue := false
-
 	sample := v1.NodeNetworkState{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1.SchemeGroupVersionNodeNetworkState.Kind,
@@ -138,8 +135,68 @@ func generateNodeNetworkStateSample() {
 			DesiredState: v1.ConfigurationState{
 				Interfaces: []v1.InterfaceSpec{
 					{
+						// setting the interface up
+						Name:  "eth0",
+						Type:  v1.InterfaceTypeEthernet,
+						State: v1.InterfaceStateUp,
+					},
+					{
+						// setting the interface down
+						Name:  "foo0",
+						Type:  v1.InterfaceTypeUnknown,
+						State: v1.InterfaceStateDown,
+					},
+					{
+						// removing an interface
+						Name:  "dummy0",
+						Type:  v1.InterfaceTypeDummy,
+						State: v1.InterfaceStateAbsent,
+					},
+					{
+						// change MTU
+						Name:  "dummy1",
+						Type:  v1.InterfaceTypeDummy,
+						State: v1.InterfaceStateUp,
+						MTU:   &MTU1400,
+					},
+				},
+			},
+		},
+		Status: v1.NodeNetworkStateStatus{},
+	}
+
+	json, err := json.MarshalIndent(sample, JsonPrefix, JsonIndent)
+	if err != nil {
+		panic(fmt.Errorf("failed to generate sample (json): %v", err))
+	}
+
+	yaml, err := yamlutils.JSONToYAML(json)
+	if err != nil {
+		panic(fmt.Errorf("failed to generate sample (yaml): %v", err))
+	}
+	fmt.Println(string(yaml))
+}
+
+func generateNodeNetworkStateEthernet() {
+	TrueValue := true
+	FalseValue := false
+
+	sample := v1.NodeNetworkState{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1.SchemeGroupVersionNodeNetworkState.Kind,
+			APIVersion: v1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "node1-network-state-ethernet",
+		},
+		Spec: v1.NodeNetworkStateSpec{
+			Managed:  true,
+			NodeName: "node1",
+			DesiredState: v1.ConfigurationState{
+				Interfaces: []v1.InterfaceSpec{
+					{
 						// setting ethernet interface with static IPs
-						Name: "eth0", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
+						Name: "eth0", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp,
 						Description: "Production Network",
 						Ethernet: &v1.EthernetSpec{
 							AutoNegotiation: true,
@@ -160,7 +217,7 @@ func generateNodeNetworkStateSample() {
 					},
 					{
 						// setting ethernet interface with DHCP
-						Name: "eth1", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp, MTU: &MTU1400,
+						Name: "eth1", Type: v1.InterfaceTypeEthernet, State: v1.InterfaceStateUp,
 						Description: "Production Network",
 						Ethernet: &v1.EthernetSpec{
 							AutoNegotiation: false,
@@ -174,16 +231,6 @@ func generateNodeNetworkStateSample() {
 							Enabled: true,
 							DHCP:    &TrueValue,
 						},
-					},
-					{
-						// setting interface down
-						Name: "old-br", Type: v1.InterfaceTypeOVSBridge, State: v1.InterfaceStateDown,
-						Description: "Deprecated Bridge",
-					},
-					{
-						// removing an interface
-						Name: "dummy0", Type: v1.InterfaceTypeDummy, State: v1.InterfaceStateAbsent,
-						Description: "Another Deprecated Bridge",
 					},
 				},
 			},
@@ -204,7 +251,7 @@ func generateNodeNetworkStateSample() {
 }
 
 func main() {
-	crdType := flag.String("crd-type", "", "Type of crd to generate. net-conf | net-state | net-conf-sample | net-state-sample")
+	crdType := flag.String("crd-type", "", "Type of crd to generate. net-conf | net-state | net-conf-sample | net-state-sample | net-state-ethernet")
 	flag.Parse()
 
 	switch *crdType {
@@ -216,6 +263,8 @@ func main() {
 		generateNodeNetConfPolicySample()
 	case "net-state-sample":
 		generateNodeNetworkStateSample()
+	case "net-state-ethernet":
+		generateNodeNetworkStateEthernet()
 	default:
 		panic(fmt.Errorf("unknown crd type %s", *crdType))
 	}
