@@ -1,3 +1,5 @@
 Gopkg.lock
 cmd/client/client
+cmd/state-controller/state-controller
+cmd/policy-controller/policy-controller
 tools/crd-generator

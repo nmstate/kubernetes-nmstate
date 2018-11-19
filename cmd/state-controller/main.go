@@ -1,3 +1,9 @@
+// This controller is listening on NodeNetworkState CRD events.
+// When it gets such an event, find if it applies to the host it is running on
+// according to the NodeName field of thr CRD.
+// For such CRD it uses nmstatectl to enforce the desired state
+// and then to report current state in the NodeNetworkState CRD.
+
 package main
 
 import (
@@ -43,10 +49,10 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	nmstateInformerFactory := informers.NewSharedInformerFactory(nmstateClient, time.Second*30)
 
-	controller := NewController(kubeClient, nmstateClient,
-		kubeInformerFactory.Apps().V1().Nodes(),
-		nmstateInformerFactory.NmstateController().V1().NodeNetConfPolicy(),
-		nmstateInformerFactory.NmstateController().V1().NodeNetworkState(),
+	controller := NewController(
+		kubeClient,
+		nmstateClient,
+		nmstateInformerFactory.Nmstate().V1().NodeNetworkStates(),
 	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)

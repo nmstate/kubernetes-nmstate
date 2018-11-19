@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
+	nmstatev1 "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned/typed/nmstate.io/v1"
 )
 
 const nmstateCommand = "nmstatectl"
@@ -17,8 +18,11 @@ func Show(currentState *v1.ConfAndOperationalState) error {
 		fmt.Printf("Failed to execute nmstate: '%v'\n'%s'\n ", err, string(buff))
 	} else {
 		if err = json.Unmarshal(buff, currentState); err != nil {
+			fmt.Printf("ERROR: %s\n", string(buff))
 			fmt.Printf("Failed to decode JSON output: %v\n", err)
-		} 
+		} else {
+			fmt.Printf("DEBUG: %s\n", string(buff))
+		}
 	}
 
 	return nil
@@ -41,10 +45,36 @@ func Set(desiredState *v1.ConfigurationState) error {
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Printf("%s\n", out)
+		fmt.Printf("ERROR: %s\n", out)
 		fmt.Printf("Failed to execute nmstate: %v\n", err)
 		return err
+	} else {
+		fmt.Printf("DEBUG: %s\n", out)
 	}
 
 	return nil
+}
+
+// HandleResource is used for handling of NodeNetworkState CRDs
+func HandleResource(state *v1.NodeNetworkState, client nmstatev1.NmstateV1Interface) (err error) {
+	if state.Spec.Managed {
+		if err = Set(&state.Spec.DesiredState); err != nil {
+			fmt.Printf("Failed set state on node: %v\n", err)
+		}
+	} else {
+		fmt.Printf("Node '%s' is unmanaged by state '%s'\n", state.Spec.NodeName, state.Name)
+	}
+
+	// TODO: should we update current state for unmanaged nodes?
+	if err = Show(&state.Status.CurrentState); err != nil {
+		fmt.Printf("Failed to fetch current state: %v\n", err)
+	} else {
+		if _, err := client.NodeNetworkStates(state.Namespace).Update(state); err != nil {
+			fmt.Printf("Failed to update state: %v\n", err)
+		} else {
+			fmt.Printf("Successfully update state '%s' on node '%s'\n", state.Name, state.Spec.NodeName)
+		}
+	}
+
+	return
 }

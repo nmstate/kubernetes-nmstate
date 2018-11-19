@@ -1,9 +1,27 @@
+// This client could be a invoked to handle NodeNetworkState CRDs or NodeNetConfPolicy CRDs
+//
+// NodeNetworkState Mode
+// Client reads all NodeNetworkState CRDs, find the one that apply to the host it is running on
+// according to the NodeName field of thr CRD.
+// For such CRD it uses nmstatectl to enforce the desired state
+// and then to report current state in the NodeNetworkState CRD.
+// Notes:
+// (1) The client cannot handle CRD deletions - and will not do state cleanup upon deletion
+// (2) The client can handle updates to the CRD in some cases, since nmstate will try to enforce the new state
+//     however, for parameters which do not require full state (e.g. static IPs), updates will not be handled by the client
+// For full CRD lifetime management, the controller should be used
+//
+// NodeNetConfPolicy Mode
+// Client reads all NodeNetworkState CRDs, find which of them apply to the host it is running on
+// according to node affinity and toleration, and then find out the list interfaces on which the policy
+// should be applied. Based on that it creates a NodeNetworkState CRD that should be handled by a
+// NodeNetworkState handler (either client or controller)
+
 package main
 
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/tools/clientcmd"
@@ -21,8 +39,6 @@ var (
 )
 
 func main() {
-	// TODO: runmtime exception: "flag redefined: log_dir"
-	//klog.InitFlags(nil)
 	flag.Parse()
 
 	cfg, err := clientcmd.BuildConfigFromFlags(*master, *kuberconfig)
@@ -51,43 +67,17 @@ func main() {
 			klog.Fatalf("Error listing all net conf policies (in %s): %v\n", *namespace, err)
 		}
 
-		// TODO: we need a better way of finding out the node, than comparing to hostname
-		// when running inside a pod, this should be simpler, by taking the node name from the pod's parameters
-		nodeName, err := os.Hostname()
-		if err != nil {
-			klog.Fatalf("Failed to get hostname: %v\n", err)
-		}
-
-		if !nmstatectl.ValidateNodeName(cfg, *namespace, nodeName) {
-			fmt.Printf("Warning: hostname '%s' was not found to be a valid node name\n", nodeName)
-		}
-
 		nodeFound := false
 		for _, state := range list.Items {
-			if nodeName == state.Spec.NodeName {
+			if nmstatectl.IsStateApplicable(cfg, &state) {
 				nodeFound = true
-				if state.Spec.Managed {
-					if err = nmstatectl.Set(&state.Spec.DesiredState); err != nil {
-						fmt.Printf("Failed set state on node: %v\n", err)
-					}
-				} else {
-					fmt.Printf("Node '%s' is unmanaged by state '%s'\n", nodeName, state.Name)
-				}
-
-				// TODO: should we update current state for unmanaged nodes?
-				if err = nmstatectl.Show(&state.Status.CurrentState); err != nil {
-					fmt.Printf("Failed to fetch current state: %v\n", err)
-				} else {
-					if _, err := nmstateClient.NmstateV1().NodeNetworkStates(*namespace).Update(&state); err != nil {
-						fmt.Printf("Failed to update state: %v\n", err)
-					} else {
-						fmt.Printf("Successfully update state '%s' on node '%s'\n", state.Name, nodeName)
-					}
+				if err = nmstatectl.HandleResource(&state, nmstateClient.NmstateV1()); err != nil {
+					fmt.Printf("Failed to handle resource '%s': %v\n", state.Name, err)
 				}
 			}
 		}
 		if !nodeFound {
-			fmt.Printf("Warning: could not find state which apply to '%s'\n", nodeName)
+			fmt.Printf("Warning: could not find state which apply to node\n")
 		}
 	} else {
 		klog.Fatalf("Unknown CRD type to fetch: %s\n", *crdType)

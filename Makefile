@@ -1,7 +1,9 @@
 all: build
 
 build:
-	cd cmd/client && go fmt && go build
+	cd cmd/client && go fmt && go vet && go build
+	cd cmd/state-controller && go fmt && go vet && go build
+	cd cmd/policy-controller && go fmt && go vet && go build
 
 GENERATED_MANIFEST_DIR=manifests/generated
 
@@ -16,7 +18,8 @@ generate:
 	tools/crd-generator -crd-type net-state-ethernet > $(GENERATED_MANIFEST_DIR)/net-state-ethernet.yaml
 
 test:
-	hack/test.sh
+	hack/test-client.sh
+	hack/test-controller.sh
 
 dep:
 	dep ensure -v
