@@ -18,8 +18,12 @@ generate:
 	tools/crd-generator -crd-type net-state-ethernet > $(GENERATED_MANIFEST_DIR)/net-state-ethernet.yaml
 
 test:
-	hack/test-client.sh
-	hack/test-controller.sh
+	@echo "==========Running Policy Client Test..."
+	hack/test-client-policy.sh
+	@echo "==========Running State Client Test..."
+	hack/test-client-state.sh
+	@echo "==========Running State Controller Test..."
+	hack/test-controller-state.sh
 
 dep:
 	dep ensure -v

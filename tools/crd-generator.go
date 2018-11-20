@@ -127,7 +127,7 @@ func generateNodeNetworkStateSample() {
 			APIVersion: v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "node1-network-state",
+			Name: "node1",
 		},
 		Spec: v1.NodeNetworkStateSpec{
 			Managed:  true,
@@ -187,7 +187,7 @@ func generateNodeNetworkStateEthernet() {
 			APIVersion: v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "node1-network-state-ethernet",
+			Name: "node1",
 		},
 		Spec: v1.NodeNetworkStateSpec{
 			Managed:  true,

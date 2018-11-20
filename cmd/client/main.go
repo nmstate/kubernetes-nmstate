@@ -1,22 +1,3 @@
-// This client could be a invoked to handle NodeNetworkState CRDs or NodeNetConfPolicy CRDs
-//
-// NodeNetworkState Mode
-// Client reads all NodeNetworkState CRDs, find the one that apply to the host it is running on
-// according to the NodeName field of thr CRD.
-// For such CRD it uses nmstatectl to enforce the desired state
-// and then to report current state in the NodeNetworkState CRD.
-// Notes:
-// (1) The client cannot handle CRD deletions - and will not do state cleanup upon deletion
-// (2) The client can handle updates to the CRD in some cases, since nmstate will try to enforce the new state
-//     however, for parameters which do not require full state (e.g. static IPs), updates will not be handled by the client
-// For full CRD lifetime management, the controller should be used
-//
-// NodeNetConfPolicy Mode
-// Client reads all NodeNetworkState CRDs, find which of them apply to the host it is running on
-// according to node affinity and toleration, and then find out the list interfaces on which the policy
-// should be applied. Based on that it creates a NodeNetworkState CRD that should be handled by a
-// NodeNetworkState handler (either client or controller)
-
 package main
 
 import (
@@ -54,7 +35,7 @@ func main() {
 	if *crdType == "policy" {
 		list, err := nmstateClient.NmstateV1().NodeNetConfPolicies(*namespace).List(metav1.ListOptions{})
 		if err != nil {
-			klog.Fatalf("Error listing all net conf policies (in %s): %v\n", *namespace, err)
+			klog.Fatalf("Error listing all node net conf policies (in %s): %v\n", *namespace, err)
 		}
 
 		for _, policy := range list.Items {
@@ -64,20 +45,29 @@ func main() {
 	} else if *crdType == "state" {
 		list, err := nmstateClient.NmstateV1().NodeNetworkStates(*namespace).List(metav1.ListOptions{})
 		if err != nil {
-			klog.Fatalf("Error listing all net conf policies (in %s): %v\n", *namespace, err)
+			klog.Fatalf("Error listing all node network states (in %s): %v\n", *namespace, err)
 		}
 
 		nodeFound := false
+		name := nmstatectl.GetHostName()
+		if name == "" {
+			klog.Fatalf("Failed to get host name\n")
+		}
+
 		for _, state := range list.Items {
-			if nmstatectl.IsStateApplicable(cfg, &state) {
+			if nmstatectl.IsStateApplicable(cfg, &state, name) {
 				nodeFound = true
-				if err = nmstatectl.HandleResource(&state, nmstateClient.NmstateV1()); err != nil {
-					fmt.Printf("Failed to handle resource '%s': %v\n", state.Name, err)
+				if _, err = nmstatectl.HandleResource(&state, nmstateClient.NmstateV1()); err != nil {
+					klog.Fatalf("Failed to handle resource '%s': %v\n", state.Name, err)
 				}
+				break
 			}
 		}
 		if !nodeFound {
-			fmt.Printf("Warning: could not find state which apply to node\n")
+			fmt.Printf("Could not find an existing state which apply to node, will create one\n")
+			if _, err = nmstatectl.CreateResource(nmstateClient.NmstateV1(), name, *namespace); err != nil {
+				klog.Fatalf("Failed to create resource for node '%s': %v\n", name, err)
+			}
 		}
 	} else {
 		klog.Fatalf("Unknown CRD type to fetch: %s\n", *crdType)

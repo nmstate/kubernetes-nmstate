@@ -1,13 +1,8 @@
-// This controller is listening on NodeNetworkState CRD events.
-// When it gets such an event, find if it applies to the host it is running on
-// according to the NodeName field of thr CRD.
-// For such CRD it uses nmstatectl to enforce the desired state
-// and then to report current state in the NodeNetworkState CRD.
-
 package main
 
 import (
 	"flag"
+	"github.com/nmstate/k8s-node-net-conf/pkg/nmstatectl"
 	"time"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -23,6 +18,7 @@ import (
 var (
 	masterURL  string
 	kubeconfig string
+	namespace  string
 )
 
 func main() {
@@ -53,6 +49,8 @@ func main() {
 		kubeClient,
 		nmstateClient,
 		nmstateInformerFactory.Nmstate().V1().NodeNetworkStates(),
+		nmstatectl.GetHostName(),
+		namespace,
 	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
@@ -68,4 +66,5 @@ func main() {
 func init() {
 	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
 	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	flag.StringVar(&namespace, "n", "default", "The namespace where the CRDs are created.")
 }
