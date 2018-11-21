@@ -5,6 +5,13 @@ build:
 	cd cmd/state-controller && go fmt && go vet && go build
 	cd cmd/policy-controller && go fmt && go vet && go build
 
+DOCKER_REPO=yuvalif
+
+docker: build
+	cd cmd/client && docker build -t $(DOCKER_REPO)/k8s-node-net-conf-client .
+	cd cmd/state-controller && docker build -t $(DOCKER_REPO)/k8s-node-network-state-controller .
+
+
 GENERATED_MANIFEST_DIR=manifests/generated
 
 generate:
