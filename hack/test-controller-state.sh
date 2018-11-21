@@ -42,8 +42,8 @@ echo "=====TEST START: running controller in docker when state does not exists"
 kubectl create namespace ${TEST_NS}
 
 # start the controller inside docker
-docker run -d --net host -v ~/.kube/:/.kube/ -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket --rm \
-    yuvalif/k8s-node-network-state-controller -n ${TEST_NS}
+docker run -d -v ~/.kube/:/.kube/ -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket --rm \
+    yuvalif/k8s-node-network-state-controller -kubeconfig /.kube/config -n ${TEST_NS} -host ${HOSTNAME}
 
 sleep 10
 
@@ -68,6 +68,7 @@ echo "=====State should be updated by controller"
 kubectl --kubeconfig ${KUBECONFIG} get nodenetworkstate ${HOSTNAME} -o yaml -n ${TEST_NS}
 
 # kill the controller
+docker kill `docker ps | grep yuvalif/k8s-node-network-state-controller | cut -f 1 -d ' '`
 
 # cleanup
 kubectl delete namespace ${TEST_NS}

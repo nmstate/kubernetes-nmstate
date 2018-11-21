@@ -20,5 +20,5 @@ RUN git clone https://github.com/nmstate/nmstate.git && \
 
 COPY ./client /
 
-ENTRYPOINT ["/client", "-kubeconfig", "/.kube/config"]
+ENTRYPOINT ["/client"]
 

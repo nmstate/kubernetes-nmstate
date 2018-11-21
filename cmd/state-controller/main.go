@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"github.com/nmstate/k8s-node-net-conf/pkg/nmstatectl"
 	"time"
 
 	kubeinformers "k8s.io/client-go/informers"
@@ -13,12 +12,15 @@ import (
 	clientset "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned"
 	informers "github.com/nmstate/k8s-node-net-conf/pkg/client/informers/externalversions"
 	"github.com/nmstate/k8s-node-net-conf/pkg/signals"
+	"github.com/nmstate/k8s-node-net-conf/pkg/utils"
 )
 
 var (
-	masterURL  string
-	kubeconfig string
-	namespace  string
+	kubeconfig = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	master     = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	namespace  = flag.String("n", "", "The namespace where the CRDs are created. If left blank and running via pod, it will be taken from there.")
+	crdType    = flag.String("type", "state", "state|policy. Whether client should handle 'state' or 'policy' CRDs.")
+	hostname   = flag.String("host", "", "Name of the host on which to enforce and report state. If left blank and running via pod, it will be taken from there.")
 )
 
 func main() {
@@ -27,7 +29,7 @@ func main() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
@@ -45,12 +47,13 @@ func main() {
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	nmstateInformerFactory := informers.NewSharedInformerFactory(nmstateClient, time.Second*30)
 
+	ns := utils.GetNamespace(*namespace)
 	controller := NewController(
 		kubeClient,
 		nmstateClient,
 		nmstateInformerFactory.Nmstate().V1().NodeNetworkStates(),
-		nmstatectl.GetHostName(),
-		namespace,
+		utils.GetHostName(*hostname, cfg, ns),
+		ns,
 	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
@@ -61,10 +64,4 @@ func main() {
 	if err = controller.Run(2, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
-}
-
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&namespace, "n", "default", "The namespace where the CRDs are created.")
 }

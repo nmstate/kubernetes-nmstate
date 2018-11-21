@@ -20,4 +20,4 @@ RUN git clone https://github.com/nmstate/nmstate.git && \
 
 COPY ./state-controller /
 
-ENTRYPOINT ["/state-controller", "-kubeconfig", "/.kube/config"]
+ENTRYPOINT ["/state-controller"]
