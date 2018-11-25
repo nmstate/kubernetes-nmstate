@@ -29,7 +29,7 @@ Some other ```make``` targets:
 │   ├── client            # generated code for client, informers and listers
 │   ├── nmstatectl        # conversion between CRD and nmstatectl input/output
 │   ├── policy-controller # main logic of policy handler running as a daemon
-│   ├── policy-controller # main logic of policy handler running as a daemon
+│   ├── state-controller  # main logic of state handler running as a daemon
 │   └── utils             # general utility functions
 ├── tools                 # tools for yaml generation
  ```
