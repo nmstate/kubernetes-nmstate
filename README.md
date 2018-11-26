@@ -4,7 +4,7 @@ Host-networking for kubernetes driven by kubernetes and executed by nmstate.
 With hybrid clouds, host-networking setup is becoming even more challenging. 
 Different payloads have different networking requirements, and not everything could be satisfied as overlays on top of the main interface of the node (e.g. SR-IOV, L2, other L2).
 The [CNI](https://github.com/containernetworking/cni) standard enables different solutions for connecting networks on the node with pods. 
-Some of them are [part of the standard](https://github.com/containernetworking/cni), and there are some that support: [OVS bridges](https://github.com/containernetworking/cni), [SR-IOV](https://github.com/containernetworking/cni), and more...
+Some of them are [part of the standard](https://github.com/containernetworking/cni), and there are some that support: [OVS bridges](https://github.com/kubevirt/ovs-cni), [SR-IOV](https://github.com/hustcat/sriov-cni), and more...
 However, in all of these cases, the node must have the networks setup before the pod is scheduled. Setting up the networks in a dynamic and heterogenous cluster, with dynamic networking requirements, is a challenge by itself - and this is what this project is addressing.
 ## The "How"
 We use [nmstate](https://nmstate.github.io/) to perform state driven network configuration on each node, as well as to report back its current state. 
