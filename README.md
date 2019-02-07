@@ -11,7 +11,7 @@ We use [nmstate](https://nmstate.github.io/) to perform state driven network con
 The system defines 2 CRDs ([Custom Resource Definitions](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/)): ```NodeNetworkState``` and ```NodeNetConfPolicy``` as described [here](https://docs.google.com/document/d/1282BcYjYGIIxQKgMYi3nQodB4ML_gw9BSs5AXB7QUtg/).
 In the project we provide a 2 processes (one each CRD handling) that could be invoked manually by an external system (e.g. [Machine Config Operator](https://github.com/openshift/machine-config-operator)) and or run as node daemons (or as a Kubernetes [daemon set](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/)) listening and handling modifications for the CRDs.
 Demo:
-[![asciicast](https://asciinema.org/a/N8SxVuGzMKT2V80xbSkWwh2r6.svg)](https://asciinema.org/a/N8SxVuGzMKT2V80xbSkWwh2r6)
+[![asciicast](https://asciinema.org/a/225838.svg)](https://asciinema.org/a/225838)
 ### State Handler
 When it starts on the node, it reads the list of ```NodeNetworkState``` CRDs, if no CRD exist for the node it is executed on, it will create one, and fill it with the output of ```nmstatectl show``` as the current status in the CRD. 
 If a ```NodeNetworkState``` CRD exists for the node, it will try to enforce the desired state from the CRD (using: ```nmstatectl set```), and then report back current state.
