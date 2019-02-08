@@ -5,11 +5,15 @@ build:
 	cd cmd/state-controller && go fmt && go vet && go build
 	cd cmd/policy-controller && go fmt && go vet && go build
 
-DOCKER_REPO=yuvalif
+IMAGE_REGISTRY ?= yuvalif
 
 docker: build
-	cd cmd/client && docker build -t $(DOCKER_REPO)/k8s-node-net-conf-client .
-	cd cmd/state-controller && docker build -t $(DOCKER_REPO)/k8s-node-network-state-controller .
+	cd cmd/client && docker build -t $(IMAGE_REGISTRY)/k8s-node-net-conf-client .
+	cd cmd/state-controller && docker build -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
+
+docker-push: build
+	docker push $(IMAGE_REGISTRY)/k8s-node-net-conf-client
+	docker push $(IMAGE_REGISTRY)/k8s-node-network-state-controller
 
 generate:
 	hack/update-codegen.sh
@@ -56,4 +60,16 @@ clean-generate:
 clean-manifests:
 	rm -rf $(MANIFESTS_DESTINATION)
 
-.PHONY: build docker generate manifests test dep clean-dep clean-generate clean-manifests
+cluster-up:
+	./cluster/up.sh
+
+cluster-sync:
+	./cluster/sync.sh
+
+cluster-clean:
+	./cluster/clean.sh
+
+cluster-down:
+	./cluster/down.sh
+
+.PHONY: build docker docker-push generate manifests test dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down

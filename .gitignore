@@ -1,5 +1,8 @@
+_out/
 Gopkg.lock
+cluster/.kubeconfig
+cluster/.kubectl
 cmd/client/client
-cmd/state-controller/state-controller
 cmd/policy-controller/policy-controller
+cmd/state-controller/state-controller
 tools/manifest-generator/manifest-generator

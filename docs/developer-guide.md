@@ -15,7 +15,12 @@ Some other ```make``` targets:
  - ```test``` - will execute integrations tests
  - ```docker``` - will build docker images for all binaries
  - ```docker-push``` will upload them into a repo (by default it would be ```docker.io/nmstate```, so proper permissions will be needed)
- # Project Directory Structure
+ - ```cluster-up``` will start a local cluster that can be used for testing of kubernetes-nmstate
+ - ```cluster-sync``` will install kubernetes-nmstate namespace, RBAC on local cluster, it will build and push there images of kubernetes-nmstate so they can be later used for testing
+ - ```cluster-clean``` removes all resources related to kubernetes-nmstate from local cluster
+ - ```cluster-down``` tears down local cluster
+ 
+# Project Directory Structure
  ```
 ├── cmd                   # location of binaries main functions  as well as Dockerfiles
 │   ├── policy-handler
