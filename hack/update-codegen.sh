@@ -22,6 +22,6 @@ SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
 
 ${CODEGEN_PKG}/generate-groups.sh "deepcopy,client,informer,lister" \
-  github.com/nmstate/k8s-node-net-conf/pkg/client github.com/nmstate/k8s-node-net-conf/pkg/apis \
+  github.com/nmstate/kubernetes-nmstate/pkg/client github.com/nmstate/kubernetes-nmstate/pkg/apis \
   nmstate.io:v1 \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt

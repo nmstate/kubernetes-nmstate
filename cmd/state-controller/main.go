@@ -9,10 +9,10 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 
-	clientset "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned"
-	informers "github.com/nmstate/k8s-node-net-conf/pkg/client/informers/externalversions"
-	"github.com/nmstate/k8s-node-net-conf/pkg/signals"
-	"github.com/nmstate/k8s-node-net-conf/pkg/utils"
+	clientset "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
+	informers "github.com/nmstate/kubernetes-nmstate/pkg/client/informers/externalversions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/signals"
+	"github.com/nmstate/kubernetes-nmstate/pkg/utils"
 )
 
 var (

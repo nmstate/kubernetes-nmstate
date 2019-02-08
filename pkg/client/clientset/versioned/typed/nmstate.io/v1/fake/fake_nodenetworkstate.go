@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The nmstate Authors.
+Copyright 2019 The nmstate Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	nmstateiov1 "github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
+	nmstateiov1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"

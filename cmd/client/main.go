@@ -8,9 +8,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 
-	nmstateioclientset "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned"
-	"github.com/nmstate/k8s-node-net-conf/pkg/nmstatectl"
-	"github.com/nmstate/k8s-node-net-conf/pkg/utils"
+	nmstateioclientset "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	"github.com/nmstate/kubernetes-nmstate/pkg/utils"
 )
 
 var (

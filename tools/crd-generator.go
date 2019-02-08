@@ -30,7 +30,7 @@ import (
 	extensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
 )
 
 func generateBlankCrd() *extensionsv1.CustomResourceDefinition {
