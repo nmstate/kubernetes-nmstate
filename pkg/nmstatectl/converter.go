@@ -3,15 +3,15 @@ package nmstatectl
 import (
 	"encoding/json"
 	"fmt"
-	"os/exec"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
 	nmstatev1 "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned/typed/nmstate.io/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"os/exec"
 )
 
 const nmstateCommand = "nmstatectl"
 
-// Show is populating the passed ConfAndOperationalState object from the output of "nmstatectl show" 
+// Show is populating the passed ConfAndOperationalState object from the output of "nmstatectl show"
 func Show(currentState *v1.ConfAndOperationalState) (err error) {
 	cmd := exec.Command(nmstateCommand, "show")
 	var buff []byte
@@ -25,7 +25,7 @@ func Show(currentState *v1.ConfAndOperationalState) (err error) {
 		fmt.Printf("Failed to decode JSON output: %v\n", err)
 		return
 	}
-	
+
 	return nil
 }
 
@@ -44,11 +44,11 @@ func Set(desiredState *v1.ConfigurationState) error {
 	}
 	stdin.Close()
 
-	if _, err = cmd.CombinedOutput(); err != nil {
-		fmt.Printf("Failed to execute nmstatectl set: %v\n", err)
+	if buff, err = cmd.CombinedOutput(); err != nil {
+		fmt.Printf("Failed to execute nmstatectl set: '%v'\n'%s'\n", err, string(buff))
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -98,20 +98,20 @@ func HandleResource(state *v1.NodeNetworkState, client nmstatev1.NmstateV1Interf
 
 // CreateResource is used for creating of NodeNetworkState CRDs
 func CreateResource(client nmstatev1.NmstateV1Interface, name string, namespace string) (*v1.NodeNetworkState, error) {
-	state := &v1.NodeNetworkState {
+	state := &v1.NodeNetworkState{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1.SchemeGroupVersionNodeNetworkState.Kind,
 			APIVersion: v1.SchemeGroupVersion.String(),
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: v1.NodeNetworkStateSpec {
-			Managed: true,
+		Spec: v1.NodeNetworkStateSpec{
+			Managed:  true,
 			NodeName: name,
 		},
-		Status: v1.NodeNetworkStateStatus {CurrentState: v1.ConfAndOperationalState{}},
+		Status: v1.NodeNetworkStateStatus{CurrentState: v1.ConfAndOperationalState{}},
 	}
 
 	if err := Show(&state.Status.CurrentState); err != nil {
