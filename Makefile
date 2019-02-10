@@ -11,18 +11,28 @@ docker: build
 	cd cmd/client && docker build -t $(DOCKER_REPO)/k8s-node-net-conf-client .
 	cd cmd/state-controller && docker build -t $(DOCKER_REPO)/k8s-node-network-state-controller .
 
-
-GENERATED_MANIFEST_DIR=manifests/generated
-
 generate:
 	hack/update-codegen.sh
-	cd tools && go fmt && go build -o crd-generator
-	mkdir -p manifests/generated
-	tools/crd-generator -crd-type net-state > $(GENERATED_MANIFEST_DIR)/net-state-crd.yaml
-	tools/crd-generator -crd-type net-conf > $(GENERATED_MANIFEST_DIR)/net-conf-crd.yaml
-	tools/crd-generator -crd-type net-conf-sample > $(GENERATED_MANIFEST_DIR)/net-conf-sample.yaml
-	tools/crd-generator -crd-type net-state-sample > $(GENERATED_MANIFEST_DIR)/net-state-sample.yaml
-	tools/crd-generator -crd-type net-state-ethernet > $(GENERATED_MANIFEST_DIR)/net-state-ethernet.yaml
+
+MANIFESTS_SOURCE ?= manifests/templates
+MANIFESTS_DESTINATION ?= manifests/examples
+NAMESPACE ?= nmstate-default
+IMAGE_REGISTRY ?= yuvalif
+IMAGE_TAG ?= latest
+PULL_POLICY ?= Always
+STATE_CLIENT_IMAGE ?= k8s-node-net-conf-client
+STATE_CONTROLLER_IMAGE ?= k8s-node-network-state-controller
+
+manifests:
+	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
+	MANIFESTS_DESTINATION=$(MANIFESTS_DESTINATION) \
+	NAMESPACE=$(NAMESPACE) \
+	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
+	IMAGE_TAG=$(IMAGE_TAG) \
+	PULL_POLICY=$(PULL_POLICY) \
+	STATE_CLIENT_IMAGE=$(STATE_CLIENT_IMAGE) \
+	STATE_CONTROLLER_IMAGE=$(STATE_CONTROLLER_IMAGE) \
+		hack/generate-manifests.sh
 
 test:
 	@echo "==========Running Policy Client Test..."
@@ -42,4 +52,8 @@ clean-dep:
 clean-generate:
 	rm -f pkg/apis/nmstate.io/v1/zz_generated.deepcopy.go
 	rm -rf pkg/client
-	rm -rf $(GENERATED_MANIFEST_DIR)
+
+clean-manifests:
+	rm -rf $(MANIFESTS_DESTINATION)
+
+.PHONY: build docker generate manifests test dep clean-dep clean-generate clean-manifests

@@ -1,0 +1,56 @@
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: nmstate-state-controller
+  namespace: {{ .Namespace }}
+  labels:
+    nmstate.io: ""
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: nmstate-state-controller
+  namespace: {{ .Namespace }}
+  labels:
+    nmstate.io: ""
+roleRef:
+  kind: ClusterRole
+  name: nmstate-state-controller
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: nmstate-state-controller
+    namespace: {{ .Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: nmstate-state-controller
+  namespace: {{ .Namespace }}
+  labels:
+    nmstate.io: ""
+rules:
+  - apiGroups:
+      - ''
+    resources:
+      - pods
+    verbs:
+      - get
+  - apiGroups:
+      - ''
+    resources:
+      - events
+    verbs:
+      - update
+      - create
+      - patch
+  - apiGroups:
+      - nmstate.io
+    resources:
+      - nodenetworkstates
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
