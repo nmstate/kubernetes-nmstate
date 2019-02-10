@@ -3,8 +3,8 @@ package nmstatectl
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
-	nmstatev1 "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned/typed/nmstate.io/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned/typed/nmstate.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os/exec"
 )
@@ -44,7 +44,7 @@ func Set(desiredState *v1.ConfigurationState) error {
 	}
 	stdin.Close()
 
-	if buff, err = cmd.CombinedOutput(); err != nil {
+	if buff, err := cmd.CombinedOutput(); err != nil {
 		fmt.Printf("Failed to execute nmstatectl set: '%v'\n'%s'\n", err, string(buff))
 		return err
 	}

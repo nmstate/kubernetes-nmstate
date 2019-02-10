@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The nmstate Authors.
+Copyright 2019 The nmstate Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,10 +21,10 @@ package v1
 import (
 	time "time"
 
-	nmstateiov1 "github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
-	versioned "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned"
-	internalinterfaces "github.com/nmstate/k8s-node-net-conf/pkg/client/informers/externalversions/internalinterfaces"
-	v1 "github.com/nmstate/k8s-node-net-conf/pkg/client/listers/nmstate.io/v1"
+	nmstateiov1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
+	versioned "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
+	internalinterfaces "github.com/nmstate/kubernetes-nmstate/pkg/client/informers/externalversions/internalinterfaces"
+	v1 "github.com/nmstate/kubernetes-nmstate/pkg/client/listers/nmstate.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"

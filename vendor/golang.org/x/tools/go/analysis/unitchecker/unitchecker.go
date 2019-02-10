@@ -25,7 +25,6 @@ package unitchecker
 //   so we will not get to analyze it. Yet we must in order
 //   to create base facts for, say, the fmt package for the
 //   printf checker.
-// - support JSON output, factored with multichecker.
 
 import (
 	"encoding/gob"
@@ -57,6 +56,7 @@ import (
 // It is provided to the tool in a JSON-encoded file
 // whose name ends with ".cfg".
 type Config struct {
+	ID                        string // e.g. "fmt [fmt.test]"
 	Compiler                  string
 	Dir                       string
 	ImportPath                string
@@ -95,7 +95,7 @@ func Main(analyzers ...*analysis.Analyzer) {
 
 Usage of %[1]s:
 	%.16[1]s unit.cfg	# execute analysis specified by config file
-	%.16[1]s help		# general help
+	%.16[1]s help    	# general help
 	%.16[1]s help name	# help on specific analyzer and its flags
 `, progname)
 		os.Exit(1)
@@ -112,7 +112,7 @@ Usage of %[1]s:
 		os.Exit(0)
 	}
 	if len(args) != 1 || !strings.HasSuffix(args[0], ".cfg") {
-		log.Fatalf("invalid command: want .cfg file (this reduced version of %s is intended to be run only by the 'go vet' command)", progname)
+		log.Fatalf(`invoking "go tool vet" directly is unsupported; use "go vet"`)
 	}
 	Run(args[0], analyzers)
 }
@@ -127,16 +127,37 @@ func Run(configFile string, analyzers []*analysis.Analyzer) {
 	}
 
 	fset := token.NewFileSet()
-	diags, err := run(fset, cfg, analyzers)
+	results, err := run(fset, cfg, analyzers)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if !cfg.VetxOnly && len(diags) > 0 {
-		for _, diag := range diags {
-			fmt.Fprintf(os.Stderr, "%s: %s\n", fset.Position(diag.Pos), diag.Message)
+	// In VetxOnly mode, the analysis is run only for facts.
+	if !cfg.VetxOnly {
+		if analysisflags.JSON {
+			// JSON output
+			tree := make(analysisflags.JSONTree)
+			for _, res := range results {
+				tree.Add(fset, cfg.ID, res.a.Name, res.diagnostics, res.err)
+			}
+			tree.Print()
+		} else {
+			// plain text
+			exit := 0
+			for _, res := range results {
+				if res.err != nil {
+					log.Println(res.err)
+					exit = 1
+				}
+			}
+			for _, res := range results {
+				for _, diag := range res.diagnostics {
+					analysisflags.PrintPlain(fset, diag)
+					exit = 1
+				}
+			}
+			os.Exit(exit)
 		}
-		os.Exit(1)
 	}
 
 	os.Exit(0)
@@ -160,7 +181,12 @@ func readConfig(filename string) (*Config, error) {
 	return cfg, nil
 }
 
-func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]analysis.Diagnostic, error) {
+var importerForCompiler = func(_ *token.FileSet, compiler string, lookup importer.Lookup) types.Importer {
+	// broken legacy implementation (https://golang.org/issue/28995)
+	return importer.For(compiler, lookup)
+}
+
+func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]result, error) {
 	// Load, parse, typecheck.
 	var files []*ast.File
 	for _, name := range cfg.GoFiles {
@@ -175,7 +201,7 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]an
 		}
 		files = append(files, f)
 	}
-	compilerImporter := importer.For(cfg.Compiler, func(path string) (io.ReadCloser, error) {
+	compilerImporter := importerForCompiler(fset, cfg.Compiler, func(path string) (io.ReadCloser, error) {
 		// path is a resolved package path, not an import path.
 		file, ok := cfg.PackageFile[path]
 		if !ok {
@@ -333,14 +359,13 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]an
 
 	execAll(analyzers)
 
-	// Return diagnostics from root analyzers.
-	var diags []analysis.Diagnostic
-	for _, a := range analyzers {
+	// Return diagnostics and errors from root analyzers.
+	results := make([]result, len(analyzers))
+	for i, a := range analyzers {
 		act := actions[a]
-		if act.err != nil {
-			return nil, act.err // some analysis failed
-		}
-		diags = append(diags, act.diagnostics...)
+		results[i].a = a
+		results[i].err = act.err
+		results[i].diagnostics = act.diagnostics
 	}
 
 	data := facts.Encode()
@@ -348,7 +373,13 @@ func run(fset *token.FileSet, cfg *Config, analyzers []*analysis.Analyzer) ([]an
 		return nil, fmt.Errorf("failed to write analysis facts: %v", err)
 	}
 
-	return diags, nil
+	return results, nil
+}
+
+type result struct {
+	a           *analysis.Analyzer
+	diagnostics []analysis.Diagnostic
+	err         error
 }
 
 type importerFunc func(path string) (*types.Package, error)

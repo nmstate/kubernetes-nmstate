@@ -824,8 +824,18 @@ func testOverlay(t *testing.T, exporter packagestest.Exporter) {
 		{map[string][]byte{}, `"abc"`, nil}, // empty overlay
 		{map[string][]byte{exported.File("golang.org/fake", "c/c.go"): []byte(`package c; const C = "C"`)}, `"abC"`, nil},
 		{map[string][]byte{exported.File("golang.org/fake", "b/b.go"): []byte(`package b; import "golang.org/fake/c"; const B = "B" + c.C`)}, `"aBc"`, nil},
-		{map[string][]byte{exported.File("golang.org/fake", "b/b.go"): []byte(`package b; import "d"; const B = "B" + d.D`)}, `unknown`,
-			[]string{`could not import d (no metadata for d)`}},
+		// Overlay with an existing file in an existing package adding a new import.
+		{map[string][]byte{exported.File("golang.org/fake", "b/b.go"): []byte(`package b; import "golang.org/fake/d"; const B = "B" + d.D`)}, `"aBd"`, nil},
+		// Overlay with a new file in an existing package.
+		{map[string][]byte{
+			exported.File("golang.org/fake", "c/c.go"):                                               []byte(`package c;`),
+			filepath.Join(filepath.Dir(exported.File("golang.org/fake", "c/c.go")), "c_new_file.go"): []byte(`package c; const C = "Ç"`)},
+			`"abÇ"`, nil},
+		// Overlay with a new file in an existing package, adding a new dependency to that package.
+		{map[string][]byte{
+			exported.File("golang.org/fake", "c/c.go"):                                               []byte(`package c;`),
+			filepath.Join(filepath.Dir(exported.File("golang.org/fake", "c/c.go")), "c_new_file.go"): []byte(`package c; import "golang.org/fake/d"; const C = "c" + d.D`)},
+			`"abcd"`, nil},
 	} {
 		exported.Config.Overlay = test.overlay
 		exported.Config.Mode = packages.LoadAllSyntax
@@ -862,7 +872,8 @@ func TestLoadAllSyntaxImportErrors(t *testing.T) {
 	packagestest.TestAll(t, testLoadAllSyntaxImportErrors)
 }
 func testLoadAllSyntaxImportErrors(t *testing.T, exporter packagestest.Exporter) {
-	// TODO(matloob): Remove this once go list -e -compiled is fixed. See golang.org/issue/26755
+	// TODO(matloob): Remove this once go list -e -compiled is fixed.
+	// See https://golang.org/issue/26755
 	t.Skip("go list -compiled -e fails with non-zero exit status for empty packages")
 
 	exported := packagestest.Export(t, exporter, []packagestest.Module{{
@@ -1599,6 +1610,12 @@ func importGraph(initial []*packages.Package) (string, map[string]*packages.Pack
 						edges = append(edges, fmt.Sprintf("%s -> %s (pruned)", p, imp))
 						continue
 					}
+				}
+				// math/bits took on a dependency on unsafe in 1.12, which breaks some
+				// tests. As a short term hack, prune that edge.
+				// TODO(matloob): think of a cleaner solution, or remove math/bits from the test.
+				if p.ID == "math/bits" && imp.ID == "unsafe" {
+					continue
 				}
 				edges = append(edges, fmt.Sprintf("%s -> %s", p, imp))
 				visit(imp)

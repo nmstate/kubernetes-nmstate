@@ -5,7 +5,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	nmstateio "github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io"
+	nmstateio "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io"
 )
 
 // SchemeGroupVersion is group version used to register these objects

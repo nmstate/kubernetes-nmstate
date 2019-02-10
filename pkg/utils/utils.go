@@ -7,7 +7,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
-	"github.com/nmstate/k8s-node-net-conf/pkg/apis/nmstate.io/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
 )
 // ValidateNodeName check if the current host is a k8s node 
 func ValidateNodeName(cfg *restclient.Config, nodeName string) bool {

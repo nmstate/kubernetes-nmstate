@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/nmstate/k8s-node-net-conf/pkg/nmstatectl"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -17,10 +17,10 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog"
 
-	clientset "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned"
-	nmstatescheme "github.com/nmstate/k8s-node-net-conf/pkg/client/clientset/versioned/scheme"
-	informers "github.com/nmstate/k8s-node-net-conf/pkg/client/informers/externalversions/nmstate.io/v1"
-	listers "github.com/nmstate/k8s-node-net-conf/pkg/client/listers/nmstate.io/v1"
+	clientset "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
+	nmstatescheme "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned/scheme"
+	informers "github.com/nmstate/kubernetes-nmstate/pkg/client/informers/externalversions/nmstate.io/v1"
+	listers "github.com/nmstate/kubernetes-nmstate/pkg/client/listers/nmstate.io/v1"
 )
 
 const controllerAgentName = "state-controller"
