@@ -1,0 +1,9 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetConfPolicy
+metadata:
+  name: my-node-net-conf-policy
+spec:
+  autoconfig: null
+  desiredState: null
+  matchRules: null
+

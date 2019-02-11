@@ -1,7 +1,7 @@
 KUBECONFIG=~/.kube/config
 
 # create a CustomResourceDefinition
-kubectl --kubeconfig ${KUBECONFIG} create -f manifests/generated/net-state-crd.yaml
+kubectl --kubeconfig ${KUBECONFIG} create -f manifests/examples/state-crd.yaml
 
 TEST_NS=test-ns
 echo "=====TEST START: running controller when state does not exists"
@@ -15,11 +15,11 @@ echo "=====State should be created by controller"
 kubectl --kubeconfig ${KUBECONFIG} get nodenetworkstate ${HOSTNAME} -o yaml -n ${TEST_NS}
 
 # create custom resources based on generated files for different host
-kubectl --kubeconfig ${KUBECONFIG} create -f manifests/generated/net-state-sample.yaml -n ${TEST_NS}
+kubectl --kubeconfig ${KUBECONFIG} create -f manifests/examples/state-example.yaml -n ${TEST_NS}
 
 # update the custom state resource based on current hostname
 HOSTNAME=`hostname`
-sed "s/nodeName: node1/nodeName: ${HOSTNAME}/" manifests/tests/test-fail.yaml > tmp.yaml
+sed "s/nodeName: node1/nodeName: ${HOSTNAME}/" manifests/examples/state-test-fail.yaml > tmp.yaml
 sed -i "s/name: node1/name: ${HOSTNAME}/" tmp.yaml
 kubectl --kubeconfig ${KUBECONFIG} apply -f tmp.yaml -n ${TEST_NS}
 rm -f tmp.yaml
@@ -52,11 +52,11 @@ echo "=====State should be created by controller"
 kubectl --kubeconfig ${KUBECONFIG} get nodenetworkstate ${HOSTNAME} -o yaml -n ${TEST_NS}
 
 # create custom resources based on generated files for different host
-kubectl --kubeconfig ${KUBECONFIG} create -f manifests/generated/net-state-sample.yaml -n ${TEST_NS}
+kubectl --kubeconfig ${KUBECONFIG} create -f manifests/examples/state-example.yaml -n ${TEST_NS}
 
 # update the custom state resource based on current hostname
 HOSTNAME=`hostname`
-sed "s/nodeName: node1/nodeName: ${HOSTNAME}/" manifests/tests/test-ok.yaml > tmp.yaml
+sed "s/nodeName: node1/nodeName: ${HOSTNAME}/" manifests/examples/state-test-ok.yaml > tmp.yaml
 sed -i "s/name: node1/name: ${HOSTNAME}/" tmp.yaml
 kubectl --kubeconfig ${KUBECONFIG} apply -f tmp.yaml -n ${TEST_NS}
 rm -f tmp.yaml

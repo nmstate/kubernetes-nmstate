@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Pod
+metadata:
+ name: state-client
+ namespace: nmstate-default
+spec:
+  serviceAccountName: nmstate-state-controller
+  containers:
+  - name: state-client
+    image: yuvalif/k8s-node-net-conf-client:latest
+    imagePullPolicy: Always
+    args: ["-type", "state"]
+    volumeMounts:
+    - name: dbus-socket
+      mountPath: /run/dbus/system_bus_socket
+    env:
+    - name: POD_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.name
+    - name: POD_NAMESPACE
+      valueFrom:
+        fieldRef:
+          fieldPath: metadata.namespace
+  volumes:
+  - name: dbus-socket
+    hostPath:
+      path: /run/dbus/system_bus_socket
+      type: Socket

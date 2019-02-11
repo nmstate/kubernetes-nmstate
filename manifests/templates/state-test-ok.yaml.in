@@ -1,0 +1,17 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkState
+metadata:
+  name: node1
+spec:
+  desiredState:
+    interfaces:
+    - name: dummy0
+      state: absent
+      type: dummy
+  managed: true
+  nodeName: node1
+status:
+  currentState:
+    capabilities: null
+    interfaces: null
+
