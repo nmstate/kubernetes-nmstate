@@ -1,0 +1,19 @@
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: scc-nmstate-state-controller
+allowPrivilegedContainer: true
+allowPrivilegeEscalation: true
+allowHostDirVolumePlugin: true
+runAsUser:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+volumes:
+- 'secret'
+users:
+- system:serviceaccount:nmstate-default:nmstate-state-controller
