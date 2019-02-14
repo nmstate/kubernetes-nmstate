@@ -4,20 +4,18 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/state-handler github.com/nmstate/kubernetes-nmstate/cmd/state-handler
 
 FROM centos:7
-RUN yum -y install iproute NetworkManager-libnm git cairo* epel-release && \
-    yum -y install python2-pip gcc python-devel gobject-introspection-devel && \
+RUN yum -y install epel-release && \
+    yum -y install \
+        python2-pip \
+        git \
+        python2-pyyaml \
+        python2-six \
+        python-gobject-base \
+        python-jsonschema \
+        python-setuptools \
+        NetworkManager-libnm \
+        && \
     yum clean all
-RUN pip install -U \
-      pip \
-      setuptools \
-      pbr \
-      tox \
-      pluggy==0.6 \
-      PyGObject \
-      pytest-cov \
-      pytest==3.5.1
-RUN git clone https://github.com/nmstate/nmstate.git && \
-    cd nmstate && \
-    pip install --upgrade .
+RUN pip install git+https://github.com/nmstate/nmstate@d2afe631c39de5b007815789e12a2e6dab447efb
 COPY --from=builder /bin/state-handler /
 ENTRYPOINT ["/state-handler"]
