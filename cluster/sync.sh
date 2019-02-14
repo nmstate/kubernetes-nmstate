@@ -18,3 +18,6 @@ done
 ./cluster/kubectl.sh apply -f _out/manifests/rbac.yaml
 ./cluster/kubectl.sh apply -f _out/manifests/state-crd.yaml
 ./cluster/kubectl.sh apply -f _out/manifests/configuration-policy-crd.yaml
+if [[ $KUBEVIRT_PROVIDER =~ ^os-.*$ ]]; then
+    ./cluster/kubectl.sh apply -f _out/manifests/openshift-scc.yaml
+fi
