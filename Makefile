@@ -6,12 +6,13 @@ build:
 
 IMAGE_REGISTRY ?= yuvalif
 
-docker: build
-	cd cmd/state-handler && docker build -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
+docker:
+	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
+	docker build -f cmd/policy-handler/Dockerfile -t $(IMAGE_REGISTRY)/k8s-node-network-configuration-policy-controller .
 
 docker-push: build
-	docker push $(IMAGE_REGISTRY)/k8s-node-net-conf-client
 	docker push $(IMAGE_REGISTRY)/k8s-node-network-state-controller
+	docker push $(IMAGE_REGISTRY)/k8s-node-network-configuration-policy-controller
 
 generate:
 	hack/update-codegen.sh
