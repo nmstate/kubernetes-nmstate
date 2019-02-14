@@ -18,6 +18,6 @@ RUN git clone https://github.com/nmstate/nmstate.git && \
     cd nmstate && \
     pip install --upgrade .
 
-COPY ./state-controller /
+COPY ./state-handler /
 
-ENTRYPOINT ["/state-controller"]
+ENTRYPOINT ["/state-handler"]

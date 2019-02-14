@@ -25,21 +25,19 @@ import (
 )
 
 type templateData struct {
-	Namespace            string
-	ImageRegistry        string
-	ImageTag             string
-	PullPolicy           string
-	StateClientImage     string
-	StateControllerImage string
+	Namespace         string
+	ImageRegistry     string
+	ImageTag          string
+	PullPolicy        string
+	StateHandlerImage string
 }
 
 var (
-	namespace            = flag.String("namespace", "", "")
-	imageRegistry        = flag.String("image-registry", "", "")
-	imageTag             = flag.String("image-tag", "", "")
-	pullPolicy           = flag.String("pull-policy", "", "")
-	stateClientImage     = flag.String("state-client-image", "", "")
-	stateControllerImage = flag.String("state-controller-image", "", "")
+	namespace         = flag.String("namespace", "", "")
+	imageRegistry     = flag.String("image-registry", "", "")
+	imageTag          = flag.String("image-tag", "", "")
+	pullPolicy        = flag.String("pull-policy", "", "")
+	stateHandlerImage = flag.String("state-handler-image", "", "")
 )
 
 func main() {
@@ -55,12 +53,11 @@ func main() {
 
 func generateFromFile(templFile string) {
 	data := &templateData{
-		Namespace:            *namespace,
-		ImageRegistry:        *imageRegistry,
-		ImageTag:             *imageTag,
-		PullPolicy:           *pullPolicy,
-		StateClientImage:     *stateClientImage,
-		StateControllerImage: *stateControllerImage,
+		Namespace:         *namespace,
+		ImageRegistry:     *imageRegistry,
+		ImageTag:          *imageTag,
+		PullPolicy:        *pullPolicy,
+		StateHandlerImage: *stateHandlerImage,
 	}
 
 	file, err := os.OpenFile(templFile, os.O_RDONLY, 0)

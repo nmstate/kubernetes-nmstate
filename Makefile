@@ -1,15 +1,13 @@
 all: build
 
 build:
-	cd cmd/client && go fmt && go vet && go build
-	cd cmd/state-controller && go fmt && go vet && go build
-	cd cmd/policy-controller && go fmt && go vet && go build
+	cd cmd/state-handler && go fmt && go vet && go build
+	cd cmd/policy-handler && go fmt && go vet && go build
 
 IMAGE_REGISTRY ?= yuvalif
 
 docker: build
-	cd cmd/client && docker build -t $(IMAGE_REGISTRY)/k8s-node-net-conf-client .
-	cd cmd/state-controller && docker build -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
+	cd cmd/state-handler && docker build -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
 
 docker-push: build
 	docker push $(IMAGE_REGISTRY)/k8s-node-net-conf-client
@@ -24,8 +22,7 @@ NAMESPACE ?= nmstate-default
 IMAGE_REGISTRY ?= yuvalif
 IMAGE_TAG ?= latest
 PULL_POLICY ?= Always
-STATE_CLIENT_IMAGE ?= k8s-node-net-conf-client
-STATE_CONTROLLER_IMAGE ?= k8s-node-network-state-controller
+STATE_HANDLER_IMAGE ?= k8s-node-network-state-controller
 
 manifests:
 	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
@@ -34,8 +31,7 @@ manifests:
 	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
 	IMAGE_TAG=$(IMAGE_TAG) \
 	PULL_POLICY=$(PULL_POLICY) \
-	STATE_CLIENT_IMAGE=$(STATE_CLIENT_IMAGE) \
-	STATE_CONTROLLER_IMAGE=$(STATE_CONTROLLER_IMAGE) \
+	STATE_HANDLER_IMAGE=$(STATE_HANDLER_IMAGE) \
 		hack/generate-manifests.sh
 
 check:

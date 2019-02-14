@@ -7,9 +7,9 @@ spec:
   serviceAccountName: nmstate-state-controller
   containers:
   - name: state-client
-    image: {{ .ImageRegistry }}/{{ .StateClientImage }}:{{ .ImageTag }}
+    image: {{ .ImageRegistry }}/{{ .StateHandlerImage }}:{{ .ImageTag }}
     imagePullPolicy: {{ .PullPolicy }}
-    args: ["-type", "state"]
+    args: ["-execution-type", "client"]
     volumeMounts:
     - name: dbus-socket
       mountPath: /run/dbus/system_bus_socket

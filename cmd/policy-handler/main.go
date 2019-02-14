@@ -10,8 +10,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -20,20 +22,35 @@ import (
 	clientset "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
 	informers "github.com/nmstate/kubernetes-nmstate/pkg/client/informers/externalversions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/signals"
+	"github.com/nmstate/kubernetes-nmstate/pkg/utils"
 )
 
 var (
-	masterURL  string
-	kubeconfig string
+	executionType = flag.String("execution-type", "", "\"controller|client\" Whether controller actively handling state changes OR only one-shot client should be started.")
+	kubeconfig    = flag.String("kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
+	master        = flag.String("master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+	namespace     = flag.String("n", "", "The namespace where the CRDs are created. If left blank and running via pod, it will be taken from there.")
+	hostname      = flag.String("host", "", "Name of the host on which to enforce and report state. If left blank and running via pod, it will be taken from there.")
 )
 
 func main() {
 	flag.Parse()
 
+	switch *executionType {
+	case "":
+		panic("execution-type must be specified")
+	case "controller":
+		controller()
+	case "client":
+		client()
+	}
+}
+
+func controller() {
 	// set up signals so we handle the first shutdown signal gracefully
 	stopCh := signals.SetupSignalHandler()
 
-	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
 	if err != nil {
 		klog.Fatalf("Error building kubeconfig: %s", err.Error())
 	}
@@ -65,7 +82,27 @@ func main() {
 	}
 }
 
-func init() {
-	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig. Only required if out-of-cluster.")
-	flag.StringVar(&masterURL, "master", "", "The address of the Kubernetes API server. Overrides any value in kubeconfig. Only required if out-of-cluster.")
+func client() {
+	cfg, err := clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
+	if err != nil {
+		klog.Fatalf("Error building kubeconfig: %v\n", err)
+	}
+
+	nmstateClient, err := clientset.NewForConfig(cfg)
+	if err != nil {
+		klog.Fatalf("Error building nmstate clientset: %v\n", err)
+	}
+
+	// get name space even if not set as commandline parameter
+	ns := utils.GetNamespace(*namespace)
+	list, err := nmstateClient.NmstateV1().NodeNetConfPolicies(ns).List(metav1.ListOptions{})
+	if err != nil {
+		klog.Fatalf("Error listing all node net conf policies (in %s): %v\n", ns, err)
+	}
+
+	for _, policy := range list.Items {
+		fmt.Printf("Node net conf policy: %v\n", policy)
+		// TODO: invoke policy handling
+	}
+	klog.Flush()
 }

@@ -7,9 +7,9 @@ spec:
   serviceAccountName: nmstate-state-controller
   containers:
   - name: state-client
-    image: yuvalif/k8s-node-net-conf-client:latest
+    image: yuvalif/k8s-node-network-state-controller:latest
     imagePullPolicy: Always
-    args: ["-type", "state"]
+    args: ["-execution-type", "client"]
     volumeMounts:
     - name: dbus-socket
       mountPath: /run/dbus/system_bus_socket

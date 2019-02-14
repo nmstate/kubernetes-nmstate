@@ -3,6 +3,6 @@ Gopkg.lock
 cluster/.kubeconfig
 cluster/.kubectl
 cmd/client/client
-cmd/policy-controller/policy-controller
-cmd/state-controller/state-controller
+cmd/policy-handler/policy-handler
+cmd/state-handler/state-handler
 tools/manifest-generator/manifest-generator
