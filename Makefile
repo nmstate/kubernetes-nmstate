@@ -39,14 +39,6 @@ check:
 	./hack/verify-fmt.sh
 	./hack/verify-vet.sh
 
-test:
-	@echo "==========Running Policy Client Test..."
-	hack/test-client-policy.sh
-	@echo "==========Running State Client Test..."
-	hack/test-client-state.sh
-	@echo "==========Running State Controller Test..."
-	hack/test-controller-state.sh
-
 dep:
 	dep ensure -v
 
@@ -73,4 +65,4 @@ cluster-clean:
 cluster-down:
 	./cluster/down.sh
 
-.PHONY: build docker docker-push generate manifests check test dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+.PHONY: build docker docker-push generate manifests check dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
