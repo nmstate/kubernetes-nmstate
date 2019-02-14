@@ -1,29 +1,28 @@
 all: build
 
+MANIFESTS_SOURCE ?= manifests/templates
+MANIFESTS_DESTINATION ?= manifests/examples
+NAMESPACE ?= nmstate-default
+IMAGE_REGISTRY ?= quay.io/nmstate
+IMAGE_TAG ?= latest
+PULL_POLICY ?= Always
+STATE_HANDLER_IMAGE ?= kubernetes-nmstate-state-handler
+POLICY_HANDLER_IMAGE ?= kubernetes-nmstate-configuration-policy-handler
+
 build:
 	cd cmd/state-handler && go fmt && go vet && go build
 	cd cmd/policy-handler && go fmt && go vet && go build
 
-IMAGE_REGISTRY ?= yuvalif
-
 docker:
-	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
-	docker build -f cmd/policy-handler/Dockerfile -t $(IMAGE_REGISTRY)/k8s-node-network-configuration-policy-controller .
+	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG) .
+	docker build -f cmd/policy-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG) .
 
-docker-push: build
-	docker push $(IMAGE_REGISTRY)/k8s-node-network-state-controller
-	docker push $(IMAGE_REGISTRY)/k8s-node-network-configuration-policy-controller
+docker-push:
+	docker push $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG)
+	docker push $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG)
 
 generate:
 	hack/update-codegen.sh
-
-MANIFESTS_SOURCE ?= manifests/templates
-MANIFESTS_DESTINATION ?= manifests/examples
-NAMESPACE ?= nmstate-default
-IMAGE_REGISTRY ?= yuvalif
-IMAGE_TAG ?= latest
-PULL_POLICY ?= Always
-STATE_HANDLER_IMAGE ?= k8s-node-network-state-controller
 
 manifests:
 	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
