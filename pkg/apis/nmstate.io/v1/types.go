@@ -137,6 +137,7 @@ type EthernetSpec struct {
 	// Link speed in TODO: which units
 	Speed uint `json:"speed"`
 }
+
 // LinkAggregationSpec aggregation spec of an interface
 type LinkAggregationSpec struct {
 	// Link aggregation mode
