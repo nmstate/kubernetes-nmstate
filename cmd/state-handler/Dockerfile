@@ -5,6 +5,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/state-handler github.com/nmstate/k
 
 FROM centos:7
 RUN yum -y install epel-release && \
+    yum -y update && \
     yum -y install \
         python2-pip \
         git \
