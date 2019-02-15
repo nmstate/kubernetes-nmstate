@@ -7,6 +7,8 @@ KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-k8s-1.11.0}
 KUBEVIRT_MEMORY_SIZE=${KUBEVIRT_MEMORY_SIZE:-5120M}
 KUBEVIRT_NUM_NODES=${KUBEVIRT_NUM_NODES:-1}
 
+SECONDARY_NICS_NUM=${SECONDARY_NICS_NUM:-1}
+
 if ! [[ $KUBEVIRT_NUM_NODES =~ '^-?[0-9]+$' ]] || [[ $KUBEVIRT_NUM_NODES -lt 1 ]] ; then
     KUBEVIRT_NUM_NODES=1
 fi
@@ -20,10 +22,15 @@ case "${KUBEVIRT_PROVIDER}" in
         ;;
 esac
 
+CREATE_SECONDARY_NICS=""
+for i in $(seq 1 ${SECONDARY_NICS_NUM}); do
+    CREATE_SECONDARY_NICS+=" -device virtio-net-pci,netdev=secondarynet$i -netdev tap,id=secondarynet$i,ifname=stap$i,script=no,downscript=no"
+done
+
 echo "Install cluster from image: ${image}"
 if [[ $image == $KUBERNETES_IMAGE ]]; then
     # Run Kubernetes cluster image
-    ./cluster/cli.sh run --random-ports --nodes ${KUBEVIRT_NUM_NODES} --memory ${KUBEVIRT_MEMORY_SIZE} --background kubevirtci/${image}
+    ./cluster/cli.sh run --random-ports --nodes ${KUBEVIRT_NUM_NODES} --memory ${KUBEVIRT_MEMORY_SIZE} --background --qemu-args "'${CREATE_SECONDARY_NICS}'" kubevirtci/${image}
 
     # Copy kubectl tool and configuration file
     ./cluster/cli.sh scp /usr/bin/kubectl - > ./cluster/.kubectl
@@ -41,7 +48,7 @@ elif [[ $image == $OPENSHIFT_IMAGE ]]; then
     fi
 
     # Run OpenShift cluster image
-    ./cluster/cli.sh run --random-ports --reverse --nodes ${KUBEVIRT_NUM_NODES} --memory ${KUBEVIRT_MEMORY_SIZE} --background kubevirtci/${image} ${KUBEVIRT_PROVIDER_EXTRA_ARGS}
+    ./cluster/cli.sh run --random-ports --reverse --nodes ${KUBEVIRT_NUM_NODES} --memory ${KUBEVIRT_MEMORY_SIZE} --background --qemu-args "'${CREATE_SECONDARY_NICS}'" kubevirtci/${image} ${KUBEVIRT_PROVIDER_EXTRA_ARGS}
     ./cluster/cli.sh scp /etc/origin/master/admin.kubeconfig - > ./cluster/.kubeconfig
     ./cluster/cli.sh ssh node01 -- sudo cp /etc/origin/master/admin.kubeconfig ~vagrant/
     ./cluster/cli.sh ssh node01 -- sudo chown vagrant:vagrant ~vagrant/admin.kubeconfig
