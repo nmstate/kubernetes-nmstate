@@ -39,7 +39,9 @@ manifests:
 		hack/generate-manifests.sh
 
 check:
+	./hack/verify-codegen.sh
 	./hack/verify-fmt.sh
+	./hack/verify-vet.sh
 
 test:
 	@echo "==========Running Policy Client Test..."
