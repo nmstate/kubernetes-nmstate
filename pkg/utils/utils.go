@@ -1,19 +1,20 @@
 package utils
 
 import (
-	"os"
 	"fmt"
+	"os"
 
-	restclient "k8s.io/client-go/rest"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
-	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
+	restclient "k8s.io/client-go/rest"
 )
-// ValidateNodeName check if the current host is a k8s node 
+
+// ValidateNodeName check if the current host is a k8s node
 func ValidateNodeName(cfg *restclient.Config, nodeName string) bool {
 	clientset, err := k8sclient.NewForConfig(cfg)
 	if err != nil {
-		fmt.Printf("Error building k8s client: %v\n", err)	
+		fmt.Printf("Error building k8s client: %v\n", err)
 	}
 
 	nodes, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
@@ -47,7 +48,7 @@ func IsStateApplicable(cfg *restclient.Config, state *v1.NodeNetworkState, nodeN
 }
 
 // GetHostName return the host name from the input
-// if not set, it tries to read from an k8s based on 
+// if not set, it tries to read from an k8s based on
 // env variable holding the pod's name, and if not possible either
 // tries to read it from the OS
 func GetHostName(hostname string, cfg *restclient.Config, ns string) string {

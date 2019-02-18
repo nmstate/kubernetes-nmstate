@@ -11,14 +11,14 @@ import (
 // SchemeGroupVersion is group version used to register these objects
 var SchemeGroupVersion = schema.GroupVersion{Group: nmstateio.GroupName, Version: "v1"}
 var SchemeGroupVersionNodeNetworkState = schema.GroupVersionKind{
-	Group: SchemeGroupVersion.Group,
+	Group:   SchemeGroupVersion.Group,
 	Version: SchemeGroupVersion.Version,
-	Kind: "NodeNetworkState",
-	}
+	Kind:    "NodeNetworkState",
+}
 var SchemeGroupVersionNodeNetConfPolicy = schema.GroupVersionKind{
-	Group: SchemeGroupVersion.Group,
+	Group:   SchemeGroupVersion.Group,
 	Version: SchemeGroupVersion.Version,
-	Kind: "NodeNetConfPolicy"}
+	Kind:    "NodeNetConfPolicy"}
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {

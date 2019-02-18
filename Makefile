@@ -38,6 +38,11 @@ manifests:
 	STATE_CONTROLLER_IMAGE=$(STATE_CONTROLLER_IMAGE) \
 		hack/generate-manifests.sh
 
+check:
+	./hack/verify-codegen.sh
+	./hack/verify-fmt.sh
+	./hack/verify-vet.sh
+
 test:
 	@echo "==========Running Policy Client Test..."
 	hack/test-client-policy.sh
@@ -72,4 +77,4 @@ cluster-clean:
 cluster-down:
 	./cluster/down.sh
 
-.PHONY: build docker docker-push generate manifests test dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+.PHONY: build docker docker-push generate manifests check test dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
