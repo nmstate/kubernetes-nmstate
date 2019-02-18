@@ -1,31 +1,28 @@
 all: build
 
-build:
-	cd cmd/client && go fmt && go vet && go build
-	cd cmd/state-controller && go fmt && go vet && go build
-	cd cmd/policy-controller && go fmt && go vet && go build
-
-IMAGE_REGISTRY ?= yuvalif
-
-docker: build
-	cd cmd/client && docker build -t $(IMAGE_REGISTRY)/k8s-node-net-conf-client .
-	cd cmd/state-controller && docker build -t $(IMAGE_REGISTRY)/k8s-node-network-state-controller .
-
-docker-push: build
-	docker push $(IMAGE_REGISTRY)/k8s-node-net-conf-client
-	docker push $(IMAGE_REGISTRY)/k8s-node-network-state-controller
-
-generate:
-	hack/update-codegen.sh
-
 MANIFESTS_SOURCE ?= manifests/templates
 MANIFESTS_DESTINATION ?= manifests/examples
 NAMESPACE ?= nmstate-default
-IMAGE_REGISTRY ?= yuvalif
+IMAGE_REGISTRY ?= quay.io/nmstate
 IMAGE_TAG ?= latest
 PULL_POLICY ?= Always
-STATE_CLIENT_IMAGE ?= k8s-node-net-conf-client
-STATE_CONTROLLER_IMAGE ?= k8s-node-network-state-controller
+STATE_HANDLER_IMAGE ?= kubernetes-nmstate-state-handler
+POLICY_HANDLER_IMAGE ?= kubernetes-nmstate-configuration-policy-handler
+
+build:
+	cd cmd/state-handler && go fmt && go vet && go build
+	cd cmd/policy-handler && go fmt && go vet && go build
+
+docker:
+	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG) .
+	docker build -f cmd/policy-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG) .
+
+docker-push:
+	docker push $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG)
+	docker push $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG)
+
+generate:
+	hack/update-codegen.sh
 
 manifests:
 	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
@@ -34,22 +31,13 @@ manifests:
 	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
 	IMAGE_TAG=$(IMAGE_TAG) \
 	PULL_POLICY=$(PULL_POLICY) \
-	STATE_CLIENT_IMAGE=$(STATE_CLIENT_IMAGE) \
-	STATE_CONTROLLER_IMAGE=$(STATE_CONTROLLER_IMAGE) \
+	STATE_HANDLER_IMAGE=$(STATE_HANDLER_IMAGE) \
 		hack/generate-manifests.sh
 
 check:
 	./hack/verify-codegen.sh
 	./hack/verify-fmt.sh
 	./hack/verify-vet.sh
-
-test:
-	@echo "==========Running Policy Client Test..."
-	hack/test-client-policy.sh
-	@echo "==========Running State Client Test..."
-	hack/test-client-state.sh
-	@echo "==========Running State Controller Test..."
-	hack/test-controller-state.sh
 
 dep:
 	dep ensure -v
@@ -77,4 +65,4 @@ cluster-clean:
 cluster-down:
 	./cluster/down.sh
 
-.PHONY: build docker docker-push generate manifests check test dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+.PHONY: build docker docker-push generate manifests check dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down

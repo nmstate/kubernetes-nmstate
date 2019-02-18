@@ -7,17 +7,11 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sclient "k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 )
 
 // ValidateNodeName check if the current host is a k8s node
-func ValidateNodeName(cfg *restclient.Config, nodeName string) bool {
-	clientset, err := k8sclient.NewForConfig(cfg)
-	if err != nil {
-		fmt.Printf("Error building k8s client: %v\n", err)
-	}
-
-	nodes, err := clientset.CoreV1().Nodes().List(metav1.ListOptions{})
+func ValidateNodeName(kubeClient k8sclient.Interface, nodeName string) bool {
+	nodes, err := kubeClient.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		fmt.Printf("Error listing all nodes: %v\n", err)
 	}
@@ -31,10 +25,10 @@ func ValidateNodeName(cfg *restclient.Config, nodeName string) bool {
 }
 
 // IsStateApplicable check if the state should be applied to current node
-func IsStateApplicable(cfg *restclient.Config, state *v1.NodeNetworkState, nodeName string) bool {
+func IsStateApplicable(kubeClient k8sclient.Interface, state *v1.NodeNetworkState, nodeName string) bool {
 	if nodeName == state.Spec.NodeName {
 		// node name validation is optional
-		if cfg != nil && !ValidateNodeName(cfg, nodeName) {
+		if !ValidateNodeName(kubeClient, nodeName) {
 			fmt.Printf("Warning: hostname '%s' was not found to be a valid node name\n", nodeName)
 		}
 
@@ -51,24 +45,19 @@ func IsStateApplicable(cfg *restclient.Config, state *v1.NodeNetworkState, nodeN
 // if not set, it tries to read from an k8s based on
 // env variable holding the pod's name, and if not possible either
 // tries to read it from the OS
-func GetHostName(hostname string, cfg *restclient.Config, ns string) string {
+func GetHostName(hostname string, kubeClient k8sclient.Interface, ns string) string {
 	if hostname != "" {
 		return hostname
 	}
 
 	cause := "missing POD_NAME env variable"
 	podName := os.Getenv("POD_NAME")
-	if cfg != nil && podName != "" {
-		clientset, err := k8sclient.NewForConfig(cfg)
+	if podName != "" {
+		pod, err := kubeClient.CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
 		if err == nil {
-			pod, err := clientset.CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
-			if err == nil {
-				return pod.Status.HostIP
-			}
-			cause = err.Error()
-		} else {
-			cause = err.Error()
+			return pod.Status.HostIP
 		}
+		cause = err.Error()
 	}
 
 	name, err := os.Hostname()

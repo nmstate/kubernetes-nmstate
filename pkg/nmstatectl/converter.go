@@ -13,7 +13,7 @@ const nmstateCommand = "nmstatectl"
 
 // Show is populating the passed ConfAndOperationalState object from the output of "nmstatectl show"
 func Show(currentState *v1.ConfAndOperationalState) (err error) {
-	cmd := exec.Command(nmstateCommand, "show")
+	cmd := exec.Command(nmstateCommand, "show", "--json")
 	var buff []byte
 
 	if buff, err = cmd.CombinedOutput(); err != nil {

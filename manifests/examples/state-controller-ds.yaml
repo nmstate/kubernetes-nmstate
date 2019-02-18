@@ -12,9 +12,9 @@ spec:
       serviceAccountName: nmstate-state-controller
       containers:
         - name: state-controller
-          image: yuvalif/k8s-node-network-state-controller:latest
+          image: quay.io/nmstate/k8s-node-network-state-controller:latest
           imagePullPolicy: Always
-          args: ["-type", "state"]
+          args: ["-execution-type", "client"]
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket

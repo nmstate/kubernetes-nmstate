@@ -39,8 +39,7 @@ for tmpl in ${templates}; do
         -image-registry="${IMAGE_REGISTRY}" \
         -image-tag="${IMAGE_TAG}" \
         -pull-policy="${PULL_POLICY}" \
-        -state-client-image="${STATE_CLIENT_IMAGE}" \
-        -state-controller-image="${STATE_CONTROLLER_IMAGE}"
+        -state-handler-image="${STATE_HANDLER_IMAGE}"
     ) > "${MANIFESTS_DESTINATION}/${out_file}"
 done
 
