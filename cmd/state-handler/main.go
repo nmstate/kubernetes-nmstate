@@ -11,7 +11,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 
-	clientset "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
 	informers "github.com/nmstate/kubernetes-nmstate/pkg/client/informers/externalversions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/signals"
@@ -29,23 +29,9 @@ var (
 func main() {
 	flag.Parse()
 
-	switch *executionType {
-	case "":
-		panic("execution-type must be specified")
-	case "controller":
-		controller()
-	case "client":
-		client()
-	}
-}
-
-func controller() {
-	// set up signals so we handle the first shutdown signal gracefully
-	stopCh := signals.SetupSignalHandler()
-
 	cfg, err := clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
 	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %s", err.Error())
+		klog.Fatalf("Error building kubeconfig: %v\n", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(cfg)
@@ -53,21 +39,42 @@ func controller() {
 		klog.Fatalf("Error building kubernetes clientset: %s", err.Error())
 	}
 
-	nmstateClient, err := clientset.NewForConfig(cfg)
+	nmstateClient, err := nmstate.NewForConfig(cfg)
 	if err != nil {
-		klog.Fatalf("Error building nmstate clientset: %s", err.Error())
+		klog.Fatalf("Error building nmstate clientset: %v\n", err)
 	}
+
+	// get name space even if not set as commandline parameter
+	namespaceName := utils.GetNamespace(*namespace)
+
+	hostName := utils.GetHostName(*hostname, kubeClient, namespaceName)
+	if hostName == "" {
+		klog.Fatalf("Failed to get host name\n")
+	}
+
+	switch *executionType {
+	case "":
+		panic("execution-type must be specified")
+	case "controller":
+		controller(kubeClient, nmstateClient, hostName, namespaceName)
+	case "client":
+		client(kubeClient, nmstateClient, hostName, namespaceName)
+	}
+}
+
+func controller(kubeClient kubernetes.Interface, nmstateClient nmstate.Interface, hostName string, namespaceName string) {
+	// set up signals so we handle the first shutdown signal gracefully
+	stopCh := signals.SetupSignalHandler()
 
 	kubeInformerFactory := kubeinformers.NewSharedInformerFactory(kubeClient, time.Second*30)
 	nmstateInformerFactory := informers.NewSharedInformerFactory(nmstateClient, time.Second*30)
 
-	ns := utils.GetNamespace(*namespace)
 	controller := NewController(
 		kubeClient,
 		nmstateClient,
 		nmstateInformerFactory.Nmstate().V1().NodeNetworkStates(),
-		utils.GetHostName(*hostname, cfg, ns),
-		ns,
+		hostName,
+		namespaceName,
 	)
 
 	// notice that there is no need to run Start methods in a separate goroutine. (i.e. go kubeInformerFactory.Start(stopCh)
@@ -75,40 +82,20 @@ func controller() {
 	kubeInformerFactory.Start(stopCh)
 	nmstateInformerFactory.Start(stopCh)
 
-	if err = controller.Run(2, stopCh); err != nil {
+	if err := controller.Run(2, stopCh); err != nil {
 		klog.Fatalf("Error running controller: %s", err.Error())
 	}
 }
 
-func client() {
-	flag.Parse()
-
-	cfg, err := clientcmd.BuildConfigFromFlags(*master, *kubeconfig)
+func client(kubeClient kubernetes.Interface, nmstateClient nmstate.Interface, hostName string, namespaceName string) {
+	list, err := nmstateClient.NmstateV1().NodeNetworkStates(namespaceName).List(metav1.ListOptions{})
 	if err != nil {
-		klog.Fatalf("Error building kubeconfig: %v\n", err)
-	}
-
-	nmstateClient, err := clientset.NewForConfig(cfg)
-	if err != nil {
-		klog.Fatalf("Error building nmstate clientset: %v\n", err)
-	}
-
-	// get name space even if not set as commandline parameter
-	ns := utils.GetNamespace(*namespace)
-
-	list, err := nmstateClient.NmstateV1().NodeNetworkStates(ns).List(metav1.ListOptions{})
-	if err != nil {
-		klog.Fatalf("Error listing all node network states (in %s): %v\n", ns, err)
+		klog.Fatalf("Error listing all node network states (in %s): %v\n", namespaceName, err)
 	}
 
 	nodeFound := false
-	name := utils.GetHostName(*hostname, cfg, ns)
-	if name == "" {
-		klog.Fatalf("Failed to get host name\n")
-	}
-
 	for _, state := range list.Items {
-		if utils.IsStateApplicable(cfg, &state, name) {
+		if utils.IsStateApplicable(kubeClient, &state, hostName) {
 			nodeFound = true
 			if _, err = nmstatectl.HandleResource(&state, nmstateClient.NmstateV1()); err != nil {
 				klog.Fatalf("Failed to handle resource '%s': %v\n", state.Name, err)
@@ -118,8 +105,8 @@ func client() {
 	}
 	if !nodeFound {
 		fmt.Printf("Could not find an existing state which apply to node, will create one\n")
-		if _, err = nmstatectl.CreateResource(nmstateClient.NmstateV1(), name, ns); err != nil {
-			klog.Fatalf("Failed to create resource for node '%s': %v\n", name, err)
+		if _, err = nmstatectl.CreateResource(nmstateClient.NmstateV1(), hostName, namespaceName); err != nil {
+			klog.Fatalf("Failed to create resource for node '%s': %v\n", hostName, err)
 		}
 	}
 	klog.Flush()
