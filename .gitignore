@@ -5,4 +5,6 @@ cluster/.kubectl
 cmd/client/client
 cmd/policy-handler/policy-handler
 cmd/state-handler/state-handler
+hack/.test_image_hash
+hack/.tests_hash
 tools/manifest-generator/manifest-generator

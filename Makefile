@@ -9,6 +9,9 @@ PULL_POLICY ?= Always
 STATE_HANDLER_IMAGE ?= kubernetes-nmstate-state-handler
 POLICY_HANDLER_IMAGE ?= kubernetes-nmstate-configuration-policy-handler
 
+KUBECONFIG ?= $(shell pwd)/cluster/.kubeconfig
+FUNC_TEST_ARGS ?= ""
+
 build:
 	cd cmd/state-handler && go fmt && go vet && go build
 	cd cmd/policy-handler && go fmt && go vet && go build
@@ -39,6 +42,11 @@ check:
 	./hack/verify-fmt.sh
 	./hack/verify-vet.sh
 
+functest:
+	KUBECONFIG=$(KUBECONFIG) \
+	FUNC_TEST_ARGS=$(FUNC_TEST_ARGS) \
+		./hack/test-functional.sh
+
 dep:
 	dep ensure -v
 
@@ -65,4 +73,4 @@ cluster-clean:
 cluster-down:
 	./cluster/down.sh
 
-.PHONY: build docker docker-push generate manifests check dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+.PHONY: build docker docker-push generate manifests check functest dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
