@@ -77,7 +77,7 @@ if [[ $image == $KUBERNETES_IMAGE ]]; then
         ./cluster/cli.sh ssh "node$(printf "%02d" ${i})" -- sudo systemctl restart openvswitch
     done
 elif [[ $image == $OPENSHIFT_IMAGE ]]; then
-    ./cluster/kubectl.sh create -f cluster/openshift-ovs-vsctl.yaml
+    ./cluster/kubectl.sh create -f _out/manifests/openshift-ovs-vsctl.yaml
     until [[ $(./cluster/kubectl.sh -n kube-system get daemonsets | grep ovs-vsctl-amd64 | awk '{ if ($3 == $4) print "0"; else print "1"}') -eq "0" ]]; do
         sleep 1
     done
