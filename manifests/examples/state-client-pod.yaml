@@ -7,7 +7,7 @@ spec:
   serviceAccountName: nmstate-state-controller
   containers:
   - name: state-client
-    image: quay.io/nmstate/k8s-node-network-state-controller:latest
+    image: quay.io/nmstate/kubernetes-nmstate-state-handler:latest
     imagePullPolicy: Always
     args: ["-execution-type", "client"]
     volumeMounts:
