@@ -14,7 +14,7 @@ spec:
         - name: state-controller
           image: {{ .ImageRegistry }}/{{ .StateHandlerImage }}:{{ .ImageTag }}
           imagePullPolicy: {{ .PullPolicy }}
-          args: ["-execution-type", "client"]
+          args: ["-execution-type", "controller"]
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket

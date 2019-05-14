@@ -14,7 +14,7 @@ spec:
         - name: state-controller
           image: quay.io/nmstate/kubernetes-nmstate-state-handler:latest
           imagePullPolicy: Always
-          args: ["-execution-type", "client"]
+          args: ["-execution-type", "controller"]
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
