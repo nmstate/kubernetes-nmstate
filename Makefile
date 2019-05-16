@@ -38,6 +38,7 @@ check:
 	./hack/verify-codegen.sh
 	./hack/verify-fmt.sh
 	./hack/verify-vet.sh
+	./hack/verify-manifests.sh
 
 dep:
 	dep ensure -v
