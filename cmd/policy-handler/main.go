@@ -54,11 +54,6 @@ func main() {
 	// get name space even if not set as commandline parameter
 	namespaceName := utils.GetNamespace(*namespace)
 
-	hostName := utils.GetHostName(*hostname, kubeClient, namespaceName)
-	if hostName == "" {
-		klog.Fatalf("Failed to get host name\n")
-	}
-
 	switch *executionType {
 	case "":
 		panic("execution-type must be specified")
