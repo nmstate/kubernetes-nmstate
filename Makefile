@@ -9,9 +9,14 @@ PULL_POLICY ?= Always
 STATE_HANDLER_IMAGE ?= kubernetes-nmstate-state-handler
 POLICY_HANDLER_IMAGE ?= kubernetes-nmstate-configuration-policy-handler
 
-build:
-	cd cmd/state-handler && go fmt && go vet && go build
-	cd cmd/policy-handler && go fmt && go vet && go build
+commands = state-handler policy-handler
+
+$(commands):
+	go fmt ./cmd/$@
+	go vet ./cmd/$@
+	go build -o ./bin/$@ ./cmd/$@ 
+
+build: policy-handler state-handler
 
 docker:
 	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG) .
@@ -66,4 +71,4 @@ cluster-clean:
 cluster-down:
 	./cluster/down.sh
 
-.PHONY: build docker docker-push generate manifests check dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+.PHONY: policy-handler state-handler build docker docker-push generate manifests check dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
