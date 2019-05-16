@@ -3,14 +3,14 @@
 
 package vanity
 
-import proto "github.com/gogo/protobuf/proto"
-import fmt "fmt"
-import math "math"
-
-import strings "strings"
-import reflect "reflect"
-
-import io "io"
+import (
+	fmt "fmt"
+	proto "github.com/gogo/protobuf/proto"
+	io "io"
+	math "math"
+	reflect "reflect"
+	strings "strings"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -24,15 +24,13 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Aproto3 struct {
-	B                    string   `protobuf:"bytes,1,opt,name=B,proto3" json:"B,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	B string `protobuf:"bytes,1,opt,name=B,proto3" json:"B,omitempty"`
 }
 
 func (m *Aproto3) Reset()      { *m = Aproto3{} }
 func (*Aproto3) ProtoMessage() {}
 func (*Aproto3) Descriptor() ([]byte, []int) {
-	return fileDescriptor_proto3_5ebceb1b2969522e, []int{0}
+	return fileDescriptor_4fee6d65e34a64b6, []int{0}
 }
 func (m *Aproto3) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -49,8 +47,8 @@ func (m *Aproto3) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (dst *Aproto3) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Aproto3.Merge(dst, src)
+func (m *Aproto3) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Aproto3.Merge(m, src)
 }
 func (m *Aproto3) XXX_Size() int {
 	return m.Size()
@@ -71,6 +69,21 @@ func (m *Aproto3) GetB() string {
 func init() {
 	proto.RegisterType((*Aproto3)(nil), "vanity.Aproto3")
 }
+
+func init() { proto.RegisterFile("proto3.proto", fileDescriptor_4fee6d65e34a64b6) }
+
+var fileDescriptor_4fee6d65e34a64b6 = []byte{
+	// 125 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0x28, 0xca, 0x2f,
+	0xc9, 0x37, 0xd6, 0x03, 0x53, 0x42, 0x6c, 0x65, 0x89, 0x79, 0x99, 0x25, 0x95, 0x4a, 0xe2, 0x5c,
+	0xec, 0x8e, 0x10, 0x09, 0x21, 0x1e, 0x2e, 0x46, 0x27, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20,
+	0x46, 0x27, 0x27, 0x93, 0x0b, 0x0f, 0xe5, 0x18, 0x6e, 0x3c, 0x94, 0x63, 0xf8, 0xf0, 0x50, 0x8e,
+	0xb1, 0xe1, 0x91, 0x1c, 0xe3, 0x8a, 0x47, 0x72, 0x8c, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24,
+	0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x8b, 0x47, 0x72, 0x0c, 0x1f, 0x1e, 0xc9, 0x31, 0x4e, 0x78,
+	0x2c, 0xc7, 0x70, 0xe1, 0xb1, 0x1c, 0xc3, 0x8d, 0xc7, 0x72, 0x0c, 0x49, 0x6c, 0x10, 0xb3, 0x00,
+	0x01, 0x00, 0x00, 0xff, 0xff, 0x3d, 0x6e, 0x6a, 0x0e, 0x6d, 0x00, 0x00, 0x00,
+}
+
 func (this *Aproto3) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -147,6 +160,9 @@ func encodeVarintProto3(dAtA []byte, offset int, v uint64) int {
 	return offset + 1
 }
 func (m *Aproto3) Size() (n int) {
+	if m == nil {
+		return 0
+	}
 	var l int
 	_ = l
 	l = len(m.B)
@@ -202,7 +218,7 @@ func (m *Aproto3) Unmarshal(dAtA []byte) error {
 			}
 			b := dAtA[iNdEx]
 			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
+			wire |= uint64(b&0x7F) << shift
 			if b < 0x80 {
 				break
 			}
@@ -230,7 +246,7 @@ func (m *Aproto3) Unmarshal(dAtA []byte) error {
 				}
 				b := dAtA[iNdEx]
 				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
+				stringLen |= uint64(b&0x7F) << shift
 				if b < 0x80 {
 					break
 				}
@@ -240,6 +256,9 @@ func (m *Aproto3) Unmarshal(dAtA []byte) error {
 				return ErrInvalidLengthProto3
 			}
 			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthProto3
+			}
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
@@ -252,6 +271,9 @@ func (m *Aproto3) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			if skippy < 0 {
+				return ErrInvalidLengthProto3
+			}
+			if (iNdEx + skippy) < 0 {
 				return ErrInvalidLengthProto3
 			}
 			if (iNdEx + skippy) > l {
@@ -320,8 +342,11 @@ func skipProto3(dAtA []byte) (n int, err error) {
 					break
 				}
 			}
-			iNdEx += length
 			if length < 0 {
+				return 0, ErrInvalidLengthProto3
+			}
+			iNdEx += length
+			if iNdEx < 0 {
 				return 0, ErrInvalidLengthProto3
 			}
 			return iNdEx, nil
@@ -352,6 +377,9 @@ func skipProto3(dAtA []byte) (n int, err error) {
 					return 0, err
 				}
 				iNdEx = start + next
+				if iNdEx < 0 {
+					return 0, ErrInvalidLengthProto3
+				}
 			}
 			return iNdEx, nil
 		case 4:
@@ -370,17 +398,3 @@ var (
 	ErrInvalidLengthProto3 = fmt.Errorf("proto: negative length found during unmarshaling")
 	ErrIntOverflowProto3   = fmt.Errorf("proto: integer overflow")
 )
-
-func init() { proto.RegisterFile("proto3.proto", fileDescriptor_proto3_5ebceb1b2969522e) }
-
-var fileDescriptor_proto3_5ebceb1b2969522e = []byte{
-	// 116 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0x28, 0xca, 0x2f,
-	0xc9, 0x37, 0xd6, 0x03, 0x53, 0x42, 0x6c, 0x65, 0x89, 0x79, 0x99, 0x25, 0x95, 0x4a, 0xe2, 0x5c,
-	0xec, 0x8e, 0x10, 0x09, 0x21, 0x1e, 0x2e, 0x46, 0x27, 0x09, 0x46, 0x05, 0x46, 0x0d, 0xce, 0x20,
-	0x46, 0x27, 0x27, 0x9d, 0x0b, 0x0f, 0xe5, 0x18, 0x6e, 0x3c, 0x94, 0x63, 0xf8, 0xf0, 0x50, 0x8e,
-	0xb1, 0xe1, 0x91, 0x1c, 0xe3, 0x8a, 0x47, 0x72, 0x8c, 0x27, 0x1e, 0xc9, 0x31, 0x5e, 0x78, 0x24,
-	0xc7, 0xf8, 0xe0, 0x91, 0x1c, 0xe3, 0x8b, 0x47, 0x72, 0x0c, 0x1f, 0x1e, 0xc9, 0x31, 0x4e, 0x78,
-	0x2c, 0xc7, 0x90, 0xc4, 0x06, 0x31, 0x03, 0x10, 0x00, 0x00, 0xff, 0xff, 0xb1, 0xa0, 0x15, 0x6b,
-	0x65, 0x00, 0x00, 0x00,
-}
