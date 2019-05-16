@@ -61,6 +61,7 @@ docker run \
    --network host \
    --mount type=bind,source=$KUBECONFIG,target=/kubeconfig,readonly \
    --mount type=bind,source=$(pwd)/_out/tests,target=/artifacts \
+   --mount type=bind,source=$(pwd)/manifests/examples,target=/manifests/examples \
    $TESTS_IMAGE_NAME \
        -kubeconfig=/kubeconfig \
        ${FUNC_TEST_ARGS}

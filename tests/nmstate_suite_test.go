@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package tests_test
+package nmstate_tests
 
 import (
 	"flag"
@@ -32,6 +32,7 @@ import (
 )
 
 var kubeconfig *string
+var nmstateNs *string
 var k8sClientset *kubernetes.Clientset
 var nmstateClientset *nmstate.Clientset
 
@@ -55,5 +56,6 @@ var _ = BeforeSuite(func() {
 
 func init() {
 	kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	nmstateNs = flag.String("namespace", "", "kubernetes-nmstate namespace")
 	flag.Parse()
 }
