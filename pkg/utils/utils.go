@@ -41,34 +41,6 @@ func IsStateApplicable(kubeClient k8sclient.Interface, state *v1.NodeNetworkStat
 	return false
 }
 
-// GetHostName return the host name from the input
-// if not set, it tries to read from an k8s based on
-// env variable holding the pod's name, and if not possible either
-// tries to read it from the OS
-func GetHostName(hostname string, kubeClient k8sclient.Interface, ns string) string {
-	if hostname != "" {
-		return hostname
-	}
-
-	cause := "missing POD_NAME env variable"
-	podName := os.Getenv("POD_NAME")
-	if podName != "" {
-		pod, err := kubeClient.CoreV1().Pods(ns).Get(podName, metav1.GetOptions{})
-		if err == nil {
-			return pod.Status.HostIP
-		}
-		cause = err.Error()
-	}
-
-	name, err := os.Hostname()
-	if err != nil {
-		fmt.Printf("Error: failed to get hostname from OS: %v\n", err)
-	}
-
-	fmt.Printf("Warning: hostname is taken from OS, this may be incorrect when running inside a container/pod: %s\n", cause)
-	return name
-}
-
 // GetNamespace trying to read the namespace from the input
 // if not set, it tries to read from an environment variable, and if not set there either
 // it returns "default"

@@ -67,6 +67,10 @@ spec:
     - name: dbus-socket
       mountPath: /run/dbus/system_bus_socket
     env:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
     - name: POD_NAME
       valueFrom:
         fieldRef:
@@ -104,6 +108,10 @@ spec:
     - name: dbus-socket
       mountPath: /run/dbus/system_bus_socket
     env:
+    - name: NODE_NAME
+      valueFrom:
+        fieldRef: 
+          fieldPath: spec.nodeName
     - name: POD_NAME
       valueFrom:
         fieldRef:

@@ -3,13 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeinformers "k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
+	"os"
+	"time"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
 	informers "github.com/nmstate/kubernetes-nmstate/pkg/client/informers/externalversions"
@@ -47,18 +47,21 @@ func main() {
 	// get name space even if not set as commandline parameter
 	namespaceName := utils.GetNamespace(*namespace)
 
-	hostName := utils.GetHostName(*hostname, kubeClient, namespaceName)
-	if hostName == "" {
-		klog.Fatalf("Failed to get host name\n")
+	if hostname == nil || *hostname == "" {
+		if envHostname, exists := os.LookupEnv("NODE_NAME"); !exists {
+			klog.Fatalf("Failed to get host name: missing NODE_NAME env variable")
+		} else {
+			*hostname = envHostname
+		}
 	}
 
 	switch *executionType {
 	case "":
 		panic("execution-type must be specified")
 	case "controller":
-		controller(kubeClient, nmstateClient, hostName, namespaceName)
+		controller(kubeClient, nmstateClient, *hostname, namespaceName)
 	case "client":
-		client(kubeClient, nmstateClient, hostName, namespaceName)
+		client(kubeClient, nmstateClient, *hostname, namespaceName)
 	}
 }
 

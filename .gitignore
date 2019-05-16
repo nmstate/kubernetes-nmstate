@@ -2,7 +2,5 @@ _out/
 Gopkg.lock
 cluster/.kubeconfig
 cluster/.kubectl
-cmd/client/client
-cmd/policy-handler/policy-handler
-cmd/state-handler/state-handler
+bin/
 tools/manifest-generator/manifest-generator
