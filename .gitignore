@@ -1,5 +1,4 @@
 _out/
-Gopkg.lock
 cluster/.kubeconfig
 cluster/.kubectl
 bin/
