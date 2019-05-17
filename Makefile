@@ -53,7 +53,8 @@ check:
 functest: tests/tests.test
 	./tests/tests.test \
 		-kubeconfig $(KUBECONFIG) \
-		-namespace $(NAMESPACE)
+		-namespace $(NAMESPACE) \
+	  -manifests _out/manifests/
 
 dep:
 	dep ensure -v

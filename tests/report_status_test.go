@@ -25,7 +25,7 @@ var _ = Describe("Reporting State", func() {
 			_ = BeforeEach(func() {
 
 				By("Creating the daemon set to monitor state")
-				manifest, err := ioutil.ReadFile("manifests/examples/state-controller-ds.yaml")
+				manifest, err := ioutil.ReadFile(*manifests + "state-controller-ds.yaml")
 				Expect(err).ShouldNot(HaveOccurred())
 
 				var ds appsv1.DaemonSet

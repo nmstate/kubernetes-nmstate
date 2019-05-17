@@ -33,6 +33,7 @@ import (
 
 var kubeconfig *string
 var nmstateNs *string
+var manifests *string
 var k8sClientset *kubernetes.Clientset
 var nmstateClientset *nmstate.Clientset
 
@@ -57,5 +58,6 @@ var _ = BeforeSuite(func() {
 func init() {
 	kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	nmstateNs = flag.String("namespace", "", "kubernetes-nmstate namespace")
+	manifests = flag.String("manifests", "", "path to manifests to test")
 	flag.Parse()
 }
