@@ -15,3 +15,12 @@ required = ["k8s.io/code-generator/cmd/client-gen"]
 [[constraint]]
   name = "k8s.io/code-generator"
   branch = "release-1.11"
+
+[[constraint]]
+  version = "0.1.2"
+  name = "kubevirt.io/qe-tools"
+
+# https://github.com/golang/dep/issues/1799
+[[override]]
+  source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
+  name = "gopkg.in/fsnotify.v1"

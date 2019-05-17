@@ -8,15 +8,20 @@ IMAGE_TAG ?= latest
 PULL_POLICY ?= Always
 STATE_HANDLER_IMAGE ?= kubernetes-nmstate-state-handler
 POLICY_HANDLER_IMAGE ?= kubernetes-nmstate-configuration-policy-handler
+KUBECONFIG ?= $(shell pwd)/cluster/.kubeconfig
 
 commands = state-handler policy-handler
+func_tests_sources = $(shell find tests/ -name "*.go")
 
 $(commands):
 	go fmt ./cmd/$@
 	go vet ./cmd/$@
 	go build -o ./bin/$@ ./cmd/$@ 
 
-build: policy-handler state-handler
+build: $(commands)
+
+tests/tests.test: $(func_tests_sources)
+	ginkgo build tests
 
 docker:
 	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG) .
@@ -45,6 +50,12 @@ check:
 	./hack/verify-vet.sh
 	./hack/verify-manifests.sh
 
+functest: tests/tests.test
+	./tests/tests.test \
+		-kubeconfig $(KUBECONFIG) \
+		-namespace $(NAMESPACE) \
+	  -manifests _out/manifests/
+
 dep:
 	dep ensure -v
 
@@ -71,4 +82,4 @@ cluster-clean:
 cluster-down:
 	./cluster/down.sh
 
-.PHONY: policy-handler state-handler build docker docker-push generate manifests check dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+.PHONY: policy-handler state-handler build docker docker-push generate manifests check functest dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down

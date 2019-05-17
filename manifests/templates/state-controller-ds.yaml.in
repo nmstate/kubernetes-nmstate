@@ -4,6 +4,9 @@ metadata:
   name: state-controller
   namespace: {{ .Namespace }}
 spec:
+  selector:
+    matchLabels:
+      nmstate.io: state-controller
   template:
     metadata:
       labels:
