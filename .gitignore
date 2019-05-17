@@ -1,6 +1,6 @@
 _out/
 cluster/.kubeconfig
 cluster/.kubectl
+tests/*.test
 bin/
-hack/.test_image_hash
-hack/.tests_hash
+tools/manifest-generator/manifest-generator
