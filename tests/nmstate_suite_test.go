@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
 	ginkgo_reporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
@@ -36,6 +37,7 @@ var nmstateNs *string
 var manifests *string
 var k8sClientset *kubernetes.Clientset
 var nmstateClientset *nmstate.Clientset
+var nmstatePodsClient corev1.PodInterface
 
 func TestPlugin(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -53,6 +55,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 	nmstateClientset, err = nmstate.NewForConfig(config)
 	Expect(err).ToNot(HaveOccurred())
+	nmstatePodsClient = k8sClientset.CoreV1().Pods(*nmstateNs)
 })
 
 func init() {
