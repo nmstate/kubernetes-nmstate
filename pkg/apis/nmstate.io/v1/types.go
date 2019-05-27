@@ -163,7 +163,8 @@ type LinkAggregationOptions struct {
 // BridgeSpec holds the configuration of the bridge connected to the interface
 type BridgeSpec struct {
 	// Port configuration on the bridge
-	Ports []BridgePort `json:"ports"`
+	Ports   []BridgePort  `json:"port"`
+	Options BridgeOptions `json:"options,omitempty"`
 }
 
 // BridgePort TODO: description
@@ -174,14 +175,37 @@ type BridgePort struct {
 	// TODO description
 	// TODO: Mandatory?
 	// TODO: possible values
-	Type string `json:"type"`
+	Type string `json:"type,omitempty"`
 	// TODO description
 	// TODO: Mandatory?
 	// TODO: possible values?
-	VlanMode string `json:"vlanMode"`
+	VlanMode string `json:"vlanMode,omitempty"`
 	// TODO description
 	// Mandatory?
-	AccessTag string `json:"accessTag"`
+	AccessTag string `json:"accessTag,omitempty"`
+	// sets the port cost of the port <port> to <cost>.
+	// This is a dimensionless metric.
+	StpPathCost int `json:"stp-path-cost,omitempty"`
+	// The priority value is an unsigned 8-bit quantity
+	// (a number between 0 and 255), and has no dimension.
+	// This metric is used in the designated port and root
+	// port selection algorithms.
+	StpPriority int `json:"stp-priority,omitempty"`
+	// Controls whether traffic may be send back out of the port on
+	// which it was received. By default, this flag is turned off and
+	// the bridge will not forward traffic back out of the receiving
+	// port.
+	// NOTE: We don't add omitempty here, to ensure that this is present for
+	//       'false' value too
+	StpHairpinMode bool `json:"stp-hairpin-mode"`
+}
+
+type BridgeOptions struct {
+	Stp BridgeStpOptions `json:"stp,omitempty"`
+}
+
+type BridgeStpOptions struct {
+	Enabled bool `json:"enabled"`
 }
 
 // IPv4Spec hold the IPv4 configuration of the interface
@@ -301,12 +325,13 @@ type AutoConfigSpec struct {
 type InterfaceType string
 
 const (
-	InterfaceTypeUnknown   = "unknown"
-	InterfaceTypeVlan      = "vlan"
-	InterfaceTypeEthernet  = "ethernet"
-	InterfaceTypeBond      = "bond"
-	InterfaceTypeOVSBridge = "ovs-bridge"
-	InterfaceTypeDummy     = "dummy"
+	InterfaceTypeUnknown     = "unknown"
+	InterfaceTypeVlan        = "vlan"
+	InterfaceTypeEthernet    = "ethernet"
+	InterfaceTypeBond        = "bond"
+	InterfaceTypeOVSBridge   = "ovs-bridge"
+	InterfaceTypeLinuxBridge = "linux-bridge"
+	InterfaceTypeDummy       = "dummy"
 )
 
 // InterfaceState is the state of the interface. One of:

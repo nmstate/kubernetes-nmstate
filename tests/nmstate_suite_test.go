@@ -18,26 +18,39 @@ package nmstate_tests
 
 import (
 	"flag"
+	"io/ioutil"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	yaml "github.com/ghodss/yaml"
+
+	apiappsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	clientappsv1 "k8s.io/client-go/kubernetes/typed/apps/v1"
+	clientcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/clientcmd"
 
 	ginkgo_reporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/client/clientset/versioned/typed/nmstate.io/v1"
 )
 
-var kubeconfig *string
-var nmstateNs *string
-var manifests *string
-var k8sClientset *kubernetes.Clientset
-var nmstateClientset *nmstate.Clientset
-var nmstatePodsClient corev1.PodInterface
+var (
+	// Flags
+	kubeconfig *string
+	nmstateNs  *string
+	manifests  *string
+
+	// Scaffolding
+	firstNodeName            string
+	nmstatePodsClient        clientcorev1.PodInterface
+	nmstateDaemonSetClient   clientappsv1.DaemonSetInterface
+	defaultNNSs, nmstateNNSs nmstatev1.NodeNetworkStateInterface
+)
 
 func TestPlugin(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -51,11 +64,55 @@ func TestPlugin(t *testing.T) {
 var _ = BeforeSuite(func() {
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	Expect(err).ToNot(HaveOccurred())
-	k8sClientset, err = kubernetes.NewForConfig(config)
+	k8sClientset, err := kubernetes.NewForConfig(config)
 	Expect(err).ToNot(HaveOccurred())
-	nmstateClientset, err = nmstate.NewForConfig(config)
+	nmstateClientset, err := nmstate.NewForConfig(config)
 	Expect(err).ToNot(HaveOccurred())
 	nmstatePodsClient = k8sClientset.CoreV1().Pods(*nmstateNs)
+	nmstateDaemonSetClient = k8sClientset.AppsV1().DaemonSets(*nmstateNs)
+	defaultNNSs = nmstateClientset.
+		Nmstate().
+		NodeNetworkStates("default")
+	nmstateNNSs = nmstateClientset.
+		Nmstate().
+		NodeNetworkStates(*nmstateNs)
+
+	By("Creating the daemon set to monitor state")
+	manifest, err := ioutil.ReadFile(*manifests + "state-controller-ds.yaml")
+	Expect(err).ToNot(HaveOccurred())
+
+	var ds apiappsv1.DaemonSet
+	err = yaml.Unmarshal(manifest, &ds)
+	Expect(err).ToNot(HaveOccurred())
+
+	_, err = nmstateDaemonSetClient.Create(&ds)
+	Expect(err).ToNot(HaveOccurred())
+	err = waitPodsReady()
+	Expect(err).ToNot(HaveOccurred())
+
+	By("Retrieving first node name")
+	nodes, err := k8sClientset.CoreV1().Nodes().List(metav1.ListOptions{})
+	Expect(err).ToNot(HaveOccurred())
+	Expect(nodes.Items).ToNot(BeEmpty())
+	firstNodeName = nodes.Items[0].ObjectMeta.Name
+
+})
+
+var _ = AfterSuite(func() {
+
+	By("Removing state-controller daemon set")
+	nmstateDaemonSetClient.Delete("state-controller", &metav1.DeleteOptions{})
+	err := waitPodsCleanup()
+	Expect(err).ToNot(HaveOccurred())
+
+	By("Removing node01 nodenetworkstates")
+	defaultNNSs.Delete(firstNodeName, &metav1.DeleteOptions{})
+	nmstateNNSs.Delete(firstNodeName, &metav1.DeleteOptions{})
+
+})
+
+var _ = AfterEach(func() {
+	writePodsLogs(GinkgoWriter)
 })
 
 func init() {

@@ -12,6 +12,7 @@ KUBECONFIG ?= $(shell pwd)/cluster/.kubeconfig
 
 commands = state-handler policy-handler
 func_tests_sources = $(shell find tests/ -name "*.go")
+apis_sources = $(shell find pkg/apis -name "*.go")
 
 $(commands):
 	go fmt ./cmd/$@
@@ -20,7 +21,7 @@ $(commands):
 
 build: $(commands)
 
-tests/tests.test: $(func_tests_sources)
+tests/tests.test: $(func_tests_sources) $(apis_sources)
 	ginkgo build tests
 
 docker:
@@ -44,13 +45,23 @@ manifests:
 	STATE_HANDLER_IMAGE=$(STATE_HANDLER_IMAGE) \
 		hack/generate-manifests.sh
 
+local-manifests:
+	IMAGE_REGISTRY=registry:5000 \
+	MANIFESTS_DESTINATION='_out/manifests' \
+	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
+	NAMESPACE=$(NAMESPACE) \
+	IMAGE_TAG=$(IMAGE_TAG) \
+	PULL_POLICY=$(PULL_POLICY) \
+	STATE_HANDLER_IMAGE=$(STATE_HANDLER_IMAGE) \
+		hack/generate-manifests.sh
+
 check:
 	./hack/verify-codegen.sh
 	./hack/verify-fmt.sh
 	./hack/verify-vet.sh
 	./hack/verify-manifests.sh
 
-functest: tests/tests.test
+functest: local-manifests tests/tests.test
 	./tests/tests.test \
 		-kubeconfig $(KUBECONFIG) \
 		-namespace $(NAMESPACE) \

@@ -4,7 +4,7 @@ registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
 registry=localhost:$registry_port
 
 IMAGE_REGISTRY=${registry} make docker docker-push
-MANIFESTS_DESTINATION='_out/manifests' IMAGE_REGISTRY='registry:5000' make manifests
+make local-manifests
 
 for i in $(seq 1 ${KUBEVIRT_NUM_NODES}); do
     ./cluster/cli.sh ssh "node$(printf "%02d" ${i})" 'sudo docker pull registry:5000/kubernetes-nmstate-state-handler'
