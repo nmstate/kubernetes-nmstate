@@ -24,9 +24,13 @@ build: $(commands)
 tests/tests.test: $(func_tests_sources) $(apis_sources)
 	ginkgo build tests
 
-docker:
+docker-state-handler:
 	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG) .
+
+docker-policy-handler:
 	docker build -f cmd/policy-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG) .
+
+docker: docker-state-handler docker-policy-handler
 
 docker-push:
 	docker push $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG)
