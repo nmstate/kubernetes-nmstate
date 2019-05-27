@@ -54,7 +54,10 @@ func main() {
 			*hostname = envHostname
 		}
 	}
-
+	if err := nmstatectl.Check(); err != nil {
+		klog.Errorf("Error running nmstatectl: %v,  check that NetworkManager is running at nodes\n", err)
+		os.Exit(1)
+	}
 	switch *executionType {
 	case "":
 		panic("execution-type must be specified")

@@ -11,6 +11,14 @@ import (
 
 const nmstateCommand = "nmstatectl"
 
+func Check() error {
+	cmd := exec.Command(nmstateCommand, "show")
+	if buff, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%s\n%v", string(buff), err)
+	}
+	return nil
+}
+
 // Show is populating the passed ConfAndOperationalState object from the output of "nmstatectl show"
 func Show(currentState *v1.ConfAndOperationalState) (err error) {
 	cmd := exec.Command(nmstateCommand, "show", "--json")
