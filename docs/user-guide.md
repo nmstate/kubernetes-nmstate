@@ -10,5 +10,6 @@ the tutorials. All of them can be used in
 
 - [Report node network state](user-guide-state-reporting.md)
 - [Configure dummy interfaces and its MTU](user-guide-state-configure-interface-mtu.md)
+- [Create Linux bridge and connect it to a node interface](user-guide-state-configure-linux-bridge.md)
 - [Create Open vSwitch bridge and connect it to a node interface](user-guide-state-configure-ovs-bridge.md)
 

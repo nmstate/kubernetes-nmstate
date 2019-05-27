@@ -195,6 +195,7 @@ through node state reporting and interface configuration.
 
 - [Report node network state](docs/user-guide-state-reporting.md)
 - [Configure dummy interfaces and their MTU](docs/user-guide-state-configure-interface-mtu.md)
+- [Connect an Linux bridge to a node interface](docs/user-guide-state-configure-linux-bridge.md)
 - [Connect an Open vSwitch bridge to a node interface](docs/user-guide-state-configure-ovs-bridge.md)
 
 All of these can be used in both
