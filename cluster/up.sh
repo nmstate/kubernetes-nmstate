@@ -9,7 +9,7 @@ KUBEVIRT_NUM_NODES=${KUBEVIRT_NUM_NODES:-1}
 
 SECONDARY_NICS_NUM=${SECONDARY_NICS_NUM:-1}
 
-if ! [[ $KUBEVIRT_NUM_NODES =~ '^-?[0-9]+$' ]] || [[ $KUBEVIRT_NUM_NODES -lt 1 ]] ; then
+if ! [[ $KUBEVIRT_NUM_NODES =~ ^-?[0-9]+$ ]] || [[ $KUBEVIRT_NUM_NODES -lt 1 ]] ; then
     KUBEVIRT_NUM_NODES=1
 fi
 
