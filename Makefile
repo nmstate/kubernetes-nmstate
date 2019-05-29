@@ -1,8 +1,12 @@
-MANAGER_IMAGE ?= kubernetes-nmstate-manager
+IMAGE_REGISTRY ?= quay.io
+IMAGE_REPO ?= nmstate
+MANAGER_IMAGE_NAME ?= kubernetes-nmstate-manager
+MANAGER_IMAGE_TAG ?= latest
+MANAGER_IMAGE_FULL_NAME ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/$(MANAGER_IMAGE_NAME):$(MANAGER_IMAGE_TAG)
 
 all: check manager
 
-check: format vet 
+check: format vet
 
 format:
 	gofmt -d cmd/ pkg/
@@ -11,7 +15,22 @@ vet:
 	go vet ./cmd/... ./pkg/...
 
 manager:
-	operator-sdk build $(MANAGER_IMAGE)
+	operator-sdk build $(MANAGER_IMAGE_FULL_NAME)
+
+push-manager:
+	docker push $(MANAGER_IMAGE_FULL_NAME)
+
+cluster-up:
+	./cluster/up.sh
+
+cluster-down:
+	./cluster/down.sh
+
+cluster-sync:
+	./cluster/sync.sh
+
+cluster-clean:
+	./cluster/clean.sh
 
 .PHONY: \
 	all \
@@ -19,3 +38,8 @@ manager:
 	format \
 	vet \
 	manager
+	push-manager \
+	cluster-up \
+	cluster-down \
+	cluster-sync \
+	cluster-clean
