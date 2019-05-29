@@ -1,0 +1,3 @@
+#!/bin/bash -e
+
+go vet ./cmd/... ./pkg/...

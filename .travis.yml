@@ -1,0 +1,7 @@
+language: go
+go: "1.11"
+
+install: true
+script:
+- make check
+- make build-manager
