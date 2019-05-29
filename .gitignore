@@ -1,6 +1,0 @@
-_out/
-cluster/.kubeconfig
-cluster/.kubectl
-tests/*.test
-bin/
-tools/manifest-generator/manifest-generator
