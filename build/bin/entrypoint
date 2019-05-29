@@ -5,7 +5,7 @@
 
 if ! whoami &>/dev/null; then
   if [ -w /etc/passwd ]; then
-    echo "${USER_NAME:-kubernetes-nmstate-manager}:x:$(id -u):$(id -g):${USER_NAME:-kubernetes-nmstate-manager} user:${HOME}:/sbin/nologin" >> /etc/passwd
+    echo "${USER_NAME:-kubernetes-nmstate}:x:$(id -u):$(id -g):${USER_NAME:-kubernetes-nmstate} user:${HOME}:/sbin/nologin" >> /etc/passwd
   fi
 fi
 

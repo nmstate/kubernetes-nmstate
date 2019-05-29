@@ -23,8 +23,11 @@ type NodeNetworkStateStatus struct {
 	CurrentState State `json:"currentState"`
 }
 
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
 // NodeNetworkState is the Schema for the nodenetworkstates API
 // +k8s:openapi-gen=true
+// +kubebuilder:subresource:status
 type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -33,7 +36,9 @@ type NodeNetworkState struct {
 	Status NodeNetworkStateStatus `json:"status,omitempty"`
 }
 
-type State interface{}
+type State interface {
+	DeepCopyState() State
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
