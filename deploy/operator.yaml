@@ -1,24 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubernetes-nmstate-manager
+  name: kubernetes-nmstate
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: kubernetes-nmstate-manager
+      name: kubernetes-nmstate
   template:
     metadata:
       labels:
-        name: kubernetes-nmstate-manager
+        name: kubernetes-nmstate
     spec:
-      serviceAccountName: kubernetes-nmstate-manager
+      serviceAccountName: kubernetes-nmstate
       containers:
-        - name: kubernetes-nmstate-manager
+        - name: kubernetes-nmstate
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
-          - kubernetes-nmstate-manager
+          - kubernetes-nmstate
           imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
@@ -30,4 +30,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "kubernetes-nmstate-manager"
+              value: "kubernetes-nmstate"

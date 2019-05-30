@@ -10,8 +10,8 @@ import (
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	"github.com/nmstate/kubernetes-nmstate-manager/pkg/apis"
-	"github.com/nmstate/kubernetes-nmstate-manager/pkg/controller"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/leader"
@@ -78,7 +78,7 @@ func main() {
 	ctx := context.TODO()
 
 	// Become the leader before proceeding
-	err = leader.Become(ctx, "kubernetes-nmstate-manager-lock")
+	err = leader.Become(ctx, "kubernetes-nmstate-lock")
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
