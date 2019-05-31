@@ -61,6 +61,12 @@ required = [
   # branch = "master" #osdk_branch_annotation
   version = "=v0.8.0" #osdk_version_annotation
 
+[[override]]
+  # This is needed to bypass golang dep bug [1]
+  # [1] https://github.com/kubernetes-sigs/kubebuilder/issues/316
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
+
 [prune]
   go-tests = true
   non-go = true

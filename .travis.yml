@@ -2,9 +2,14 @@ language: go
 go: "1.11"
 
 before_install:
-# install operator-sdk
+- echo "install operator-sdk"
 - sudo curl -JL https://github.com/operator-framework/operator-sdk/releases/download/v0.8.0/operator-sdk-v0.8.0-x86_64-linux-gnu -o /usr/bin/operator-sdk
 - sudo chmod +x /usr/bin/operator-sdk
+- echo "install unit test framework ginkgo and gomega"
+- go get github.com/onsi/ginkgo/ginkgo
+- go get github.com/onsi/gomega/...
+- go get -v -t ./...
+- export PATH=$PATH:$HOME/gopath/bin
 install: true
 script:
-- make all
+- make all test/unit

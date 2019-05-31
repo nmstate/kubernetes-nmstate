@@ -20,6 +20,13 @@ manager:
 push-manager:
 	docker push $(MANAGER_IMAGE_FULL_NAME)
 
+gen-k8s:
+	operator-sdk generate k8s
+
+unit-test:
+	ginkgo build ./pkg/apis/nmstate/v1
+	ginkgo ./pkg/apis/nmstate/v1
+
 cluster-up:
 	./cluster/up.sh
 
@@ -37,8 +44,9 @@ cluster-clean:
 	check \
 	format \
 	vet \
-	manager
+	manager \
 	push-manager \
+	test/unit \
 	cluster-up \
 	cluster-down \
 	cluster-sync \
