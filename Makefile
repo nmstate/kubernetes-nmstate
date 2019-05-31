@@ -20,6 +20,10 @@ manager:
 push-manager:
 	docker push $(MANAGER_IMAGE_FULL_NAME)
 
+test/unit:
+	ginkgo build ./$@
+	ginkgo ./$@
+
 cluster-up:
 	./cluster/up.sh
 
@@ -37,8 +41,9 @@ cluster-clean:
 	check \
 	format \
 	vet \
-	manager
+	manager \
 	push-manager \
+	test/unit \
 	cluster-up \
 	cluster-down \
 	cluster-sync \
