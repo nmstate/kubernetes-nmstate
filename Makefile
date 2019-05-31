@@ -38,6 +38,12 @@ test/e2e:
 		--namespace default \
 		--up-local
 
+test/e2e:
+	operator-sdk test local ./$@ \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace default \
+		--up-local 
+
 cluster-up:
 	./cluster/up.sh
 
