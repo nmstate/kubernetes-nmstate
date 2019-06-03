@@ -12,4 +12,4 @@ before_install:
 - export PATH=$PATH:$HOME/gopath/bin
 install: true
 script:
-- make all test/unit
+- GINKGO_EXTRA_ARGS="--compilers=2" make all unit-test

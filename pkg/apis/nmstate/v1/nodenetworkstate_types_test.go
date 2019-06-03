@@ -11,9 +11,7 @@ import (
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
-		obtainedStruct   NodeNetworkState
-		obtainedManifest []byte
-		desiredState     = State(`
+		desiredState = State(`
 interfaces:
   - name: eth1
     type: ethernet
@@ -25,7 +23,7 @@ interfaces:
     type: ethernet
     state: down`)
 
-		NNSManifest = `
+		nnsManifest = `
 apiVersion: nmstate.io/v1
 kind: NodeNetworkState
 metadata:
@@ -46,7 +44,7 @@ currentState:
       state: down
 
 `
-		NNSStruct = NodeNetworkState{
+		nnsStruct = NodeNetworkState{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "nmstate.io/v1",
 				Kind:       "NodeNetworkState",
@@ -64,39 +62,40 @@ currentState:
 		}
 	)
 
-	BeforeEach(func() {
-		err := yaml.Unmarshal([]byte(NNSManifest), &obtainedStruct)
-		Expect(err).ToNot(HaveOccurred())
+	Context("when reading NodeNetworkState from a raw manifest", func() {
 
-		obtainedManifest, err = yaml.Marshal(NNSStruct)
-		Expect(err).ToNot(HaveOccurred())
+		var nodeNetworkStateStruct NodeNetworkState
 
-	})
-	Context("when unmarshal the result", func() {
-		It("should be like the NNS struct", func() {
-			// We cannot compare the whole structs since the raw yaml strings
-			// are not going to match, so we have to match them field by field
-			Expect(obtainedStruct.Spec.DesiredState).
-				To(MatchYAML([]byte(NNSStruct.Spec.DesiredState)))
+		BeforeEach(func() {
+			err := yaml.Unmarshal([]byte(nnsManifest), &nodeNetworkStateStruct)
+			Expect(err).ToNot(HaveOccurred())
+		})
 
-			Expect(obtainedStruct.CurrentState).
-				To(MatchYAML([]byte(NNSStruct.CurrentState)))
-
-			Expect(obtainedStruct.Spec.Managed).
-				To(Equal(NNSStruct.Spec.Managed))
-
-			Expect(obtainedStruct.Spec.NodeName).
-				To(Equal(NNSStruct.Spec.NodeName))
-
-			Expect(obtainedStruct.TypeMeta).To(Equal(NNSStruct.TypeMeta))
-
-			Expect(obtainedStruct.ObjectMeta).To(Equal(NNSStruct.ObjectMeta))
+		It("should succesfully parse desiredState yaml", func() {
+			Expect(nodeNetworkStateStruct.Spec.DesiredState).To(MatchYAML([]byte(nnsStruct.Spec.DesiredState)))
+		})
+		It("should succesfully parse currentState yaml", func() {
+			Expect(nodeNetworkStateStruct.CurrentState).To(MatchYAML([]byte(nnsStruct.CurrentState)))
+		})
+		It("should succesfully parse non state attributes", func() {
+			Expect(nodeNetworkStateStruct.Spec.Managed).To(Equal(nnsStruct.Spec.Managed))
+			Expect(nodeNetworkStateStruct.Spec.NodeName).To(Equal(nnsStruct.Spec.NodeName))
+			Expect(nodeNetworkStateStruct.TypeMeta).To(Equal(nnsStruct.TypeMeta))
+			Expect(nodeNetworkStateStruct.ObjectMeta).To(Equal(nnsStruct.ObjectMeta))
 		})
 	})
 
 	Context("when marshal the result", func() {
-		It("should match the NNS manifest", func() {
-			Expect(string(obtainedManifest)).To(MatchYAML(NNSManifest))
+
+		var nodeNetworkStateManifest []byte
+		BeforeEach(func() {
+			var err error
+			nodeNetworkStateManifest, err = yaml.Marshal(nnsStruct)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should match the NodeNetworkState manifest", func() {
+			Expect(string(nodeNetworkStateManifest)).To(MatchYAML(nnsManifest))
 		})
 	})
 
