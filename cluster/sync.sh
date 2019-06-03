@@ -3,7 +3,7 @@
 registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
 registry=localhost:$registry_port
 
-IMAGE_REGISTRY=${registry} make push-manager
+IMAGE_REGISTRY=${registry} make push-handler
 
 ./cluster/cli.sh ssh node01 'sudo docker pull registry:5000/nmstate/kubernetes-nmstate-manager'
 # Temporary until image is updated with provisioner that sets this field
