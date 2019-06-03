@@ -24,6 +24,12 @@ type NodeNetworkStateSpec struct {
 	DesiredState State `json:"desiredState,omitempty"`
 }
 
+// NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
+// +k8s:openapi-gen=true
+type NodeNetworkStateStatus struct {
+	CurrentState State `json:"currentState,omitempty"`
+}
+
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // NodeNetworkState is the Schema for the nodenetworkstates API
@@ -33,8 +39,8 @@ type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec         NodeNetworkStateSpec `json:"spec,omitempty"`
-	CurrentState State                `json:"currentState,omitempty"`
+	Spec   NodeNetworkStateSpec   `json:"spec,omitempty"`
+	Status NodeNetworkStateStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

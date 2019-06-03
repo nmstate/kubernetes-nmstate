@@ -37,11 +37,12 @@ spec:
       - name: eth1
         type: ethernet
         state: up
-currentState:
-  interfaces:
-    - name: eth1
-      type: ethernet
-      state: down
+status:
+  currentState:
+    interfaces:
+      - name: eth1
+        type: ethernet
+        state: down
 
 `
 		nnsStruct = NodeNetworkState{
@@ -58,7 +59,9 @@ currentState:
 				NodeName:     "node01",
 				DesiredState: desiredState,
 			},
-			CurrentState: currentState,
+			Status: NodeNetworkStateStatus{
+				CurrentState: currentState,
+			},
 		}
 	)
 
@@ -75,7 +78,7 @@ currentState:
 			Expect(nodeNetworkStateStruct.Spec.DesiredState).To(MatchYAML([]byte(nnsStruct.Spec.DesiredState)))
 		})
 		It("should succesfully parse currentState yaml", func() {
-			Expect(nodeNetworkStateStruct.CurrentState).To(MatchYAML([]byte(nnsStruct.CurrentState)))
+			Expect(nodeNetworkStateStruct.Status.CurrentState).To(MatchYAML([]byte(nnsStruct.Status.CurrentState)))
 		})
 		It("should succesfully parse non state attributes", func() {
 			Expect(nodeNetworkStateStruct.Spec.Managed).To(Equal(nnsStruct.Spec.Managed))
