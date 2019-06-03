@@ -6,7 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	yaml "github.com/ghodss/yaml"
+	yaml "sigs.k8s.io/yaml"
 )
 
 var _ = Describe("NodeNetworkState", func() {

@@ -1,7 +1,7 @@
 package v1
 
 import (
-	yaml "github.com/ghodss/yaml"
+	yaml "sigs.k8s.io/yaml"
 )
 
 // Serialize t as yaml into output
