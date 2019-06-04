@@ -18,6 +18,8 @@ GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 KUBECONFIG ?= ./cluster/.kubeconfig
 LOCAL_REGISTRY ?= registry:5000
 
+local_handler_manifest = build/_output/handler.local.yaml
+
 all: check manager
 
 check: format vet
@@ -53,6 +55,10 @@ test/e2e:
 		--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
 		--up-local
 
+$(local_handler_manifest): deploy/handler.yaml
+	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
+		deploy/handler.yaml > $@
+
 cluster-up:
 	./cluster/up.sh
 
@@ -62,13 +68,14 @@ cluster-down:
 cluster-clean:
 	./cluster/clean.sh
 
-cluster-sync:
+cluster-sync: $(local_handler_manifest)
 	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
 		make push-handler
 	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
+	./cluster/kubectl.sh apply -f $(local_handler_manifest)
 
 .PHONY: \
 	all \
