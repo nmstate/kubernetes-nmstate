@@ -33,6 +33,9 @@ vet:
 manager:
 	operator-sdk build $(MANAGER_IMAGE)
 
+manager-up:
+	operator-sdk up local --kubeconfig $(KUBECONFIG)
+
 handler:
 	docker build -t $(HANDLER_IMAGE) build/handler
 
@@ -76,6 +79,7 @@ cluster-sync: $(local_handler_manifest)
 	# This field is required by buildah tool
 	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
 	./cluster/kubectl.sh apply -f $(local_handler_manifest)
+
 
 .PHONY: \
 	all \

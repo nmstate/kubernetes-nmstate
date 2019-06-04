@@ -1,13 +1,18 @@
 package node
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/tools/remotecommand"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -96,28 +101,70 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	handlerPod, err := r.handlerPod(request.Name)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	reqLogger.Info(fmt.Sprintf("Handler pod: %s", handlerPod.Name))
+	kubeConfig, err := config.GetConfig()
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	// From https://github.com/kubernetes/kubernetes/blob/master/test/e2e/framework/exec_util.go#L59
+	req := kubeClient.RESTClient().Post().
+		Resource("pods").
+		Name(handlerPod.Name).
+		Namespace(handlerPod.Namespace).
+		SubResource("exec")
+	req.VersionedParams(&corev1.PodExecOptions{
+		Container: handlerPod.Spec.Containers[0].Name,
+		Command:   []string{"nmstatectl", "show"},
+		Stdin:     false,
+		Stderr:    true,
+		Stdout:    true,
+		TTY:       false,
+	}, scheme.ParameterCodec)
+
+	var stdout, stderr bytes.Buffer
+	exec, err := remotecommand.NewSPDYExecutor(kubeConfig, "POST", req.URL())
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("Error at executor init %v", err)
+	}
+	err = exec.Stream(remotecommand.StreamOptions{
+		Stdout: &stdout,
+		Stderr: &stderr,
+		Tty:    false,
+	})
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("stdout: %s, stderr: %s, err: %v", stdout.String(), stderr.String(), err)
+	}
 	return reconcile.Result{}, nil
 }
 
-// newPodForCR returns a busybox pod with the same name/namespace as the cr
-func newPodForCR(cr *corev1.Node) *corev1.Pod {
-	labels := map[string]string{
-		"app": cr.Name,
+func (r *ReconcileNode) handlerPod(nodeName string) (corev1.Pod, error) {
+	// Fetch the handler pod at this node
+	podList := corev1.PodList{}
+	listOptions := &client.ListOptions{}
+	// We have to look by label, since is the  only cached stuff
+	// matching by field does not work
+	listOptions.MatchingLabels(map[string]string{"nmstate.io": "nmstate-handler"})
+	err := r.client.List(context.TODO(), listOptions, &podList)
+	if err != nil {
+		return corev1.Pod{}, err
 	}
-	return &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cr.Name + "-pod",
-			Namespace: cr.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:    "busybox",
-					Image:   "busybox",
-					Command: []string{"sleep", "3600"},
-				},
-			},
-		},
+	if len(podList.Items) == 0 {
+		return corev1.Pod{}, fmt.Errorf("No nmstate handlers at cluster")
 	}
+	for _, pod := range podList.Items {
+		if pod.Spec.NodeName == nodeName {
+			return pod, nil
+		}
+	}
+	// Just select the first one in case that more exists
+	return corev1.Pod{}, fmt.Errorf("No nmstate handlers at %", nodeName)
 }
