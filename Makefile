@@ -50,12 +50,7 @@ test/e2e:
 	operator-sdk test local ./$@ \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace default \
-		--up-local
-
-test/e2e:
-	operator-sdk test local ./$@ \
-		--kubeconfig $(KUBECONFIG) \
-		--namespace default \
+		--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
 		--up-local
 
 cluster-up:
