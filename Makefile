@@ -27,7 +27,7 @@ gen-k8s:
 	operator-sdk generate k8s
 
 unit-test:
-	$(GINKGO) $(GINKGO_ARGS) ./pkg/apis/nmstate/v1
+	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
 cluster-up:
 	./cluster/up.sh
@@ -48,7 +48,7 @@ cluster-clean:
 	vet \
 	manager \
 	push-manager \
-	test/unit \
+	test-unit \
 	cluster-up \
 	cluster-down \
 	cluster-sync \
