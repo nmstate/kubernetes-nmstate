@@ -123,7 +123,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		SubResource("exec")
 	req.VersionedParams(&corev1.PodExecOptions{
 		Container: handlerPod.Spec.Containers[0].Name,
-		Command:   []string{"nmstatectl", "show"},
+		Command:   []string{"/bin/sh", "-c", "nmstatectl show"},
 		Stdin:     false,
 		Stderr:    true,
 		Stdout:    true,

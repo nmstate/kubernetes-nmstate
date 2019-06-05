@@ -16,6 +16,8 @@ GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINK
 GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 
 KUBECONFIG ?= ./cluster/.kubeconfig
+# TODO: go run ./vendor..../cmd/operator-sdk
+OPERATOR_SDK ?= operator-sdk
 LOCAL_REGISTRY ?= registry:5000
 KUBECTL ?= ./cluster/kubectl.sh
 
@@ -40,16 +42,17 @@ vet:
 	go vet ./cmd/... ./pkg/...
 
 manager:
-	operator-sdk build $(MANAGER_IMAGE)
+	$(OPERATOR_SDK) build $(MANAGER_IMAGE)
 
 manager-up:
-	operator-sdk up local --kubeconfig $(KUBECONFIG)
+	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
+	$(OPERATOR_SDK) up local --kubeconfig $(KUBECONFIG)
 
 handler:
 	docker build -t $(HANDLER_IMAGE) build/handler
 
 gen-k8s:
-	operator-sdk generate k8s
+	$(OPERATOR_SDK) generate k8s
 
 push-manager: manager
 	docker push $(MANAGER_IMAGE)
@@ -60,12 +63,19 @@ push-handler: handler
 unit-test:
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
-test/e2e:
-	operator-sdk test local ./$@ \
+test/local/e2e:
+	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace default \
 		--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
 		--up-local
+
+test/cluster/e2e:
+	$(OPERATOR_SDK) test local ./test/e2e \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace default \
+		--no-setup
+
 
 $(local_handler_manifest): deploy/handler.yaml
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
@@ -117,7 +127,8 @@ cluster-sync: cluster-sync-handler cluster-sync-manager
 	manager \
 	push-manager \
 	test-unit \
-	test/e2e \
+	test/local/e2e \
+	test/cluster/e2e \
 	cluster-up \
 	cluster-down \
 	cluster-sync \
