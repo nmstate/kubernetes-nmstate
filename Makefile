@@ -3,6 +3,9 @@ IMAGE_REPO ?= nmstate
 MANAGER_IMAGE_NAME ?= kubernetes-nmstate-manager
 MANAGER_IMAGE_TAG ?= latest
 MANAGER_IMAGE_FULL_NAME ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/$(MANAGER_IMAGE_NAME):$(MANAGER_IMAGE_TAG)
+GINKGO_EXTRA_ARGS ?=
+GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
+GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 
 all: check manager
 
@@ -19,6 +22,12 @@ manager:
 
 push-manager:
 	docker push $(MANAGER_IMAGE_FULL_NAME)
+
+gen-k8s:
+	operator-sdk generate k8s
+
+unit-test:
+	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
 cluster-up:
 	./cluster/up.sh
@@ -37,8 +46,9 @@ cluster-clean:
 	check \
 	format \
 	vet \
-	manager
+	manager \
 	push-manager \
+	test-unit \
 	cluster-up \
 	cluster-down \
 	cluster-sync \

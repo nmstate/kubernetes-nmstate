@@ -2,9 +2,8 @@ language: go
 go: "1.11"
 
 before_install:
-# install operator-sdk
 - sudo curl -JL https://github.com/operator-framework/operator-sdk/releases/download/v0.8.0/operator-sdk-v0.8.0-x86_64-linux-gnu -o /usr/bin/operator-sdk
 - sudo chmod +x /usr/bin/operator-sdk
 install: true
 script:
-- make all
+- GINKGO_EXTRA_ARGS="--compilers=2" make all unit-test
