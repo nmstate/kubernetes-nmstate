@@ -65,7 +65,7 @@ status:
 		}
 	)
 
-	Context("when reading NodeNetworkState from a raw manifest", func() {
+	Context("when read NeworkNodeState struct from yaml", func() {
 
 		var nodeNetworkStateStruct NodeNetworkState
 
@@ -88,7 +88,7 @@ status:
 		})
 	})
 
-	Context("when marshal the result", func() {
+	Context("when write NetworkNodeState struct to yaml", func() {
 
 		var nodeNetworkStateManifest []byte
 		BeforeEach(func() {

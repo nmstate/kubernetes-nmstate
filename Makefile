@@ -3,8 +3,8 @@ IMAGE_REPO ?= nmstate
 MANAGER_IMAGE_NAME ?= kubernetes-nmstate-manager
 MANAGER_IMAGE_TAG ?= latest
 MANAGER_IMAGE_FULL_NAME ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/$(MANAGER_IMAGE_NAME):$(MANAGER_IMAGE_TAG)
-GINKGO_EXTRA_ARGS ?= 
-GINKGO_ARGS ?= -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
+GINKGO_EXTRA_ARGS ?=
+GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
 GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 
 all: check manager
