@@ -17,8 +17,17 @@ GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 
 KUBECONFIG ?= ./cluster/.kubeconfig
 LOCAL_REGISTRY ?= registry:5000
+KUBECTL ?= ./cluster/kubectl.sh
+
+directories := $(filter-out ./ ./vendor/ ,$(sort $(dir $(wildcard ./*/))))
+rwildcard=$(wildcard $1$2) $(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2))
+all_sources=$(call rwildcard,$(directories),*) $(wildcard *)
 
 local_handler_manifest = build/_output/handler.local.yaml
+local_manager_manifest = build/_output/manager.local.yaml
+
+foo:
+	echo $(all_sources)
 
 all: check manager
 
@@ -62,6 +71,11 @@ $(local_handler_manifest): deploy/handler.yaml
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/handler.yaml > $@
 
+$(local_manager_manifest): deploy/operator.yaml
+	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)#" \
+		deploy/operator.yaml > $@
+
+
 cluster-up:
 	./cluster/up.sh
 
@@ -71,15 +85,29 @@ cluster-down:
 cluster-clean:
 	./cluster/clean.sh
 
-cluster-sync: $(local_handler_manifest)
+cluster-sync-handler: $(local_handler_manifest)
 	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
 		make push-handler
 	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
-	./cluster/kubectl.sh apply -f $(local_handler_manifest)
+	$(KUBECTL) apply -f $(local_handler_manifest)
 
+cluster-sync-manager: $(local_manager_manifest)
+	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
+		make push-manager
+	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)'
+	# Temporary until image is updated with provisioner that sets this field
+	# This field is required by buildah tool
+	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
+	$(KUBECTL) apply -f deploy/service_account.yaml
+	$(KUBECTL) apply -f deploy/role.yaml
+	$(KUBECTL) apply -f deploy/role_binding.yaml
+	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
+	$(KUBECTL) apply -f $(local_manager_manifest)
+
+cluster-sync: cluster-sync-handler cluster-sync-manager
 
 .PHONY: \
 	all \
