@@ -9,7 +9,7 @@ spec:
     listKind: NodeNetworkStateList
     plural: nodenetworkstates
     singular: nodenetworkstate
-  scope: Namespaced
+  scope: Cluster
   subresources:
     status: {}
   validation:
