@@ -46,7 +46,8 @@ manager:
 
 manager-up:
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
-	$(OPERATOR_SDK) up local --kubeconfig $(KUBECONFIG)
+	OPERATOR_NAME=kubernetes-nmstate \
+				  $(OPERATOR_SDK) up local --kubeconfig $(KUBECONFIG)
 
 handler:
 	docker build -t $(HANDLER_IMAGE) build/handler
@@ -64,11 +65,12 @@ unit-test:
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
 test/local/e2e:
-	$(OPERATOR_SDK) test local ./test/e2e \
-		--kubeconfig $(KUBECONFIG) \
-		--namespace default \
-		--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
-		--up-local
+	OPERATOR_NAME=kubernetes-nmstate \
+		$(OPERATOR_SDK) test local ./test/e2e \
+			--kubeconfig $(KUBECONFIG) \
+			--namespace default \
+			--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
+			--up-local
 
 test/cluster/e2e:
 	$(OPERATOR_SDK) test local ./test/e2e \
