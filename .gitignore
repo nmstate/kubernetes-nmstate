@@ -1,6 +1,7 @@
 # Temporary Build Files
 build/_output
 build/_test
+cluster/sync-resources
 
 # Temporary local cluster files
 cluster/.kubeconfig

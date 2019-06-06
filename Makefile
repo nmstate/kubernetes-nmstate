@@ -28,6 +28,8 @@ all_sources=$(call rwildcard,$(directories),*) $(wildcard *)
 local_handler_manifest = build/_output/handler.local.yaml
 local_manager_manifest = build/_output/manager.local.yaml
 
+resources = deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
+
 foo:
 	echo $(all_sources)
 
@@ -97,26 +99,30 @@ cluster-down:
 cluster-clean:
 	./cluster/clean.sh
 
-cluster-sync-handler: $(local_handler_manifest)
+cluster/sync-resources: $(resources)
+	for resource in $(resources); do \
+		$(KUBECTL) apply -f $$resource; \
+	done
+	touch $@
+
+
+cluster-sync-handler: cluster/sync-resources $(local_handler_manifest)
 	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
 		make push-handler
 	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
-	$(KUBECTL) delete -f $(local_manager_manifest) || true
-	$(KUBECTL) create -f $(local_manager_manifest)
+	$(KUBECTL) delete -f $(local_handler_manifest) || true
+	$(KUBECTL) create -f $(local_handler_manifest)
 
-cluster-sync-manager: $(local_manager_manifest)
+cluster-sync-manager: cluster/sync-resources $(local_manager_manifest)
 	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
 		make push-manager
 	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
-	$(KUBECTL) apply -f deploy/service_account.yaml
-	$(KUBECTL) apply -f deploy/role.yaml
-	$(KUBECTL) apply -f deploy/role_binding.yaml
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
 	$(KUBECTL) delete -f $(local_manager_manifest) || true
 	$(KUBECTL) create -f $(local_manager_manifest)
