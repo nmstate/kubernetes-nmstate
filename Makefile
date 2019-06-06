@@ -104,7 +104,8 @@ cluster-sync-handler: $(local_handler_manifest)
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
-	$(KUBECTL) apply -f $(local_handler_manifest)
+	$(KUBECTL) delete -f $(local_manager_manifest) || true
+	$(KUBECTL) create -f $(local_manager_manifest)
 
 cluster-sync-manager: $(local_manager_manifest)
 	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
@@ -117,7 +118,8 @@ cluster-sync-manager: $(local_manager_manifest)
 	$(KUBECTL) apply -f deploy/role.yaml
 	$(KUBECTL) apply -f deploy/role_binding.yaml
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
-	$(KUBECTL) apply -f $(local_manager_manifest)
+	$(KUBECTL) delete -f $(local_manager_manifest) || true
+	$(KUBECTL) create -f $(local_manager_manifest)
 
 cluster-sync: cluster-sync-handler cluster-sync-manager
 
