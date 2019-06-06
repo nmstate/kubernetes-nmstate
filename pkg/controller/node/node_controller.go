@@ -104,12 +104,14 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	if err != nil {
 		return reconcile.Result{}, err
 	}
+	containerName := handlerPod.Spec.Containers[0].Name
 	// From https://github.com/kubernetes/kubernetes/blob/master/test/e2e/framework/exec_util.go#L59
 	req := kubeClient.RESTClient().Post().
 		Resource("pods").
 		Name(handlerPod.Name).
 		Namespace(handlerPod.Namespace).
-		SubResource("exec")
+		SubResource("exec").
+		Param("container", containerName)
 	req.VersionedParams(&corev1.PodExecOptions{
 		Container: handlerPod.Spec.Containers[0].Name,
 		Command:   []string{"/bin/sh", "-c", "nmstatectl show"},
