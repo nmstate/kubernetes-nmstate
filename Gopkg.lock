@@ -477,7 +477,7 @@
   version = "v1.8.0"
 
 [[projects]]
-  digest = "1:9f353a779b8b118229dfc1541e41d72d1a3a6f2d13756f5fe66daeb0f52191ab"
+  digest = "1:93a4c9dc4a16dc6c32fa5f069a52eb8a684baeb25863d7ccde3b5eccdca09660"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -494,8 +494,7 @@
     "types",
   ]
   pruneopts = "NT"
-  revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
-  version = "v1.5.0"
+  revision = "efe19c39ca106ee4ed42a1b25e1a80a53be4831a"
 
 [[projects]]
   digest = "1:ce4e43d2eef4a4c40c6e8439c724e34e6fd7e48959a340038e3cd02762cdb437"
@@ -1281,11 +1280,12 @@
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/types",
     "k8s.io/apimachinery/pkg/util/wait",
-    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth",
+    "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/remotecommand",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
