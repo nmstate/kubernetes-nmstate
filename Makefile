@@ -75,10 +75,12 @@ test/cluster/e2e:
 
 
 $(local_handler_manifest): deploy/handler.yaml
+	mkdir -p $$(dirname $@)
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/handler.yaml > $@
 
 $(local_manager_manifest): deploy/operator.yaml
+	mkdir -p $$(dirname $@)
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)#" \
 		deploy/operator.yaml > $@
 
@@ -90,14 +92,19 @@ cluster-down:
 	./cluster/down.sh
 
 cluster-clean:
-	./cluster/clean.sh
+	$(KUBECTL) delete --ignore-not-found -f build/_output/
+	$(KUBECTL) delete --ignore-not-found -f deploy/
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
+		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
+	fi
 
 cluster-sync-resources:
 	for resource in $(resources); do \
 		$(KUBECTL) apply -f $$resource; \
 	done
 	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
-		$(KUBECTL) apply -f deploy/openshift-scc.yaml; \
+		$(KUBECTL) apply -f deploy/openshift/; \
 	fi
 
 
