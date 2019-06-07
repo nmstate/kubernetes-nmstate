@@ -74,6 +74,10 @@ required = [
   name = "github.com/coreos/prometheus-operator"
   version = "=v0.26.0"
 
+[[override]]
+  name = "github.com/onsi/gomega"
+  revision = "efe19c39ca106ee4ed42a1b25e1a80a53be4831a"
+
 [prune]
   go-tests = true
   non-go = true

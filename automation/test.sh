@@ -9,6 +9,6 @@ trap '{ make cluster-down; }' EXIT SIGINT SIGTERM SIGSTOP
 
 make cluster-down
 make cluster-up
-make test/local/e2e
+make cluster-sync-handler test/local/e2e
 make cluster-sync
 make test/cluster/e2e
