@@ -88,6 +88,13 @@ status:
 		})
 	})
 
+	Context("when reading NodeNetworkState struct from invalid yaml", func() {
+		It("should return error", func() {
+			err := yaml.Unmarshal([]byte("invalid yaml"), &NodeNetworkState{})
+			Expect(err).To(HaveOccurred())
+		})
+	})
+
 	Context("when write NetworkNodeState struct to yaml", func() {
 
 		var nodeNetworkStateManifest []byte
