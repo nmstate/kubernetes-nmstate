@@ -93,7 +93,7 @@ func prepare(t *testing.T) (*framework.TestCtx, string) {
 	Expect(err).ToNot(HaveOccurred())
 
 	// wait for memcached-operator to be ready
-	err = e2eutil.WaitForOperatorDeployment(t, framework.Global.KubeClient, namespace, "kubernetes-nmstate", 1, time.Second*5, time.Second*30)
+	err = e2eutil.WaitForOperatorDeployment(t, framework.Global.KubeClient, namespace, "nmstate-manager", 1, time.Second*5, time.Second*30)
 	Expect(err).ToNot(HaveOccurred())
 	return ctx, namespace
 }
