@@ -35,7 +35,7 @@ manager:
 
 manager-up:
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
-	OPERATOR_NAME=kubernetes-nmstate \
+	OPERATOR_NAME=nmstate-manager \
 				  $(OPERATOR_SDK) up local --kubeconfig $(KUBECONFIG)
 
 gen-k8s:
@@ -48,7 +48,7 @@ unit-test:
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
 test/local/e2e:
-	OPERATOR_NAME=kubernetes-nmstate \
+	OPERATOR_NAME=nmstate-manager\
 		$(OPERATOR_SDK) test local ./test/e2e \
 			--kubeconfig $(KUBECONFIG) \
 			--namespace default \

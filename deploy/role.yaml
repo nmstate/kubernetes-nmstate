@@ -36,7 +36,7 @@ rules:
 - apiGroups:
   - apps
   resourceNames:
-  - kubernetes-nmstate
+  - nmstate-manager
   resources:
   - deployments/finalizers
   verbs:
