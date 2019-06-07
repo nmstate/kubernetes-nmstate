@@ -5,6 +5,8 @@ import (
 	. "github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/types"
+
+	yaml "sigs.k8s.io/yaml"
 )
 
 var _ = Describe("Nodes", func() {
@@ -27,9 +29,22 @@ var _ = Describe("Nodes", func() {
 			for _, node := range nodes {
 				key := types.NamespacedName{Namespace: namespace, Name: node}
 				nodeNetworkState := nodeNetworkState(key)
-				//TODO: exec nmstatectl is not in place let's just compare
-				//      with the stuff we have harcoded there
-				Expect(nodeNetworkState.Status.CurrentState).To(MatchYAML("interfaces: []"))
+				currentStateYaml := nodeNetworkState.Status.CurrentState
+				Expect(currentStateYaml).ToNot(BeEmpty())
+				var currentState map[string][]map[string]interface{}
+				err := yaml.Unmarshal(currentStateYaml, &currentState)
+				Expect(err).ToNot(HaveOccurred())
+				interfaces := currentState["interfaces"]
+				Expect(interfaces).ToNot(BeEmpty())
+				obtainedInterfaces := interfacesName(interfaces)
+				Expect(obtainedInterfaces).To(SatisfyAll(
+					ContainElement("lo"),
+					ContainElement("cni0"),
+					ContainElement("eth0"),
+					ContainElement("eth1"),
+					ContainElement("flannel.1"),
+					ContainElement(ContainSubstring("veth")),
+				))
 			}
 		})
 	})

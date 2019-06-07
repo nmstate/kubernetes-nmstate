@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
@@ -63,6 +64,9 @@ func writePodsLogs(namespace string, writer io.Writer) error {
 	podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
 
 	for _, pod := range podList.Items {
+		if !strings.Contains(pod.Name, "nmstate") {
+			continue
+		}
 		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
 		podLogs, err := req.Stream()
 		if err != nil {
@@ -78,6 +82,16 @@ func writePodsLogs(namespace string, writer io.Writer) error {
 
 	}
 	return nil
+}
+
+func interfacesName(interfaces []map[string]interface{}) []string {
+	var names []string
+	for _, iface := range interfaces {
+		name, hasName := iface["name"]
+		Expect(hasName).To(BeTrue())
+		names = append(names, name.(string))
+	}
+	return names
 }
 
 func prepare(t *testing.T) (*framework.TestCtx, string) {

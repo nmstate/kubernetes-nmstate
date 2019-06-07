@@ -11,13 +11,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+	k8sHandler "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/handler"
 )
 
 var log = logf.Log.WithName("controller_node")
@@ -48,7 +49,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	//TODO: We only one creates/deletes and the timeouts
 	// Watch for changes to primary resource Node
-	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &k8sHandler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -92,7 +93,6 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	}
 
 	//TODO: Manage deletes
-
 	nodeNetworkStateKey := types.NamespacedName{
 		Namespace: "default",
 		Name:      request.Name,
@@ -119,10 +119,19 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		}
 	}
 
-	//TODO: Update it from nmstate-handler
+	handler, err := handler.New(r.client, request.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("Error finding nmstate-handler pod: %v", err)
+	}
+
+	currentState, err := handler.Nmstatectl("show")
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("Error running nmstatectl show: %v", err)
+	}
+
 	// Let's update status with current network config from nmstatectl
 	nodeNetworkState.Status = nmstatev1.NodeNetworkStateStatus{
-		CurrentState: nmstatev1.State("interfaces: []"),
+		CurrentState: nmstatev1.State(currentState),
 	}
 	err = r.client.Status().Update(context.TODO(), nodeNetworkState)
 	if err != nil {
