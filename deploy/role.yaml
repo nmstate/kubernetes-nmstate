@@ -8,7 +8,6 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pods
   - services
   - endpoints
   - persistentvolumeclaims
@@ -17,6 +16,19 @@ rules:
   - secrets
   verbs:
   - '*'
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
 - apiGroups:
   - apps
   resources:
