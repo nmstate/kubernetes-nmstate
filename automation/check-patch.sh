@@ -24,7 +24,8 @@ main() {
     echo "Install operator repository to the right place"
     mkdir -p $GOPATH/src/github.com/nmstate
     mkdir -p $GOPATH/pkg
-    ln -s $(pwd)/kubernetes-nmstate $GOPATH/src/github.com/nmstate/
+    # symlink does not work with make we need a copy
+    cp -rf $(pwd)/kubernetes-nmstate $GOPATH/src/github.com/nmstate/
     cd $GOPATH/src/github.com/nmstate/kubernetes-nmstate
 
     echo "Install operator-sdk"
