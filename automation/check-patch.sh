@@ -27,10 +27,6 @@ main() {
     ln -s $(pwd)/kubernetes-nmstate $GOPATH/src/github.com/nmstate/
     cd $GOPATH/src/github.com/nmstate/kubernetes-nmstate
 
-    echo "Install operator-sdk"
-    curl -JL https://github.com/operator-framework/operator-sdk/releases/download/v0.8.0/operator-sdk-v0.8.0-x86_64-linux-gnu -o /usr/bin/operator-sdk
-    chmod +x /usr/bin/operator-sdk
-
     echo "Run functional tests"
     exec automation/test.sh
 }

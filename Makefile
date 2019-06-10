@@ -12,9 +12,11 @@ GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 
 KUBECONFIG ?= ./cluster/.kubeconfig
 # TODO: use operator-sdk from vendor/
-OPERATOR_SDK ?= operator-sdk
+OPERATOR_SDK ?= go run ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
 KUBECTL ?= ./cluster/kubectl.sh
+
+export GO111MODULE = off
 
 local_manager_manifest = build/_output/manager.local.yaml
 
