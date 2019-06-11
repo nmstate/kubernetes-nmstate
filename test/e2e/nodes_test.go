@@ -13,6 +13,9 @@ import (
 
 var _ = Describe("Nodes", func() {
 	Context("when nodes are up", func() {
+		AfterEach(func() {
+			deleteNodeNeworkStates()
+		})
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
 				key := types.NamespacedName{Namespace: namespace, Name: node}

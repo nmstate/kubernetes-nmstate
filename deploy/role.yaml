@@ -48,7 +48,7 @@ rules:
 - apiGroups:
   - apps
   resourceNames:
-  - nmstate-manager
+  - nmstate-handler
   resources:
   - deployments/finalizers
   verbs:

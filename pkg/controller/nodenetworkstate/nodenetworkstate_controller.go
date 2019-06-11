@@ -2,17 +2,22 @@ package nodenetworkstate
 
 import (
 	"context"
+	"fmt"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	k8shandler "sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
 var log = logf.Log.WithName("controller_nodenetworkstate")
@@ -36,8 +41,22 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
+	forThisPod := predicate.Funcs{
+		CreateFunc: func(createEvent event.CreateEvent) bool {
+			return nmstate.IsForThisPod(createEvent.Meta)
+		},
+		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+			return nmstate.IsForThisPod(deleteEvent.Meta)
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			return nmstate.IsForThisPod(updateEvent.MetaNew)
+		},
+		GenericFunc: func(genericEvent event.GenericEvent) bool {
+			return nmstate.IsForThisPod(genericEvent.Meta)
+		},
+	}
 	// Watch for changes to primary resource NodeNetworkState
-	err = c.Watch(&source.Kind{Type: &nmstatev1.NodeNetworkState{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &nmstatev1.NodeNetworkState{}}, &k8shandler.EnqueueRequestForObject{}, forThisPod)
 	if err != nil {
 		return err
 	}
@@ -79,5 +98,11 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	err = nmstate.UpdateCurrentState(r.client, instance)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate: %v", err)
+	}
+
 	return reconcile.Result{}, nil
 }
