@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kubernetes-nmstate
+  name: nmstate-manager
 spec:
   replicas: 1
   selector:
     matchLabels:
-      name: kubernetes-nmstate
+      name: nmstate-manager
   template:
     metadata:
       labels:
-        name: kubernetes-nmstate
+        name: nmstate-manager
     spec:
       serviceAccountName: kubernetes-nmstate
       containers:
-        - name: kubernetes-nmstate
+        - name: nmstate-manager
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
@@ -30,4 +30,4 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "kubernetes-nmstate"
+              value: "nmstate-manager"

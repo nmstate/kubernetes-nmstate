@@ -1,5 +1,6 @@
 # Force dep to vendor the code generators, which aren't imported just used at dev time.
 required = [
+  "k8s.io/code-generator/cmd/defaulter-gen",
   "k8s.io/code-generator/cmd/deepcopy-gen",
   "k8s.io/code-generator/cmd/conversion-gen",
   "k8s.io/code-generator/cmd/client-gen",
@@ -8,74 +9,72 @@ required = [
   "k8s.io/kube-openapi/cmd/openapi-gen",
   "k8s.io/gengo/args",
   "sigs.k8s.io/controller-tools/pkg/crd/generator",
+  "github.com/operator-framework/operator-sdk/cmd/operator-sdk",
+  "golang.org/x/tools/cmd/goimports",
   "github.com/onsi/ginkgo/ginkgo",
 ]
 
+# https://github.com/golang/dep/issues/1799
 [[override]]
-  name = "k8s.io/code-generator"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "c2090bec4d9b1fb25de3812f868accc2bc9ecbae"
+  source = "https://github.com/fsnotify/fsnotify/archive/v1.4.7.tar.gz"
+  name = "gopkg.in/fsnotify.v1"
+
+[[constraint]]
+  name = "github.com/operator-framework/operator-sdk"
+  version = "=v0.8.0"
+
+[[override]]
+  name = "k8s.io/api"
+  version = "kubernetes-1.13.1"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  version = "kubernetes-1.13.1"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  version = "kubernetes-1.13.1"
+
+[[override]]
+  name = "k8s.io/apiserver"
+  version = "kubernetes-1.13.1"
+
+[[override]]
+  name = "k8s.io/client-go"
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "k8s.io/kube-openapi"
   revision = "0cf8f7e6ed1d2e3d47d02e3b6e559369af24d803"
 
 [[override]]
-  name = "github.com/go-openapi/spec"
-  branch = "master"
+  name = "github.com/docker/docker"
+  revision = "45262c4cb057e78ba98d02b5e0121ed402779c7f"
 
+[[override]]
+  name = "github.com/russross/blackfriday"
+  revision = "f3ccc8fc06d5d2e48a7083dcf0180c00a8a284cc"
+
+[[constraint]]
+  name = "sigs.k8s.io/controller-runtime"
+  version = "=v0.1.10"
+
+# This override revision has a fix that allows CRD unit tests to run correctly.
+# Remove once v0.1.11 is released.
 [[override]]
   name = "sigs.k8s.io/controller-tools"
   revision = "9d55346c2bde73fb3326ac22eac2e5210a730207"
 
 [[override]]
-  name = "k8s.io/api"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "05914d821849570fba9eacfb29466f2d8d3cd229"
-
-[[override]]
-  name = "k8s.io/apiextensions-apiserver"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "0fe22c71c47604641d9aa352c785b7912c200562"
-
-[[override]]
-  name = "k8s.io/apimachinery"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "2b1284ed4c93a43499e781493253e2ac5959c4fd"
-
-[[override]]
-  name = "k8s.io/client-go"
-  # revision for tag "kubernetes-1.13.1"
-  revision = "8d9ed539ba3134352c586810e749e58df4e94e4f"
+  name = "k8s.io/kube-aggregator"
+  # Required for operator-lifecycle-manager version compatibility.
+  version = "kubernetes-1.13.1"
 
 [[override]]
   name = "github.com/coreos/prometheus-operator"
-  version = "=v0.29.0"
-
-[[override]]
-  name = "sigs.k8s.io/controller-runtime"
-  version = "=v0.1.10"
-
-[[constraint]]
-  name = "github.com/operator-framework/operator-sdk"
-  # The version rule is used for a specific release and the master branch for in between releases.
-  # branch = "master" #osdk_branch_annotation
-  version = "=v0.8.0" #osdk_version_annotation
-
-[[override]]
-  # This is needed to bypass golang dep bug [1]
-  # [1] https://github.com/kubernetes-sigs/kubebuilder/issues/316
-  name = "gopkg.in/fsnotify.v1"
-  source = "https://github.com/fsnotify/fsnotify.git"
+  version = "=v0.26.0"
 
 [prune]
   go-tests = true
   non-go = true
-
-  [[prune.project]]
-    name = "k8s.io/code-generator"
-    non-go = false
-
-  [[prune.project]]
-    name = "k8s.io/gengo"
-    non-go = false
+  unused-packages = true
