@@ -15,8 +15,8 @@ main() {
     export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
     mkdir -p $GOPATH
 
-    echo "Install Go 1.11"
-    export GIMME_GO_VERSION=1.11
+    echo "Install Go 1.10"
+    export GIMME_GO_VERSION=1.10
     mkdir -p /gimme
     curl -sL https://raw.githubusercontent.com/travis-ci/gimme/master/gimme | HOME=/gimme bash >> /etc/profile.d/gimme.sh
     source /etc/profile.d/gimme.sh
