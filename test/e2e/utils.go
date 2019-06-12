@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"testing"
 	"time"
 
@@ -34,7 +33,8 @@ func writePodsLogs(namespace string, writer io.Writer) error {
 	podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
 
 	for _, pod := range podList.Items {
-		if !strings.Contains(pod.Name, "nmstate") {
+		appLabel, hasAppLabel := pod.Labels["app"]
+		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
 			continue
 		}
 		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
