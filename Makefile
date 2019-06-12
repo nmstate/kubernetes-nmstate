@@ -65,13 +65,15 @@ test/local/e2e:
 			--kubeconfig $(KUBECONFIG) \
 			--namespace default \
 			--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
-			--up-local
+			--up-local \
+			--go-test-flags "-test.v -ginkgo.v"
 
 test/cluster/e2e:
 	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace default \
-		--no-setup
+		--no-setup \
+		--go-test-flags "-test.v -ginkgo.v"
 
 
 $(local_handler_manifest): deploy/handler.yaml
