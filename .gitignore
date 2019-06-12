@@ -2,9 +2,8 @@
 build/_output
 build/_test
 
-# Temporary local cluster files
-cluster/.kubeconfig
-cluster/.kubectl
+# Cloned kubevirtci
+kubevirtci
 
 # Created by https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
 ### Emacs ###
