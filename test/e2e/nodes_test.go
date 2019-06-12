@@ -25,7 +25,7 @@ var _ = Describe("Nodes", func() {
 				By("unmarshal state yaml into unstructured golang")
 				var currentState map[string]interface{}
 				err := yaml.Unmarshal(currentStateYaml, &currentState)
-				Expect(err).ToNot(HaveOccurred(), "should parse correctly yaml: %s", currentStateYaml)
+				Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", currentStateYaml)
 
 				interfaces := currentState["interfaces"].([]interface{})
 				Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)

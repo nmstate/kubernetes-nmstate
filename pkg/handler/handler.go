@@ -88,7 +88,6 @@ func (h Handler) Nmstatectl(arguments string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("stdout: %s, stderr: %s, err: %v", stdout.String(), stderr.String(), err)
 	}
-	fmt.Printf("stdout: %s, stderr: %s, err: %v\n", stdout.String(), stderr.String(), err)
 
 	return stdout.String(), nil
 }

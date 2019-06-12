@@ -58,7 +58,7 @@ func interfacesName(interfaces []interface{}) []string {
 	var names []string
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, nhttps://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yam")
+		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
 		names = append(names, name.(string))
 	}
 	return names
