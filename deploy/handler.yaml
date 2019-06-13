@@ -12,6 +12,7 @@ spec:
         app: kubernetes-nmstate
         nmstate.io: nmstate-handler
     spec:
+      serviceAccountName: kubernetes-nmstate
       containers:
         - name: nmstate-handler
           image: REPLACE_IMAGE
