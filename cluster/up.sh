@@ -64,7 +64,12 @@ until [[ $(./cluster/kubectl.sh get nodes --no-headers | wc -l) -eq $(./cluster/
     sleep 1
 done
 
+# Something is fishy with cli.sh so we bypass it running docker exec directly
+node01_id=$(docker ps |grep node01 |awk '{print $1}')
+
 echo 'Install NetworkManager on the node'
-./cluster/cli.sh ssh node01 -- sudo yum install -y NetworkManager NetworkManager-ovs
-./cluster/cli.sh ssh node01 -- sudo systemctl daemon-reload
-./cluster/cli.sh ssh node01 -- sudo systemctl restart NetworkManager
+docker exec $node01_id ssh.sh sudo yum install -y NetworkManager
+docker exec $node01_id ssh.sh sudo systemctl daemon-reload
+docker exec $node01_id ssh.sh sudo systemctl restart NetworkManager
+echo 'Check NetworkManager is working fine'
+docker exec $node01_id ssh.sh nmcli device show
