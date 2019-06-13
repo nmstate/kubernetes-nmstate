@@ -97,7 +97,7 @@ $(CLUSTER_DIR)/%: kubevirtci.version
 	cd kubevirtci && git checkout $$(cat  ../kubevirtci.version)
 
 cluster-up: $(CLUSTER_UP)
-	$(CLUSTER_UP)
+	bash -xe $(CLUSTER_UP)
 	$(SSH) node01 -- sudo yum install -y NetworkManager NetworkManager-ovs
 	$(SSH) node01 -- sudo systemctl daemon-reload
 	$(SSH) node01 -- sudo systemctl restart NetworkManager
