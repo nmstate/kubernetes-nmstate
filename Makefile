@@ -110,7 +110,7 @@ cluster-sync-resources:
 	fi
 
 
-cluster-sync-handler: $(local_handler_manifest)
+cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
 	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
 		make push-handler
 	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)'
