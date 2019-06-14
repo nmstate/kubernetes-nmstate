@@ -11,4 +11,3 @@ docker exec $node01_id ssh.sh sudo systemctl restart NetworkManager
 
 echo 'Check NetworkManager is working fine'
 docker exec $node01_id ssh.sh nmcli device show > /dev/null
-
