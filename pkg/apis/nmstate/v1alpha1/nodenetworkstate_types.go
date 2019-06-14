@@ -28,7 +28,7 @@ type NodeNetworkStateSpec struct {
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
 	CurrentState State                       `json:"currentState,omitempty"`
-	Condition    []NodeNetworkStateCondition `json:"conditions,omitempty" optional:"true"`
+	Conditions   []NodeNetworkStateCondition `json:"conditions,omitempty" optional:"true"`
 }
 
 // +k8s:openapi-gen=true

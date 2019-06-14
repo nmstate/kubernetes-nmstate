@@ -221,8 +221,8 @@ func (in *NodeNetworkStateStatus) DeepCopyInto(out *NodeNetworkStateStatus) {
 		*out = make(State, len(*in))
 		copy(*out, *in)
 	}
-	if in.Condition != nil {
-		in, out := &in.Condition, &out.Condition
+	if in.Conditions != nil {
+		in, out := &in.Conditions, &out.Conditions
 		*out = make([]NodeNetworkStateCondition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
