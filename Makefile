@@ -100,9 +100,7 @@ $(CLUSTER_DIR)/%: kubevirtci.version
 
 cluster-up: $(CLUSTER_UP)
 	$(CLUSTER_UP)
-	$(SSH) node01 -- sudo yum install -y NetworkManager NetworkManager-ovs
-	$(SSH) node01 -- sudo systemctl daemon-reload
-	$(SSH) node01 -- sudo systemctl restart NetworkManager
+	hacks/install-nm.sh
 
 cluster-down: $(CLUSTER_DOWN)
 	$(CLUSTER_DOWN)
