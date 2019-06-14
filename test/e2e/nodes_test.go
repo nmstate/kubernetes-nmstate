@@ -13,6 +13,10 @@ import (
 
 var _ = Describe("Nodes", func() {
 	Context("when nodes are up", func() {
+		var (
+			timeout  = 5 * time.Second
+			interval = 1 * time.Second
+		)
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
 				key := types.NamespacedName{Namespace: namespace, Name: node}
@@ -20,7 +24,7 @@ var _ = Describe("Nodes", func() {
 				Eventually(func() nmstatev1.State {
 					currentStateYaml = nodeNetworkState(key).Status.CurrentState
 					return currentStateYaml
-				}).ShouldNot(BeEmpty(), "Node %s should have currentState", node)
+				}, timeout, interval).ShouldNot(BeEmpty(), "Node %s should have currentState", node)
 
 				By("unmarshal state yaml into unstructured golang")
 				var currentState map[string]interface{}
