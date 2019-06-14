@@ -108,10 +108,16 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		if !errors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("error at node reconcile accessing NodeNetworkState: %v", err)
 		}
-		err = nmstate.CreateNodeNeworkState(r.client, request.Name, nodeNetworkState)
+	} else {
+		// NodeNetworkState is no suppose to be there let's delete it
+		err = nmstate.DeleteNodeNetworkState(r.client, nodeNetworkState)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
+			return reconcile.Result{}, fmt.Errorf("error at node reconcile deleting NodeNetworkState: %v", err)
 		}
+	}
+	err = nmstate.CreateNodeNeworkState(r.client, request.Name)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
 	}
 
 	return reconcile.Result{}, nil

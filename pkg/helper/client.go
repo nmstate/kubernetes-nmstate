@@ -38,8 +38,9 @@ func GetNodeNetworkState(client client.Client, nodeName string, nodeNetworkState
 	return client.Get(context.TODO(), nodeNetworkStateKey, nodeNetworkState)
 }
 
-func CreateNodeNeworkState(client client.Client, nodeName string, nodeNetworkState *nmstatev1.NodeNetworkState) error {
+func CreateNodeNeworkState(client client.Client, nodeName string) error {
 
+	nodeNetworkState := nmstatev1.NodeNetworkState{}
 	// Create NodeNetworkState for this node
 	nodeNetworkState.ObjectMeta = metav1.ObjectMeta{
 		Name:      nodeName,
@@ -49,9 +50,20 @@ func CreateNodeNeworkState(client client.Client, nodeName string, nodeNetworkSta
 		NodeName: nodeName,
 	}
 	// There is no NodeNetworkState for this node let's create it
-	err := client.Create(context.TODO(), nodeNetworkState)
+	err := client.Create(context.TODO(), &nodeNetworkState)
 	if err != nil {
 		return fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
+	}
+
+	return nil
+}
+
+func DeleteNodeNetworkState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
+
+	// There is no NodeNetworkState for this node let's create it
+	err := client.Delete(context.TODO(), nodeNetworkState)
+	if err != nil {
+		return fmt.Errorf("error deleting NodeNetworkState: %v, %+v", err, nodeNetworkState)
 	}
 
 	return nil
