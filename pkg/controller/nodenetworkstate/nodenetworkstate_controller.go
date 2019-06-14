@@ -41,22 +41,22 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	forThisPod := predicate.Funcs{
+	forThisNode := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nmstate.IsForThisPod(createEvent.Meta)
+			return nmstate.EventIsForThisNode(createEvent.Meta)
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nmstate.IsForThisPod(deleteEvent.Meta)
+			return nmstate.EventIsForThisNode(deleteEvent.Meta)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.IsForThisPod(updateEvent.MetaNew)
+			return nmstate.EventIsForThisNode(updateEvent.MetaNew)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return nmstate.IsForThisPod(genericEvent.Meta)
+			return nmstate.EventIsForThisNode(genericEvent.Meta)
 		},
 	}
 	// Watch for changes to primary resource NodeNetworkState
-	err = c.Watch(&source.Kind{Type: &nmstatev1.NodeNetworkState{}}, &k8shandler.EnqueueRequestForObject{}, forThisPod)
+	err = c.Watch(&source.Kind{Type: &nmstatev1.NodeNetworkState{}}, &k8shandler.EnqueueRequestForObject{}, forThisNode)
 	if err != nil {
 		return err
 	}

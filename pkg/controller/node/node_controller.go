@@ -42,14 +42,14 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// If they are not set by default they are true so we set others than
-	// CreateFunc to false
-	onCreationForThisPod := predicate.Funcs{
+	// By default all this functors return true so controller watch all events,
+	// but we only want to watch create/delete for current node.
+	onCreationForThisNode := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nmstate.IsForThisPod(createEvent.Meta)
+			return nmstate.EventIsForThisNode(createEvent.Meta)
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
-			return false
+			return false // TODO: implement delete
 		},
 		UpdateFunc: func(event.UpdateEvent) bool {
 			return false
@@ -60,7 +60,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 	//TODO: Watch deletes too handling it correctly at Reconciler
 	// Watch for changes to primary resource Node
-	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}, onCreationForThisPod)
+	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}, onCreationForThisNode)
 	if err != nil {
 		return err
 	}
