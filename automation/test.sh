@@ -2,10 +2,16 @@
 
 kubectl() { cluster/kubectl.sh "$@"; }
 
+teardown() {
+    kubectl get event || true
+    kubectl get pod || true
+    make cluster-down
+}
+
 export KUBEVIRT_PROVIDER=$TARGET
 
 # Make sure that the VM is properly shut down on exit
-trap '{ make cluster-down; }' EXIT SIGINT SIGTERM SIGSTOP
+trap '{ teardown }' EXIT SIGINT SIGTERM SIGSTOP
 
 make cluster-down
 make cluster-up
