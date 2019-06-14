@@ -96,7 +96,6 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 		return nil
 	}
 	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
-		t.Logf("namespace: %s, name: %s", namespace, name)
 		deployment, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{IncludeUninitialized: true})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
