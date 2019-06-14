@@ -14,6 +14,10 @@ HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 GINKGO_EXTRA_ARGS ?=
 GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
 GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
+
+E2E_TEST_EXTRA_ARGS ?=
+E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
+
 OPERATOR_SDK ?= go run ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
 
@@ -73,14 +77,14 @@ test/local/e2e:
 			--namespace default \
 			--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
 			--up-local \
-			--go-test-flags "-test.v -ginkgo.v"
+			--go-test-flags "$(E2E_TEST_ARGS)"
 
 test/cluster/e2e:
 	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace default \
 		--no-setup \
-		--go-test-flags "-test.v -ginkgo.v"
+		--go-test-flags "$(E2E_TEST_ARGS)"
 
 
 $(local_handler_manifest): deploy/handler.yaml
