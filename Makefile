@@ -16,7 +16,7 @@ GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINK
 GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 
 E2E_TEST_EXTRA_ARGS ?=
-E2E_TEST_ARGS ?= -test.v -ginkgo.v$(E2E_TEST_EXTRA_ARGS)
+E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
 
 KUBECONFIG ?= ./cluster/.kubeconfig
 # TODO: use operator-sdk from vendor/
