@@ -104,7 +104,7 @@ $(CLUSTER_DIR)/%: kubevirtci.version
 
 cluster-up: $(CLUSTER_UP)
 	$(CLUSTER_UP)
-	hacks/install-nm.sh
+	hack/install-nm.sh
 
 cluster-down: $(CLUSTER_DOWN)
 	$(CLUSTER_DOWN)
