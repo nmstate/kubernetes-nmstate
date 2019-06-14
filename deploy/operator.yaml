@@ -10,6 +10,7 @@ spec:
   template:
     metadata:
       labels:
+        app: kubernetes-nmstate
         name: nmstate-manager
     spec:
       serviceAccountName: kubernetes-nmstate
