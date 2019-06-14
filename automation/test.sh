@@ -9,4 +9,5 @@ trap '{ make cluster-down; }' EXIT SIGINT SIGTERM SIGSTOP
 
 make cluster-down
 make cluster-up
-make cluster-sync test/cluster/e2e
+make cluster-sync
+make E2E_TEST_EXTRA_ARGS="-ginkgo.noColor" test/cluster/e2e
