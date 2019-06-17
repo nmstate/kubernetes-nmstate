@@ -102,8 +102,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	//TODO: Manage deletes
 	nodeNetworkStateKey := types.NamespacedName{
-		Namespace: "default",
-		Name:      request.Name,
+		Name: request.Name,
 	}
 	// Create NodeNetworkState for this node
 	nodeNetworkState := &nmstatev1.NodeNetworkState{}
@@ -113,8 +112,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			return reconcile.Result{}, fmt.Errorf("error accessing NodeNetworkState: %v", err)
 		}
 		nodeNetworkState.ObjectMeta = metav1.ObjectMeta{
-			Name:      request.Name,
-			Namespace: "default",
+			Name: request.Name,
 		}
 		nodeNetworkState.Spec = nmstatev1.NodeNetworkStateSpec{
 			NodeName: request.Name,
