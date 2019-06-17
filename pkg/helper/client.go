@@ -27,38 +27,30 @@ func nmstatectl(arguments ...string) (string, error) {
 	return outb.String(), nil
 }
 
-func GetNodeNetworkState(client client.Client, nodeName string, nodeNetworkState *nmstatev1.NodeNetworkState) error {
+func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1.NodeNetworkState, error) {
+	var nodeNetworkState nmstatev1.NodeNetworkState
 	nodeNetworkStateKey := types.NamespacedName{
 		Namespace: namespace,
 		Name:      nodeName,
 	}
-
-	return client.Get(context.TODO(), nodeNetworkStateKey, nodeNetworkState)
+	err := client.Get(context.TODO(), nodeNetworkStateKey, &nodeNetworkState)
+	return nodeNetworkState, err
 }
 
-func CreateNodeNeworkState(client client.Client, nodeName string) error {
-	nodeNetworkState := nmstatev1.NodeNetworkState{}
-	// Create NodeNetworkState for this node
-	nodeNetworkState.ObjectMeta = metav1.ObjectMeta{
-		Name:      nodeName,
-		Namespace: namespace,
+func InitializeNodeNeworkState(client client.Client, nodeName string) error {
+	nodeNetworkState := nmstatev1.NodeNetworkState{
+		// Create NodeNetworkState for this node
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      nodeName,
+			Namespace: namespace,
+		},
+		Spec: nmstatev1.NodeNetworkStateSpec{
+			NodeName: nodeName,
+		},
 	}
-	nodeNetworkState.Spec = nmstatev1.NodeNetworkStateSpec{
-		NodeName: nodeName,
-	}
-	// There is no NodeNetworkState for this node let's create it
 	err := client.Create(context.TODO(), &nodeNetworkState)
 	if err != nil {
 		return fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
-	}
-
-	return nil
-}
-
-func DeleteNodeNetworkState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
-	err := client.Delete(context.TODO(), nodeNetworkState)
-	if err != nil {
-		return fmt.Errorf("error deleting NodeNetworkState: %v, %+v", err, nodeNetworkState)
 	}
 
 	return nil

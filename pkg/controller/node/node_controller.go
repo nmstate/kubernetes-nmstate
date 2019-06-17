@@ -17,7 +17,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
@@ -102,23 +101,16 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	}
 
 	//TODO: Manage deletes
-	nodeNetworkState := &nmstatev1.NodeNetworkState{}
-	err = nmstate.GetNodeNetworkState(r.client, request.Name, nodeNetworkState)
+	_, err = nmstate.GetNodeNetworkState(r.client, request.Name)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("error at node reconcile accessing NodeNetworkState: %v", err)
-		}
-	} else {
-		// NodeNetworkState is no suppose to be there let's delete it
-		err = nmstate.DeleteNodeNetworkState(r.client, nodeNetworkState)
-		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("error at node reconcile deleting NodeNetworkState: %v", err)
+		} else {
+			err = nmstate.InitializeNodeNeworkState(r.client, request.Name)
+			if err != nil {
+				return reconcile.Result{}, fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
+			}
 		}
 	}
-	err = nmstate.CreateNodeNeworkState(r.client, request.Name)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
-	}
-
 	return reconcile.Result{}, nil
 }

@@ -46,7 +46,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return nmstate.EventIsForThisNode(createEvent.Meta)
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nmstate.EventIsForThisNode(deleteEvent.Meta)
+			// This controller responsability is updates, receiving
+			// deletes is of no use
+			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			return nmstate.EventIsForThisNode(updateEvent.MetaNew)
