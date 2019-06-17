@@ -17,7 +17,6 @@ const nmstateCommand = "nmstatectl"
 const namespace = "default"
 
 func nmstatectl(arguments ...string) (string, error) {
-	//cmd := exec.Command(nmstateCommand, arguments...)
 	cmd := exec.Command(nmstateCommand, arguments...)
 	var outb, errb bytes.Buffer
 	cmd.Stdout = &outb
@@ -29,7 +28,6 @@ func nmstatectl(arguments ...string) (string, error) {
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string, nodeNetworkState *nmstatev1.NodeNetworkState) error {
-
 	nodeNetworkStateKey := types.NamespacedName{
 		Namespace: namespace,
 		Name:      nodeName,
@@ -39,7 +37,6 @@ func GetNodeNetworkState(client client.Client, nodeName string, nodeNetworkState
 }
 
 func CreateNodeNeworkState(client client.Client, nodeName string) error {
-
 	nodeNetworkState := nmstatev1.NodeNetworkState{}
 	// Create NodeNetworkState for this node
 	nodeNetworkState.ObjectMeta = metav1.ObjectMeta{
@@ -59,8 +56,6 @@ func CreateNodeNeworkState(client client.Client, nodeName string) error {
 }
 
 func DeleteNodeNetworkState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
-
-	// There is no NodeNetworkState for this node let's create it
 	err := client.Delete(context.TODO(), nodeNetworkState)
 	if err != nil {
 		return fmt.Errorf("error deleting NodeNetworkState: %v, %+v", err, nodeNetworkState)

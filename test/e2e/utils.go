@@ -159,7 +159,9 @@ func deleteNodeNeworkStates() {
 	nodeNetworkStateList := &nmstatev1.NodeNetworkStateList{}
 	err := framework.Global.Client.List(context.TODO(), &dynclient.ListOptions{}, nodeNetworkStateList)
 	Expect(err).ToNot(HaveOccurred())
+	var deleteErrors []error
 	for _, nodeNetworkState := range nodeNetworkStateList.Items {
-		framework.Global.Client.Delete(context.TODO(), &nodeNetworkState)
+		deleteErrors = append(deleteErrors, framework.Global.Client.Delete(context.TODO(), &nodeNetworkState))
 	}
+	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
 }
