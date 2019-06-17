@@ -3,6 +3,7 @@ package nodenetworkstate
 import (
 	"context"
 	"fmt"
+	"time"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -20,7 +21,10 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
-var log = logf.Log.WithName("controller_nodenetworkstate")
+var (
+	log                     = logf.Log.WithName("controller_nodenetworkstate")
+	nodenetworkstateRefresh = 5 * time.Second
+)
 
 // Add creates a new NodeNetworkState Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -106,5 +110,5 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate: %v", err)
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
 }
