@@ -61,15 +61,15 @@ metadata:
   name: kubernetes-nmstate
 rules:
 - apiGroups:
-  - nmstate
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
   - ""
   resources:
   - nodes
   verbs:
   - get
   - list
+- apiGroups:
+  - nmstate
+  resources:
+  - '*'
+  verbs:
+  - '*'

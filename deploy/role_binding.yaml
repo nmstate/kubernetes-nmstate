@@ -6,7 +6,6 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: kubernetes-nmstate
-  namespace: default
 roleRef:
   kind: Role
   name: kubernetes-nmstate
