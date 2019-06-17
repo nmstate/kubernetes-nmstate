@@ -39,7 +39,6 @@ var _ = Describe("Nodes", func() {
 				obtainedInterfaces := interfacesName(interfaces)
 				Expect(obtainedInterfaces).To(SatisfyAll(
 					ContainElement("eth0"),
-					ContainElement("eth1"),
 				))
 			}
 		})

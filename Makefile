@@ -18,11 +18,19 @@ GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
 E2E_TEST_EXTRA_ARGS ?=
 E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
 
-KUBECONFIG ?= ./cluster/.kubeconfig
-# TODO: use operator-sdk from vendor/
 OPERATOR_SDK ?= go run ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
-KUBECTL ?= ./cluster/kubectl.sh
+
+export KUBEVIRT_PROVIDER ?= k8s-1.11.0
+export KUBEVIRT_NUM_NODES ?= 1
+
+CLUSTER_DIR ?= kubevirtci/cluster-up/
+KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
+KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
+CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
+CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
+CLI ?= $(CLUSTER_DIR)/cli.sh
+SSH ?= $(CLI) ssh
 
 local_handler_manifest = build/_output/handler.local.yaml
 local_manager_manifest = build/_output/manager.local.yaml
@@ -80,23 +88,28 @@ test/cluster/e2e:
 
 
 $(local_handler_manifest): deploy/handler.yaml
-	mkdir -p $$(dirname $@)
+	mkdir -p $(dir $@)
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/handler.yaml > $@
 
 $(local_manager_manifest): deploy/operator.yaml
-	mkdir -p $$(dirname $@)
+	mkdir -p $(dir $@)
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)#" \
 		deploy/operator.yaml > $@
 
+$(CLUSTER_DIR)/%: kubevirtci.version
+	rm -rf kubevirtci
+	git clone https://github.com/kubevirt/kubevirtci
+	cd kubevirtci && git checkout $$(cat  ../kubevirtci.version)
 
-cluster-up:
-	./cluster/up.sh
+cluster-up: $(CLUSTER_UP)
+	$(CLUSTER_UP)
+	hack/install-nm.sh
 
-cluster-down:
-	./cluster/down.sh
+cluster-down: $(CLUSTER_DOWN)
+	$(CLUSTER_DOWN)
 
-cluster-clean:
+cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f build/_output/
 	$(KUBECTL) delete --ignore-not-found -f deploy/
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
@@ -104,7 +117,7 @@ cluster-clean:
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi
 
-cluster-sync-resources:
+cluster-sync-resources: $(KUBECTL)
 	for resource in $(resources); do \
 		$(KUBECTL) apply -f $$resource || exit 1; \
 	done
@@ -113,23 +126,21 @@ cluster-sync-resources:
 	fi
 
 
-cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
-	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
+cluster-sync-handler: cluster-sync-resources $(local_handler_manifest) $(CLI) $(KUBECTL)
+	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
 		make push-handler
-	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
-	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
+	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
 	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
 	$(KUBECTL) create -f $(local_handler_manifest)
 
-cluster-sync-manager: cluster-sync-resources $(local_manager_manifest)
-	IMAGE_REGISTRY=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r') \
+cluster-sync-manager: cluster-sync-resources $(CLI) $(local_manager_manifest)
+	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
 		make push-manager
-	./cluster/cli.sh ssh node01 'sudo docker pull $(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
-	./cluster/cli.sh ssh node01 'sudo sysctl -w user.max_user_namespaces=1024'
+	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f $(local_manager_manifest)
 	$(KUBECTL) create -f $(local_manager_manifest)
