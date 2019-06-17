@@ -17,19 +17,6 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - pods/exec
-  verbs:
-  - create
-- apiGroups:
   - apps
   resources:
   - deployments
@@ -61,6 +48,12 @@ metadata:
   name: kubernetes-nmstate
 rules:
 - apiGroups:
+  - nmstate.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
   - ""
   resources:
   - nodes
@@ -68,8 +61,16 @@ rules:
   - get
   - list
 - apiGroups:
-  - nmstate
+  - ""
   resources:
-  - '*'
+  - pods
   verbs:
-  - '*'
+  - get
+  - list
+- apiGroups:
+  - ""
+  resources:
+  - pods/exec
+  verbs:
+  - create
+

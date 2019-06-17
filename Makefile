@@ -106,7 +106,7 @@ cluster-clean:
 
 cluster-sync-resources:
 	for resource in $(resources); do \
-		$(KUBECTL) apply -f $$resource; \
+		$(KUBECTL) apply -f $$resource || exit 1; \
 	done
 	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
 		$(KUBECTL) apply -f deploy/openshift/; \
