@@ -1,6 +1,6 @@
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: Role
 metadata:
   creationTimestamp: null
   name: kubernetes-nmstate
@@ -53,8 +53,15 @@ rules:
   - deployments/finalizers
   verbs:
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: kubernetes-nmstate
+rules:
 - apiGroups:
-  - nmstate.io
+  - nmstate
   resources:
   - '*'
   verbs:
