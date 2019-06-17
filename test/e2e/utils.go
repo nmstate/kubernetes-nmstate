@@ -79,7 +79,7 @@ func prepare(t *testing.T) (*framework.TestCtx, string) {
 	namespace, err := ctx.GetNamespace()
 	Expect(err).ToNot(HaveOccurred())
 
-	err = WaitForOperatorDaemonSet(t, framework.Global.KubeClient, namespace, "nmstate-handler", time.Second*5, time.Second*30)
+	err = WaitForOperatorDaemonSet(t, framework.Global.KubeClient, namespace, "nmstate-handler", time.Second*5, time.Second*90)
 	Expect(err).ToNot(HaveOccurred())
 	return ctx, namespace
 }
