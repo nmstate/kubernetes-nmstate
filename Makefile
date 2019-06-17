@@ -129,7 +129,6 @@ cluster-sync-resources: $(KUBECTL)
 cluster-sync-handler: cluster-sync-resources $(local_handler_manifest) $(CLI) $(KUBECTL)
 	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
 		make push-handler
-	$(SSH) node01 'sudo docker pull $(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
@@ -139,7 +138,6 @@ cluster-sync-handler: cluster-sync-resources $(local_handler_manifest) $(CLI) $(
 cluster-sync-manager: cluster-sync-resources $(CLI) $(local_manager_manifest)
 	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
 		make push-manager
-	$(SSH) node01 'sudo docker pull $(LOCAL_REGISTRY)/$(MANAGER_IMAGE_FULL_NAME)'
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
