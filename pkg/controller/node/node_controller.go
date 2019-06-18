@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	log         = logf.Log.WithName("controller_nodenetworkstate")
+	log         = logf.Log.WithName("controller_node")
 	nodeRefresh = 5 * time.Second
 )
 

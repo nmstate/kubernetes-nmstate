@@ -56,9 +56,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.EventIsForThisNode(updateEvent.MetaNew) &&
-				(updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration() ||
-					!reflect.DeepEqual(updateEvent.MetaNew.GetFinalizers(), updateEvent.MetaOld.GetFinalizers()))
+			eventIsForThisNode = nmstate.EventIsForThisNode(updateEvent.MetaNew)
+
+			// As described [1] if we want to ignore reconcile of status update we have
+			// to check generation since it does not change on status updates also force
+			// reconcile if finalizers have changes
+			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
+			generationIsDifferent = updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
+			finalizersAreDifferent = !reflect.DeepEqual(updateEvent.MetaNew.GetFinalizers(), updateEvent.MetaOld.GetFinalizers())
+
+			return eventIsForThisNode && (generationIsDifferent || finalizersAreDifferent)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
 			return nmstate.EventIsForThisNode(genericEvent.Meta)
