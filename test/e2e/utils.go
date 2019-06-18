@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os/exec"
 	"testing"
 	"time"
@@ -122,29 +121,12 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
-func readStateFromFile(file string, namespace string) nmstatev1.NodeNetworkState {
-	manifest, err := ioutil.ReadFile(file)
-	Expect(err).ToNot(HaveOccurred())
-
+func updateDesiredState(namespace string, node string, desiredState nmstatev1.State) {
+	key := types.NamespacedName{Namespace: namespace, Name: node}
 	state := nmstatev1.NodeNetworkState{}
-	err = yaml.Unmarshal(manifest, &state)
-	Expect(err).ToNot(HaveOccurred())
-	state.ObjectMeta.Namespace = namespace
-	return state
-}
-
-func createStateFromFile(file string, namespace string, cleanupOptions *framework.CleanupOptions) {
-	state := readStateFromFile(file, namespace)
-	err := framework.Global.Client.Create(context.TODO(), &state, cleanupOptions)
-	Expect(err).ToNot(HaveOccurred())
-}
-
-func updateStateSpecFromFile(file string, key types.NamespacedName) {
-	state := nmstatev1.NodeNetworkState{}
-	stateFromManifest := readStateFromFile(file, key.Namespace)
 	err := framework.Global.Client.Get(context.TODO(), key, &state)
 	Expect(err).ToNot(HaveOccurred())
-	state.Spec = stateFromManifest.Spec
+	state.Spec.DesiredState = desiredState
 	err = framework.Global.Client.Update(context.TODO(), &state)
 	Expect(err).ToNot(HaveOccurred())
 }

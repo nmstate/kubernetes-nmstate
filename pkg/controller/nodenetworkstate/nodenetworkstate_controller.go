@@ -38,6 +38,10 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
+func desiredState(object runtime.Object) nmstatev1.State {
+	return object.(*nmstatev1.NodeNetworkState).Spec.DesiredState
+}
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
@@ -65,7 +69,12 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
 			finalizersAreDifferent := !reflect.DeepEqual(updateEvent.MetaNew.GetFinalizers(), updateEvent.MetaOld.GetFinalizers())
 
-			return eventIsForThisNode && (generationIsDifferent || finalizersAreDifferent)
+			// we only care about desiredState changes
+			oldDesiredState := desiredState(updateEvent.ObjectOld)
+			newDesiredState := desiredState(updateEvent.ObjectNew)
+			desiredStateIsDifferent := !reflect.DeepEqual(oldDesiredState, newDesiredState)
+
+			return eventIsForThisNode && (generationIsDifferent || finalizersAreDifferent || desiredStateIsDifferent)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
 			return nmstate.EventIsForThisNode(genericEvent.Meta)
@@ -115,9 +124,14 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
+	err = nmstate.ApplyDesiredState(instance)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
+	}
+
 	err = nmstate.UpdateCurrentState(r.client, instance)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
 	}
 
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
