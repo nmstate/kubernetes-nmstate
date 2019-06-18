@@ -15,6 +15,9 @@ import (
 
 var _ = Describe("Nodes", func() {
 	Context("when nodes are up", func() {
+		AfterEach(func() {
+			deleteNodeNeworkStates()
+		})
 		var (
 			timeout  = 5 * time.Second
 			interval = 1 * time.Second

@@ -1,21 +1,20 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: DaemonSet
 metadata:
-  name: nmstate-manager
+  name: nmstate-handler
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      name: nmstate-manager
+      name: nmstate-handler
   template:
     metadata:
       labels:
         app: kubernetes-nmstate
-        name: nmstate-manager
+        name: nmstate-handler
     spec:
       serviceAccountName: kubernetes-nmstate
       containers:
-        - name: nmstate-manager
+        - name: nmstate-handler
           # Replace this with the built image name
           image: REPLACE_IMAGE
           command:
@@ -29,4 +28,18 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "nmstate-manager"
+              value: "nmstate-handler"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          volumeMounts:
+          - name: dbus-socket
+            mountPath: /run/dbus/system_bus_socket
+          securityContext:
+            privileged: true
+      volumes:
+      - name: dbus-socket
+        hostPath:
+          path: /run/dbus/system_bus_socket
+          type: Socket
