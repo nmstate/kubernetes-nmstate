@@ -3,6 +3,7 @@ package nodenetworkstate
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
@@ -55,7 +56,9 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.EventIsForThisNode(updateEvent.MetaNew)
+			return nmstate.EventIsForThisNode(updateEvent.MetaNew) &&
+				(updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration() ||
+					!reflect.DeepEqual(updateEvent.MetaNew.GetFinalizers(), updateEvent.MetaOld.GetFinalizers()))
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
 			return nmstate.EventIsForThisNode(genericEvent.Meta)

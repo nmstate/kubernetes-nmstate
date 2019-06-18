@@ -64,7 +64,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNe
 		CurrentState: nmstatev1.State(currentState),
 	}
 
-	err = client.Status().Update(context.TODO(), nodeNetworkState)
+	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
 		return fmt.Errorf("error updating status of NodeNetworkState: %v", err)
 	}
