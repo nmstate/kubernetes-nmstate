@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os/exec"
 	"testing"
 	"time"
 
@@ -24,6 +25,9 @@ import (
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
 )
+
+const ReadTimeout = 15 * time.Second
+const ReadInterval = 1 * time.Second
 
 func writePodsLogs(namespace string, writer io.Writer) error {
 	if framework.Global.LocalOperator {
@@ -147,11 +151,9 @@ func updateStateSpecFromFile(file string, key types.NamespacedName) {
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1.NodeNetworkState {
 	state := nmstatev1.NodeNetworkState{}
-	timeout := 5 * time.Second
-	interval := 1 * time.Second
 	Eventually(func() error {
 		return framework.Global.Client.Get(context.TODO(), key, &state)
-	}, timeout, interval).ShouldNot(HaveOccurred())
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return state
 }
 
@@ -164,4 +166,42 @@ func deleteNodeNeworkStates() {
 		deleteErrors = append(deleteErrors, framework.Global.Client.Delete(context.TODO(), &nodeNetworkState))
 	}
 	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
+}
+
+func run(node string, command ...string) {
+	ssh_command := []string{"ssh", node}
+	ssh_command = append(ssh_command, command...)
+	cmd := exec.Command("kubevirtci/cluster-up/cli.sh", ssh_command...)
+	cmd.Stdout = GinkgoWriter
+	cmd.Stderr = GinkgoWriter
+	Expect(cmd.Run()).To(Succeed())
+}
+
+func createDummy(nodes []string, dummyName string) {
+	for _, node := range nodes {
+		run(node, "sudo", "ip", "link", "add", dummyName, "type", "dummy")
+	}
+}
+
+func deleteDummy(nodes []string, dummyName string) {
+	for _, node := range nodes {
+		run(node, "sudo", "ip", "link", "delete", dummyName, "type", "dummy")
+	}
+}
+
+func interfaces(state nmstatev1.State) []interface{} {
+	By("unmarshal state yaml into unstructured golang")
+	var stateUnstructured map[string]interface{}
+	err := yaml.Unmarshal(state, &stateUnstructured)
+	Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", state)
+	interfaces := stateUnstructured["interfaces"].([]interface{})
+	return interfaces
+}
+
+func currentState(namespace string, node string, currentStateYaml *nmstatev1.State) AsyncAssertion {
+	key := types.NamespacedName{Namespace: namespace, Name: node}
+	return Eventually(func() nmstatev1.State {
+		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
+		return *currentStateYaml
+	}, ReadTimeout, ReadInterval)
 }

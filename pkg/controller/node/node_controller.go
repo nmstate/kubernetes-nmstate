@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -20,7 +21,10 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
-var log = logf.Log.WithName("controller_node")
+var (
+	log         = logf.Log.WithName("controller_node")
+	nodeRefresh = 5 * time.Second
+)
 
 // Add creates a new Node Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -112,5 +116,5 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 			}
 		}
 	}
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: nodeRefresh}, nil
 }
