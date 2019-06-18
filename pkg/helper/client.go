@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,15 +16,34 @@ import (
 
 const nmstateCommand = "nmstatectl"
 
-func nmstatectl(arguments ...string) (string, error) {
-	cmd := exec.Command(nmstateCommand, arguments...)
-	var outb, errb bytes.Buffer
-	cmd.Stdout = &outb
-	cmd.Stderr = &errb
+func show(arguments ...string) (string, error) {
+	cmd := exec.Command(nmstateCommand, "show")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("Failed to execute nmstatectl show: '%v'", err)
+		return "", fmt.Errorf("Failed to execute nmstatectl show: '%v', %s", err, stderr.String())
 	}
-	return outb.String(), nil
+	return stdout.String(), nil
+}
+
+func set(state string) error {
+	cmd := exec.Command(nmstateCommand, "set")
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("Failed to create pipe for writing  into nmstate: %v", err)
+	}
+	defer stdin.Close()
+	_, err = io.WriteString(stdin, state)
+	if err != nil {
+		return fmt.Errorf("Failed to write state into stdin: %v", err)
+	}
+	if err = cmd.Run(); err != nil {
+		return fmt.Errorf("Failed to execute nmstate set: '%v' '%s'", err, stderr.String())
+	}
+	return nil
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1.NodeNetworkState, error) {
@@ -54,7 +74,7 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
-	currentState, err := nmstatectl("show")
+	currentState, err := show()
 	if err != nil {
 		return fmt.Errorf("Error running nmstatectl show: %v", err)
 	}
@@ -70,4 +90,8 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNe
 	}
 
 	return nil
+}
+
+func ApplyDesiredState(nodeNetworkState *nmstatev1.NodeNetworkState) error {
+	return set(string(nodeNetworkState.Spec.DesiredState))
 }
