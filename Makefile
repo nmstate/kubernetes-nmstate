@@ -16,7 +16,7 @@ E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
 OPERATOR_SDK ?= go run ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
 
-export KUBEVIRT_PROVIDER ?= k8s-1.11.0
+export KUBEVIRT_PROVIDER ?= k8s-1.13.3
 export KUBEVIRT_NUM_NODES ?= 1
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
