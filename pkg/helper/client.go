@@ -98,5 +98,9 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNe
 }
 
 func ApplyDesiredState(nodeNetworkState *nmstatev1.NodeNetworkState) error {
+	desiredState := string(nodeNetworkState.Spec.DesiredState)
+	if len(desiredState) == 0 {
+		return nil
+	}
 	return set(string(nodeNetworkState.Spec.DesiredState))
 }
