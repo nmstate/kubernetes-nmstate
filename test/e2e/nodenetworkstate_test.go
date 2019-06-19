@@ -9,9 +9,9 @@ import (
 
 var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
-		var (
-			desiredState nmstatev1.State
-		)
+
+		var desiredState nmstatev1.State
+
 		JustBeforeEach(func() {
 			for _, node := range nodes {
 				updateDesiredState(namespace, node, desiredState)

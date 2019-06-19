@@ -22,27 +22,31 @@ func show(arguments ...string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("Failed to execute nmstatectl show: '%v', %s", err, stderr.String())
+		return "", fmt.Errorf("failed to execute nmstatectl show: '%v', '%s', '%s'", err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
 }
 
 func set(state string) error {
 	cmd := exec.Command(nmstateCommand, "set")
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("Failed to create pipe for writing  into nmstate: %v", err)
+		return fmt.Errorf("failed to create pipe for writing into nmstate: %v", err)
 	}
 	defer stdin.Close()
+
 	_, err = io.WriteString(stdin, state)
 	if err != nil {
-		return fmt.Errorf("Failed to write state into stdin: %v", err)
+		return fmt.Errorf("failed to write state into stdin: %v", err)
 	}
+
 	if err = cmd.Run(); err != nil {
-		return fmt.Errorf("Failed to execute nmstate set: '%v' '%s'", err, stderr.String())
+		return fmt.Errorf("failed to execute nmstate set: '%v' '%s' '%s'", err, stdout.String(), stderr.String())
 	}
+
 	return nil
 }
 
@@ -76,7 +80,7 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
 	currentState, err := show()
 	if err != nil {
-		return fmt.Errorf("Error running nmstatectl show: %v", err)
+		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
 	// Let's update status with current network config from nmstatectl
