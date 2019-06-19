@@ -17,6 +17,11 @@ var _ = Describe("NodeNetworkState", func() {
 				updateDesiredState(namespace, node, desiredState)
 			}
 		})
+		JustAfterEach(func() {
+			for _, node := range nodes {
+				updateDesiredState(namespace, node, desiredState)
+			}
+		})
 		Context("with a linux bridge", func() {
 			BeforeEach(func() {
 				desiredState =
@@ -36,6 +41,14 @@ var _ = Describe("NodeNetworkState", func() {
           stp-hairpin-mode: false
           stp-path-cost: 100
           stp-priority: 32
+`)
+			})
+			AfterEach(func() {
+				desiredState =
+					nmstatev1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: absent
 `)
 			})
 			It("should have the linux bridge at currentState", func() {

@@ -36,12 +36,13 @@ func set(state string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create pipe for writing into nmstate: %v", err)
 	}
-	defer stdin.Close()
-
-	_, err = io.WriteString(stdin, state)
-	if err != nil {
-		return fmt.Errorf("failed to write state into stdin: %v", err)
-	}
+	go func() {
+		defer stdin.Close()
+		_, err = io.WriteString(stdin, state)
+		if err != nil {
+			fmt.Printf("failed to write state into stdin: %v\n", err)
+		}
+	}()
 
 	if err = cmd.Run(); err != nil {
 		return fmt.Errorf("failed to execute nmstate set: '%v' '%s' '%s'", err, stdout.String(), stderr.String())
