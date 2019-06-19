@@ -83,7 +83,7 @@ $(local_handler_manifest): deploy/operator.yaml
 $(CLUSTER_DIR)/%: kubevirtci.version
 	rm -rf kubevirtci
 	git clone https://github.com/kubevirt/kubevirtci
-	cd kubevirtci && git checkout $$(cat  ../kubevirtci.version)
+	cd kubevirtci && git fetch origin pull/105/head: && git checkout $$(cat  ../kubevirtci.version)
 
 cluster-up: $(CLUSTER_UP)
 	$(CLUSTER_UP)
