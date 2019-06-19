@@ -9,23 +9,9 @@ import (
 
 var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
-
-		var desiredState nmstatev1.State
-
-		JustBeforeEach(func() {
-			for _, node := range nodes {
-				updateDesiredState(namespace, node, desiredState)
-			}
-		})
-		JustAfterEach(func() {
-			for _, node := range nodes {
-				updateDesiredState(namespace, node, desiredState)
-			}
-		})
 		Context("with a linux bridge", func() {
-			BeforeEach(func() {
-				desiredState =
-					nmstatev1.State(`interfaces:
+			var (
+				br1Up = nmstatev1.State(`interfaces:
   - name: eth1
     type: ethernet
     state: up
@@ -42,14 +28,19 @@ var _ = Describe("NodeNetworkState", func() {
           stp-path-cost: 100
           stp-priority: 32
 `)
-			})
-			AfterEach(func() {
-				desiredState =
-					nmstatev1.State(`interfaces:
+
+				br1Absent = nmstatev1.State(`interfaces:
   - name: br1
     type: linux-bridge
     state: absent
 `)
+			)
+
+			BeforeEach(func() {
+				updateDesiredState(namespace, br1Up)
+			})
+			AfterEach(func() {
+				updateDesiredState(namespace, br1Absent)
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {

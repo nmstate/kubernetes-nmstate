@@ -121,7 +121,7 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
-func updateDesiredState(namespace string, node string, desiredState nmstatev1.State) {
+func updateDesiredStateAtNode(namespace string, node string, desiredState nmstatev1.State) {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
 	state := nmstatev1.NodeNetworkState{}
 	err := framework.Global.Client.Get(context.TODO(), key, &state)
@@ -129,6 +129,12 @@ func updateDesiredState(namespace string, node string, desiredState nmstatev1.St
 	state.Spec.DesiredState = desiredState
 	err = framework.Global.Client.Update(context.TODO(), &state)
 	Expect(err).ToNot(HaveOccurred())
+}
+
+func updateDesiredState(namespace string, desiredState nmstatev1.State) {
+	for _, node := range nodes {
+		updateDesiredStateAtNode(namespace, node, desiredState)
+	}
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1.NodeNetworkState {

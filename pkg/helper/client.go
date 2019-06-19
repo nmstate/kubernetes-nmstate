@@ -27,14 +27,14 @@ func show(arguments ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-func set(state string) error {
+func set(state string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "set")
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("failed to create pipe for writing into nmstate: %v", err)
+		return "", fmt.Errorf("failed to create pipe for writing into nmstate: %v", err)
 	}
 	go func() {
 		defer stdin.Close()
@@ -45,10 +45,10 @@ func set(state string) error {
 	}()
 
 	if err = cmd.Run(); err != nil {
-		return fmt.Errorf("failed to execute nmstate set: '%v' '%s' '%s'", err, stdout.String(), stderr.String())
+		return "", fmt.Errorf("failed to execute nmstate set: '%v' '%s' '%s'", err, stdout.String(), stderr.String())
 	}
 
-	return nil
+	return stdout.String(), nil
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1.NodeNetworkState, error) {
@@ -97,10 +97,10 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNe
 	return nil
 }
 
-func ApplyDesiredState(nodeNetworkState *nmstatev1.NodeNetworkState) error {
+func ApplyDesiredState(nodeNetworkState *nmstatev1.NodeNetworkState) (string, error) {
 	desiredState := string(nodeNetworkState.Spec.DesiredState)
 	if len(desiredState) == 0 {
-		return nil
+		return "Ignoring empty desired state", nil
 	}
 	return set(string(nodeNetworkState.Spec.DesiredState))
 }
