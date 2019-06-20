@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,6 +168,7 @@ func run(node string, command ...string) {
 	ssh_command := []string{node}
 	ssh_command = append(ssh_command, command...)
 	cmd := exec.Command("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
+	GinkgoWriter.Write([]byte(strings.Join(ssh_command, " ") + "\n"))
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
@@ -186,13 +188,13 @@ func deleteBridgeAtNodes(bridgeName string) {
 
 func createDummy(nodes []string, dummyName string) {
 	for _, node := range nodes {
-		run(node, "sudo", "ip", "link", "add", dummyName, "type", "dummy")
+		run(node, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
 	}
 }
 
 func deleteDummy(nodes []string, dummyName string) {
 	for _, node := range nodes {
-		run(node, "sudo", "ip", "link", "delete", dummyName, "type", "dummy")
+		run(node, "sudo", "nmcli", "con", "delete", dummyName)
 	}
 }
 
