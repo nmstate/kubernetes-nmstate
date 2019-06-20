@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -137,6 +138,12 @@ func updateDesiredState(namespace string, desiredState nmstatev1.State) {
 	}
 }
 
+func resetDesiredStateForNodes(namespace string) {
+	for _, node := range nodes {
+		updateDesiredStateAtNode(namespace, node, nmstatev1.State(""))
+	}
+}
+
 func nodeNetworkState(key types.NamespacedName) nmstatev1.NodeNetworkState {
 	state := nmstatev1.NodeNetworkState{}
 	Eventually(func() error {
@@ -157,12 +164,13 @@ func deleteNodeNeworkStates() {
 }
 
 func run(node string, command ...string) {
-	ssh_command := []string{"ssh", node}
+	ssh_command := []string{node}
 	ssh_command = append(ssh_command, command...)
-	cmd := exec.Command("kubevirtci/cluster-up/cli.sh", ssh_command...)
-	cmd.Stdout = GinkgoWriter
-	cmd.Stderr = GinkgoWriter
-	Expect(cmd.Run()).To(Succeed())
+	cmd := exec.Command("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	Expect(cmd.Run()).To(Succeed(), stdout.String()+stderr.String())
 }
 
 func runAtNodes(command ...string) {
@@ -172,7 +180,8 @@ func runAtNodes(command ...string) {
 }
 
 func deleteBridgeAtNodes(bridgeName string) {
-	runAtNodes("-", "sudo", "ip", "link", "delete", bridgeName, "type", "bridge", "&&", "sleep", "1")
+	By(fmt.Sprintf("Delete bridge %s", bridgeName))
+	runAtNodes("sudo", "ip", "link", "delete", bridgeName, "type", "bridge")
 }
 
 func createDummy(nodes []string, dummyName string) {
@@ -201,5 +210,13 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1.Sta
 	return Eventually(func() nmstatev1.State {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return *currentStateYaml
+	}, ReadTimeout, ReadInterval)
+}
+
+func desiredState(namespace string, node string, desiredStateYaml *nmstatev1.State) AsyncAssertion {
+	key := types.NamespacedName{Namespace: namespace, Name: node}
+	return Eventually(func() nmstatev1.State {
+		*desiredStateYaml = nodeNetworkState(key).Spec.DesiredState
+		return *desiredStateYaml
 	}, ReadTimeout, ReadInterval)
 }

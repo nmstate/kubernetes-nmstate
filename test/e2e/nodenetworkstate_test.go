@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -34,9 +36,15 @@ var _ = Describe("NodeNetworkState", func() {
 				updateDesiredState(namespace, br1Up)
 			})
 			AfterEach(func() {
+
 				// First we clean desired state if we
 				// don't do that nmstate recreates the bridge
-				updateDesiredState(namespace, nmstatev1.State(""))
+				resetDesiredStateForNodes(namespace)
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
 
 				// Let's clean the bridge directly in the node
 				// bypassing nmstate
