@@ -38,8 +38,15 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
-func desiredState(object runtime.Object) nmstatev1.State {
-	return object.(*nmstatev1.NodeNetworkState).Spec.DesiredState
+func desiredState(object runtime.Object) (nmstatev1.State, error) {
+	var state nmstatev1.State
+	switch v := object.(type) {
+	default:
+		return nmstatev1.State{}, fmt.Errorf("unexpected type %T", v)
+	case *nmstatev1.NodeNetworkState:
+		state = v.Spec.DesiredState
+	}
+	return state, nil
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -70,8 +77,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			finalizersAreDifferent := !reflect.DeepEqual(updateEvent.MetaNew.GetFinalizers(), updateEvent.MetaOld.GetFinalizers())
 
 			// we only care about desiredState changes
-			oldDesiredState := desiredState(updateEvent.ObjectOld)
-			newDesiredState := desiredState(updateEvent.ObjectNew)
+			oldDesiredState, err := desiredState(updateEvent.ObjectOld)
+			if err != nil {
+				log.Error(err, "retrieving desiredState from ObjectOld")
+				return false
+			}
+			newDesiredState, err := desiredState(updateEvent.ObjectNew)
+			if err != nil {
+				log.Error(err, "retrieving desiredState from ObjectNew")
+				return false
+			}
 			desiredStateIsDifferent := !reflect.DeepEqual(oldDesiredState, newDesiredState)
 
 			return eventIsForThisNode && (generationIsDifferent || finalizersAreDifferent || desiredStateIsDifferent)
