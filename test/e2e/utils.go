@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -172,6 +173,7 @@ func run(node string, command ...string) {
 	ssh_command := []string{"ssh", node}
 	ssh_command = append(ssh_command, command...)
 	cmd := exec.Command("kubevirtci/cluster-up/cli.sh", ssh_command...)
+	GinkgoWriter.Write([]byte(strings.Join(ssh_command, " ") + "\n"))
 	cmd.Stdout = GinkgoWriter
 	cmd.Stderr = GinkgoWriter
 	Expect(cmd.Run()).To(Succeed())
@@ -179,13 +181,13 @@ func run(node string, command ...string) {
 
 func createDummy(nodes []string, dummyName string) {
 	for _, node := range nodes {
-		run(node, "sudo", "ip", "link", "add", dummyName, "type", "dummy")
+		run(node, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
 	}
 }
 
 func deleteDummy(nodes []string, dummyName string) {
 	for _, node := range nodes {
-		run(node, "sudo", "ip", "link", "delete", dummyName, "type", "dummy")
+		run(node, "sudo", "nmcli", "con", "delete", dummyName)
 	}
 }
 
