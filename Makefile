@@ -27,6 +27,7 @@ CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
 CLI ?= $(CLUSTER_DIR)/cli.sh
 SSH ?= $(CLI) ssh
 
+install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
 
 resources = deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
@@ -80,10 +81,8 @@ $(local_handler_manifest): deploy/operator.yaml
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/operator.yaml > $@
 
-$(CLUSTER_DIR)/%: kubevirtci.version
-	rm -rf kubevirtci
-	git clone https://github.com/kubevirt/kubevirtci
-	cd kubevirtci && git checkout $$(cat  ../kubevirtci.version)
+$(CLUSTER_DIR)/%: $(install_kubevirtci)
+	$(install_kubevirtci)
 
 cluster-up: $(CLUSTER_UP)
 	$(CLUSTER_UP)
