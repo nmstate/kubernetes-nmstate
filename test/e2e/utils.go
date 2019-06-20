@@ -183,19 +183,17 @@ func runAtNodes(command ...string) {
 
 func deleteBridgeAtNodes(bridgeName string) {
 	By(fmt.Sprintf("Delete bridge %s", bridgeName))
-	runAtNodes("sudo", "ip", "link", "delete", bridgeName, "type", "bridge")
+	runAtNodes("sudo", "nmcli", "con", "delete", bridgeName)
 }
 
-func createDummy(nodes []string, dummyName string) {
-	for _, node := range nodes {
-		run(node, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
-	}
+func createDummyAtNodes(dummyName string) {
+	By(fmt.Sprintf("Creating dummy %s", dummyName))
+	runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
 }
 
-func deleteDummy(nodes []string, dummyName string) {
-	for _, node := range nodes {
-		run(node, "sudo", "nmcli", "con", "delete", dummyName)
-	}
+func deleteDummyAtNodes(dummyName string) {
+	By(fmt.Sprintf("Deleting dummy %s", dummyName))
+	runAtNodes("sudo", "nmcli", "con", "delete", dummyName)
 }
 
 func interfaces(state nmstatev1.State) []interface{} {
