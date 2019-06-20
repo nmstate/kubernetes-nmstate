@@ -165,6 +165,16 @@ func run(node string, command ...string) {
 	Expect(cmd.Run()).To(Succeed())
 }
 
+func runAtNodes(command ...string) {
+	for _, node := range nodes {
+		run(node, command...)
+	}
+}
+
+func deleteBridgeAtNodes(bridgeName string) {
+	runAtNodes("-", "sudo", "ip", "link", "delete", bridgeName, "type", "bridge", "&&", "sleep", "1")
+}
+
 func createDummy(nodes []string, dummyName string) {
 	for _, node := range nodes {
 		run(node, "sudo", "ip", "link", "add", dummyName, "type", "dummy")

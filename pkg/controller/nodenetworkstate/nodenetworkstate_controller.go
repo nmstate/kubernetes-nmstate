@@ -128,7 +128,7 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
 	}
-	reqLogger.Info(nmstateOutput)
+	reqLogger.Info("nmstate", "output", nmstateOutput)
 
 	err = nmstate.UpdateCurrentState(r.client, instance)
 	if err != nil {

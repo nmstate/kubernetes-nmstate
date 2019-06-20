@@ -28,19 +28,19 @@ var _ = Describe("NodeNetworkState", func() {
           stp-path-cost: 100
           stp-priority: 32
 `)
-
-				br1Absent = nmstatev1.State(`interfaces:
-  - name: br1
-    type: linux-bridge
-    state: absent
-`)
 			)
 
 			BeforeEach(func() {
 				updateDesiredState(namespace, br1Up)
 			})
 			AfterEach(func() {
-				updateDesiredState(namespace, br1Absent)
+				// First we clean desired state if we
+				// don't do that nmstate recreates the bridge
+				updateDesiredState(namespace, nmstatev1.State(""))
+
+				// Let's clean the bridge directly in the node
+				// bypassing nmstate
+				deleteBridgeAtNodes("br1")
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
