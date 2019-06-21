@@ -186,6 +186,11 @@ func deleteBridgeAtNodes(bridgeName string) {
 	runAtNodes("sudo", "nmcli", "con", "delete", bridgeName)
 }
 
+func createBridgeAtNodes(bridgeName string) {
+	By(fmt.Sprintf("Creating bridge %s", bridgeName))
+	runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName)
+}
+
 func createDummyAtNodes(dummyName string) {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
 	runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
@@ -218,5 +223,17 @@ func desiredState(namespace string, node string, desiredStateYaml *nmstatev1.Sta
 	return Eventually(func() nmstatev1.State {
 		*desiredStateYaml = nodeNetworkState(key).Spec.DesiredState
 		return *desiredStateYaml
+	}, ReadTimeout, ReadInterval)
+}
+
+func interfacesForNode(node string) AsyncAssertion {
+	return Eventually(func() []string {
+		var currentStateYaml nmstatev1.State
+		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+
+		interfaces := interfaces(currentStateYaml)
+		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
+
+		return interfacesName(interfaces)
 	}, ReadTimeout, ReadInterval)
 }
