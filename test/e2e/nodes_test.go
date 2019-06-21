@@ -34,7 +34,7 @@ var _ = Describe("Nodes", func() {
 			})
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement("dummy0"))
+					interfacesForNode(node).Should(ContainElement(expectedDummyName))
 				}
 			})
 		})
