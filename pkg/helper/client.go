@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,15 +16,39 @@ import (
 
 const nmstateCommand = "nmstatectl"
 
-func nmstatectl(arguments ...string) (string, error) {
-	cmd := exec.Command(nmstateCommand, arguments...)
-	var outb, errb bytes.Buffer
-	cmd.Stdout = &outb
-	cmd.Stderr = &errb
+func show(arguments ...string) (string, error) {
+	cmd := exec.Command(nmstateCommand, "show")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("Failed to execute nmstatectl show: '%v'", err)
+		return "", fmt.Errorf("failed to execute nmstatectl show: '%v', '%s', '%s'", err, stdout.String(), stderr.String())
 	}
-	return outb.String(), nil
+	return stdout.String(), nil
+}
+
+func set(state string) (string, error) {
+	cmd := exec.Command(nmstateCommand, "set")
+	var stdout, stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return "", fmt.Errorf("failed to create pipe for writing into nmstate: %v", err)
+	}
+	go func() {
+		defer stdin.Close()
+		_, err = io.WriteString(stdin, state)
+		if err != nil {
+			fmt.Printf("failed to write state into stdin: %v\n", err)
+		}
+	}()
+
+	if err = cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to execute nmstate set: '%v' '%s' '%s'", err, stdout.String(), stderr.String())
+	}
+
+	return stdout.String(), nil
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1.NodeNetworkState, error) {
@@ -54,9 +79,9 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
-	currentState, err := nmstatectl("show")
+	currentState, err := show()
 	if err != nil {
-		return fmt.Errorf("Error running nmstatectl show: %v", err)
+		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
 	// Let's update status with current network config from nmstatectl
@@ -70,4 +95,12 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNe
 	}
 
 	return nil
+}
+
+func ApplyDesiredState(nodeNetworkState *nmstatev1.NodeNetworkState) (string, error) {
+	desiredState := string(nodeNetworkState.Spec.DesiredState)
+	if len(desiredState) == 0 {
+		return "Ignoring empty desired state", nil
+	}
+	return set(string(nodeNetworkState.Spec.DesiredState))
 }
