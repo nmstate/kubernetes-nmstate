@@ -38,6 +38,17 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
+func desiredState(object runtime.Object) (nmstatev1.State, error) {
+	var state nmstatev1.State
+	switch v := object.(type) {
+	default:
+		return nmstatev1.State{}, fmt.Errorf("unexpected type %T", v)
+	case *nmstatev1.NodeNetworkState:
+		state = v.Spec.DesiredState
+	}
+	return state, nil
+}
+
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
@@ -65,7 +76,20 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
 			finalizersAreDifferent := !reflect.DeepEqual(updateEvent.MetaNew.GetFinalizers(), updateEvent.MetaOld.GetFinalizers())
 
-			return eventIsForThisNode && (generationIsDifferent || finalizersAreDifferent)
+			// we only care about desiredState changes
+			oldDesiredState, err := desiredState(updateEvent.ObjectOld)
+			if err != nil {
+				log.Error(err, "retrieving desiredState from ObjectOld")
+				return false
+			}
+			newDesiredState, err := desiredState(updateEvent.ObjectNew)
+			if err != nil {
+				log.Error(err, "retrieving desiredState from ObjectNew")
+				return false
+			}
+			desiredStateIsDifferent := !reflect.DeepEqual(oldDesiredState, newDesiredState)
+
+			return eventIsForThisNode && (generationIsDifferent || finalizersAreDifferent || desiredStateIsDifferent)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
 			return nmstate.EventIsForThisNode(genericEvent.Meta)
@@ -115,9 +139,15 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
+	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
+	}
+	reqLogger.Info("nmstate", "output", nmstateOutput)
+
 	err = nmstate.UpdateCurrentState(r.client, instance)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
 	}
 
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil

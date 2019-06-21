@@ -40,10 +40,10 @@ var _ = Describe("Nodes", func() {
 				expectedDummyName = "dummy0"
 			)
 			BeforeEach(func() {
-				createDummy(nodes, expectedDummyName)
+				createDummyAtNodes(expectedDummyName)
 			})
 			AfterEach(func() {
-				deleteDummy(nodes, expectedDummyName)
+				deleteDummyAtNodes(expectedDummyName)
 			})
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
