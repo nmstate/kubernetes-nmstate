@@ -11,14 +11,7 @@ var _ = Describe("Nodes", func() {
 	Context("when are up", func() {
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
-				var currentStateYaml nmstatev1.State
-				currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
-
-				interfaces := interfaces(currentStateYaml)
-				Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
-
-				obtainedInterfaces := interfacesName(interfaces)
-				Expect(obtainedInterfaces).To(ContainElement("eth0"))
+				interfacesForNode(node).Should(ContainElement("eth0"))
 			}
 		})
 		Context("and node network state is deleted", func() {
@@ -27,11 +20,7 @@ var _ = Describe("Nodes", func() {
 			})
 			It("should recreate it with currentState", func() {
 				for _, node := range nodes {
-					var currentStateYaml nmstatev1.State
-					currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
-
-					interfaces := interfaces(currentStateYaml)
-					Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
+					interfacesForNode(node).Should(ContainElement("eth0"))
 				}
 			})
 		})
@@ -47,15 +36,7 @@ var _ = Describe("Nodes", func() {
 			})
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
-					Eventually(func() []string {
-						var currentStateYaml nmstatev1.State
-						currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
-
-						interfaces := interfaces(currentStateYaml)
-						Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
-
-						return interfacesName(interfaces)
-					}, ReadTimeout, ReadInterval).Should(ContainElement(expectedDummyName))
+					interfacesForNode(node).Should(ContainElement("dummy0"))
 				}
 			})
 		})
