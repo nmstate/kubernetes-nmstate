@@ -11,5 +11,3 @@ git clone https://github.com/$organization/kubevirtci $kubevirtci_dir
 pushd $kubevirtci_dir
 git checkout $commit
 popd
-
-
