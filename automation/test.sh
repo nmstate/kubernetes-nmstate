@@ -16,4 +16,4 @@ trap teardown EXIT SIGINT SIGTERM SIGSTOP
 make cluster-down
 make cluster-up
 make cluster-sync
-make E2E_TEST_EXTRA_ARGS="-ginkgo.noColor" test/cluster/e2e
+make E2E_TEST_EXTRA_ARGS="-ginkgo.noColor" test/e2e
