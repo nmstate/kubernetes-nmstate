@@ -46,11 +46,6 @@ vet:
 handler:
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
-handler-up:
-	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
-	OPERATOR_NAME=nmstate-handler \
-				  $(OPERATOR_SDK) up local --kubeconfig $(KUBECONFIG)
-
 gen-k8s:
 	$(OPERATOR_SDK) generate k8s
 
