@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
-		Context("with a linux bridge", func() {
+		Context("with a linux bridge up", func() {
 			var (
 				br1Up = nmstatev1.State(`interfaces:
   - name: eth1
@@ -52,17 +52,33 @@ var _ = Describe("NodeNetworkState", func() {
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
-					Eventually(func() []string {
-						var currentStateYaml nmstatev1.State
-						currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
-
-						interfaces := interfaces(currentStateYaml)
-						Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
-
-						return interfacesName(interfaces)
-					}, ReadTimeout, ReadInterval).Should(ContainElement("br1"))
+					interfacesForNode(node).Should(ContainElement("br1"))
 				}
 			})
 		})
+		Context("with a linux bridge absent", func() {
+			var (
+				br1Absent = nmstatev1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: absent
+`)
+			)
+
+			BeforeEach(func() {
+				createBridgeAtNodes("br1")
+				updateDesiredState(namespace, br1Absent)
+			})
+			AfterEach(func() {
+				// If not br1 is going to be removed if created manually
+				resetDesiredStateForNodes(namespace)
+			})
+			It("should have the linux bridge at currentState", func() {
+				for _, node := range nodes {
+					interfacesForNode(node).ShouldNot(ContainElement("br1"))
+				}
+			})
+		})
+
 	})
 })
