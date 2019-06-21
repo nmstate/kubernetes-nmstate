@@ -59,16 +59,7 @@ push-handler: handler
 unit-test:
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
-test/local/e2e:
-	OPERATOR_NAME=nmstate-handler\
-		$(OPERATOR_SDK) test local ./test/e2e \
-			--kubeconfig $(KUBECONFIG) \
-			--namespace default \
-			--global-manifest deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml \
-			--up-local \
-			--go-test-flags "$(E2E_TEST_ARGS)"
-
-test/cluster/e2e:
+test/e2e:
 	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace default \
@@ -127,8 +118,7 @@ cluster-sync: cluster-sync-handler
 	handler \
 	push-handler \
 	test-unit \
-	test/local/e2e \
-	test/cluster/e2e \
+	test/e2e \
 	cluster-up \
 	cluster-down \
 	cluster-sync-resources \
