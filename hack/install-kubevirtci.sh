@@ -1,9 +1,7 @@
 #!/bin/bash -e
 
-# TODO: This is temporal while [1] is merged
-#       [1] https://github.com/kubevirt/kubevirtci/pull/108
-organization=qinqon
-commit="9f21fcda8643d979620edd4c658869220fd36822"
+organization=kubevirt
+commit="71b500a6eda02eff137c575878fdc55a7d923e21"
 
 script_dir=$(dirname "$(readlink -f "$0")")
 kubevirtci_dir=kubevirtci
