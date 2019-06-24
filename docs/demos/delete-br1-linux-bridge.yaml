@@ -1,0 +1,11 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkState
+metadata:
+  name: node01
+spec:
+  desiredState:
+    interfaces:
+      - name: br1
+        type: linux-bridge
+        state: absent
+      nodeName: node1
