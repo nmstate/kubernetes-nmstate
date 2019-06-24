@@ -8,12 +8,12 @@ HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
 GINKGO_EXTRA_ARGS ?=
 GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
-GINKGO?= go run ./vendor/github.com/onsi/ginkgo/ginkgo
+GINKGO?= build/_output/bin/ginkgo
 
 E2E_TEST_EXTRA_ARGS ?=
 E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
 
-OPERATOR_SDK ?= go run ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
+OPERATOR_SDK ?= build/_output/bin/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
 
 export KUBEVIRT_PROVIDER ?= k8s-1.13.3
@@ -43,19 +43,25 @@ format:
 vet:
 	go vet ./cmd/... ./pkg/...
 
-handler:
+$(GINKGO): Gopkg.toml
+	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/onsi/ginkgo/ginkgo
+
+$(OPERATOR_SDK): Gopkg.toml
+	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
+
+handler: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
-gen-k8s:
+gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
 
 push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
-unit-test:
+test/unit: $(GINKGO)
 	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
-test/e2e:
+test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace default \
@@ -113,7 +119,7 @@ cluster-sync: cluster-sync-handler
 	vet \
 	handler \
 	push-handler \
-	test-unit \
+	test/unit \
 	test/e2e \
 	cluster-up \
 	cluster-down \

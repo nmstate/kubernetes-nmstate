@@ -3,4 +3,4 @@ go: "1.11"
 
 install: true
 script:
-- GINKGO_EXTRA_ARGS="--compilers=2" make all unit-test
+- GINKGO_EXTRA_ARGS="--compilers=2" make all test/unit
