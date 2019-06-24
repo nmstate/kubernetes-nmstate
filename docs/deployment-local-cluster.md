@@ -14,8 +14,10 @@ Start your local cluster. If you want to use OpenShift instead of Kubernetes or
 a different amount of nodes, check the
 [development guide](developer-guide.md#local-cluster).
 
+Start the local cluster
+
 ```shell
-KUBEVIRT_NUM_NODES=2 make cluster-up
+make cluster-up
 ```
 
 Build kubernetes-nmstate from local sources and install it on the cluster.

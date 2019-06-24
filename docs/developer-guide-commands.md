@@ -11,6 +11,7 @@ make gen-k8s
 
 # Build handler operator (binary and docker)
 make handler
+```
 
 ## Testing
 
@@ -24,6 +25,7 @@ make test/e2e
 
 ## Containers
 
+```shell
 # Push nmstate-handler container to remote registry
 make handler-push
 ```
@@ -42,13 +44,12 @@ HANDLER_IMAGE_TAG # latest
 
 ## Manifests
 
-The operator `operator.yaml` manifest from the `deploy` folder  is a template
+The operator `operator.yaml` manifest from the `deploy` folder is a template
 to be able to replace the with correct docker image to use.
 
 Everytime cluster-sync is called it will regenerate the operator yaml with
 correct kubernets-nmstate-handler image and apply it.
 
-```
 
 ## Local Cluster
 

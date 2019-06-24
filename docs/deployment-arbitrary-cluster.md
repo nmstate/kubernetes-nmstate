@@ -1,6 +1,6 @@
 # Deployment on Arbitrary Cluster
 
-In this guide, we will cover the installation of etworkManager
+In this guide, we will cover the installation of NetworkManager
 and kubernetes-nmstate on your arbitrary cluster.
 
 ## Requirements
@@ -32,7 +32,7 @@ Finally, we can install kubernetes-nmstate on our cluster.
 ```shell
 # Install k8s resources and kubernets-nmstate operator
 for manifest in "service_account.yaml role.yaml role_binding.yaml crds/nmstate_v1_nodenetworkstate_crd.yaml operator.yaml"; do
-    kubectl apply -f https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/master/deploy/0.0.3/$manifest
+    kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.3.0/$manifest
 done
 ```
 
@@ -41,7 +41,7 @@ done
 ```shell
 # Install k8s resources , openshift scc and kubernets-nmstate operator
 for manifest in "service_account.yaml role.yaml role_binding.yaml openshift/scc.yaml crds/nmstate_v1_nodenetworkstate_crd.yaml operator.yaml"; do
-    kubectl apply -f https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/master/deploy/0.0.3/$manifest
+    kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.3.0/$manifest
 done
 ```
 

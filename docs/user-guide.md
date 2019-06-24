@@ -9,4 +9,3 @@ the tutorials.
 
 - [Report node network state](user-guide-state-reporting.md)
 - [Create Linux bridge and connect it to a node interface](user-guide-state-configure-linux-bridge.md)
-
