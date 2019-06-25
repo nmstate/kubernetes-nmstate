@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,12 +38,12 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
-func desiredState(object runtime.Object) (nmstatev1.State, error) {
-	var state nmstatev1.State
+func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {
+	var state nmstatev1alpha1.State
 	switch v := object.(type) {
 	default:
-		return nmstatev1.State{}, fmt.Errorf("unexpected type %T", v)
-	case *nmstatev1.NodeNetworkState:
+		return nmstatev1alpha1.State{}, fmt.Errorf("unexpected type %T", v)
+	case *nmstatev1alpha1.NodeNetworkState:
 		state = v.Spec.DesiredState
 	}
 	return state, nil
@@ -96,7 +96,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		},
 	}
 	// Watch for changes to primary resource NodeNetworkState
-	err = c.Watch(&source.Kind{Type: &nmstatev1.NodeNetworkState{}}, &k8shandler.EnqueueRequestForObject{}, forThisNode)
+	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NodeNetworkState{}}, &k8shandler.EnqueueRequestForObject{}, forThisNode)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 	reqLogger.Info("Reconciling NodeNetworkState")
 
 	// Fetch the NodeNetworkState instance
-	instance := &nmstatev1.NodeNetworkState{}
+	instance := &nmstatev1alpha1.NodeNetworkState{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {

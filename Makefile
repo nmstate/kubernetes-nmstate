@@ -87,7 +87,7 @@ cluster-down: $(CLUSTER_DOWN)
 cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f build/_output/
 	$(KUBECTL) delete --ignore-not-found -f deploy/
-	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
 	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi
@@ -106,7 +106,7 @@ cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
-	$(KUBECTL) apply -f deploy/crds/nmstate_v1_nodenetworkstate_crd.yaml
+	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
 	$(KUBECTL) create -f $(local_handler_manifest)
 

@@ -24,7 +24,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 const ReadTimeout = 15 * time.Second
@@ -123,9 +123,9 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
-func updateDesiredStateAtNode(namespace string, node string, desiredState nmstatev1.State) {
+func updateDesiredStateAtNode(namespace string, node string, desiredState nmstatev1alpha1.State) {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
-	state := nmstatev1.NodeNetworkState{}
+	state := nmstatev1alpha1.NodeNetworkState{}
 	err := framework.Global.Client.Get(context.TODO(), key, &state)
 	Expect(err).ToNot(HaveOccurred())
 	state.Spec.DesiredState = desiredState
@@ -133,7 +133,7 @@ func updateDesiredStateAtNode(namespace string, node string, desiredState nmstat
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func updateDesiredState(namespace string, desiredState nmstatev1.State) {
+func updateDesiredState(namespace string, desiredState nmstatev1alpha1.State) {
 	for _, node := range nodes {
 		updateDesiredStateAtNode(namespace, node, desiredState)
 	}
@@ -141,12 +141,12 @@ func updateDesiredState(namespace string, desiredState nmstatev1.State) {
 
 func resetDesiredStateForNodes(namespace string) {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(namespace, node, nmstatev1.State(""))
+		updateDesiredStateAtNode(namespace, node, nmstatev1alpha1.State(""))
 	}
 }
 
-func nodeNetworkState(key types.NamespacedName) nmstatev1.NodeNetworkState {
-	state := nmstatev1.NodeNetworkState{}
+func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState {
+	state := nmstatev1alpha1.NodeNetworkState{}
 	Eventually(func() error {
 		return framework.Global.Client.Get(context.TODO(), key, &state)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
@@ -154,7 +154,7 @@ func nodeNetworkState(key types.NamespacedName) nmstatev1.NodeNetworkState {
 }
 
 func deleteNodeNeworkStates() {
-	nodeNetworkStateList := &nmstatev1.NodeNetworkStateList{}
+	nodeNetworkStateList := &nmstatev1alpha1.NodeNetworkStateList{}
 	err := framework.Global.Client.List(context.TODO(), &dynclient.ListOptions{}, nodeNetworkStateList)
 	Expect(err).ToNot(HaveOccurred())
 	var deleteErrors []error
@@ -201,7 +201,7 @@ func deleteDummyAtNodes(dummyName string) {
 	runAtNodes("sudo", "nmcli", "con", "delete", dummyName)
 }
 
-func interfaces(state nmstatev1.State) []interface{} {
+func interfaces(state nmstatev1alpha1.State) []interface{} {
 	By("unmarshal state yaml into unstructured golang")
 	var stateUnstructured map[string]interface{}
 	err := yaml.Unmarshal(state, &stateUnstructured)
@@ -210,17 +210,17 @@ func interfaces(state nmstatev1.State) []interface{} {
 	return interfaces
 }
 
-func currentState(namespace string, node string, currentStateYaml *nmstatev1.State) AsyncAssertion {
+func currentState(namespace string, node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
-	return Eventually(func() nmstatev1.State {
+	return Eventually(func() nmstatev1alpha1.State {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return *currentStateYaml
 	}, ReadTimeout, ReadInterval)
 }
 
-func desiredState(namespace string, node string, desiredStateYaml *nmstatev1.State) AsyncAssertion {
+func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alpha1.State) AsyncAssertion {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
-	return Eventually(func() nmstatev1.State {
+	return Eventually(func() nmstatev1alpha1.State {
 		*desiredStateYaml = nodeNetworkState(key).Spec.DesiredState
 		return *desiredStateYaml
 	}, ReadTimeout, ReadInterval)
@@ -228,7 +228,7 @@ func desiredState(namespace string, node string, desiredStateYaml *nmstatev1.Sta
 
 func interfacesForNode(node string) AsyncAssertion {
 	return Eventually(func() []string {
-		var currentStateYaml nmstatev1.State
+		var currentStateYaml nmstatev1alpha1.State
 		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
 
 		interfaces := interfaces(currentStateYaml)

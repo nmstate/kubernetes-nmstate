@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	apis "github.com/nmstate/kubernetes-nmstate/pkg/apis"
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 var (
@@ -21,7 +21,7 @@ var (
 
 var _ = BeforeSuite(func() {
 	By("Adding custom resource scheme to framework")
-	nodeNetworkStateList := &nmstatev1.NodeNetworkStateList{}
+	nodeNetworkStateList := &nmstatev1alpha1.NodeNetworkStateList{}
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, nodeNetworkStateList)
 	Expect(err).ToNot(HaveOccurred())
 })

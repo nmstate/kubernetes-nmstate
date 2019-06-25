@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 const nmstateCommand = "nmstatectl"
@@ -51,8 +51,8 @@ func set(state string) (string, error) {
 	return stdout.String(), nil
 }
 
-func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1.NodeNetworkState, error) {
-	var nodeNetworkState nmstatev1.NodeNetworkState
+func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {
+	var nodeNetworkState nmstatev1alpha1.NodeNetworkState
 	nodeNetworkStateKey := types.NamespacedName{
 		Name: nodeName,
 	}
@@ -61,12 +61,12 @@ func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1.NodeN
 }
 
 func InitializeNodeNeworkState(client client.Client, nodeName string) error {
-	nodeNetworkState := nmstatev1.NodeNetworkState{
+	nodeNetworkState := nmstatev1alpha1.NodeNetworkState{
 		// Create NodeNetworkState for this node
 		ObjectMeta: metav1.ObjectMeta{
 			Name: nodeName,
 		},
-		Spec: nmstatev1.NodeNetworkStateSpec{
+		Spec: nmstatev1alpha1.NodeNetworkStateSpec{
 			NodeName: nodeName,
 		},
 	}
@@ -78,15 +78,15 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 	return nil
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNetworkState) error {
+func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
 	currentState, err := show()
 	if err != nil {
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
 	// Let's update status with current network config from nmstatectl
-	nodeNetworkState.Status = nmstatev1.NodeNetworkStateStatus{
-		CurrentState: nmstatev1.State(currentState),
+	nodeNetworkState.Status = nmstatev1alpha1.NodeNetworkStateStatus{
+		CurrentState: nmstatev1alpha1.State(currentState),
 	}
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
@@ -97,7 +97,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1.NodeNe
 	return nil
 }
 
-func ApplyDesiredState(nodeNetworkState *nmstatev1.NodeNetworkState) (string, error) {
+func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (string, error) {
 	desiredState := string(nodeNetworkState.Spec.DesiredState)
 	if len(desiredState) == 0 {
 		return "Ignoring empty desired state", nil
