@@ -6,14 +6,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1"
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up", func() {
 			var (
-				br1Up = nmstatev1.State(`interfaces:
+				br1Up = nmstatev1alpha1.State(`interfaces:
   - name: eth1
     type: ethernet
     state: up
@@ -58,7 +58,7 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with a linux bridge absent", func() {
 			var (
-				br1Absent = nmstatev1.State(`interfaces:
+				br1Absent = nmstatev1alpha1.State(`interfaces:
   - name: br1
     type: linux-bridge
     state: absent
