@@ -34,5 +34,5 @@ for node01 change bridge state to `absent`
 ./kubevirtci/cluster-up/kubectl.sh patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/delete-br1-linux-bridge.yaml)"
 
 # on arbitrary cluster
-kubectl patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/delete-br1-linux-bridge.yaml")
+kubectl patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/delete-br1-linux-bridge.yaml)"
 ```
