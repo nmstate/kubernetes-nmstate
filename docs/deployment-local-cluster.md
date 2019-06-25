@@ -33,7 +33,7 @@ Build kubernetes-nmstate from local sources and install it on the cluster.
 make cluster-sync
 ```
 
-You can ssh into the created nodes using `kubevirtci/clusetr-up/ssh.sh`.
+You can ssh into the created nodes using `kubevirtci/cluster-up/ssh.sh`.
 
 ```shell
 kubevirtci/cluster-up/ssh.sh node01
