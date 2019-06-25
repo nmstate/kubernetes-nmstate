@@ -1,100 +1,129 @@
-all: build
+IMAGE_REGISTRY ?= quay.io
+IMAGE_REPO ?= nmstate
 
-MANIFESTS_SOURCE ?= manifests/templates
-MANIFESTS_DESTINATION ?= manifests/examples
-NAMESPACE ?= nmstate-default
-IMAGE_REGISTRY ?= quay.io/nmstate
-IMAGE_TAG ?= latest
-PULL_POLICY ?= Always
-STATE_HANDLER_IMAGE ?= kubernetes-nmstate-state-handler
-POLICY_HANDLER_IMAGE ?= kubernetes-nmstate-configuration-policy-handler
-KUBECONFIG ?= $(shell pwd)/cluster/.kubeconfig
+HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
+HANDLER_IMAGE_TAG ?= latest
+HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
+HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
-commands = state-handler policy-handler
-func_tests_sources = $(shell find tests/ -name "*.go")
-apis_sources = $(shell find pkg/apis -name "*.go")
+GINKGO_EXTRA_ARGS ?=
+GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
+GINKGO?= build/_output/bin/ginkgo
 
-$(commands):
-	go fmt ./cmd/$@
-	go vet ./cmd/$@
-	go build -o ./bin/$@ ./cmd/$@ 
+E2E_TEST_EXTRA_ARGS ?=
+E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
 
-build: $(commands)
+OPERATOR_SDK ?= build/_output/bin/operator-sdk
+LOCAL_REGISTRY ?= registry:5000
 
-tests/tests.test: $(func_tests_sources) $(apis_sources)
-	ginkgo build tests
+export KUBEVIRT_PROVIDER ?= k8s-1.13.3
+export KUBEVIRT_NUM_NODES ?= 1
+export KUBEVIRT_NUM_SECONDARY_NICS ?= 1
 
-docker-state-handler:
-	docker build -f cmd/state-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG) .
+CLUSTER_DIR ?= kubevirtci/cluster-up/
+KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
+KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
+CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
+CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
+CLI ?= $(CLUSTER_DIR)/cli.sh
+SSH ?= $(CLI) ssh
 
-docker-policy-handler:
-	docker build -f cmd/policy-handler/Dockerfile -t $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG) .
+install_kubevirtci := hack/install-kubevirtci.sh
+local_handler_manifest = build/_output/handler.local.yaml
 
-docker: docker-state-handler docker-policy-handler
+resources = deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 
-docker-push:
-	docker push $(IMAGE_REGISTRY)/$(STATE_HANDLER_IMAGE):$(IMAGE_TAG)
-	docker push $(IMAGE_REGISTRY)/$(POLICY_HANDLER_IMAGE):$(IMAGE_TAG)
+all: check handler
 
-generate:
-	hack/update-codegen.sh
+check: format vet
 
-manifests:
-	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
-	MANIFESTS_DESTINATION=$(MANIFESTS_DESTINATION) \
-	NAMESPACE=$(NAMESPACE) \
-	IMAGE_REGISTRY=$(IMAGE_REGISTRY) \
-	IMAGE_TAG=$(IMAGE_TAG) \
-	PULL_POLICY=$(PULL_POLICY) \
-	STATE_HANDLER_IMAGE=$(STATE_HANDLER_IMAGE) \
-		hack/generate-manifests.sh
+format:
+	gofmt -d cmd/ pkg/
 
-local-manifests:
-	IMAGE_REGISTRY=registry:5000 \
-	MANIFESTS_DESTINATION='_out/manifests' \
-	MANIFESTS_SOURCE=$(MANIFESTS_SOURCE) \
-	NAMESPACE=$(NAMESPACE) \
-	IMAGE_TAG=$(IMAGE_TAG) \
-	PULL_POLICY=$(PULL_POLICY) \
-	STATE_HANDLER_IMAGE=$(STATE_HANDLER_IMAGE) \
-		hack/generate-manifests.sh
+vet:
+	go vet ./cmd/... ./pkg/...
 
-check:
-	./hack/verify-codegen.sh
-	./hack/verify-fmt.sh
-	./hack/verify-vet.sh
-	./hack/verify-manifests.sh
+$(GINKGO): Gopkg.toml
+	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/onsi/ginkgo/ginkgo
 
-functest: local-manifests tests/tests.test
-	./tests/tests.test \
-		-kubeconfig $(KUBECONFIG) \
-		-namespace $(NAMESPACE) \
-	  -manifests _out/manifests/
+$(OPERATOR_SDK): Gopkg.toml
+	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 
-dep:
-	dep ensure -v
+handler: $(OPERATOR_SDK)
+	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
-clean-dep:
-	rm -f ./Gopkg.lock
-	rm -rf ./vendor
+gen-k8s: $(OPERATOR_SDK)
+	$(OPERATOR_SDK) generate k8s
 
-clean-generate:
-	rm -f pkg/apis/nmstate.io/v1/zz_generated.deepcopy.go
-	rm -rf pkg/client
+push-handler: handler
+	docker push $(HANDLER_IMAGE)
 
-clean-manifests:
-	rm -rf $(MANIFESTS_DESTINATION)
+test/unit: $(GINKGO)
+	$(GINKGO) $(GINKGO_ARGS) ./pkg/
 
-cluster-up:
-	./cluster/up.sh
+test/e2e: $(OPERATOR_SDK)
+	$(OPERATOR_SDK) test local ./test/e2e \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace default \
+		--no-setup \
+		--go-test-flags "$(E2E_TEST_ARGS)"
 
-cluster-sync:
-	./cluster/sync.sh
 
-cluster-clean:
-	./cluster/clean.sh
+$(local_handler_manifest): deploy/operator.yaml
+	mkdir -p $(dir $@)
+	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
+		deploy/operator.yaml > $@
 
-cluster-down:
-	./cluster/down.sh
+$(CLUSTER_DIR)/%: $(install_kubevirtci)
+	$(install_kubevirtci)
 
-.PHONY: policy-handler state-handler build docker docker-push generate manifests check functest dep clean-dep clean-generate clean-manifests cluster-up cluster-sync cluster-clean cluster-down
+cluster-up: $(CLUSTER_UP)
+	$(CLUSTER_UP)
+	hack/install-nm.sh
+
+cluster-down: $(CLUSTER_DOWN)
+	$(CLUSTER_DOWN)
+
+cluster-clean: $(KUBECTL)
+	$(KUBECTL) delete --ignore-not-found -f build/_output/
+	$(KUBECTL) delete --ignore-not-found -f deploy/
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
+		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
+	fi
+
+cluster-sync-resources: $(KUBECTL)
+	for resource in $(resources); do \
+		$(KUBECTL) apply -f $$resource || exit 1; \
+	done
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
+		$(KUBECTL) apply -f deploy/openshift/; \
+	fi
+
+cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
+	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
+		make push-handler
+	# Temporary until image is updated with provisioner that sets this field
+	# This field is required by buildah tool
+	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
+	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
+	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
+	$(KUBECTL) create -f $(local_handler_manifest)
+
+cluster-sync: cluster-sync-handler
+
+.PHONY: \
+	all \
+	check \
+	format \
+	vet \
+	handler \
+	push-handler \
+	test/unit \
+	test/e2e \
+	cluster-up \
+	cluster-down \
+	cluster-sync-resources \
+	cluster-sync-handler \
+	cluster-sync \
+	cluster-clean
