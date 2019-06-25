@@ -8,8 +8,8 @@ and the other for the CRD NodeNeworkState.
 
 ## Components
 
-- [Node Controller](developer-guide-state.md) - developer guide and design of `NodeNetworkState` handler.
-- [NodeNetworkState Controller](developer-guide-node.md) - developer guide and design of `NodeNetworkState` handler.
+- [Node Controller](developer-guide-node.md) - developer guide and design of `Node` handler.
+- [NodeNetworkState Controller](developer-guide-state.md) - developer guide and design of `NodeNetworkState` handler.
 
 # Development
 

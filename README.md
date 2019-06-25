@@ -39,7 +39,7 @@ Node Network State objects are created per each node in the cluster and can be
 used to configure and report available interfaces and network configuration.
 
 Example of NodeNetworkState listing network configuration of node01 can be
-found in manifests/docs/demos/state.yaml.
+found at [state example](docs/demos/state.yaml).
 
 ## Deployment and Usage
 

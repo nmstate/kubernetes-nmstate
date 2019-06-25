@@ -20,6 +20,7 @@ make handler
 make test/unit
 
 # Run e2e tests
+# you need a running k8s/openshift cluster with with kubernets-nmstate running
 make test/e2e
 ```
 
@@ -78,6 +79,7 @@ kubevirtci/cluster-up/ssh.sh node01 -- echo 'Hello World'
 kubevirtci/cluster-up/kubectl.sh
 
 # Build project, build images, push them to cluster's registry and install them
+# this have to be call everytime you want to reflect code changes at cluster
 make cluster-sync
 
 # Remove all components and objects related to the project

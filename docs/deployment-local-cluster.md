@@ -19,7 +19,12 @@ Start the local cluster
 ```shell
 make cluster-up
 ```
+Stop the local cluster
 
+```shell
+
+make cluster-down
+`
 Build kubernetes-nmstate from local sources and install it on the cluster.
 
 ```shell

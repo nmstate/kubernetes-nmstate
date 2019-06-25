@@ -14,6 +14,17 @@ must be installed on the node.
 
 ### NetworkManager
 
+From [gnome](https://developer.gnome.org/NetworkManager/stable/NetworkManager.html):
+
+"The NetworkManager daemon attempts to make networking configuration and
+operation as painless and automatic as possible by managing the primary
+network connection and other network interfaces, like Ethernet, Wi-Fi,
+and Mobile Broadband devices. NetworkManager will connect any network device
+when a connection for that device becomes available, unless that behavior
+is disabled. Information about networking is exported via a D-Bus interface
+to any interested application, providing a rich API with which to inspect
+and control network settings and operation."
+
 kubernetes-nmstate containers communicate with a NetworkManager instance running
 on the node using D-Bus. Make sure that NetworkManager is installed and running
 on each node.

@@ -1,5 +1,10 @@
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkState
+metadata:
+  name: node01
 spec:
   desiredState:
+    nodeName: node1
     interfaces:
       - name: eth1
         description: An ethernet network interface
