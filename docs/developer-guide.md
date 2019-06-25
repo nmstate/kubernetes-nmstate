@@ -1,16 +1,15 @@
 # Design
 
-The system defines 2 objects, `NodeNetworkState` and `NodeNetworkConfigurationPolicy` that
-are used to report and configure cluster node interfaces. You can find more
-information in [kubernetes-nmstate design document](https://docs.google.com/document/d/1282BcYjYGIIxQKgMYi3nQodB4ML_gw9BSs5AXB7QUtg/).
+The system is implemented as an k8s operator using the [operator-sdk](https://github.com/operator-framework/operator-sdk)
+but is deployed as a DaemonSet instead of Deployment with [filtering](https://github.com/operator-framework/operator-sdk/blob/master/doc/user/event-filtering.md) only events for the DaemonSet pod node.
 
-Each of these objects has a dedicated handler. Both of these handlers can function
-in [active and on-demand modes](user-guide-active-vs-on-demand.md).
+There are two controllers one for [Node](https://godoc.org/k8s.io/api/core/v1#Node)
+and the other for the CRD NodeNeworkState.
 
 ## Components
 
-- [State Handler](developer-guide-state.md) - developer guide and design of `NodeNetworkState` handler.
-- [Configuration Policy Handler](developer-guide-configuration-policy.md) - developer guide and design of `NodeNetworkConfigurationPolicy` handler.
+- [Node Controller](developer-guide-node.md) - developer guide and design of `Node` handler.
+- [NodeNetworkState Controller](developer-guide-state.md) - developer guide and design of `NodeNetworkState` handler.
 
 # Development
 

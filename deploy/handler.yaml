@@ -1,0 +1,29 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  name: nmstate-handler
+spec:
+  selector:
+    matchLabels:
+      nmstate.io: nmstate-handler
+  template:
+    metadata:
+      labels:
+        app: kubernetes-nmstate
+        nmstate.io: nmstate-handler
+    spec:
+      serviceAccountName: kubernetes-nmstate
+      containers:
+        - name: nmstate-handler
+          image: REPLACE_IMAGE
+          imagePullPolicy: Always
+          volumeMounts:
+          - name: dbus-socket
+            mountPath: /run/dbus/system_bus_socket
+          securityContext:
+            privileged: true
+      volumes:
+      - name: dbus-socket
+        hostPath:
+          path: /run/dbus/system_bus_socket
+          type: Socket

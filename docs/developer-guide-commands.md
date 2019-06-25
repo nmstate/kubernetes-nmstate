@@ -7,96 +7,79 @@ this project.
 
 ```shell
 # If pkg/apis/ has been changed, run generator to update client code
-make generate
+make gen-k8s
 
-# Build binaries of all components, make format is called as a part of it
-make build
-
-# Refresh vendoring after dependencies change
-make dep
+# Build handler operator (binary and docker)
+make handler
 ```
 
 ## Testing
 
 ```shell
-# Check code formatting, imports and properly generated modules
-make check
+# Run unit tests
+make test/unit
+
+# Run e2e tests
+# you need a running k8s/openshift cluster with with kubernets-nmstate running
+make test/e2e
 ```
 
 ## Containers
 
 ```shell
-# Build containers of all components, binaries are built as a part of multi-stage containerized build
-make docker
-
-# Push built containers to remote registry
-make docker-push
+# Push nmstate-handler container to remote registry
+make handler-push
 ```
 
 It is possible to adjust the built container images with the following
 environment variables.
 
 ```shell
-IMAGE_REGISTRY # quay.io/nmstate
-IMAGE_TAG # latest
-STATE_HANDLER_IMAGE # kubernetes-nmstate-state-handler
-POLICY_HANDLER_IMAGE # kubernetes-nmstate-configuration-policy-handler
+IMAGE_REGISTRY # quay.io
+IMAGE_REPO # nmstate
+
+HANDLER_IMAGE_NAME # kubernetes-nmstate-handler
+HANDLER_IMAGE_TAG # latest
+
 ```
 
 ## Manifests
 
-Manifests in the `manifests/examples/` folder are built from templates kept in
-`manifests/templates/`.
+The operator `operator.yaml` manifest from the `deploy` folder is a template
+to be able to replace the with correct docker image to use.
 
-```shell
-# build manifests
-make manifests
-```
+Everytime cluster-sync is called it will regenerate the operator yaml with
+correct kubernets-nmstate-handler image and apply it.
 
-Manifest templates contain the following variables. It it possible to adjust
-them my setting environment variables before calling `make manifests`.
-
-```shell
-NAMESPACE # nmstate-default
-IMAGE_REGISTRY # quay.io/nmstate
-IMAGE_TAG # latest
-PULL_POLICY # Always
-STATE_HANDLER_IMAGE # kubernetes-nmstate-state-handler
-POLICY_HANDLER_IMAGE # kubernetes-nmstate-configuration-policy-handler
-```
-
-You can also specify input and output directories.
-
-```shell
-MANIFESTS_SOURCE # manifests/templates
-MANIFESTS_DESTINATION # manifests/examples
-```
 
 ## Local Cluster
 
 This project uses [kubevirtci](https://github.com/kubevirt/kubevirtci) to
-deploy the local cluster.
+deploy the local cluster, the version of the repository to use is marked at
+hack/install-kubevirtci.sh and it install it under `kubevirtci` dir in case
+a new version is detrected the cluster command will re-install it.
 
 Use the following commands to control it:
 
-*note:* The default Provider is one node (master + worker) of Kubernetes 1.11.0.
+*note:* The default Provider is one node (master + worker) of Kubernetes 1.13.1.
 
 ```shell
 # Deploy local Kubernetes cluster
-export KUBEVIRT_PROVIDER=k8s-1.11.0 # k8s-1.11.0 for Kubernetes or os-3.11.0 for OpenShift
+export KUBEVIRT_PROVIDER=k8s-1.13.1 # k8s-1.13.1 for Kubernetes or os-3.11.0 for OpenShift
 export KUBEVIRT_NUM_NODES=3 # master + two nodes
 make cluster-up
 
 # SSH to node01 and open interactive shell
-./cluster/cli.sh ssh node01
+kubevirtci/cluster-up/ssh.sh node01
 
 # SSH to node01 and run command
-./cluster/cli.sh ssh node01 echo 'Hello World'
+kubevirtci/cluster-up/ssh.sh node01 -- echo 'Hello World'
 
 # Communicate with the Kubernetes cluster using kubectl
-./cluster/kubectl.sh
+kubevirtci/cluster-up/kubectl.sh
 
 # Build project, build images, push them to cluster's registry and install them
+# this have to be call everytime you want to reflect code changes at cluster
 make cluster-sync
 
 # Remove all components and objects related to the project
@@ -109,21 +92,20 @@ make cluster-down
 ## Project Directory Structure
 
  ```
-├── cluster               # local cluster scripts
-├── cmd                   # location of binaries main functions and Dockerfiles
-│   ├── policy-handler
-│   └── state-handler
-├── docs                  # project documentation
-├── hack                  # project scripts
-├── manifests             # yaml files
-│   ├── examples          # generated yaml files
-│   └── templates         # templates for all yaml files, CRDs, daemon sets and others
-├── pkg                   # libraries used by the binaries in cmd
-│   ├── apis              # CRD definitions
-│   ├── client            # generated code for Kubernetes API client
-│   ├── nmstatectl        # conversion between CRD and nmstatectl input/output
-│   ├── policy-controller # main logic of policy handler running as a daemon
-│   ├── state-controller  # main logic of state handler running as a daemon
-│   └── utils             # general utility functions
-└── tools                 # tools for yaml generation
+├── automation                  # The stdci scripts
+├── cmd                         # Executable binaries
+│   ├── manager                 # the operator main function command.
+├── docs                        # project documentation
+├── hack                        # project scripts
+├── deploy                      # yaml files
+│   ├── openshift               # openshift specific configuration
+│   └── crds                    # CRDs configuration
+├── pkg                         # libraries used by the binaries in cmd
+│   ├── apis                    # CRD definitions
+│   ├── helper                  # Helpers to call nmstate and change CRs
+│   ├── controller              # main logic of with the operator controllers
+│       ├── node                # core Node object controller
+│       ├── nodenetworkstate    # NodeNetworkState controller
+├── test                        # e2e tests
+├── version                     # operator's version
  ```
