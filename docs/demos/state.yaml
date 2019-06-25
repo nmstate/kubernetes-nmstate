@@ -1,13 +1,13 @@
-apiVersion: v1
+apiVersion: v1alpha1
 items:
-- apiVersion: nmstate.io/v1
+- apiVersion: nmstate.io/v1alpha1
   kind: NodeNetworkState
   metadata:
     creationTimestamp: "2019-06-24T07:48:25Z"
     generation: 1
     name: node01
     resourceVersion: "629"
-    selfLink: /apis/nmstate.io/v1/nodenetworkstates/node01
+    selfLink: /apis/nmstate.io/v1alpha1/nodenetworkstates/node01
     uid: 7298d496-9654-11e9-ba95-525500d15501
   spec:
     managed: false
