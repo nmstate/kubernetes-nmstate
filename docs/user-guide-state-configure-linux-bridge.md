@@ -15,24 +15,24 @@ ready. In order to do that, you can follow guides of deployment on
 
 Install kubernetes-nmstate operator (if not already done).
 
-Start the linux bridge br1 by creating the 'NodeNetworkState'
-with it on 'up' state
+Start the linux bridge br1 by patching desiredState at 'NodeNetworkState'
+on the node we want to have it, in this case node01
 
 ```shell
 # on local cluster
-./cluster/kubectl.sh create -f docs/demos/create-br1-linux-bridge.yaml
+./kubevirtci/cluster-up/kubectl.sh patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/create-br1-linux-bridge.yaml)"
 
 # on arbitrary cluster
-kubectl create -f https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/master/manifests/docs/demos/create-br1-linux-bridge.yaml
+kubectl patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/create-br1-linux-bridge.yaml)"
 ```
 
-Delete the linux bridge br1 by updating the 'NodeNetworkState'
-with it on 'absent' state
+Delete the linux bridge br1 by patching again desiredState at NodeNetworkState
+for node01 change bridge state to `absent`
 
 ```shell
 # on local cluster
-./cluster/kubectl.sh apply -f docs/demos/delete-br1-linux-bridge.yaml
+./kubevirtci/cluster-up/kubectl.sh patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/delete-br1-linux-bridge.yaml)"
 
 # on arbitrary cluster
-kubectl create -f https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/master/manifests/docs/demos/delete-br1-linux-bridge.yaml
+kubectl patch --type merge nodenetworkstate node01 -p "$(cat docs/demos/delete-br1-linux-bridge.yaml")
 ```

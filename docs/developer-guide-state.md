@@ -12,43 +12,21 @@ apply directly the new config into the node (using : `nmstatectl set`)
 ## Configuration
 
 This is done by modifying the `desiredState` object inside the
-`NodeNetworkState` CRD. For example, assuming that the following file
-(`node1-eth1-linux-bridge.yaml`) has the correct node name (`node1`), and that
-eth1 interface exists (and is up) on that node:
+`NodeNetworkState` CRD. For example, looking at `docs/demos` directory
+in the kubernets-nmstate repository we have one manifest to create a linux
+bridge br1 at node01 `docs/demo/docs/demos/create-br1-linux-bridge.yaml`,
+it creates a br1 with eth1 as one of the ports
 
-```yaml
-apiVersion: nmstate.io/v1
-kind: NodeNetworkState
-metadata:
-  name: node1
-spec:
-  nodeName: node1
-  desiredState:
-    interfaces:
-      - name: br1
-        type: linux-bridge
-        state: up
-        bridge:
-          options:
-            stp:
-              enabled: false
-          port:
-            - name: eth1
-              stp-hairpin-mode: false
-              stp-path-cost: 100
-              stp-priority: 32
-```
-
-Calling:
+To change desiredState at that node we have to patch nodenetworkstate node01
 
 ```
-kubectl apply -f node1-eth1-linux-bridge.yaml
+kubectl patch nodenetworkstate node01 -p "$(cat docs/demo/create-br1-linux-bridge.yaml)"
 ```
 
 Will create a linux bridge br1 connecting a port with eth1.
 
 ```
-kubectl get nodenetworkstate node1 -o yaml
+kubectl get nodenetworkstate node01 -o yaml
 ```
 
 Should provide with the above `desiredState` and well as `currentState`

@@ -20,7 +20,7 @@ Read Node Network States from all nodes.
 
 ```shell
 # on local cluster
-./cluster/kubectl.sh get nodenetworkstates -o yaml
+kubevirtci/cluster-up/kubectl.sh get nodenetworkstates -o yaml
 
 # on arbitrary cluster
 kubectl get nodenetworkstates -o yaml
@@ -30,8 +30,8 @@ Then, read reported network state from selected node.
 
 ```shell
 # on local cluster
-./cluster/kubectl.sh get nodenetworkstate node01 -o yaml
+kubevirtci/cluster-up/kubectl.sh get nodenetworkstate node01 -o yaml
 
 # on arbitrary cluster
-kubectl e node01 -o yaml
+kubectl get node01 -o yaml
 ```

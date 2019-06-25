@@ -1,7 +1,3 @@
-apiVersion: nmstate.io/v1
-kind: NodeNetworkState
-metadata:
-  name: node01
 spec:
   desiredState:
     interfaces:
@@ -22,4 +18,3 @@ spec:
               stp-hairpin-mode: false
               stp-path-cost: 100
               stp-priority: 32
-      nodeName: node1
