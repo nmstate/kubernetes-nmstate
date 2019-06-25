@@ -38,14 +38,8 @@ For more information, please check
 Node Network State objects are created per each node in the cluster and can be
 used to configure and report available interfaces and network configuration.
 
-#### Examples
-
-Read `NodeNetworkState` of node `node01` to list available interfaces and their
-configuration:
-
-```bash
-curl https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/master/manifests/docs/demos/state.yaml
-```
+Example of NodeNetworkState listing network configuration of node01 can be
+found in manifests/docs/demos/state.yaml.
 
 ## Deployment and Usage
 
