@@ -33,5 +33,5 @@ Then, read reported network state from selected node.
 kubevirtci/cluster-up/kubectl.sh get nodenetworkstate node01 -o yaml
 
 # on arbitrary cluster
-kubectl get nodenetworkstate node01 -o yaml
+kubectl get nodenetworkstate <node-name> -o yaml
 ```

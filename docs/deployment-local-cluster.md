@@ -19,25 +19,27 @@ Start the local cluster
 ```shell
 make cluster-up
 ```
+
 Stop the local cluster
 
 ```shell
 
 make cluster-down
-`
+```
+
 Build kubernetes-nmstate from local sources and install it on the cluster.
 
 ```shell
 make cluster-sync
 ```
 
-You can ssh into the created nodes using `cluster/cli.sh`.
+You can ssh into the created nodes using `kubevirtci/clusetr-up/ssh.sh`.
 
 ```shell
 kubevirtci/cluster-up/ssh.sh node01
 ```
 
-Finally, you can access Kubernetes API using `cluster/kubectl.sh`.
+Finally, you can access Kubernetes API using `kubevirtci/cluster-up/kubectl.sh`.
 
 ```shell
 kubevirtci/cluster-up/kubectl.sh get nodes
