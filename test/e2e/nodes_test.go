@@ -3,6 +3,9 @@ package e2e
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 var _ = Describe("Nodes", func() {
@@ -12,6 +15,11 @@ var _ = Describe("Nodes", func() {
 				interfacesNameForNode(node).Should(ContainElement("eth0"))
 			}
 		})
+		It("should have Available ConditionType set to true", func() {
+			for _, node := range nodes {
+				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable, corev1.ConditionTrue)
+			}
+		})
 		Context("and node network state is deleted", func() {
 			BeforeEach(func() {
 				deleteNodeNeworkStates()
@@ -19,6 +27,11 @@ var _ = Describe("Nodes", func() {
 			It("should recreate it with currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNode(node).Should(ContainElement("eth0"))
+				}
+			})
+			FIt("should have Initialized ConditionType set to true", func() {
+				for _, node := range nodes {
+					checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionInitialized, corev1.ConditionTrue)
 				}
 			})
 		})

@@ -745,7 +745,7 @@
   revision = "5eb7ae5bdb7ac36a26d6e34e5d0ec07be128927f"
 
 [[projects]]
-  digest = "1:a668c191f1f11e526b4451d1a1e6442400ad9a8fe1f84ad72ab5986414acb28b"
+  digest = "1:f925854bdc2a8dfa0be769a8471b7bf9be7f34eb8788cc1a52ff48ff93762a14"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
     "cmd/operator-sdk",
@@ -809,7 +809,6 @@
     "pkg/predicate",
     "pkg/restmapper",
     "pkg/test",
-    "pkg/test/e2eutil",
     "version",
   ]
   pruneopts = "NUT"
@@ -1900,12 +1899,10 @@
     "github.com/onsi/gomega",
     "github.com/operator-framework/operator-sdk/cmd/operator-sdk",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
-    "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/pkg/restmapper",
     "github.com/operator-framework/operator-sdk/pkg/test",
-    "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/spf13/pflag",
     "golang.org/x/tools/cmd/goimports",
@@ -1914,12 +1911,10 @@
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
-    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/types",
-    "k8s.io/client-go/kubernetes/scheme",
+    "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/plugin/pkg/client/auth",
-    "k8s.io/client-go/rest",
-    "k8s.io/client-go/tools/remotecommand",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",

@@ -1,4 +1,4 @@
-package nodenetworkstate
+package conditions
 
 import (
 	"testing"
