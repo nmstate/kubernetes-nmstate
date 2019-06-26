@@ -6,4 +6,6 @@ This release has rewrite the project from scratch using operator-sdk
 * The cluster-up cluster-down scripts call kubevirtci directly cloning the
   repo.
 
+```
 docker pull HANDLER_IMAGE
+```

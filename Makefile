@@ -33,7 +33,7 @@ SSH ?= $(CLUSTER_DIR)/ssh.sh
 
 install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
-operator_manifest = build/_output/operator.yaml
+versioned_operator_manifest = build/_output/versioned/operator.yaml
 version = build/_output/version
 description = build/_output/description
 
@@ -82,7 +82,7 @@ $(local_handler_manifest): deploy/operator.yaml
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/operator.yaml > $@
 
-$(operator_manifest): deploy/operator.yaml
+$(versioned_operator_manifest):
 	mkdir -p $(dir $@)
 	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
 		deploy/operator.yaml > $@
@@ -128,6 +128,8 @@ cluster-sync-handler: cluster-sync-resources $(local_handler_manifest) push-hand
 	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
 	$(KUBECTL) create -f $(local_handler_manifest)
 
+cluster-sync: cluster-sync-handler
+
 $(version): version/version.go
 	grep = version/version.go | sed -r 's/.*= \"(.*)"$$/v\1/g' \
 		   > $(version)
@@ -139,14 +141,14 @@ $(description): version/description
 
 release: $(version)
 release: HANDLER_IMAGE_SUFFIX = :$(file < $(version))
-release: $(operator_manifest) push-handler $(description)
+release: $(versioned_operator_manifest) push-handler $(description)
 	DESCRIPTION=$(description) \
 	HANDLER_IMAGE=$(HANDLER_IMAGE) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(file < $(version)) \
 				   hack/release.sh \
 				   		$(resources) \
-						$(operator_manifest) \
+						$(versioned_operator_manifest) \
 						$(shell find deploy/crds/ deploy/openshift -type f)
 .PHONY: \
 	all \
