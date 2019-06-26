@@ -12,6 +12,7 @@ required = [
   "github.com/operator-framework/operator-sdk/cmd/operator-sdk",
   "golang.org/x/tools/cmd/goimports",
   "github.com/onsi/ginkgo/ginkgo",
+  "github.com/aktau/github-release",
 ]
 
 # https://github.com/golang/dep/issues/1799
