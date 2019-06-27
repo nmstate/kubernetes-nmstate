@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
@@ -17,6 +18,7 @@ var (
 	t         *testing.T
 	namespace string
 	nodes     = []string{"node01"} // TODO: Get it from cluster
+	startTime time.Time
 )
 
 var _ = BeforeSuite(func() {
@@ -38,8 +40,9 @@ func TestE2E(tapi *testing.T) {
 
 var _ = BeforeEach(func() {
 	_, namespace = prepare(t)
+	startTime = time.Now()
 })
 
 var _ = AfterEach(func() {
-	writePodsLogs(namespace, GinkgoWriter)
+	writePodsLogs(namespace, startTime, GinkgoWriter)
 })
