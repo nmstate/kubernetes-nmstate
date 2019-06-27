@@ -74,6 +74,19 @@ func interfacesName(interfaces []interface{}) []string {
 	return names
 }
 
+func interfaceByName(interfaces []interface{}, searchedName string) map[string]interface{} {
+	var dummy map[string]interface{}
+	for _, iface := range interfaces {
+		name, hasName := iface.(map[string]interface{})["name"]
+		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
+		if name == searchedName {
+			return iface.(map[string]interface{})
+		}
+	}
+	Fail(fmt.Sprintf("interface %s not found at %+v", searchedName, interfaces))
+	return dummy
+}
+
 func prepare(t *testing.T) (*framework.TestCtx, string) {
 	By("Initialize cluster resources")
 	cleanupRetryInterval := time.Second * 1
@@ -166,7 +179,7 @@ func deleteNodeNeworkStates() {
 	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
 }
 
-func run(node string, command ...string) {
+func run(node string, command ...string) error {
 	ssh_command := []string{node}
 	ssh_command = append(ssh_command, command...)
 	cmd := exec.Command("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
@@ -174,33 +187,41 @@ func run(node string, command ...string) {
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
-	Expect(cmd.Run()).To(Succeed(), stdout.String()+stderr.String())
+	err := cmd.Run()
+	GinkgoWriter.Write([]byte(stdout.String() + stderr.String() + "\n"))
+	return err
 }
 
-func runAtNodes(command ...string) {
+func runAtNodes(command ...string) (errs []error) {
 	for _, node := range nodes {
-		run(node, command...)
+		errs = append(errs, run(node, command...))
 	}
+	return errs
 }
 
-func deleteBridgeAtNodes(bridgeName string) {
+func deleteBridgeAtNodes(bridgeName string) []error {
 	By(fmt.Sprintf("Delete bridge %s", bridgeName))
-	runAtNodes("sudo", "nmcli", "con", "delete", bridgeName)
+	return runAtNodes("sudo", "nmcli", "con", "delete", bridgeName)
 }
 
-func createBridgeAtNodes(bridgeName string) {
+func createBridgeAtNodes(bridgeName string) []error {
 	By(fmt.Sprintf("Creating bridge %s", bridgeName))
-	runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName)
+	return runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName)
 }
 
-func createDummyAtNodes(dummyName string) {
+func createDummyAtNodes(dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
-	runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
+	return runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
 }
 
-func deleteDummyAtNodes(dummyName string) {
+func deleteDummyAtNodes(dummyName string) []error {
 	By(fmt.Sprintf("Deleting dummy %s", dummyName))
-	runAtNodes("sudo", "nmcli", "con", "delete", dummyName)
+	return runAtNodes("sudo", "nmcli", "con", "delete", dummyName)
+}
+
+func deleteBondAtNodes(bondName string) []error {
+	By(fmt.Sprintf("Delete bond %s", bondName))
+	return runAtNodes("sudo", "nmcli", "con", "delete", bondName)
 }
 
 func interfaces(state nmstatev1alpha1.State) []interface{} {
@@ -228,7 +249,7 @@ func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-func interfacesForNode(node string) AsyncAssertion {
+func interfacesNameForNode(node string) AsyncAssertion {
 	return Eventually(func() []string {
 		var currentStateYaml nmstatev1alpha1.State
 		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
@@ -238,4 +259,23 @@ func interfacesForNode(node string) AsyncAssertion {
 
 		return interfacesName(interfaces)
 	}, ReadTimeout, ReadInterval)
+}
+
+func interfacesForNode(node string) AsyncAssertion {
+	return Eventually(func() []interface{} {
+		var currentStateYaml nmstatev1alpha1.State
+		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+
+		interfaces := interfaces(currentStateYaml)
+		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
+
+		return interfaces
+	}, ReadTimeout, ReadInterval)
+}
+
+func toUnstructured(y string) interface{} {
+	var u interface{}
+	err := yaml.Unmarshal([]byte(y), &u)
+	Expect(err).ToNot(HaveOccurred())
+	return u
 }

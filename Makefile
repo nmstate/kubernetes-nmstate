@@ -10,8 +10,16 @@ GINKGO_EXTRA_ARGS ?=
 GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
 GINKGO?= build/_output/bin/ginkgo
 
-E2E_TEST_EXTRA_ARGS ?=
-E2E_TEST_ARGS ?= $(strip -test.v -ginkgo.v $(E2E_TEST_EXTRA_ARGS))
+E2E_TEST_ARGS ?= -test.v -ginkgo.v
+ifdef E2E_TEST_FOCUS
+	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
+endif
+ifdef E2E_TEST_SKIP
+	E2E_TEST_ARGS +=  -ginkgo.skip $(E2E_TEST_SKIP)
+endif
+ifdef E2E_TEST_EXTRA_ARGS
+	E2E_TEST_ARGS +=  $(E2E_TEST_EXTRA_ARGS)
+endif
 
 OPERATOR_SDK ?= build/_output/bin/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
