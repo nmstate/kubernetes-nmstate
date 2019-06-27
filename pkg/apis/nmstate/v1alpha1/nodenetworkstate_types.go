@@ -30,6 +30,8 @@ type NodeNetworkStateStatus struct {
 	CurrentState State `json:"currentState,omitempty"`
 }
 
+// +genclient
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // NodeNetworkState is the Schema for the nodenetworkstates API
