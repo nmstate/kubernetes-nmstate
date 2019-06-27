@@ -143,7 +143,6 @@ release: $(version)
 release: HANDLER_IMAGE_SUFFIX = :$(file < $(version))
 release: $(versioned_operator_manifest) push-handler $(description)
 	DESCRIPTION=$(description) \
-	HANDLER_IMAGE=$(HANDLER_IMAGE) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(file < $(version)) \
 				   hack/release.sh \
