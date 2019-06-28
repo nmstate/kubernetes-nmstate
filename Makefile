@@ -6,8 +6,14 @@ HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
-GINKGO_EXTRA_ARGS ?=
-GINKGO_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(GINKGO_EXTRA_ARGS)
+UNIT_TEST_EXTRA_ARGS ?=
+UNIT_TEST_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_EXTRA_ARGS)
+ifdef UNIT_TEST_FOCUS
+	UNIT_TEST_ARGS += --focus $(UNIT_TEST_FOCUS)
+endif
+ifdef UNIT_TEST_SKIP
+	UNIT_TEST_ARGS += --skip $(UNIT_TEST_SKIP)
+endif
 GINKGO?= build/_output/bin/ginkgo
 
 E2E_TEST_ARGS ?= -test.v -ginkgo.v
@@ -74,7 +80,7 @@ push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	$(GINKGO) $(GINKGO_ARGS) ./pkg/
+	$(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
 
 test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \
@@ -103,6 +109,7 @@ cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f build/_output/
 	$(KUBECTL) delete --ignore-not-found -f deploy/
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
 	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi
@@ -122,6 +129,7 @@ cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
 	# This field is required by buildah tool
 	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
+	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
 	$(KUBECTL) create -f $(local_handler_manifest)
 

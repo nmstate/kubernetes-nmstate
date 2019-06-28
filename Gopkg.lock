@@ -665,11 +665,12 @@
   revision = "cca7078d478f8520f85629ad7c68962d31ed7682"
 
 [[projects]]
-  digest = "1:e6f85c42b50299b3f3c1642851a6651ed593f904e9e14c000ab8a001c4050827"
+  digest = "1:dbc24dd0591271d269786adff7458f2c1437305091e41979c5495efe3df09ab8"
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
     "config",
+    "extensions/table",
     "ginkgo",
     "ginkgo/convert",
     "ginkgo/interrupthandler",
@@ -745,7 +746,7 @@
   revision = "5eb7ae5bdb7ac36a26d6e34e5d0ec07be128927f"
 
 [[projects]]
-  digest = "1:a668c191f1f11e526b4451d1a1e6442400ad9a8fe1f84ad72ab5986414acb28b"
+  digest = "1:f925854bdc2a8dfa0be769a8471b7bf9be7f34eb8788cc1a52ff48ff93762a14"
   name = "github.com/operator-framework/operator-sdk"
   packages = [
     "cmd/operator-sdk",
@@ -809,7 +810,6 @@
     "pkg/predicate",
     "pkg/restmapper",
     "pkg/test",
-    "pkg/test/e2eutil",
     "version",
   ]
   pruneopts = "NUT"
@@ -1473,7 +1473,7 @@
   revision = "d8fee89e76cab0bcb976c2fd2ff013b4ce54850f"
 
 [[projects]]
-  digest = "1:d81fd13d6e926381a52a1d4a6a31fe28b7e2f1029536f0f79170b12095519ff2"
+  digest = "1:faf9217c7752be77728b0aa84b3d61a893244a154fca97a242453f5c6c51686f"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1537,6 +1537,7 @@
     "scale/scheme/autoscalingv1",
     "scale/scheme/extensionsint",
     "scale/scheme/extensionsv1beta1",
+    "testing",
     "third_party/forked/golang/template",
     "tools/auth",
     "tools/cache",
@@ -1824,7 +1825,7 @@
   revision = "c55fbcfc754a5b2ec2fbae8fb9dcac36bdba6a12"
 
 [[projects]]
-  digest = "1:b7ca84cccb4630cbd53eef277cf73ac87d7bbcc9ae3e72b8cf414be381853dcc"
+  digest = "1:f9536a0685b75eef97e368e810d124641afc4185d7c619a67e3ac2f5af2fe9a1"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     "pkg/cache",
@@ -1832,6 +1833,7 @@
     "pkg/client",
     "pkg/client/apiutil",
     "pkg/client/config",
+    "pkg/client/fake",
     "pkg/controller",
     "pkg/event",
     "pkg/handler",
@@ -1896,16 +1898,15 @@
   input-imports = [
     "github.com/go-openapi/spec",
     "github.com/onsi/ginkgo",
+    "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/ginkgo/ginkgo",
     "github.com/onsi/gomega",
     "github.com/operator-framework/operator-sdk/cmd/operator-sdk",
     "github.com/operator-framework/operator-sdk/pkg/k8sutil",
-    "github.com/operator-framework/operator-sdk/pkg/leader",
     "github.com/operator-framework/operator-sdk/pkg/log/zap",
     "github.com/operator-framework/operator-sdk/pkg/metrics",
     "github.com/operator-framework/operator-sdk/pkg/restmapper",
     "github.com/operator-framework/operator-sdk/pkg/test",
-    "github.com/operator-framework/operator-sdk/pkg/test/e2eutil",
     "github.com/operator-framework/operator-sdk/version",
     "github.com/spf13/pflag",
     "golang.org/x/tools/cmd/goimports",
@@ -1914,12 +1915,11 @@
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/runtime",
     "k8s.io/apimachinery/pkg/runtime/schema",
-    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/types",
+    "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/plugin/pkg/client/auth",
-    "k8s.io/client-go/rest",
-    "k8s.io/client-go/tools/remotecommand",
     "k8s.io/code-generator/cmd/client-gen",
     "k8s.io/code-generator/cmd/conversion-gen",
     "k8s.io/code-generator/cmd/deepcopy-gen",
@@ -1931,6 +1931,7 @@
     "k8s.io/kube-openapi/pkg/common",
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/client/config",
+    "sigs.k8s.io/controller-runtime/pkg/client/fake",
     "sigs.k8s.io/controller-runtime/pkg/controller",
     "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/handler",
