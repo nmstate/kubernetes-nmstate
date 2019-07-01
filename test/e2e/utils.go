@@ -30,11 +30,13 @@ import (
 const ReadTimeout = 15 * time.Second
 const ReadInterval = 1 * time.Second
 
-func writePodsLogs(namespace string, writer io.Writer) error {
+func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) error {
 	if framework.Global.LocalOperator {
 		return nil
 	}
+
 	podLogOpts := corev1.PodLogOptions{}
+	podLogOpts.SinceTime = &metav1.Time{sinceTime}
 	podList := &corev1.PodList{}
 	err := framework.Global.Client.List(context.TODO(), &dynclient.ListOptions{}, podList)
 	Expect(err).ToNot(HaveOccurred())
