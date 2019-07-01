@@ -80,7 +80,9 @@ $(local_handler_manifest): deploy/operator.yaml
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/operator.yaml > $@
 
-$(versioned_operator_manifest):
+
+$(versioned_operator_manifest): HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
+$(versioned_operator_manifest): version/version.go
 	mkdir -p $(dir $@)
 	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
 		deploy/operator.yaml > $@
