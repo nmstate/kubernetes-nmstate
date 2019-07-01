@@ -1,7 +1,6 @@
 IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 
-TAG ?= $(shell grep = version/version.go | sed -r 's/.*= \"(.*)"$/\1/g')
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 #HANDLER_IMAGE_SUFFIX ?= :latest
 HANDLER_IMAGE_SUFFIX ?=
@@ -34,7 +33,6 @@ SSH ?= $(CLUSTER_DIR)/ssh.sh
 install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
 versioned_operator_manifest = build/_output/versioned/operator.yaml
-version = build/_output/version
 description = build/_output/description
 
 resources = deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
@@ -130,21 +128,16 @@ cluster-sync-handler: cluster-sync-resources $(local_handler_manifest) push-hand
 
 cluster-sync: cluster-sync-handler
 
-$(version): version/version.go
-	grep = version/version.go | sed -r 's/.*= \"(.*)"$$/v\1/g' \
-		   > $(version)
-
 $(description): version/description
 	mkdir -p $(dir $@)
 	sed "s#HANDLER_IMAGE#$(HANDLER_IMAGE)#" \
 		version/description > $@
 
-release: $(version)
-release: HANDLER_IMAGE_SUFFIX = :$(file < $(version))
+release: HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
 release: $(versioned_operator_manifest) push-handler $(description)
 	DESCRIPTION=$(description) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
-	TAG=$(file < $(version)) \
+	TAG=$(shell hack/version.sh) \
 				   hack/release.sh \
 				   		$(resources) \
 						$(versioned_operator_manifest) \
