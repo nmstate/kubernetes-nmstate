@@ -89,15 +89,14 @@
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
 
 [[projects]]
-  digest = "1:3f0fd0e02a52a4f27d23a0c799dd72cf58e4616bbe4ec6322dbbe2a9795e7201"
+  digest = "1:5a7098e0c8301d494f920da6eef6cf33357b94201f1b6e227214db49a58cfb06"
   name = "github.com/aktau/github-release"
   packages = [
     ".",
     "github",
   ]
   pruneopts = "NUT"
-  revision = "744a70ee16ff8e6be45bfabb8b233d7f1e058a2b"
-  version = "v0.7.2"
+  revision = "b61ce1a1426379d208f188311954fde680ac99f0"
 
 [[projects]]
   digest = "1:680b63a131506e668818d630d3ca36123ff290afa0afc9f4be21940adca3f27d"

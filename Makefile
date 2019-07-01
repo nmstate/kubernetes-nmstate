@@ -2,7 +2,6 @@ IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
-#HANDLER_IMAGE_SUFFIX ?= :latest
 HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
@@ -87,11 +86,10 @@ $(versioned_operator_manifest): version/version.go
 	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
 		deploy/operator.yaml > $@
 
-$(): deploy/operator.yaml
+$(local_handler_manifest): deploy/operator.yaml
 	mkdir -p $(dir $@)
 	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
 		deploy/operator.yaml > $@
-
 
 $(CLUSTER_DIR)/%: $(install_kubevirtci)
 	$(install_kubevirtci)
@@ -119,8 +117,9 @@ cluster-sync-resources: $(KUBECTL)
 		$(KUBECTL) apply -f deploy/openshift/; \
 	fi
 
-cluster-sync-handler: IMAGE_REGISTRY = localhost:$(shell $(CLI) ports registry | tr -d '\r')
-cluster-sync-handler: cluster-sync-resources $(local_handler_manifest) push-handler
+cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
+	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
+				   make push-handler
 	# Temporary until image is updated with provisioner that sets this field
 	# This field is required by buildah tool
 	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
@@ -135,6 +134,10 @@ $(description): version/description
 	sed "s#HANDLER_IMAGE#$(HANDLER_IMAGE)#" \
 		version/description > $@
 
+# This uses target specific variables [1] so we can use push-handler as a
+# dependency and change the SUFFIX with the correct version so no need for
+# calling make on make is needed.
+# [1] https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
 release: HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
 release: $(versioned_operator_manifest) push-handler $(description)
 	DESCRIPTION=$(description) \

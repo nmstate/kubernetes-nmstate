@@ -79,6 +79,10 @@ required = [
   name = "github.com/onsi/gomega"
   revision = "efe19c39ca106ee4ed42a1b25e1a80a53be4831a"
 
+[[override]]
+  name = "github.com/aktau/github-release"
+  revision = "b61ce1a1426379d208f188311954fde680ac99f0"
+
 [prune]
   go-tests = true
   non-go = true
