@@ -2,25 +2,27 @@
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kubernetes-nmstate
+  name: nmstate-handler
+  namespace: nmstate
 subjects:
 - kind: ServiceAccount
-  name: kubernetes-nmstate
-  namespace: default
+  name: nmstate-handler
+  namespace: nmstate
 roleRef:
   kind: Role
-  name: kubernetes-nmstate
+  name: nmstate-handler
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: kubernetes-nmstate
+  name: nmstate-handler
+  namespace: nmstate
 subjects:
 - kind: ServiceAccount
-  name: kubernetes-nmstate
-  namespace: default
+  name: nmstate-handler
+  namespace: nmstate
 roleRef:
   kind: ClusterRole
-  name: kubernetes-nmstate
+  name: nmstate-handler
   apiGroup: rbac.authorization.k8s.io

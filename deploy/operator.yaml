@@ -1,7 +1,9 @@
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: nmstate-handler
+  namespace: nmstate
 spec:
   selector:
     matchLabels:
@@ -12,14 +14,20 @@ spec:
         app: kubernetes-nmstate
         name: nmstate-handler
     spec:
-      serviceAccountName: kubernetes-nmstate
+      serviceAccountName: nmstate-handler
+      nodeSelector:
+        beta.kubernetes.io/arch: amd64
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: nmstate-handler
           # Replace this with the built image name
           image: REPLACE_IMAGE
+          imagePullPolicy: Always
           command:
           - kubernetes-nmstate
-          imagePullPolicy: Always
           env:
             - name: WATCH_NAMESPACE
               value: ""
