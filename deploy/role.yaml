@@ -3,7 +3,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   creationTimestamp: null
-  name: kubernetes-nmstate
+  name: nmstate-handler
+  namespace: nmstate
 rules:
 - apiGroups:
   - ""
@@ -45,7 +46,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: kubernetes-nmstate
+  name: nmstate-handler
+  namespace: nmstate
 rules:
 - apiGroups:
   - nmstate.io
@@ -60,17 +62,3 @@ rules:
   verbs:
   - get
   - list
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  verbs:
-  - get
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - pods/exec
-  verbs:
-  - create
-

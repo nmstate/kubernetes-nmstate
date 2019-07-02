@@ -39,7 +39,7 @@ SSH ?= $(CLI) ssh
 install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
 
-resources = deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
+resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 
 all: check handler
 
@@ -72,7 +72,7 @@ test/unit: $(GINKGO)
 test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
-		--namespace default \
+		--namespace nmstate \
 		--no-setup \
 		--go-test-flags "$(E2E_TEST_ARGS)"
 
