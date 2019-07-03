@@ -28,8 +28,23 @@ spec:
         metadata:
           type: object
         spec:
+          properties:
+            desiredState:
+              description: The desired configuration for the node
+              type: object
+            managed:
+              type: boolean
+            nodeName:
+              description: Name of the node reporting this state
+              type: string
+          required:
+          - managed
+          - nodeName
           type: object
         status:
+          properties:
+            currentState:
+              type: object
           type: object
   version: v1alpha1
   versions:

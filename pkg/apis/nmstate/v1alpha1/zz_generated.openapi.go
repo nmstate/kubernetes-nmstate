@@ -67,7 +67,28 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateSpec(ref common.ReferenceC
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
 				Description: "NodeNetworkStateSpec defines the desired state of NodeNetworkState",
-				Properties:  map[string]spec.Schema{},
+				Properties: map[string]spec.Schema{
+					"managed": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"boolean"},
+							Format: "",
+						},
+					},
+					"nodeName": {
+						SchemaProps: spec.SchemaProps{
+							Description: "Name of the node reporting this state",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
+					"desiredState": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The desired configuration for the node",
+							Type:        []string{"object"},
+						},
+					},
+				},
+				Required: []string{"managed", "nodeName"},
 			},
 		},
 		Dependencies: []string{},
@@ -78,8 +99,14 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
 			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkStateStatus defines the observed state of NodeNetworkState",
-				Properties:  map[string]spec.Schema{},
+				Description: "NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node",
+				Properties: map[string]spec.Schema{
+					"currentState": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"object"},
+						},
+					},
+				},
 			},
 		},
 		Dependencies: []string{},
