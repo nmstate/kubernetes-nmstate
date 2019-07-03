@@ -214,14 +214,9 @@ func createDummyAtNodes(dummyName string) []error {
 	return runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
 }
 
-func deleteDummyAtNodes(dummyName string) []error {
-	By(fmt.Sprintf("Deleting dummy %s", dummyName))
-	return runAtNodes("sudo", "nmcli", "con", "delete", dummyName)
-}
-
-func deleteBondAtNodes(bondName string) []error {
-	By(fmt.Sprintf("Delete bond %s", bondName))
-	return runAtNodes("sudo", "nmcli", "con", "delete", bondName)
+func deleteConnectionAtNodes(name string) []error {
+	By(fmt.Sprintf("Delete connection %s", name))
+	return runAtNodes("sudo", "nmcli", "con", "delete", name)
 }
 
 func interfaces(state nmstatev1alpha1.State) []interface{} {

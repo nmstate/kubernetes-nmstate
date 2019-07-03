@@ -73,6 +73,9 @@ var _ = Describe("NodeNetworkState", func() {
   - name: br1
     type: linux-bridge
     state: absent
+  - name: eth1
+    type: ethernet
+    state: absent
 `)
 	)
 	Context("when desiredState is configured", func() {
@@ -93,7 +96,8 @@ var _ = Describe("NodeNetworkState", func() {
 
 				// Let's clean the bridge directly in the node
 				// bypassing nmstate
-				deleteBridgeAtNodes("br1")
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("br1")
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
@@ -129,7 +133,8 @@ var _ = Describe("NodeNetworkState", func() {
 				//       remove this ugly sleep
 				time.Sleep(1 * time.Second)
 
-				deleteBondAtNodes("bond1")
+				deleteConnectionAtNodes("bond1")
+				deleteConnectionAtNodes("eth1")
 			})
 			It("should have the bond interface at currentState", func() {
 				var (
@@ -159,8 +164,9 @@ var _ = Describe("NodeNetworkState", func() {
 				//       remove this ugly sleep
 				time.Sleep(1 * time.Second)
 
-				deleteBridgeAtNodes("br1")
-				deleteBondAtNodes("bond1")
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("br1")
+				deleteConnectionAtNodes("bond1")
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
 				var (

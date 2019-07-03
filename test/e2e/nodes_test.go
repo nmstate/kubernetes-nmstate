@@ -30,7 +30,7 @@ var _ = Describe("Nodes", func() {
 				createDummyAtNodes(expectedDummyName)
 			})
 			AfterEach(func() {
-				deleteDummyAtNodes(expectedDummyName)
+				deleteConnectionAtNodes(expectedDummyName)
 			})
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
