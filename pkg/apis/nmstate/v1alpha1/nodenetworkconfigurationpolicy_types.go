@@ -4,20 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// NodeNetworkConfigurationPolicyMatch define the matching criteria to apply
-// the policy
-// +k8s:openapi-gen=true
-type NodeNetworkConfigurationPolicyMatch struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
-	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-
-	// Node names to apply the policy
-	Nodes []string `json:"nodes,omitempty"`
-}
 
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
 // +k8s:openapi-gen=true
@@ -30,8 +17,11 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// priority define the order from low to high
 	Priority int `json:"priority,omitempty"`
 
-	// Criteria to apply this policy
-	Match NodeNetworkConfigurationPolicyMatch `json:"match,omitempty"`
+	// NodeSelector is a selector which must be true for the policy to be applied to the node.
+	// Selector which must match a node's labels for the policy to be scheduled on that node.
+	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`

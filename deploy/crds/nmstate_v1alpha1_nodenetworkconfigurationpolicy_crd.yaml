@@ -9,6 +9,8 @@ spec:
     listKind: NodeNetworkConfigurationPolicyList
     plural: nodenetworkconfigurationpolicies
     singular: nodenetworkconfigurationpolicy
+    shortNames:
+      - nncp
   scope: Cluster
   subresources:
     status: {}
