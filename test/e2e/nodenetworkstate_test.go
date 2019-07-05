@@ -10,10 +10,22 @@ import (
 )
 
 var _ = Describe("NodeNetworkState", func() {
-	Context("when desiredState is configured", func() {
-		Context("with a linux bridge up", func() {
-			var (
-				br1Up = nmstatev1alpha1.State(`interfaces:
+	var (
+		bond1Up = nmstatev1alpha1.State(`interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: bond1
+    type: bond
+    state: up
+    link-aggregation:
+      mode: active-backup
+      slaves:
+        - eth1
+      options:
+        miimon: '120'
+`)
+		br1Up = nmstatev1alpha1.State(`interfaces:
   - name: eth1
     type: ethernet
     state: up
@@ -30,8 +42,44 @@ var _ = Describe("NodeNetworkState", func() {
           stp-path-cost: 100
           stp-priority: 32
 `)
-			)
+		br1WithBond1Up = nmstatev1alpha1.State(`interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: bond1
+    type: bond
+    state: up
+    link-aggregation:
+      mode: active-backup
+      slaves:
+        - eth1
+      options:
+        miimon: '120'
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+        - name: bond1
+          stp-hairpin-mode: false
+          stp-path-cost: 100
+          stp-priority: 32
+`)
 
+		br1Absent = nmstatev1alpha1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: absent
+  - name: eth1
+    type: ethernet
+    state: absent
+`)
+	)
+	Context("when desiredState is configured", func() {
+		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
 				updateDesiredState(namespace, br1Up)
 			})
@@ -48,23 +96,16 @@ var _ = Describe("NodeNetworkState", func() {
 
 				// Let's clean the bridge directly in the node
 				// bypassing nmstate
-				deleteBridgeAtNodes("br1")
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("br1")
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement("br1"))
+					interfacesNameForNode(node).Should(ContainElement("br1"))
 				}
 			})
 		})
 		Context("with a linux bridge absent", func() {
-			var (
-				br1Absent = nmstatev1alpha1.State(`interfaces:
-  - name: br1
-    type: linux-bridge
-    state: absent
-`)
-			)
-
 			BeforeEach(func() {
 				createBridgeAtNodes("br1")
 				updateDesiredState(namespace, br1Absent)
@@ -75,10 +116,81 @@ var _ = Describe("NodeNetworkState", func() {
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
-					interfacesForNode(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
 				}
 			})
 		})
+		Context("with a active-backup miimon 100 bond interface up", func() {
+			BeforeEach(func() {
+				updateDesiredState(namespace, bond1Up)
+			})
+			AfterEach(func() {
 
+				resetDesiredStateForNodes(namespace)
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
+
+				deleteConnectionAtNodes("bond1")
+				deleteConnectionAtNodes("eth1")
+			})
+			It("should have the bond interface at currentState", func() {
+				var (
+					expectedBond = interfaceByName(interfaces(bond1Up), "bond1")
+				)
+
+				for _, node := range nodes {
+					interfacesForNode(node).Should(ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", expectedBond["name"]),
+						HaveKeyWithValue("type", expectedBond["type"]),
+						HaveKeyWithValue("state", expectedBond["state"]),
+						HaveKeyWithValue("link-aggregation", expectedBond["link-aggregation"]),
+					)))
+				}
+			})
+		})
+		Context("with the bond interface as linux bridge port", func() {
+			BeforeEach(func() {
+				updateDesiredState(namespace, br1WithBond1Up)
+			})
+			AfterEach(func() {
+
+				resetDesiredStateForNodes(namespace)
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
+
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("br1")
+				deleteConnectionAtNodes("bond1")
+			})
+			It("should have the bond in the linux bridge as port at currentState", func() {
+				var (
+					expectedInterfaces  = interfaces(br1WithBond1Up)
+					expectedBond        = interfaceByName(expectedInterfaces, "bond1")
+					expectedBridge      = interfaceByName(expectedInterfaces, "br1")
+					expectedBridgePorts = expectedBridge["bridge"].(map[string]interface{})["port"]
+				)
+				for _, node := range nodes {
+					interfacesForNode(node).Should(SatisfyAll(
+						ContainElement(SatisfyAll(
+							HaveKeyWithValue("name", expectedBond["name"]),
+							HaveKeyWithValue("type", expectedBond["type"]),
+							HaveKeyWithValue("state", expectedBond["state"]),
+							HaveKeyWithValue("link-aggregation", expectedBond["link-aggregation"]),
+						)),
+						ContainElement(SatisfyAll(
+							HaveKeyWithValue("name", expectedBridge["name"]),
+							HaveKeyWithValue("type", expectedBridge["type"]),
+							HaveKeyWithValue("state", expectedBridge["state"]),
+							HaveKeyWithValue("bridge", HaveKeyWithValue("port", expectedBridgePorts)),
+						))))
+				}
+			})
+		})
 	})
 })
