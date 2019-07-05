@@ -8,6 +8,8 @@ spec:
     kind: NodeNetworkState
     listKind: NodeNetworkStateList
     plural: nodenetworkstates
+    shortNames:
+    - nns
     singular: nodenetworkstate
   scope: Cluster
   subresources:

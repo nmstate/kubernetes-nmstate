@@ -14,7 +14,6 @@ import (
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
 		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicy":       schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref),
-		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyMatch":  schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyMatch(ref),
 		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec":   schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref),
 		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref),
 		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkState":                     schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
@@ -66,33 +65,6 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref common.
 	}
 }
 
-func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyMatch(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkConfigurationPolicyMatch define the matching criteria to apply the policy",
-				Properties: map[string]spec.Schema{
-					"nodes": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Node names to apply the policy",
-							Type:        []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{},
-	}
-}
-
 func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
 	return common.OpenAPIDefinition{
 		Schema: spec.Schema{
@@ -106,10 +78,18 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref com
 							Format:      "int32",
 						},
 					},
-					"match": {
+					"nodeSelector": {
 						SchemaProps: spec.SchemaProps{
-							Description: "Criteria to apply this policy",
-							Ref:         ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyMatch"),
+							Description: "NodeSelector is a selector which must be true for the policy to be applied to the node. Selector which must match a node's labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/",
+							Type:        []string{"object"},
+							AdditionalProperties: &spec.SchemaOrBool{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Type:   []string{"string"},
+										Format: "",
+									},
+								},
+							},
 						},
 					},
 					"desiredState": {
@@ -121,8 +101,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref com
 				},
 			},
 		},
-		Dependencies: []string{
-			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyMatch"},
+		Dependencies: []string{},
 	}
 }
 
@@ -222,7 +201,8 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"currentState": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
+							Type:   []string{"string"},
+							Format: "byte",
 						},
 					},
 				},
