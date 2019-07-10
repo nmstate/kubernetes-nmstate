@@ -243,7 +243,7 @@ func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateC
 	var condition *nmstatev1alpha1.NodeNetworkStateCondition
 	Eventually(func() corev1.ConditionStatus {
 		state := nodeNetworkState(key)
-		condition = conditions.GetCondition(&state, conditionType)
+		condition = conditions.Condition(&state, conditionType)
 		Expect(condition).NotTo(BeNil())
 		return condition.Status
 	}, ReadTimeout, ReadInterval).Should(

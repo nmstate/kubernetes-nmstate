@@ -3,20 +3,32 @@ package conditions_test
 import (
 	"time"
 
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var _ = Describe("GetCondition", func() {
-	Context("when is given nodenetworkstate pointer and type", func() {
+var _ = Describe("Conditions", func() {
+	Context("when instance is empty", func() {
+		It("should return nil", func() {
+			condition := conditions.Condition(&nmstatev1.NodeNetworkState{}, nmstatev1.NodeNetworkStateConditionFailing)
+			Expect(condition).To(BeNil())
+		})
+	})
+
+	Context("when composed by one condition with known type and unknown status", func() {
 		nodeNetworkState := nmstatev1.NodeNetworkState{
 			Status: nmstatev1.NodeNetworkStateStatus{
 				Conditions: []nmstatev1.NodeNetworkStateCondition{
+					nmstatev1.NodeNetworkStateCondition{
+						Type:   nmstatev1.NodeNetworkStateConditionAvailable,
+						Status: corev1.ConditionTrue,
+					},
 					nmstatev1.NodeNetworkStateCondition{
 						Type:   nmstatev1.NodeNetworkStateConditionFailing,
 						Status: corev1.ConditionUnknown,
@@ -25,16 +37,15 @@ var _ = Describe("GetCondition", func() {
 			},
 		}
 
-		It("should return condition pointer", func() {
+		It("should find the correct condition", func() {
 			instance := nodeNetworkState.DeepCopy()
-			condition := conditions.GetCondition(instance, nmstatev1.NodeNetworkStateConditionFailing)
+			condition := conditions.Condition(instance, nmstatev1.NodeNetworkStateConditionFailing)
 			Expect(condition).ToNot(BeNil())
 			Expect(condition.Type).To(Equal(nmstatev1.NodeNetworkStateConditionFailing))
+			Expect(condition.Status).To(Equal(corev1.ConditionUnknown))
 		})
 	})
-})
 
-var _ = Describe("SetCondition", func() {
 	Context("when is empty", func() {
 		nodeNetworkState := &nmstatev1.NodeNetworkState{}
 
@@ -43,7 +54,7 @@ var _ = Describe("SetCondition", func() {
 			conditionType := nmstatev1.NodeNetworkStateConditionFailing
 
 			conditions.SetCondition(instance, conditionType, corev1.ConditionFalse, "foo", "bar")
-			condition := conditions.GetCondition(instance, conditionType)
+			condition := conditions.Condition(instance, conditionType)
 
 			Expect(condition.Type).To(Equal(conditionType))
 			Expect(condition.Status).To(Equal(corev1.ConditionFalse))
@@ -81,7 +92,7 @@ var _ = Describe("SetCondition", func() {
 				conditions.SetCondition(instance, conditionType, corev1.ConditionTrue, "foo", "bar")
 				Expect(len(instance.Status.Conditions)).To(Equal(len(nodeNetworkState.Status.Conditions) + 1))
 
-				condition := conditions.GetCondition(instance, conditionType)
+				condition := conditions.Condition(instance, conditionType)
 				Expect(condition.Type).To(Equal(conditionType))
 				Expect(condition.Status).To(Equal(corev1.ConditionTrue))
 				Expect(condition.Reason).To(Equal("foo"))
@@ -100,8 +111,8 @@ var _ = Describe("SetCondition", func() {
 				By("Shouldn't add new condition")
 				Expect(len(instance.Status.Conditions)).To(Equal(len(nodeNetworkState.Status.Conditions)))
 
-				condition := conditions.GetCondition(instance, conditionType)
-				originalCondition := conditions.GetCondition(&nodeNetworkState, conditionType)
+				condition := conditions.Condition(instance, conditionType)
+				originalCondition := conditions.Condition(&nodeNetworkState, conditionType)
 				By("Should change LastHeartbeatTime")
 				Expect(originalCondition.LastHeartbeatTime.Time.Before(condition.LastHeartbeatTime.Time)).To(BeTrue(), "LastHeartbeatTime of updated condition wasn't updated")
 			})
@@ -117,8 +128,8 @@ var _ = Describe("SetCondition", func() {
 				By("Shouldn't add new condition")
 				Expect(len(instance.Status.Conditions)).To(Equal(len(nodeNetworkState.Status.Conditions)))
 
-				condition := conditions.GetCondition(instance, conditionType)
-				originalCondition := conditions.GetCondition(&nodeNetworkState, conditionType)
+				condition := conditions.Condition(instance, conditionType)
+				originalCondition := conditions.Condition(&nodeNetworkState, conditionType)
 				By("Should change different values")
 				Expect(condition.Status).To(Equal(corev1.ConditionTrue))
 				Expect(condition.Reason).To(Equal("bar"))

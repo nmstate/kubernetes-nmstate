@@ -9,7 +9,7 @@ import (
 )
 
 func SetCondition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.NodeNetworkStateConditionType, status corev1.ConditionStatus, reason, message string) {
-	condition := GetCondition(instance, conditionType)
+	condition := Condition(instance, conditionType)
 	now := metav1.Time{
 		Time: time.Now(),
 	}
@@ -38,7 +38,7 @@ func SetCondition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.
 	condition.LastHeartbeatTime = now
 }
 
-func GetCondition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.NodeNetworkStateConditionType) *nmstatev1.NodeNetworkStateCondition {
+func Condition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.NodeNetworkStateConditionType) *nmstatev1.NodeNetworkStateCondition {
 	for i, condition := range instance.Status.Conditions {
 		if condition.Type == conditionType {
 			return &instance.Status.Conditions[i]
