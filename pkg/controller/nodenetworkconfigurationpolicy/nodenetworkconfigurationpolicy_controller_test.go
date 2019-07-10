@@ -148,6 +148,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() {
 	var (
+		runningNode       = corev1.Node{}
+		runningNodeName   string
 		nodeNetworkStates []nmstatev1alpha1.NodeNetworkState
 
 		cl               client.Client
@@ -158,16 +160,41 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 				Name: RECONCILE_POLICY_NAME,
 			},
 		}
-		res reconcile.Result
+		eth0UpState = nmstatev1alpha1.State(`
+interfaces:
+  - name: eth0
+    state: up
+`)
+		eth1UpState = nmstatev1alpha1.State(`
+interfaces:
+  - name: eth1
+    state: up
+`)
+		eth0MTU1450 = nmstatev1alpha1.State(`
+interfaces:
+  - name: eth0
+    state: up
+    mtu: 1450
+`)
+		eth0AndEth1UpState = nmstatev1alpha1.State(`
+interfaces:
+  - name: eth0
+    state: up
+  - name: eth1
+    state: up
+`)
 	)
 
 	BeforeEach(func() {
-		By("Populate the NodeNetworkState for nodeNetworkStates")
+
+		By("populate the NodeNetworkState for each node")
 		nodeNetworkStates = nil
 		for n := 1; n <= NUMBER_OF_NODES; n++ {
+			nodeName := fmt.Sprintf("node%02d", n)
 			nodeNetworkStates = append(nodeNetworkStates, nmstatev1alpha1.NodeNetworkState{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: fmt.Sprintf("node%02d", n),
+					Name:   nodeName,
+					Labels: map[string]string{"hostname": nodeName},
 				},
 			})
 		}
@@ -179,14 +206,23 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 				Name: RECONCILE_POLICY_NAME,
 			},
 		}
+
+		runningNode.ObjectMeta.Name = nodeNetworkStates[0].Name
+		runningNodeName = runningNode.ObjectMeta.Name
+		runningNode.ObjectMeta.Labels = map[string]string{"hostname": runningNodeName}
+
+		By("set reconciling policy labels with hostname")
+		reconciledPolicy.Spec.NodeSelector = map[string]string{"hostname": runningNodeName}
+
 	})
 
 	JustBeforeEach(func() {
 		// Register operator types with the runtime scheme.
 		By("register state and policies types")
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
 		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkState{})
+		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
+		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkConfigurationPolicyList{})
 
 		// Objects to track in the fake client
 		objs := []runtime.Object{&reconciledPolicy}
@@ -198,14 +234,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 	})
 
 	Context("when there is no NodeNetworkState for the node", func() {
-
-		JustBeforeEach(func() {
-			var err error
-			res, err = r.Reconcile(req)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
 		It("should requeue", func() {
+			res, err := r.Reconcile(req)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(res.Requeue).To(BeTrue())
 		})
 	})
@@ -215,31 +246,103 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 		JustBeforeEach(func() {
 			err := cl.Create(context.TODO(), &nodeNetworkStates[0])
 			Expect(err).ToNot(HaveOccurred())
-			res, err = r.Reconcile(req)
+			err = cl.Create(context.TODO(), &runningNode)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should not requeue", func() {
+			res, err := r.Reconcile(req)
+			Expect(err).ToNot(HaveOccurred())
 			Expect(res.Requeue).ToNot(BeTrue())
 		})
 		Context(" and it has non empty desiredState", func() {
-			var (
-				expectedDesiredState = nmstatev1alpha1.State(`
-interfaces:
-  name: eth0
-  state: up
-`)
-			)
-
 			BeforeEach(func() {
-				reconciledPolicy.Spec.DesiredState = expectedDesiredState
+				reconciledPolicy.Spec.DesiredState = eth0UpState
 			})
 
 			It("should update NodeNetworkState with desiredState", func() {
-				obtainedState := nmstatev1alpha1.NodeNetworkState{}
-				err := cl.Get(context.TODO(), types.NamespacedName{Name: nodeNetworkStates[0].Name}, &obtainedState)
+				_, err := r.Reconcile(req)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(obtainedState.Spec.DesiredState).To(MatchYAML(expectedDesiredState))
+				obtainedState := nmstatev1alpha1.NodeNetworkState{}
+				err = cl.Get(context.TODO(), types.NamespacedName{Name: runningNodeName}, &obtainedState)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(obtainedState.Spec.DesiredState).To(MatchYAML(eth0UpState))
+			})
+			Context(" and has another policy for different node", func() {
+				JustBeforeEach(func() {
+					differentNodePolicy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "different-node-policy",
+						},
+						Spec: nmstatev1alpha1.NodeNetworkConfigurationPolicySpec{
+							NodeSelector: map[string]string{
+								"hostname": "arrakis",
+							},
+							DesiredState: eth1UpState,
+						},
+					}
+					err := cl.Create(context.TODO(), &differentNodePolicy)
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("should not merge desired state", func() {
+					_, err := r.Reconcile(req)
+					Expect(err).ToNot(HaveOccurred())
+					obtainedState := nmstatev1alpha1.NodeNetworkState{}
+					err = cl.Get(context.TODO(), types.NamespacedName{Name: runningNodeName}, &obtainedState)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(obtainedState.Spec.DesiredState).To(MatchYAML(eth0UpState))
+				})
+			})
+			Context(" and has another policy with non conflicting desiredState", func() {
+				JustBeforeEach(func() {
+					sameNodePolicy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "same-node-policy",
+						},
+						Spec: nmstatev1alpha1.NodeNetworkConfigurationPolicySpec{
+							NodeSelector: map[string]string{
+								"hostname": runningNodeName,
+							},
+							DesiredState: eth1UpState,
+						},
+					}
+					err := cl.Create(context.TODO(), &sameNodePolicy)
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("should merge desired state", func() {
+					_, err := r.Reconcile(req)
+					Expect(err).ToNot(HaveOccurred())
+					obtainedState := nmstatev1alpha1.NodeNetworkState{}
+					err = cl.Get(context.TODO(), types.NamespacedName{Name: runningNodeName}, &obtainedState)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(obtainedState.Spec.DesiredState).To(MatchYAML(eth0AndEth1UpState))
+				})
+			})
+			Context(" and has another policy with conflicting desiredState", func() {
+				JustBeforeEach(func() {
+					conflictingPolicy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "conflicting-policy",
+						},
+						Spec: nmstatev1alpha1.NodeNetworkConfigurationPolicySpec{
+							NodeSelector: map[string]string{
+								"hostname": runningNodeName,
+							},
+							DesiredState: eth0MTU1450,
+						},
+					}
+					err := cl.Create(context.TODO(), &conflictingPolicy)
+					Expect(err).ToNot(HaveOccurred())
+				})
+				It("should keep desired state", func() {
+					res, err := r.Reconcile(req)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(res.Requeue).To(BeFalse())
+					obtainedState := nmstatev1alpha1.NodeNetworkState{}
+					err = cl.Get(context.TODO(), types.NamespacedName{Name: runningNodeName}, &obtainedState)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(obtainedState.Spec.DesiredState).To(MatchYAML(eth0UpState))
+				})
 			})
 		})
 	})

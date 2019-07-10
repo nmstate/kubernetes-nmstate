@@ -19,6 +19,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	yaml "sigs.k8s.io/yaml"
+
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
@@ -113,6 +115,107 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 	scheme *runtime.Scheme
 }
 
+// It will return the policies with same labels at the one from argument
+func (r *ReconcileNodeNetworkConfigurationPolicy) filterByNodeLabels(node corev1.Node) (nmstatev1alpha1.NodeNetworkConfigurationPolicyList, error) {
+	policyList := nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
+	filteredPolicyList := nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
+
+	// Retrieve all the policies
+	err := r.client.List(context.TODO(), &client.ListOptions{}, &policyList)
+	if err != nil {
+		return policyList, err
+	}
+
+	// Get the ones that fit this node
+	for _, policy := range policyList.Items {
+		if nodeSelectorMatchesThisNode(r.client, &policy) {
+			filteredPolicyList.Items = append(filteredPolicyList.Items, policy)
+		}
+	}
+
+	return filteredPolicyList, nil
+}
+
+func unmarshalInterfaces(state nmstatev1alpha1.State) (map[string]interface{}, []interface{}, error) {
+	// Unmarshall interfaces state into unstructured golang
+	var unstructuredState map[string]interface{}
+	err := yaml.Unmarshal(state, &unstructuredState)
+	if err != nil {
+		return unstructuredState, []interface{}{}, fmt.Errorf("error unmarshaling state: %v", err)
+	}
+	return unstructuredState, unstructuredState["interfaces"].([]interface{}), nil
+}
+
+func mapByName(interfacesList []interface{}) (map[string]interface{}, error) {
+	interfacesMap := map[string]interface{}{}
+	for _, iface := range interfacesList {
+		// Cast generic type to a map so we can search 'name' field
+		interfaceMap := iface.(map[string]interface{})
+		interfaceName, hasName := interfaceMap["name"]
+		if !hasName {
+			return interfaceMap, fmt.Errorf("no 'name' field at interface")
+		}
+
+		// Store in the map by 'name' so we can search for it
+		interfacesMap[interfaceName.(string)] = interfaceMap
+	}
+	return interfacesMap, nil
+}
+
+func intersectionKeys(lhs map[string]interface{}, rhs map[string]interface{}) []string {
+	intersectionKeys := []string{}
+	for key, _ := range lhs {
+		if _, hasKey := rhs[key]; hasKey {
+			intersectionKeys = append(intersectionKeys, key)
+		}
+	}
+	return intersectionKeys
+}
+
+// It will merge "interfaces" if they are not comflicting (there is not changes from the same interface) in case
+// of conflicting and error is returned and no combination is done.
+func combineState(inputState nmstatev1alpha1.State, outputState nmstatev1alpha1.State) (nmstatev1alpha1.State, error) {
+	// If the output state is empty we just need to return the input
+	if len(outputState) == 0 {
+		return inputState, nil
+	}
+
+	_, inputInterfaces, err := unmarshalInterfaces(inputState)
+	if err != nil {
+		return outputState, fmt.Errorf("error unmarshaling input state: %v", err)
+	}
+	outputUnstructuredState, outputInterfaces, err := unmarshalInterfaces(outputState)
+	if err != nil {
+		return outputState, fmt.Errorf("error unmarshaling output state: %v", err)
+	}
+
+	inputMap, err := mapByName(inputInterfaces)
+	if err != nil {
+		return outputState, fmt.Errorf("error converting input to map: %v", err)
+	}
+	outputMap, err := mapByName(outputInterfaces)
+	if err != nil {
+		return outputState, fmt.Errorf("error converting output to map: %v", err)
+	}
+
+	// If we have a network interface at both input and output
+	// don't do any combination
+	intersectionKeys := intersectionKeys(inputMap, outputMap)
+	if len(intersectionKeys) > 0 {
+		return outputState, nil
+	}
+	// Add new configured interfaces to NodeNetworkState DesiredState
+	outputInterfaces = append(outputInterfaces, inputInterfaces...)
+	outputUnstructuredState["interfaces"] = outputInterfaces
+
+	// Marshal back DesiredState to NodeNetworkState
+	outputState, err = yaml.Marshal(outputUnstructuredState)
+	if err != nil {
+		return outputState, fmt.Errorf("error marshaling modified desired state: %v", err)
+	}
+	return outputState, nil
+}
+
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
 // and what is in the NodeNetworkConfigurationPolicy.Spec
 // Note:
@@ -150,8 +253,27 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	// FIXME: We have to merge it somehow in case of multiple policies applied
-	nodeNetworkState.Spec.DesiredState = instance.Spec.DesiredState
+	node := corev1.Node{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("cannot find corev1.Node nodeName %s: %v", nodeName, err)
+	}
+
+	// It's going to also return reconciling instance but that's not an issue
+	policyList, err := r.filterByNodeLabels(node)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("error filtering policies by label: %v", err)
+	}
+
+	var combinedState nmstatev1alpha1.State
+	for _, policy := range policyList.Items {
+		combinedState, err = combineState(policy.Spec.DesiredState, combinedState)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	nodeNetworkState.Spec.DesiredState = combinedState
 
 	// TODO: Use Patch instaed of Update
 	err = r.client.Update(context.TODO(), nodeNetworkState)
