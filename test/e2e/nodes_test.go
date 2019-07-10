@@ -12,11 +12,6 @@ var _ = Describe("Nodes", func() {
 				interfacesNameForNode(node).Should(ContainElement("eth0"))
 			}
 		})
-		It("should have Available ConditionType set to true", func() {
-			for _, node := range nodes {
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable, corev1.ConditionTrue)
-			}
-		})
 		Context("and node network state is deleted", func() {
 			BeforeEach(func() {
 				deleteNodeNeworkStates()
@@ -24,11 +19,6 @@ var _ = Describe("Nodes", func() {
 			It("should recreate it with currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNode(node).Should(ContainElement("eth0"))
-				}
-			})
-			FIt("should have Initialized ConditionType set to true", func() {
-				for _, node := range nodes {
-					checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionInitialized, corev1.ConditionTrue)
 				}
 			})
 		})
