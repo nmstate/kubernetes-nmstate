@@ -5,12 +5,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"os/exec"
 
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
-
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -74,14 +70,6 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 			NodeName: nodeName,
 		},
 	}
-	conditions.SetCondition(
-		&nodeNetworkState,
-		nmstatev1alpha1.NodeNetworkStateConditionInitialized,
-		corev1.ConditionTrue,
-		"Created",
-		"NodeNetworkState was created by Node controller",
-	)
-	log.Printf("XXX")
 	err := client.Create(context.TODO(), &nodeNetworkState)
 	if err != nil {
 		return fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
@@ -97,7 +85,9 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	}
 
 	// Let's update status with current network config from nmstatectl
-	nodeNetworkState.Status.CurrentState = nmstatev1alpha1.State(currentState)
+	nodeNetworkState.Status = nmstatev1alpha1.NodeNetworkStateStatus{
+		CurrentState: nmstatev1alpha1.State(currentState),
+	}
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
