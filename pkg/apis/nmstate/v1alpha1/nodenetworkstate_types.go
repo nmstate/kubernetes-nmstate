@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -26,8 +27,29 @@ type NodeNetworkStateSpec struct {
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
-	CurrentState State `json:"currentState,omitempty"`
+	CurrentState State                       `json:"currentState,omitempty"`
+	Conditions   []NodeNetworkStateCondition `json:"conditions,omitempty" optional:"true"`
 }
+
+// +k8s:openapi-gen=true
+type NodeNetworkStateCondition struct {
+	Type               NodeNetworkStateConditionType `json:"type"`
+	Status             corev1.ConditionStatus        `json:"status"`
+	Reason             string                        `json:"reason,omitempty"`
+	Message            string                        `json:"message,omitempty"`
+	LastHeartbeatTime  metav1.Time                   `json:"lastHearbeatTime,omitempty"`
+	LastTransitionTime metav1.Time                   `json:"lastTransitionTime,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type NodeNetworkStateConditionType string
+
+const (
+	NodeNetworkStateConditionFailing     NodeNetworkStateConditionType = "Failing"
+	NodeNetworkStateConditionProgressing NodeNetworkStateConditionType = "Progressing"
+	NodeNetworkStateConditionAvailable   NodeNetworkStateConditionType = "Available"
+	NodeNetworkStateConditionInitialized NodeNetworkStateConditionType = "Initialized"
+)
 
 // +genclient
 // +genclient:nonNamespaced
