@@ -25,7 +25,6 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 )
 
 const ReadTimeout = 15 * time.Second
@@ -235,20 +234,6 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return *currentStateYaml
 	}, ReadTimeout, ReadInterval)
-}
-
-// TODO log actual condition when fails
-func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateConditionType, conditionStatus corev1.ConditionStatus) {
-	key := types.NamespacedName{Name: node}
-	var condition *nmstatev1alpha1.NodeNetworkStateCondition
-	Eventually(func() corev1.ConditionStatus {
-		state := nodeNetworkState(key)
-		condition = conditions.Condition(&state, conditionType)
-		Expect(condition).NotTo(BeNil())
-		return condition.Status
-	}, ReadTimeout, ReadInterval).Should(
-		Equal(conditionStatus),
-	)
 }
 
 func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alpha1.State) AsyncAssertion {

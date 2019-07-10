@@ -6,10 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
-
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -144,41 +141,14 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
-		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
-		conditions.SetCondition(
-			instance,
-			nmstatev1alpha1.NodeNetworkStateConditionFailing,
-			corev1.ConditionFalse,
-			"Failed",
-			errmsg.Error(),
-		)
-		r.client.Status().Update(context.TODO(), instance)
-		return reconcile.Result{}, errmsg
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
 	err = nmstate.UpdateCurrentState(r.client, instance)
 	if err != nil {
-		errmsg := fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
-		conditions.SetCondition(
-			instance,
-			nmstatev1alpha1.NodeNetworkStateConditionFailing,
-			corev1.ConditionFalse,
-			"Failed",
-			errmsg.Error(),
-		)
-		r.client.Status().Update(context.TODO(), instance)
-		return reconcile.Result{}, errmsg
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
 	}
 
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-		corev1.ConditionTrue,
-		"Success",
-		"successfully reconciled NodeNetworkState",
-	)
-	r.client.Status().Update(context.TODO(), instance)
-	//reqLogger.Info("xxx", "123", instance)
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
 }
