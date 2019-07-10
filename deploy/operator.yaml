@@ -68,3 +68,4 @@ metadata:
   namespace: nmstate
 data:
   node_network_state_refresh_interval: "5"
+  filter_out: "veth,*"
