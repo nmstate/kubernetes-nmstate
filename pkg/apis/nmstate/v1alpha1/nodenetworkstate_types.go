@@ -1,10 +1,10 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // State containes the namestatectl yaml [1] as string instead of golang struct
@@ -27,8 +27,29 @@ type NodeNetworkStateSpec struct {
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
-	CurrentState State `json:"currentState,omitempty"`
+	CurrentState State                       `json:"currentState,omitempty"`
+	Conditions   []NodeNetworkStateCondition `json:"conditions,omitempty" optional:"true"`
 }
+
+// +k8s:openapi-gen=true
+type NodeNetworkStateCondition struct {
+	Type               NodeNetworkStateConditionType `json:"type"`
+	Status             corev1.ConditionStatus        `json:"status"`
+	Reason             string                        `json:"reason,omitempty"`
+	Message            string                        `json:"message,omitempty"`
+	LastHeartbeatTime  metav1.Time                   `json:"lastHearbeatTime,omitempty"`
+	LastTransitionTime metav1.Time                   `json:"lastTransitionTime,omitempty"`
+}
+
+// +k8s:openapi-gen=true
+type NodeNetworkStateConditionType string
+
+const (
+	NodeNetworkStateConditionFailing     NodeNetworkStateConditionType = "Failing"
+	NodeNetworkStateConditionProgressing NodeNetworkStateConditionType = "Progressing"
+	NodeNetworkStateConditionAvailable   NodeNetworkStateConditionType = "Available"
+	NodeNetworkStateConditionInitialized NodeNetworkStateConditionType = "Initialized"
+)
 
 // +genclient
 // +genclient:nonNamespaced
@@ -37,6 +58,7 @@ type NodeNetworkStateStatus struct {
 // NodeNetworkState is the Schema for the nodenetworkstates API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:path=nodenetworkstates,shortName=nns
 type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
