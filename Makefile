@@ -6,7 +6,6 @@ HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
-UNIT_TEST_EXTRA_ARGS ?=
 UNIT_TEST_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_EXTRA_ARGS)
 ifdef UNIT_TEST_FOCUS
 	UNIT_TEST_ARGS += --focus $(UNIT_TEST_FOCUS)
@@ -14,7 +13,9 @@ endif
 ifdef UNIT_TEST_SKIP
 	UNIT_TEST_ARGS += --skip $(UNIT_TEST_SKIP)
 endif
-GINKGO?= build/_output/bin/ginkgo
+ifdef UNIT_TEST_EXTRA_ARGS
+	UNIT_TEST_ARGS += $(UNIT_TEST_ARGS)
+endif
 
 E2E_TEST_ARGS ?= -test.v -ginkgo.v
 ifdef E2E_TEST_FOCUS
@@ -27,6 +28,7 @@ ifdef E2E_TEST_EXTRA_ARGS
 	E2E_TEST_ARGS +=  $(E2E_TEST_EXTRA_ARGS)
 endif
 
+GINKGO?= build/_output/bin/ginkgo
 OPERATOR_SDK ?= build/_output/bin/operator-sdk
 LOCAL_REGISTRY ?= registry:5000
 

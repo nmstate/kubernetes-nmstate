@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -19,16 +18,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 var (
 	log = logf.Log.WithName("controller_nodenetworkconfigurationpolicy")
 )
-
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
 
 // Add creates a new NodeNetworkConfigurationPolicy Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -40,6 +36,7 @@ func Add(mgr manager.Manager) error {
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkConfigurationPolicy{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
+
 func getNodeName() (string, error) {
 	nodeName := os.Getenv("NODE_NAME")
 	if len(nodeName) == 0 {
@@ -57,7 +54,7 @@ func matches(nodeSelector map[string]string, labels map[string]string) bool {
 	return true
 }
 
-func nodeSelectorMatchisThisNode(cl client.Client, eventObject runtime.Object) bool {
+func nodeSelectorMatchesThisNode(cl client.Client, eventObject runtime.Object) bool {
 	nodeName, err := getNodeName()
 	if err != nil {
 		log.Info("NODE_NAME not found for pod")
@@ -77,17 +74,17 @@ func nodeSelectorMatchisThisNode(cl client.Client, eventObject runtime.Object) b
 func forThisNodePredicate(cl client.Client) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nodeSelectorMatchisThisNode(cl, createEvent.Object)
+			return nodeSelectorMatchesThisNode(cl, createEvent.Object)
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nodeSelectorMatchisThisNode(cl, deleteEvent.Object)
+			return nodeSelectorMatchesThisNode(cl, deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nodeSelectorMatchisThisNode(cl, updateEvent.ObjectOld) &&
-				nodeSelectorMatchisThisNode(cl, updateEvent.ObjectNew)
+			return nodeSelectorMatchesThisNode(cl, updateEvent.ObjectOld) &&
+				nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return nodeSelectorMatchisThisNode(cl, genericEvent.Object)
+			return nodeSelectorMatchesThisNode(cl, genericEvent.Object)
 		},
 	}
 }

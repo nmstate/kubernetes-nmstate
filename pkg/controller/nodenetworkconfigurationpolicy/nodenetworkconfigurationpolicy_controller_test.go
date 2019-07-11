@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	. "github.com/onsi/ginkgo/extensions/table"
-
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,7 +23,7 @@ import (
 )
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
-	type PredicateCase struct {
+	type predicateCase struct {
 		EnvNodeName  string
 		ObjNodeName  string
 		NodeSelector map[string]string
@@ -32,7 +31,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		Reconcile    bool
 	}
 	DescribeTable("all events",
-		func(c PredicateCase) {
+		func(c predicateCase) {
 			node := corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:   c.ObjNodeName,
@@ -69,7 +68,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				})).To(Equal(c.Reconcile))
 		},
 		Entry("events with empty node labels",
-			PredicateCase{
+			predicateCase{
 				EnvNodeName: "node01",
 				ObjNodeName: "node01",
 				NodeLabels:  map[string]string{},
@@ -80,7 +79,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Reconcile: false,
 			}),
 		Entry("events with empty node selector",
-			PredicateCase{
+			predicateCase{
 				ObjNodeName: "node01",
 				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
@@ -91,7 +90,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Reconcile:    true,
 			}),
 		Entry("events with matching node selector",
-			PredicateCase{
+			predicateCase{
 				ObjNodeName: "node01",
 				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
@@ -105,7 +104,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Reconcile: true,
 			}),
 		Entry("events with missing label at node",
-			PredicateCase{
+			predicateCase{
 				ObjNodeName: "node01",
 				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
@@ -118,7 +117,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Reconcile: false,
 			}),
 		Entry("events with different label value at node",
-			PredicateCase{
+			predicateCase{
 				ObjNodeName: "node01",
 				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
@@ -132,7 +131,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Reconcile: false,
 			}),
 		Entry("node not found",
-			PredicateCase{
+			predicateCase{
 				ObjNodeName:  "node01",
 				EnvNodeName:  "node02",
 				NodeLabels:   map[string]string{},
@@ -140,7 +139,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Reconcile:    false,
 			}),
 		Entry("env NODE_NAME empty",
-			PredicateCase{
+			predicateCase{
 				EnvNodeName:  "",
 				ObjNodeName:  "node01",
 				NodeLabels:   map[string]string{},
