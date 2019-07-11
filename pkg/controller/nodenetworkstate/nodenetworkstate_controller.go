@@ -3,7 +3,9 @@ package nodenetworkstate
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
+	"strconv"
 	"time"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
@@ -24,8 +26,20 @@ import (
 
 var (
 	log                     = logf.Log.WithName("controller_nodenetworkstate")
-	nodenetworkstateRefresh = 5 * time.Second
+	nodenetworkstateRefresh time.Duration
 )
+
+func init() {
+	refreshTime, isSet := os.LookupEnv("NODE_NETWORK_STATE_REFRESH_INTERVAL")
+	if !isSet {
+		panic("NODE_NETWORK_STATE_REFRESH_INTERVAL is mandatory")
+	}
+	intRefreshTime, err := strconv.Atoi(refreshTime)
+	if err != nil {
+		panic(fmt.Sprintf("Failed while converting evnironment variable to int: %v", err))
+	}
+	nodenetworkstateRefresh = time.Duration(intRefreshTime) * time.Second
+}
 
 // Add creates a new NodeNetworkState Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
