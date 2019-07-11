@@ -41,6 +41,11 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: NODE_NETWORK_STATE_REFRESH_INTERVAL
+              valueFrom:
+                configMapKeyRef:
+                  name: nmstate-config
+                  key: node_network_state_refresh_interval
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
@@ -51,3 +56,11 @@ spec:
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nmstate-config
+  namespace: nmstate
+data:
+  node_network_state_refresh_interval: "5"
