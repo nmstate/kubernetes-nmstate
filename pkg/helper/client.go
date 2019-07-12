@@ -100,11 +100,10 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
-	// TODO: function that gets currentState and string to filter out
-	// filterOut(nmstatev1alpha1.State(currentState))
+	filteredState := filterOut(nmstatev1alpha1.State(currentState))
 
 	// Let's update status with current network config from nmstatectl
-	nodeNetworkState.Status.CurrentState = nmstatev1alpha1.State(currentState)
+	nodeNetworkState.Status.CurrentState = filteredState
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
