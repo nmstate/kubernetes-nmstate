@@ -11,7 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	yaml "gopkg.in/yaml.v2"
 )
 
 const nmstateCommand = "nmstatectl"
@@ -99,7 +101,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	}
 
 	// TODO: function that gets currentState and string to filter out
-	filterOut(nmstatev1alpha1.State(currentState))
+	// filterOut(nmstatev1alpha1.State(currentState))
 
 	// Let's update status with current network config from nmstatectl
 	nodeNetworkState.Status.CurrentState = nmstatev1alpha1.State(currentState)
@@ -147,6 +149,29 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	return commandOutput, nil
 }
 
-func filterOut(currentState *nmstatev1alpha1.State) {
-	glob.Glob("veth*")
+func filterOut(currentState nmstatev1alpha1.State) nmstatev1alpha1.State {
+	var state map[string]interface{}
+	err := yaml.Unmarshal([]byte(currentState), &state)
+	if err != nil {
+		panic(fmt.Sprintf("%v", err))
+	}
+
+	interfaces := state["interfaces"]
+	var filteredInterfaces []interface{}
+
+	for _, iface := range interfaces.([]interface{}) {
+		name := iface.(map[interface{}]interface{})["name"]
+		g := glob.MustCompile("veth*")
+		if !g.Match(name.(string)) {
+			filteredInterfaces = append(filteredInterfaces, iface)
+		}
+	}
+
+	state["interfaces"] = filteredInterfaces
+	filteredState, err := yaml.Marshal(state)
+	if err != nil {
+		panic(fmt.Sprintf("%v", err))
+	}
+
+	return filteredState
 }
