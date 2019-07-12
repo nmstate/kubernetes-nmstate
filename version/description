@@ -1,10 +1,8 @@
-This release has rewrite the project from scratch using operator-sdk
+Run nmstate at 'nmstate' namespace
 
-* Use operator-sdk tools to construct it
-* Add unit tests for marshal/unmarshall nmstate yaml
-* Add e2e tests
-* The cluster-up cluster-down scripts call kubevirtci directly cloning the
-  repo.
+
+Although the CRD is cluster scope the infrastructure that handle it
+have to be under a namspace, also we no longer need exec.
 
 ```
 docker pull HANDLER_IMAGE
