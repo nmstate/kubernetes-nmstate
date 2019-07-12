@@ -23,8 +23,17 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("controller_nodenetworkconfigurationpolicy")
+	log      = logf.Log.WithName("controller_nodenetworkconfigurationpolicy")
+	nodeName string
 )
+
+func init() {
+	var isSet = false
+	nodeName, isSet = os.LookupEnv("NODE_NAME")
+	if !isSet || len(nodeName) == 0 {
+		panic("NODE_NAME is mandatory")
+	}
+}
 
 // Add creates a new NodeNetworkConfigurationPolicy Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -37,14 +46,6 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkConfigurationPolicy{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
-func getNodeName() (string, error) {
-	nodeName := os.Getenv("NODE_NAME")
-	if len(nodeName) == 0 {
-		return nodeName, fmt.Errorf("no NODE_NAME environment variable")
-	}
-	return nodeName, nil
-}
-
 func matches(nodeSelector map[string]string, labels map[string]string) bool {
 	for key, value := range nodeSelector {
 		if foundValue, hasKey := labels[key]; !hasKey || foundValue != value {
@@ -55,13 +56,8 @@ func matches(nodeSelector map[string]string, labels map[string]string) bool {
 }
 
 func nodeSelectorMatchesThisNode(cl client.Client, eventObject runtime.Object) bool {
-	nodeName, err := getNodeName()
-	if err != nil {
-		log.Info("NODE_NAME not found for pod")
-		return false
-	}
 	node := corev1.Node{}
-	err = cl.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+	err := cl.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
 	if err != nil {
 		log.Info("Cannot find corev1.Node", "nodeName", nodeName)
 		return false
@@ -103,10 +99,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -123,8 +115,6 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
 // and what is in the NodeNetworkConfigurationPolicy.Spec
-// TODO(user): Modify this Reconcile function to implement your Controller logic.  This example creates
-// a Pod as an example
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
@@ -147,10 +137,6 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	}
 
 	nodeNetworkState := &nmstatev1alpha1.NodeNetworkState{}
-	nodeName, err := getNodeName()
-	if err != nil {
-		return reconcile.Result{}, err
-	}
 	nodeNetworkStateKey := types.NamespacedName{Name: nodeName}
 	err = r.client.Get(context.TODO(), nodeNetworkStateKey, nodeNetworkState)
 	if err != nil {

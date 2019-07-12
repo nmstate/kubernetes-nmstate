@@ -3,7 +3,6 @@ package nodenetworkconfigurationpolicy
 import (
 	"context"
 	"fmt"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -24,13 +23,12 @@ import (
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
 	type predicateCase struct {
-		EnvNodeName  string
 		ObjNodeName  string
 		NodeSelector map[string]string
 		NodeLabels   map[string]string
 		Reconcile    bool
 	}
-	DescribeTable("all events",
+	DescribeTable("testing predicates",
 		func(c predicateCase) {
 			node := corev1.Node{
 				ObjectMeta: metav1.ObjectMeta{
@@ -44,8 +42,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 					NodeSelector: c.NodeSelector,
 				},
 			}
-
-			os.Setenv("NODE_NAME", c.EnvNodeName)
 
 			// Objects to track in the fake client
 			objs := []runtime.Object{&node}
@@ -69,7 +65,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		},
 		Entry("events with empty node labels",
 			predicateCase{
-				EnvNodeName: "node01",
 				ObjNodeName: "node01",
 				NodeLabels:  map[string]string{},
 				NodeSelector: map[string]string{
@@ -81,7 +76,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		Entry("events with empty node selector",
 			predicateCase{
 				ObjNodeName: "node01",
-				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
 					"label1": "foo",
 					"label2": "bar",
@@ -92,7 +86,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		Entry("events with matching node selector",
 			predicateCase{
 				ObjNodeName: "node01",
-				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
 					"label1": "foo",
 					"label2": "bar",
@@ -106,7 +99,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		Entry("events with missing label at node",
 			predicateCase{
 				ObjNodeName: "node01",
-				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
 					"label1": "foo",
 				},
@@ -119,7 +111,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		Entry("events with different label value at node",
 			predicateCase{
 				ObjNodeName: "node01",
-				EnvNodeName: "node01",
 				NodeLabels: map[string]string{
 					"label1": "foo",
 					"label2": "bar1",
@@ -132,16 +123,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			}),
 		Entry("node not found",
 			predicateCase{
-				ObjNodeName:  "node01",
-				EnvNodeName:  "node02",
-				NodeLabels:   map[string]string{},
-				NodeSelector: map[string]string{},
-				Reconcile:    false,
-			}),
-		Entry("env NODE_NAME empty",
-			predicateCase{
-				EnvNodeName:  "",
-				ObjNodeName:  "node01",
+				ObjNodeName:  "node02",
 				NodeLabels:   map[string]string{},
 				NodeSelector: map[string]string{},
 				Reconcile:    false,
@@ -189,8 +171,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 				Namespace: namespace,
 			},
 		}
-		By("set NODE_NAME to " + nodes[0].Name)
-		os.Setenv("NODE_NAME", nodes[0].Name)
 	})
 
 	JustBeforeEach(func() {
@@ -209,25 +189,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 
 		r = &ReconcileNodeNetworkConfigurationPolicy{client: cl, scheme: s}
 
-	})
-	Context("when there is no NODE_NAME environment variable", func() {
-		BeforeEach(func() {
-			os.Unsetenv("NODE_NAME")
-		})
-		It("should fail", func() {
-			_, err := r.Reconcile(req)
-			Expect(err).To(HaveOccurred())
-		})
-	})
-
-	Context("when NODE_NAME environment variable is empty", func() {
-		BeforeEach(func() {
-			os.Setenv("NODE_NAME", "")
-		})
-		It("should fail", func() {
-			_, err := r.Reconcile(req)
-			Expect(err).To(HaveOccurred())
-		})
 	})
 	Context("when there is no NodeNetworkState for the node", func() {
 		JustBeforeEach(func() {
