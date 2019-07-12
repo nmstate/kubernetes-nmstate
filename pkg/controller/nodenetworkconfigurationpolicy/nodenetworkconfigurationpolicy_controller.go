@@ -152,6 +152,8 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 
 	// FIXME: We have to merge it somehow in case of multiple policies applied
 	nodeNetworkState.Spec.DesiredState = instance.Spec.DesiredState
+
+	// TODO: Use Patch instaed of Update
 	err = r.client.Update(context.TODO(), nodeNetworkState)
 	if err != nil {
 		return reconcile.Result{}, err
