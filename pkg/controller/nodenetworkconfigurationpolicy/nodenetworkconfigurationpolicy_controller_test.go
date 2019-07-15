@@ -186,7 +186,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 		s := scheme.Scheme
 		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
 		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkState{})
-		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &corev1.Node{})
 
 		// Objects to track in the fake client
 		objs := []runtime.Object{&policy1}
