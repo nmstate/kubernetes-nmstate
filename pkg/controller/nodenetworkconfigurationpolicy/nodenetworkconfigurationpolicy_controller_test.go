@@ -73,6 +73,16 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				},
 				Reconcile: false,
 			}),
+		Entry("events with nil node selector",
+			predicateCase{
+				ObjNodeName: "node01",
+				NodeLabels: map[string]string{
+					"label1": "foo",
+					"label2": "bar",
+				},
+				NodeSelector: nil,
+				Reconcile:    true,
+			}),
 		Entry("events with empty node selector",
 			predicateCase{
 				ObjNodeName: "node01",
