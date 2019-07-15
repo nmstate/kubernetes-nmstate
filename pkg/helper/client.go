@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,6 +18,12 @@ import (
 )
 
 const nmstateCommand = "nmstatectl"
+
+var interfacesFilter string
+
+func init() {
+	interfacesFilter = os.Getenv("INTERFACES_FILTER")
+}
 
 func show(arguments ...string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "show")
@@ -95,15 +102,17 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
-	currentState, err := show()
+	currentStateRaw, err := show()
 	if err != nil {
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
-	filteredState := filterOut(nmstatev1alpha1.State(currentState))
-
-	// Let's update status with current network config from nmstatectl
-	nodeNetworkState.Status.CurrentState = filteredState
+	currentState := nmstatev1alpha1.State(currentStateRaw)
+	if interfacesFilter == "" {
+		nodeNetworkState.Status.CurrentState = currentState
+	} else {
+		nodeNetworkState.Status.CurrentState = filterOut(currentState, interfacesFilter)
+	}
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
@@ -148,7 +157,7 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	return commandOutput, nil
 }
 
-func filterOut(currentState nmstatev1alpha1.State) nmstatev1alpha1.State {
+func filterOut(currentState nmstatev1alpha1.State, interfacesFilter string) nmstatev1alpha1.State {
 	var state map[string]interface{}
 	err := yaml.Unmarshal([]byte(currentState), &state)
 	if err != nil {
@@ -160,7 +169,7 @@ func filterOut(currentState nmstatev1alpha1.State) nmstatev1alpha1.State {
 
 	for _, iface := range interfaces.([]interface{}) {
 		name := iface.(map[interface{}]interface{})["name"]
-		g := glob.MustCompile("veth*")
+		g := glob.MustCompile(interfacesFilter)
 		if !g.Match(name.(string)) {
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}

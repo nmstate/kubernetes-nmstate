@@ -50,6 +50,11 @@ spec:
                 configMapKeyRef:
                   name: nmstate-config
                   key: node_network_state_refresh_interval
+            - name: INTERFACES_FILTER
+              valueFrom:
+                configMapKeyRef:
+                  name: nmstate-config
+                  key: interfaces_filter
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
@@ -68,4 +73,4 @@ metadata:
   namespace: nmstate
 data:
   node_network_state_refresh_interval: "5"
-  filter_out: "veth,*"
+  interfaces_filter: "veth*"

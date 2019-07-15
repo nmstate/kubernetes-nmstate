@@ -17,7 +17,7 @@ var _ = Describe("FilterOut", func() {
   state: down
   type: ethernet
 `)
-		returnedState := filterOut(state)
+		returnedState := filterOut(state, "veth*")
 		It("should return filtered 1 interface without veth", func() {
 			filteredState := nmstatev1alpha1.State(`interfaces:
 - name: eth1
@@ -40,7 +40,7 @@ var _ = Describe("FilterOut", func() {
   state: down
   type: ethernet
 `)
-		returnedState := filterOut(state)
+		returnedState := filterOut(state, "veth*")
 		It("should return filtered 1 interface without veth", func() {
 			filteredState := nmstatev1alpha1.State(`interfaces:
 - name: eth1
