@@ -154,7 +154,7 @@ $(description): version/description
 # calling make on make is needed.
 # [1] https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
 release: HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
-release: $(versioned_operator_manifest) push-handler $(description)
+release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_RELEASE)
 	DESCRIPTION=$(description) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(shell hack/version.sh) \
