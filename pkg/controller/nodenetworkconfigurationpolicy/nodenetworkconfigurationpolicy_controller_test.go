@@ -143,18 +143,16 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() {
 	var (
-		name          = "nodenetworkconfigurationpolicy-test"
-		namespace     = "default"
-		numberOfNodes = 2
-		nodes         []nmstatev1alpha1.NodeNetworkState
+		name              = "nodenetworkconfigurationpolicy-test"
+		numberOfNodes     = 2
+		nodeNetworkStates []nmstatev1alpha1.NodeNetworkState
 
 		cl      client.Client
 		r       *ReconcileNodeNetworkConfigurationPolicy
 		req     reconcile.Request
 		policy1 = nmstatev1alpha1.NodeNetworkConfigurationPolicy{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: namespace,
+				Name: name,
 			},
 		}
 		res reconcile.Result
@@ -162,13 +160,12 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 
 	BeforeEach(func() {
 
-		By("populate the NodeNetworkState for nodes")
-		nodes = nil
+		By("populate the NodeNetworkState for nodeNetworkStates")
+		nodeNetworkStates = nil
 		for n := 1; n <= numberOfNodes; n++ {
-			nodes = append(nodes, nmstatev1alpha1.NodeNetworkState{
+			nodeNetworkStates = append(nodeNetworkStates, nmstatev1alpha1.NodeNetworkState{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      fmt.Sprintf("node%02d", n),
-					Namespace: namespace,
+					Name: fmt.Sprintf("node%02d", n),
 				},
 			})
 		}
@@ -177,8 +174,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 		// watched resource .
 		req = reconcile.Request{
 			NamespacedName: types.NamespacedName{
-				Name:      name,
-				Namespace: namespace,
+				Name: name,
 			},
 		}
 	})
@@ -188,8 +184,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 		// Register operator types with the runtime scheme.
 		By("register state and policies types")
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &policy1)
-		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nodes[0])
+		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
+		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &nmstatev1alpha1.NodeNetworkState{})
+		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion, &corev1.Node{})
 
 		// Objects to track in the fake client
 		objs := []runtime.Object{&policy1}
@@ -200,26 +197,33 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller reconciler", func() 
 		r = &ReconcileNodeNetworkConfigurationPolicy{client: cl, scheme: s}
 
 	})
+
 	Context("when there is no NodeNetworkState for the node", func() {
+
 		JustBeforeEach(func() {
 			var err error
 			res, err = r.Reconcile(req)
 			Expect(err).ToNot(HaveOccurred())
 		})
+
 		It("should requeue", func() {
 			Expect(res.Requeue).To(BeTrue())
 		})
 	})
+
 	Context("when there is NodeNetworkState for the node", func() {
+
 		JustBeforeEach(func() {
-			err := cl.Create(context.TODO(), &nodes[0])
+			err := cl.Create(context.TODO(), &nodeNetworkStates[0])
 			Expect(err).ToNot(HaveOccurred())
 			res, err = r.Reconcile(req)
 			Expect(err).ToNot(HaveOccurred())
 		})
+
 		It("should not requeue", func() {
 			Expect(res.Requeue).ToNot(BeTrue())
 		})
+
 		Context(" and it has non empty desiredState", func() {
 			var (
 				expectedDesiredState = nmstatev1alpha1.State(`
@@ -228,12 +232,14 @@ interfaces:
   state: up
 `)
 			)
+
 			BeforeEach(func() {
 				policy1.Spec.DesiredState = expectedDesiredState
 			})
+
 			It("should update NodeNetworkState with desiredState", func() {
 				obtainedState := nmstatev1alpha1.NodeNetworkState{}
-				err := cl.Get(context.TODO(), types.NamespacedName{Name: nodes[0].Name}, &obtainedState)
+				err := cl.Get(context.TODO(), types.NamespacedName{Name: nodeNetworkStates[0].Name}, &obtainedState)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(obtainedState.Spec.DesiredState).To(MatchYAML(expectedDesiredState))
 			})
