@@ -109,11 +109,6 @@ $(versioned_operator_manifest): version/version.go
 	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
 		deploy/operator.yaml > $@
 
-$(local_handler_manifest): deploy/operator.yaml
-	mkdir -p $(dir $@)
-	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
-		deploy/operator.yaml > $@
-
 $(CLUSTER_DIR)/%: $(install_kubevirtci)
 	$(install_kubevirtci)
 
