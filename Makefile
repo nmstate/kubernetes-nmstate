@@ -1,6 +1,8 @@
 IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 
+WHAT =? ./pkg/
+
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
@@ -88,7 +90,7 @@ push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
+	NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) $(WHAT)
 
 test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \

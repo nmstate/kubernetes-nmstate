@@ -77,6 +77,33 @@ var _ = Describe("NodeNetworkState", func() {
     type: ethernet
     state: absent
 `)
+
+		br1WithVlanFiltering = nmstatev1alpha1.State(`interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        vlan-filtering: true
+        stp:
+          enabled: false
+      vlans:
+        - vlan-min-range: 20
+          vlan-max-range: 22
+        - vlan-min-range: 40
+      port:
+        - name: eth1
+          stp-hairpin-mode: false
+          stp-path-cost: 100
+          stp-priority: 32
+          vlans:
+            - vlan-min-range: 30
+              vlan-max-range: 32
+            - vlan-min-range: 50
+`)
 	)
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up", func() {
@@ -192,5 +219,32 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
+		Context("with a linux bridge up and vlan-filtering with vlans", func() {
+			BeforeEach(func() {
+				updateDesiredState(namespace, br1WithVlanFiltering)
+			})
+			AfterEach(func() {
+
+				// First we clean desired state if we
+				// don't do that nmstate recreates the bridge
+				resetDesiredStateForNodes(namespace)
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
+
+				// Let's clean the bridge directly in the node
+				// bypassing nmstate
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("br1")
+			})
+			It("should have the linux bridge at currentState", func() {
+				for _, node := range nodes {
+					interfacesNameForNode(node).Should(ContainElement("br1"))
+				}
+			})
+		})
+
 	})
 })

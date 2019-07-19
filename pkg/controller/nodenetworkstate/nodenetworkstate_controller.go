@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	nmstatewrapper "github.com/nmstate/kubernetes-nmstate/pkg/helper/wrapper"
 )
 
 var (
@@ -153,7 +154,7 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 
-	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
+	nmstateOutput, err := nmstatewrapper.ApplyDesiredState(instance)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
 	}
