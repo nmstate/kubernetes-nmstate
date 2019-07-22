@@ -115,8 +115,8 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 	scheme *runtime.Scheme
 }
 
-// It will return the policies with same labels at the one from argument
-func (r *ReconcileNodeNetworkConfigurationPolicy) filterByNodeLabels(node corev1.Node) (nmstatev1alpha1.NodeNetworkConfigurationPolicyList, error) {
+// It will return policies with their nodeSelector matching node labels
+func (r *ReconcileNodeNetworkConfigurationPolicy) policiesMatchingNode(node corev1.Node) (nmstatev1alpha1.NodeNetworkConfigurationPolicyList, error) {
 	policyList := nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
 	filteredPolicyList := nmstatev1alpha1.NodeNetworkConfigurationPolicyList{}
 
@@ -136,30 +136,31 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) filterByNodeLabels(node corev1
 	return filteredPolicyList, nil
 }
 
-func unmarshalInterfaces(state nmstatev1alpha1.State) (map[string]interface{}, []interface{}, error) {
+func unmarshalInterfaces(state nmstatev1alpha1.State, interfaces *[]interface{}) (map[string]interface{}, error) {
 	// Unmarshall interfaces state into unstructured golang
 	var unstructuredState map[string]interface{}
 	err := yaml.Unmarshal(state, &unstructuredState)
 	if err != nil {
-		return unstructuredState, []interface{}{}, fmt.Errorf("error unmarshaling state: %v", err)
+		return unstructuredState, fmt.Errorf("error unmarshaling state: %v", err)
 	}
-	return unstructuredState, unstructuredState["interfaces"].([]interface{}), nil
+	*interfaces = unstructuredState["interfaces"].([]interface{})
+	return unstructuredState, nil
 }
 
-func mapByName(interfacesList []interface{}) (map[string]interface{}, error) {
-	interfacesMap := map[string]interface{}{}
-	for _, iface := range interfacesList {
+func mapByName(ifaceList []interface{}) (map[string]interface{}, error) {
+	ifacesMap := map[string]interface{}{}
+	for _, iface := range ifaceList {
 		// Cast generic type to a map so we can search 'name' field
-		interfaceMap := iface.(map[string]interface{})
-		interfaceName, hasName := interfaceMap["name"]
+		ifaceMap := iface.(map[string]interface{})
+		ifaceName, hasName := ifaceMap["name"]
 		if !hasName {
-			return interfaceMap, fmt.Errorf("no 'name' field at interface")
+			return ifacesMap, fmt.Errorf("no 'name' field at interface")
 		}
 
 		// Store in the map by 'name' so we can search for it
-		interfacesMap[interfaceName.(string)] = interfaceMap
+		ifacesMap[ifaceName.(string)] = ifaceMap
 	}
-	return interfacesMap, nil
+	return ifacesMap, nil
 }
 
 func intersectionKeys(lhs map[string]interface{}, rhs map[string]interface{}) []string {
@@ -172,7 +173,7 @@ func intersectionKeys(lhs map[string]interface{}, rhs map[string]interface{}) []
 	return intersectionKeys
 }
 
-// It will merge "interfaces" if they are not comflicting (there is not changes from the same interface) in case
+// It will merge "interfaces" if they are not conflicting (there is not changes from the same interface) in case
 // of conflicting and error is returned and no combination is done.
 func combineState(inputState nmstatev1alpha1.State, outputState nmstatev1alpha1.State) (nmstatev1alpha1.State, error) {
 	// If the output state is empty we just need to return the input
@@ -180,11 +181,15 @@ func combineState(inputState nmstatev1alpha1.State, outputState nmstatev1alpha1.
 		return inputState, nil
 	}
 
-	_, inputInterfaces, err := unmarshalInterfaces(inputState)
+	var inputInterfaces []interface{}
+	var outputInterfaces []interface{}
+
+	_, err := unmarshalInterfaces(inputState, &inputInterfaces)
 	if err != nil {
 		return outputState, fmt.Errorf("error unmarshaling input state: %v", err)
 	}
-	outputUnstructuredState, outputInterfaces, err := unmarshalInterfaces(outputState)
+
+	outputUnstructuredState, err := unmarshalInterfaces(outputState, &outputInterfaces)
 	if err != nil {
 		return outputState, fmt.Errorf("error unmarshaling output state: %v", err)
 	}
@@ -193,6 +198,7 @@ func combineState(inputState nmstatev1alpha1.State, outputState nmstatev1alpha1.
 	if err != nil {
 		return outputState, fmt.Errorf("error converting input to map: %v", err)
 	}
+
 	outputMap, err := mapByName(outputInterfaces)
 	if err != nil {
 		return outputState, fmt.Errorf("error converting output to map: %v", err)
@@ -260,7 +266,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	}
 
 	// It's going to also return reconciling instance but that's not an issue
-	policyList, err := r.filterByNodeLabels(node)
+	policyList, err := r.policiesMatchingNode(node)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error filtering policies by label: %v", err)
 	}
