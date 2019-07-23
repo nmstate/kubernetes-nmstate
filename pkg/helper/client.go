@@ -27,6 +27,17 @@ func show(arguments ...string) (string, error) {
 	return stdout.String(), nil
 }
 
+func applyVlanFiltering() (string, error) {
+	cmd := exec.Command("vlan-filtering")
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to execute vlan-filtering: '%v', '%s', '%s'", err, stdout.String(), stderr.String())
+	}
+	return stdout.String(), nil
+}
+
 func set(state string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "set")
 	var stdout, stderr bytes.Buffer
@@ -102,5 +113,13 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	if len(desiredState) == 0 {
 		return "Ignoring empty desired state", nil
 	}
-	return set(string(nodeNetworkState.Spec.DesiredState))
+	outputSet, err := set(string(nodeNetworkState.Spec.DesiredState))
+	if err != nil {
+		return outputSet, err
+	}
+	outputVlanFiltering, err := applyVlanFiltering()
+	if err != nil {
+		return outputVlanFiltering, err
+	}
+	return outputSet + outputVlanFiltering, nil
 }

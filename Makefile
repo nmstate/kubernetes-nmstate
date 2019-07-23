@@ -35,7 +35,7 @@ LOCAL_REGISTRY ?= registry:5000
 
 export KUBEVIRT_PROVIDER ?= k8s-1.13.3
 export KUBEVIRT_NUM_NODES ?= 1
-export KUBEVIRT_NUM_SECONDARY_NICS ?= 1
+export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
 KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
