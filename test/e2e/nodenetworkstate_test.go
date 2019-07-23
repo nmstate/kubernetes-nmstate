@@ -81,13 +81,13 @@ var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
-				updateDesiredState(namespace, br1Up)
+				updateDesiredState(br1Up)
 			})
 			AfterEach(func() {
 
 				// First we clean desired state if we
 				// don't do that nmstate recreates the bridge
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 
 				// TODO: Add status conditions to ensure that
 				//       it has being really reset so we can
@@ -108,11 +108,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with a linux bridge absent", func() {
 			BeforeEach(func() {
 				createBridgeAtNodes("br1")
-				updateDesiredState(namespace, br1Absent)
+				updateDesiredState(br1Absent)
 			})
 			AfterEach(func() {
 				// If not br1 is going to be removed if created manually
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
@@ -122,11 +122,11 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
-				updateDesiredState(namespace, bond1Up)
+				updateDesiredState(bond1Up)
 			})
 			AfterEach(func() {
 
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 
 				// TODO: Add status conditions to ensure that
 				//       it has being really reset so we can
@@ -153,11 +153,11 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
-				updateDesiredState(namespace, br1WithBond1Up)
+				updateDesiredState(br1WithBond1Up)
 			})
 			AfterEach(func() {
 
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 
 				// TODO: Add status conditions to ensure that
 				//       it has being really reset so we can

@@ -138,8 +138,8 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
-func updateDesiredStateAtNode(namespace string, node string, desiredState nmstatev1alpha1.State) {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
+func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
+	key := types.NamespacedName{Name: node}
 	state := nmstatev1alpha1.NodeNetworkState{}
 	err := framework.Global.Client.Get(context.TODO(), key, &state)
 	Expect(err).ToNot(HaveOccurred())
@@ -148,15 +148,15 @@ func updateDesiredStateAtNode(namespace string, node string, desiredState nmstat
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func updateDesiredState(namespace string, desiredState nmstatev1alpha1.State) {
+func updateDesiredState(desiredState nmstatev1alpha1.State) {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(namespace, node, desiredState)
+		updateDesiredStateAtNode(node, desiredState)
 	}
 }
 
-func resetDesiredStateForNodes(namespace string) {
+func resetDesiredStateForNodes() {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(namespace, node, nmstatev1alpha1.State(""))
+		updateDesiredStateAtNode(node, nmstatev1alpha1.State(""))
 	}
 }
 
