@@ -11,7 +11,7 @@ spec:
     - name: eth2
       type: ethernet
       state: up
-    - name: mynet0
+    - name: br0
       type: linux-bridge
       state: up
       bridge:
@@ -23,7 +23,7 @@ spec:
             stp-hairpin-mode: false
             stp-path-cost: 100
             stp-priority: 32
-    - name: mynet1
+    - name: br1
       type: linux-bridge
       state: up
       bridge:
