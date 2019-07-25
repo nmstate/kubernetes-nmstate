@@ -113,10 +113,16 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	if len(desiredState) == 0 {
 		return "Ignoring empty desired state", nil
 	}
-	outputSet, err := set(string(nodeNetworkState.Spec.DesiredState))
+
+	setOutput, err := set(string(nodeNetworkState.Spec.DesiredState))
 	if err != nil {
-		return outputSet, err
+		return setOutput, err
 	}
+
+	// Future versions of nmstate/NM will support vlan-filtering meanwhile
+	// we have to enforce it at the desiredState bridges and outbound ports
+	// they will be configured with vlan_filtering 1 and all the vlan id range
+	// set
 	bridgesUp, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
 	if err != nil {
 		return "", fmt.Errorf("error retrieving up bridges from desired state: %v", err)
@@ -125,5 +131,6 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	if err != nil {
 		return outputVlanFiltering, err
 	}
-	return outputSet + outputVlanFiltering, nil
+
+	return setOutput + outputVlanFiltering, nil
 }

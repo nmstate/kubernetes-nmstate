@@ -5,7 +5,7 @@ RUN yum -y install epel-release && \
     yum -y install \
         https://kojipkgs.fedoraproject.org/packages/nmstate/0.0.6/2.el7/noarch/python2-libnmstate-0.0.6-2.el7.noarch.rpm \
         https://kojipkgs.fedoraproject.org/packages/nmstate/0.0.6/2.el7/noarch/nmstate-0.0.6-2.el7.noarch.rpm \
-        iproute \
+        iproute && \
     yum clean all
 
 # Cannot change the binary to nmstate-handler since the name
