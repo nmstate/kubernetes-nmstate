@@ -96,6 +96,7 @@ var _ = Describe("NodeNetworkState", func() {
 
 				// Let's clean the bridge directly in the node
 				// bypassing nmstate
+				deleteConnectionAtNodes("eth1")
 				deleteConnectionAtNodes("br1")
 			})
 			It("should have the linux bridge at currentState", func() {
@@ -133,6 +134,7 @@ var _ = Describe("NodeNetworkState", func() {
 				time.Sleep(1 * time.Second)
 
 				deleteConnectionAtNodes("bond1")
+				deleteConnectionAtNodes("eth1")
 			})
 			It("should have the bond interface at currentState", func() {
 				var (
@@ -162,6 +164,7 @@ var _ = Describe("NodeNetworkState", func() {
 				//       remove this ugly sleep
 				time.Sleep(1 * time.Second)
 
+				deleteConnectionAtNodes("eth1")
 				deleteConnectionAtNodes("br1")
 				deleteConnectionAtNodes("bond1")
 			})
