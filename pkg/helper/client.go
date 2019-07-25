@@ -27,8 +27,8 @@ func show(arguments ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-func applyVlanFiltering() (string, error) {
-	cmd := exec.Command("vlan-filtering")
+func applyVlanFiltering(bridgesUp []string) (string, error) {
+	cmd := exec.Command("vlan-filtering", bridgesUp...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -117,7 +117,11 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	if err != nil {
 		return outputSet, err
 	}
-	outputVlanFiltering, err := applyVlanFiltering()
+	bridgesUp, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving up bridges from desired state: %v", err)
+	}
+	outputVlanFiltering, err := applyVlanFiltering(bridgesUp)
 	if err != nil {
 		return outputVlanFiltering, err
 	}

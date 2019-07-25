@@ -1,23 +1,16 @@
 #!/bin/bash -e
-IFS=$'\n'
-sed_expression="^.*: (.*) state .* : .*master (.*) state.*$"
-vlan_range=1-4094
-for port in $(bridge link show | grep -v @ | grep "state forwarding"); do
-   outbound_name=$(echo $port | sed -r "s/$sed_expression/\1/")
-   bridge_name=$(echo $port | sed -r "s/$sed_expression/\2/")
-   bridges=$(printf $bridge_name\\n$bridges | uniq)
-   outbounds=$(printf $outbound_name\\n$outbounds)
-done
 
-# We need activate vlan_filtering first to be able
-# to set vlans on outbound ports
-for bridge in $bridges; do
+vlan_range=1-4094
+
+for bridge in $@; do
    ip link set dev $bridge type bridge vlan_filtering 1
    bridge vlan add dev $bridge vid $vlan_range self
-done
 
-for outbound in $outbounds; do
-   bridge vlan add dev $outbound vid $vlan_range
-done
+   IFS=$'\n'
+   for port in $(bridge link show $bridge | grep -v @ | grep "state forwarding"); do
+      outbound=$(echo $port | sed -r "s/^.*: (.*) state .* :.*$/\1/")
+      bridge vlan add dev $outbound vid $vlan_range
+   done
 
+done
 bridge vlan show
