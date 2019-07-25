@@ -123,6 +123,8 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	// we have to enforce it at the desiredState bridges and outbound ports
 	// they will be configured with vlan_filtering 1 and all the vlan id range
 	// set
+	// TODO: After implementing commit/rollack from nmstate we have to
+	//       rollback if vlanfiltering fails
 	bridgesUp, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
 	if err != nil {
 		return "", fmt.Errorf("error retrieving up bridges from desired state: %v", err)
