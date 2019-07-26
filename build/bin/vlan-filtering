@@ -13,4 +13,4 @@ for bridge in $@; do
    done
 
 done
-bridge vlan show
+bridge -j vlan show
