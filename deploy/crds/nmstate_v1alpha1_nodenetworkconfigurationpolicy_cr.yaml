@@ -3,14 +3,15 @@ kind: NodeNetworkConfigurationPolicy
 metadata:
   name: example-nodenetworkconfigurationpolicy
 spec:
-  priority: 99
-  nodeSelector:
-    kubernetes.io/hostname: node01
   desiredState:
+    interfaces:
     - name: eth1
       type: ethernet
       state: up
-    - name: br1
+    - name: eth2
+      type: ethernet
+      state: up
+    - name: br0
       type: linux-bridge
       state: up
       bridge:
@@ -19,6 +20,18 @@ spec:
             enabled: false
         port:
           - name: eth1
+            stp-hairpin-mode: false
+            stp-path-cost: 100
+            stp-priority: 32
+    - name: br1
+      type: linux-bridge
+      state: up
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: eth2
             stp-hairpin-mode: false
             stp-path-cost: 100
             stp-priority: 32

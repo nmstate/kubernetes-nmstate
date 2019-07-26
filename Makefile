@@ -6,7 +6,7 @@ HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
-UNIT_TEST_ARGS ?= -v -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_EXTRA_ARGS)
+UNIT_TEST_ARGS ?=  -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_EXTRA_ARGS)
 ifdef UNIT_TEST_FOCUS
 	UNIT_TEST_ARGS += --focus $(UNIT_TEST_FOCUS)
 endif
@@ -17,7 +17,7 @@ ifdef UNIT_TEST_EXTRA_ARGS
 	UNIT_TEST_ARGS += $(UNIT_TEST_ARGS)
 endif
 
-E2E_TEST_ARGS ?= -test.v -ginkgo.v
+E2E_TEST_ARGS ?= -test.v
 ifdef E2E_TEST_FOCUS
 	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
 endif
@@ -35,7 +35,7 @@ LOCAL_REGISTRY ?= registry:5000
 
 export KUBEVIRT_PROVIDER ?= k8s-1.13.3
 export KUBEVIRT_NUM_NODES ?= 1
-export KUBEVIRT_NUM_SECONDARY_NICS ?= 1
+export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
 KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig

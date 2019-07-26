@@ -5,6 +5,7 @@ metadata:
   name: nmstate
 allowPrivilegedContainer: true
 allowHostDirVolumePlugin: true
+allowHostNetwork: true
 runAsUser:
   type: RunAsAny
 seLinuxContext:
