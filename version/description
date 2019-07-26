@@ -1,8 +1,9 @@
-Run nmstate at 'nmstate' namespace
+Enforce linux bridge vlan_filtering with iproute tools
 
-
-Although the CRD is cluster scope the infrastructure that handle it
-have to be under a namspace, also we no longer need exec.
+Support for linux bridge vlan filtering is going to be at future versions
+of nmstate/NM meanwhile kubenetes-nmstate implement it using iproute commands
+it will set all the vlan range at outbound interface and bridge itself at the
+bridges set by desired state
 
 ```
 docker pull HANDLER_IMAGE
