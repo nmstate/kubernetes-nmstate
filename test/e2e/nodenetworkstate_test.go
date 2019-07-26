@@ -6,8 +6,18 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/tidwall/gjson"
+
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
+
+func hasVlans(result gjson.Result, maxVlan int) {
+	vlans := result.Array()
+	ExpectWithOffset(1, vlans).To(HaveLen(maxVlan))
+	for i, vlan := range vlans {
+		Expect(vlan.Get("vlan").Int()).To(Equal(int64(i + 1)))
+	}
+}
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
@@ -153,6 +163,7 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
+				createBridgeAtNodes("br2", "eth2")
 				updateDesiredState(br1WithBond1Up)
 			})
 			AfterEach(func() {
@@ -165,7 +176,9 @@ var _ = Describe("NodeNetworkState", func() {
 				time.Sleep(1 * time.Second)
 
 				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("eth2")
 				deleteConnectionAtNodes("br1")
+				deleteConnectionAtNodes("br2")
 				deleteConnectionAtNodes("bond1")
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
@@ -189,6 +202,21 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("state", expectedBridge["state"]),
 							HaveKeyWithValue("bridge", HaveKeyWithValue("port", expectedBridgePorts)),
 						))))
+				}
+				for _, bridgeVlans := range bridgeVlansAtNodes() {
+					parsedVlans := gjson.Parse(bridgeVlans)
+
+					hasVlans(parsedVlans.Get("bond1"), 4094)
+					hasVlans(parsedVlans.Get("br1"), 4094)
+
+					br2 := parsedVlans.Get("br2")
+					hasVlans(br2, 1)
+
+					eth1Vlans := parsedVlans.Get("eth1").Array()
+					Expect(eth1Vlans).To(BeEmpty())
+
+					eth2Vlans := parsedVlans.Get("eth2").Array()
+					Expect(eth2Vlans).To(BeEmpty())
 				}
 			})
 		})
