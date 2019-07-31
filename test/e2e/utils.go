@@ -141,11 +141,12 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 	key := types.NamespacedName{Name: node}
 	state := nmstatev1alpha1.NodeNetworkState{}
-	err := framework.Global.Client.Get(context.TODO(), key, &state)
-	Expect(err).ToNot(HaveOccurred())
-	state.Spec.DesiredState = desiredState
-	err = framework.Global.Client.Update(context.TODO(), &state)
-	Expect(err).ToNot(HaveOccurred())
+	Eventually(func() error {
+		err := framework.Global.Client.Get(context.TODO(), key, &state)
+		Expect(err).ToNot(HaveOccurred())
+		state.Spec.DesiredState = desiredState
+		return framework.Global.Client.Update(context.TODO(), &state)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 }
 
 func updateDesiredState(desiredState nmstatev1alpha1.State) {
@@ -204,18 +205,27 @@ func runAtNodes(command ...string) (outputs []string, errs []error) {
 	return outputs, errs
 }
 
-func deleteBridgeAtNodes(bridgeName string) []error {
+func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 	By(fmt.Sprintf("Delete bridge %s", bridgeName))
-	_, errs := runAtNodes("sudo", "nmcli", "con", "delete", bridgeName)
+	_, errs := runAtNodes("sudo", "ip", "link", "del", bridgeName)
+	for _, portName := range ports {
+		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
+		errs = append(errs, slaveErrors...)
+	}
 	return errs
 }
 
 func createBridgeAtNodes(bridgeName string, ports ...string) []error {
 	By(fmt.Sprintf("Creating bridge %s", bridgeName))
-	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName)
+	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName, "con-name", bridgeName)
+	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", bridgeName)
+	errs = append(errs, upErrs...)
 	for _, portName := range ports {
-		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge-slave", "ifname", portName, "master", bridgeName)
+		conName := bridgeName + "-" + portName
+		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge-slave", "ifname", portName, "master", bridgeName, "con-name", conName)
+		_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", conName)
 		errs = append(errs, slaveErrors...)
+		errs = append(errs, upErrs...)
 	}
 	return errs
 }
@@ -223,6 +233,8 @@ func createBridgeAtNodes(bridgeName string, ports ...string) []error {
 func createDummyAtNodes(dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
 	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
+	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", dummyName)
+	errs = append(errs, upErrs...)
 	return errs
 }
 
