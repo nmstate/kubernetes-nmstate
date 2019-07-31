@@ -203,21 +203,24 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("bridge", HaveKeyWithValue("port", expectedBridgePorts)),
 						))))
 				}
-				for _, bridgeVlans := range bridgeVlansAtNodes() {
-					parsedVlans := gjson.Parse(bridgeVlans)
+				Eventually(func() bool {
+					for _, bridgeVlans := range bridgeVlansAtNodes() {
+						parsedVlans := gjson.Parse(bridgeVlans)
 
-					hasVlans(parsedVlans.Get("bond1"), 4094)
-					hasVlans(parsedVlans.Get("br1"), 4094)
+						hasVlans(parsedVlans.Get("bond1"), 4094)
+						hasVlans(parsedVlans.Get("br1"), 4094)
 
-					br2 := parsedVlans.Get("br2")
-					hasVlans(br2, 1)
+						eth1Vlans := parsedVlans.Get("eth1").Array()
+						Expect(eth1Vlans).To(BeEmpty())
 
-					eth1Vlans := parsedVlans.Get("eth1").Array()
-					Expect(eth1Vlans).To(BeEmpty())
+						br2 := parsedVlans.Get("br2")
+						hasVlans(br2, 1)
 
-					eth2Vlans := parsedVlans.Get("eth2").Array()
-					Expect(eth2Vlans).To(BeEmpty())
-				}
+						eth2Vlans := parsedVlans.Get("eth2")
+						hasVlans(eth2Vlans, 1)
+					}
+					return true
+				}).Should(BeTrue())
 			})
 		})
 	})
