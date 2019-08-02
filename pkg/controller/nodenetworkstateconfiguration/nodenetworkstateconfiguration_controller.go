@@ -1,12 +1,9 @@
-package nodenetworkstate
+package nodenetworkstateconfiguration
 
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
-	"strconv"
-	"time"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -25,21 +22,8 @@ import (
 )
 
 var (
-	log                     = logf.Log.WithName("controller_nodenetworkstate")
-	nodenetworkstateRefresh time.Duration
+	log = logf.Log.WithName("controller_nodenetworkstateconfiguration")
 )
-
-func init() {
-	refreshTime, isSet := os.LookupEnv("NODE_NETWORK_STATE_REFRESH_INTERVAL")
-	if !isSet {
-		panic("NODE_NETWORK_STATE_REFRESH_INTERVAL is mandatory")
-	}
-	intRefreshTime, err := strconv.Atoi(refreshTime)
-	if err != nil {
-		panic(fmt.Sprintf("Failed while converting evnironment variable to int: %v", err))
-	}
-	nodenetworkstateRefresh = time.Duration(intRefreshTime) * time.Second
-}
 
 // Add creates a new NodeNetworkState Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -49,7 +33,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNodeNetworkState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileNodeNetworkStateConfiguration{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {
@@ -66,7 +50,7 @@ func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("nodenetworkstate-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("nodenetworkstateconfiguration-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -117,11 +101,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileNodeNetworkState implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileNodeNetworkState{}
+// blank assignment to verify that ReconcileNodeNetworkStateConfiguration implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileNodeNetworkStateConfiguration{}
 
-// ReconcileNodeNetworkState reconciles a NodeNetworkState object
-type ReconcileNodeNetworkState struct {
+// ReconcileNodeNetworkStateConfiguration reconciles a NodeNetworkState object
+type ReconcileNodeNetworkStateConfiguration struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -135,9 +119,9 @@ type ReconcileNodeNetworkState struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling NodeNetworkState")
+	reqLogger.Info("Reconciling NodeNetworkStateConfiguration")
 
 	// Fetch the NodeNetworkState instance
 	instance := &nmstatev1alpha1.NodeNetworkState{}
@@ -155,14 +139,9 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
+		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate configuration at desired state apply: %v", err)
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	err = nmstate.UpdateCurrentState(r.client, instance)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
-	}
-
-	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
+	return reconcile.Result{}, nil
 }

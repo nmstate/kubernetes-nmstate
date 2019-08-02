@@ -1,9 +1,9 @@
-Enforce linux bridge vlan_filtering with iproute tools
+Update NodeNeworkState desiredState only on changes
 
-Support for linux bridge vlan filtering is going to be at future versions
-of nmstate/NM meanwhile kubenetes-nmstate implement it using iproute commands
-it will set all the vlan range at outbound interface and bridge itself at the
-bridges set by desired state
+Before this release it was updateing desiredState at the same time that we refresh
+currentState leaving to connectivity issues. Now currentState is update at different
+controller to refresh it so desiredState is only applyed if it's really changed.
+
 
 ```
 docker pull HANDLER_IMAGE
