@@ -1,9 +1,7 @@
-Update NodeNeworkState desiredState only on changes
+Upgrade nmstate to 0.0.8 version
 
-Before this release it was updateing desiredState at the same time that we refresh
-currentState leaving to connectivity issues. Now currentState is update at different
-controller to refresh it so desiredState is only applyed if it's really changed.
-
+There is a problem deleting bridges at nmstate https://github.com/nmstate/nmstate/pull/445 this upgrade nmstate
+so we fix that
 
 ```
 docker pull HANDLER_IMAGE
