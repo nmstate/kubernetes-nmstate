@@ -5,14 +5,14 @@ interfaces on our cluster nodes.
 
 ## Requirements
 
-Before we start, make sure that you have your Kubernetes/OpenShift cluster
-ready with OVS. In order to do that, you can follow guides of deployment on
-[local cluster](deployment-local-cluster.md) or your
+Before we start, please make sure that you have your Kubernetes/OpenShift
+cluster ready with OVS. In order to do that, you can follow guides of deployment
+on [local cluster](deployment-local-cluster.md) or your
 [arbitrary cluster](deployment-arbitrary-cluster.md).
 
 ## Periodically report state from all nodes
 
-The operator will periodically update reported state of node interfaces.
+The operator will periodically update the reported state of node interfaces.
 
 Read `NodeNetworkStates` from all nodes:
 
@@ -26,7 +26,7 @@ Of from a specific node:
 kubectl get nodenetworkstate <node-name> -o yaml
 ```
 
-Output of such command may look like this:
+The output of such command may look like this:
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1

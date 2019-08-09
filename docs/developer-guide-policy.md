@@ -4,5 +4,5 @@ This controller runs on every node, when it reconciles `NodeNetworkConfiguration
 it checks whether it matches its node. When no `nodeSelector` is specified in the
 object, it always matches. Otherwise it compares the selector with node's labels.
 
-Configuration specified in `desiredState` is then saved in matching `NodeNetworkState`.
+The configuration specified in `desiredState` is then saved in matching `NodeNetworkState`.
 The `NodeNetworkState` controller is then responsible of configuration.

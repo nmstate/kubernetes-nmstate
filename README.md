@@ -32,7 +32,7 @@ This operator is driven by two types of objets, `NodeNetworkState` and
 
 `NodeNetworkState` objects are created per each node in the cluster and can be
 used to report available interfaces and network configuration. These objects
-are created by kubernetes-nmstate and should not be touched by a user.
+are created by kubernetes-nmstate and must not be touched by a user.
 
 Example of `NodeNetworkState` listing network configuration of node01, the full
 object can be found at [Node Network State tutorial](docs/user-guide-state-reporting.md):
@@ -66,7 +66,7 @@ networking state per node or set of nodes. It uses API similar to
 `NodeNetworkState`.
 
 Example of a `NodeNetworkConfigurationPolicy` creating Linux bridge `br1` on top
-of `eth1` in all nodes in the cluster.
+of `eth1` in all nodes in the cluster:
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1

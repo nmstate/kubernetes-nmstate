@@ -5,15 +5,15 @@ to node interface `eth1`.
 
 ## Requirements
 
-Before we start, make sure that you have your Kubernetes/OpenShift cluster
-ready. In order to do that, you can follow guides of deployment on
+Before we start, please make sure that you have your Kubernetes/OpenShift
+cluster ready. In order to do that, you can follow guides of deployment on
 [local cluster](deployment-local-cluster.md) or your
 [arbitrary cluster](deployment-arbitrary-cluster.md).
 
 ## Configure bridge
 
 All you have to do in order to create the bridge on all nodes across cluster is
-to apply following policy:
+to apply the following policy:
 
 ```yaml
 cat <<EOF | kubectl create -f -
