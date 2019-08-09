@@ -64,7 +64,7 @@ EOF
 ## Selecting nodes
 
 `NodeNetworkConfigurationPolicy` supports node selectors. Thanks to them you can
-select subset of nodes or a specific node by its name:
+select a subset of nodes or a specific node by its name:
 
 ```yaml
 cat <<EOF | kubectl create -f -
