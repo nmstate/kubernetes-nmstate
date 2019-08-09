@@ -1,6 +1,0 @@
-spec:
-  desiredState:
-    interfaces:
-      - name: br1
-        type: linux-bridge
-        state: absent
