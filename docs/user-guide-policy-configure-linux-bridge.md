@@ -6,7 +6,7 @@ to node interface `eth1`.
 ## Requirements
 
 Before we start, please make sure that you have your Kubernetes/OpenShift
-cluster ready. In order to do that, you can follow guides of deployment on
+cluster ready. In order to do that, you can follow the guides of deployment on
 [local cluster](deployment-local-cluster.md) or your
 [arbitrary cluster](deployment-arbitrary-cluster.md).
 
