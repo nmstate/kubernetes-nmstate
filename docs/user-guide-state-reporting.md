@@ -20,7 +20,7 @@ Read `NodeNetworkStates` from all nodes:
 kubectl get nodenetworkstates -o yaml
 ```
 
-Of from a specific node:
+Or from a specific node:
 
 ```shell
 kubectl get nodenetworkstate <node-name> -o yaml
