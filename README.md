@@ -25,7 +25,7 @@ what this project is addressing.
 
 We use [nmstate](https://nmstate.github.io/) to perform state driven network
 configuration on each node, as well as to return back its current state.
-This operator is driven by two types of objets, `NodeNetworkState` and
+This operator is driven by two types of objects, `NodeNetworkState` and
 `NodeNetworkConfigurationPolicy`.
 
 ### Node Network State
@@ -66,7 +66,7 @@ networking state per node or set of nodes. It uses API similar to
 `NodeNetworkState`.
 
 Example of a `NodeNetworkConfigurationPolicy` creating Linux bridge `br1` on top
-of `eth1` in all nodes in the cluster:
+of `eth1` in all the nodes in the cluster:
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1
