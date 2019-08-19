@@ -75,20 +75,21 @@ metadata:
   name: br1-eth1-policy
 spec:
   desiredState:
-  - name: eth1
-    description: An ethernet network interface
-    type: ethernet
-    state: up
-  - name: br1
-    description: Linux bridge with eth1 as a port
-    type: linux-bridge
-    state: up
-    bridge:
-      options:
-        stp:
-          enabled: false
-      port:
-        - name: bond1
+    interfaces:
+    - name: eth1
+      description: An ethernet network interface
+      type: ethernet
+      state: up
+    - name: br1
+      description: Linux bridge with eth1 as a port
+      type: linux-bridge
+      state: up
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+        - name: eth1
           stp-hairpin-mode: false
           stp-path-cost: 100
           stp-priority: 32
