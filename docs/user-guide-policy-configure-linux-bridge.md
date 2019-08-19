@@ -1,4 +1,4 @@
-# Tutorial: Create an Linux Bridge and Connect it to a Node Interface
+# Tutorial: Create a Linux Bridge and Connect it to a Node Interface
 
 Use Node Network Configuration Policy to configure a new linux bridge `br1` connected
 to node interface `eth1`.
