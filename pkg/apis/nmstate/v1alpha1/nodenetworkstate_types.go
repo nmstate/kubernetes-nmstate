@@ -48,7 +48,6 @@ const (
 	NodeNetworkStateConditionFailing     NodeNetworkStateConditionType = "Failing"
 	NodeNetworkStateConditionProgressing NodeNetworkStateConditionType = "Progressing"
 	NodeNetworkStateConditionAvailable   NodeNetworkStateConditionType = "Available"
-	NodeNetworkStateConditionInitialized NodeNetworkStateConditionType = "Initialized"
 )
 
 // +genclient

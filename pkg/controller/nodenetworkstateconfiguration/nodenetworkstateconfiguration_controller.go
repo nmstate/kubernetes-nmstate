@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 )
 
 var (
@@ -139,9 +141,42 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate configuration at desired state apply: %v", err)
+		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
+		conditions.SetCondition(
+			instance,
+			nmstatev1alpha1.NodeNetworkStateConditionFailing,
+			corev1.ConditionTrue,
+			"Failed",
+			errmsg.Error(),
+		)
+		conditions.SetCondition(
+			instance,
+			nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+			corev1.ConditionFalse,
+			"Success",
+			"successfully reconciled NodeNetworkState",
+		)
+		r.client.Status().Update(context.TODO(), instance)
+		return reconcile.Result{}, errmsg
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
+	
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionTrue,
+		"Success",
+		"successfully reconciled NodeNetworkState",
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionFalse,
+		"Failed",
+		"",
+	)
+	r.client.Status().Update(context.TODO(), instance)
+	
 
 	return reconcile.Result{}, nil
 }
