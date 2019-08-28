@@ -87,6 +87,33 @@ var _ = Describe("NodeNetworkState", func() {
     type: ethernet
     state: absent
 `)
+		bond0UpWithEth1AndEth2 = nmstatev1alpha1.State(`interfaces:
+- name: eth2
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+- name: eth1
+  type: ethernet
+  state: up
+  ipv4:
+    enabled: false
+- name: bond0
+  type: bond
+  state: up
+  ipv4:
+    address:
+    - ip: 10.10.10.10
+      prefix-length: 24
+    enabled: true
+  link-aggregation:
+    mode: balance-rr
+    options:
+      miimon: '140'
+    slaves:
+    - eth1
+    - eth2
+`)
 	)
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up", func() {
@@ -221,6 +248,35 @@ var _ = Describe("NodeNetworkState", func() {
 					}
 					return true
 				}).Should(BeTrue())
+			})
+		})
+		Context("with bond interface that has 2 eths as slaves", func() {
+			BeforeEach(func() {
+				updateDesiredState(bond0UpWithEth1AndEth2)
+			})
+			AfterEach(func() {
+				resetDesiredStateForNodes()
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
+
+				deleteConnectionAtNodes("bond0")
+			})
+			It("should have the bond interface with 2 slaves at currentState", func() {
+				var (
+					expectedBond = interfaceByName(interfaces(bond0UpWithEth1AndEth2), "bond0")
+				)
+
+				for _, node := range nodes {
+					interfacesForNode(node).Should(ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", expectedBond["name"]),
+						HaveKeyWithValue("type", expectedBond["type"]),
+						HaveKeyWithValue("state", expectedBond["state"]),
+						HaveKeyWithValue("link-aggregation", expectedBond["link-aggregation"]),
+					)))
+				}
 			})
 		})
 	})
