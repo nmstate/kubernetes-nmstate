@@ -1,9 +1,12 @@
 package nodenetworkstateconfiguration
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os/exec"
 	"reflect"
+	"regexp"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -137,6 +140,14 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
+	// TODO HUGE TODO WHY WE HAVE THIS WORKAROUND
+	if bridgeName, portName, vlanRangeMin, vlanRangeMax := detectBridgeWorkaround(instance.Spec.DesiredState); bridgeName != "" {
+		reqLogger.Info("Starting default bridge configuration")
+		out := setupDefaultBridge(bridgeName, portName, vlanRangeMin, vlanRangeMax)
+		reqLogger.Info("Finished default bridge configuration. Progress:\n%s", out)
+		return reconcile.Result{}, nil
+	}
+
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate configuration at desired state apply: %v", err)
@@ -144,4 +155,89 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
 	return reconcile.Result{}, nil
+}
+
+/*
+Workaround Policy:
+
+
+cat <<EOF | ./kubevirtci/cluster-up/kubectl.sh apply -f -
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: brext-eth0-policy
+spec:
+  desiredState:
+    interfaces:
+    - name: brext
+      type: linux-bridge
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true
+      ipv6:
+        dhcp: true
+        enabled: true
+      bridge:
+        options:
+          vlan-filtering: true
+          vlans:
+          - vlan-range-min: 1
+            vlan-range-max: 4094
+        port:
+        - name: eth0
+          vlans:
+          - vlan-range-min: 1
+            vlan-range-max: 4094
+EOF
+
+*/
+
+// TODO in order to maintain compatibility in future, trigger workaround if the requested configuration matches
+func detectBridgeWorkaround(desiredState nmstatev1alpha1.State) (string, string, string, string) {
+	// TODO: passed from policy, so it is preformated and sorted
+	re := regexp.MustCompile(`\Ainterfaces:
+- bridge:
+    options:
+      vlan-filtering: true
+      vlans:
+      - vlan-range-max: (.*)
+        vlan-range-min: (.*)
+    port:
+    - name: (.*)
+      vlans:
+      - vlan-range-max: (.*)
+        vlan-range-min: (.*)
+  ipv4:
+    dhcp: true
+    enabled: true
+  ipv6:
+    dhcp: true
+    enabled: true
+  name: (.*)
+  state: up
+  type: linux-bridge
+\z`)
+
+	found := re.FindAllStringSubmatch(string(desiredState), 2)
+
+	if len(found) == 1 && len(found[0]) == 7 {
+		bridgeName := found[0][6]
+		portName := found[0][3]
+		vlanRangeMin := found[0][2]
+		vlanRangeMax := found[0][1]
+		return bridgeName, portName, vlanRangeMin, vlanRangeMax
+	}
+
+	return "", "", "", ""
+}
+
+// TODO we dont care about fails
+func setupDefaultBridge(bridgeName string, portName string, vlanRangeMin string, vlanRangeMax string) string {
+	cmd := exec.Command("bridge-over-nic", bridgeName, portName, vlanRangeMin, vlanRangeMax)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	cmd.Run()
+	return stdout.String() + stderr.String()
 }

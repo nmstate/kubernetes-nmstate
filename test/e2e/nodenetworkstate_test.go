@@ -1,12 +1,16 @@
 package e2e
 
 import (
+	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"github.com/tidwall/gjson"
+	"k8s.io/apimachinery/pkg/types"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -51,6 +55,28 @@ var _ = Describe("NodeNetworkState", func() {
           stp-hairpin-mode: false
           stp-path-cost: 100
           stp-priority: 32
+`)
+		brextWorkaroundUp = nmstatev1alpha1.State(`interfaces:
+- bridge:
+    options:
+      vlan-filtering: true
+      vlans:
+      - vlan-range-max: 4094
+        vlan-range-min: 1
+    port:
+    - name: eth0
+      vlans:
+      - vlan-range-max: 4094
+        vlan-range-min: 1
+  ipv4:
+    dhcp: true
+    enabled: true
+  ipv6:
+    dhcp: true
+    enabled: true
+  name: brext
+  state: up
+  type: linux-bridge
 `)
 		br1WithBond1Up = nmstatev1alpha1.State(`interfaces:
   - name: eth1
@@ -112,6 +138,42 @@ var _ = Describe("NodeNetworkState", func() {
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNode(node).Should(ContainElement("br1"))
+				}
+			})
+		})
+		FContext("with a linux bridge workaround (dhcp+trunk) up", func() {
+			// TODO: setup on the default interface
+			BeforeEach(func() {
+				updateDesiredState(brextWorkaroundUp)
+			})
+			AfterEach(func() {
+				// First we clean desired state if we
+				// don't do that nmstate recreates the bridge
+				resetDesiredStateForNodes()
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
+
+				// Let's clean the bridge directly in the node
+				// bypassing nmstate
+				deleteConnectionAtNodes("eth0")
+				deleteConnectionAtNodes("brext")
+				// TODO: wait till eventually gets back connectivity
+			})
+			It("should have the linux bridge at currentState", func() {
+				for _, node := range nodes {
+					// TODO: wait until gets connectivity to the node
+					Eventually(func() error {
+						return framework.Global.Client.Get(context.TODO(), types.NamespacedName{Name: node}, &nmstatev1alpha1.NodeNetworkState{})
+					}, 5*time.Minute, 10*time.Second).ShouldNot(HaveOccurred())
+
+					By(fmt.Sprintf("XXX: %v", node))
+					Eventually(func() AsyncAssertion {
+						By(fmt.Sprintf("XXX: %v", node))
+						return interfacesNameForNode(node)
+					}, 1*time.Minute, 5*time.Second).Should(ContainElement("brext"))
 				}
 			})
 		})

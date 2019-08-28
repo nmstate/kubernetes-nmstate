@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -xe
+
+bridge_name=$1
+port_name=$2
+vlan_range_min=$3
+vlan_range_max=$4
+
+VLAN_RANGE="${vlan_range_min}-${vlan_range_max}"
+
+if [ -z "${bridge_name}" ]; then
+    echo 'Please define name of the bridge via BRIDGE_NAME variable'
+    exit 1
+fi
+
+if [ -z "${port_name}" ]; then
+    echo 'Please define name of the port via PORT_NAME variable'
+    exit 1
+fi
+
+if [[ ! $(ip address show $port_name) ]]; then
+    echo "Interface ${port_name} has not been found in the system"
+    exit 1
+fi
+
+if [[ ! $(nmcli --fields connection.id con show ${bridge_name}) ]]; then
+    echo 'Bridge connection profile does not exists yet, creating it'
+    nmcli con add type bridge ifname ${bridge_name} con-name ${bridge_name}
+    nmcli con mod ${bridge_name} connection.autoconnect-slaves 1
+fi
+
+if [[ ! $(nmcli --fields connection.id con show ${port_name}) ]]; then
+    echo 'Port connection profile does not exists yet, creating it'
+    nmcli con add type bridge-slave ifname ${port_name} con-name ${port_name} master ${bridge_name}
+fi
+
+echo 'Activate bridge connection profile'
+nmcli con up ${bridge_name}
+
+echo 'Enable vlan filtering on the bridge'
+ip link set dev ${bridge_name} type bridge vlan_filtering 1
+
+echo 'Enable trunk on the southbound port'
+bridge vlan add dev ${bridge_name} vid ${VLAN_RANGE} self
+bridge vlan add dev ${port_name} vid ${VLAN_RANGE}
