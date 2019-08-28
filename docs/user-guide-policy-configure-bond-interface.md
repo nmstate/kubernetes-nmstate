@@ -1,7 +1,7 @@
 # Tutorial: Create a Bond Interface and Connect it to a Node Interface
 
 Use Node Network Configuration Policy to configure a new bond interface `bond0`
-with slaves `eth2` and `eth3`.
+with slaves `eth1` and `eth2`.
 
 ## Requirements
 
@@ -16,11 +16,11 @@ All you have to do in order to create the bond on all nodes across cluster is
 to apply the following policy:
 
 ```yaml
-cat <<EOF | kubectl create -f -
+cat <<EOF | ./kubevirtci/cluster-up/kubectl.sh create -f -
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-  name: bond0-eth2-eth3-policy
+  name: bond0-eth1-eth2-policy
 spec:
   desiredState:
     interfaces:
@@ -29,12 +29,12 @@ spec:
       state: up
       ipv4:
         enabled: false
-    - name: eth3
+    - name: eth1
       type: ethernet
       state: up
       ipv4:
         enabled: false
-    - name: bond99
+    - name: bond0
       type: bond
       state: up
       ipv4:
@@ -47,7 +47,7 @@ spec:
         options:
           miimon: '140'
         slaves:
-        - eth3
+        - eth1
         - eth2
 EOF
 ```
@@ -55,11 +55,11 @@ EOF
 You can also remove the bond with following:
 
 ```yaml
-cat <<EOF | ./kubevirt/cluster-up/kubectl.sh create -f -
+cat <<EOF | kubectl create -f -
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-  name: bond0-eth2-eth3-policy
+  name: bond0-eth1-eth2-policy
 spec:
   desiredState:
     interfaces:
