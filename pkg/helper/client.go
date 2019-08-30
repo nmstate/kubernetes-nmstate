@@ -99,9 +99,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	}
 
 	// Let's update status with current network config from nmstatectl
-	nodeNetworkState.Status = nmstatev1alpha1.NodeNetworkStateStatus{
-		CurrentState: nmstatev1alpha1.State(currentState),
-	}
+	nodeNetworkState.Status.CurrentState = nmstatev1alpha1.State(currentState)
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
