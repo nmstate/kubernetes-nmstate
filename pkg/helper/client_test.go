@@ -96,4 +96,32 @@ var _ = Describe("FilterOut", func() {
 			Expect(returnedState).To(Equal(filteredState))
 		})
 	})
+
+	Context("when given 3 interfaces, 1 is veth and 1 is vnet", func() {
+		BeforeEach(func() {
+			state = nmstatev1alpha1.State(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+- name: vethab6030bd
+  state: down
+  type: ethernet
+- name: vnet2b730a2b@if3
+  state: down
+  type: ethernet
+`)
+			filteredState = nmstatev1alpha1.State(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+`)
+		})
+
+		It("should return filtered 1 interface without veth and vnet", func() {
+			returnedState, err := filterOut(state, "{veth*,vnet*}")
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(returnedState).To(Equal(filteredState))
+		})
+	})
 })
