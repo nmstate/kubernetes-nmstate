@@ -30,7 +30,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 )
 
-const ReadTimeout = 15 * time.Second
+const ReadTimeout = 30 * time.Second
 const ReadInterval = 1 * time.Second
 
 func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) error {
@@ -290,23 +290,19 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-// TODO log actual condition when fails
 func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateConditionType, conditionStatus corev1.ConditionStatus) {
 	key := types.NamespacedName{Name: node}
-	var condition *nmstatev1alpha1.NodeNetworkStateCondition
-	Eventually(func() *nmstatev1alpha1.NodeNetworkStateCondition {
-		state := nodeNetworkState(key)
-		condition = conditions.Condition(&state, conditionType)
-		return condition
-	}, ReadTimeout, ReadInterval).ShouldNot(
-		BeNil(),
-	)
+	var state nmstatev1alpha1.NodeNetworkState
 	Eventually(func() corev1.ConditionStatus {
-		state := nodeNetworkState(key)
-		condition = conditions.Condition(&state, conditionType)
+		state = nodeNetworkState(key)
+		condition := conditions.Condition(&state, conditionType)
+		if condition == nil {
+			return corev1.ConditionUnknown
+		}
 		return condition.Status
 	}, ReadTimeout, ReadInterval).Should(
 		Equal(conditionStatus),
+		fmt.Sprintf("Actual Conditions:\n%s", conditionsToYaml(state.Status.Conditions)),
 	)
 }
 
@@ -394,4 +390,12 @@ func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
 		return run(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
 	}, ReadTimeout, ReadTimeout)
+}
+
+func conditionsToYaml(conditions []nmstatev1alpha1.NodeNetworkStateCondition) string {
+	manifest, err := yaml.Marshal(conditions)
+	if err != nil {
+		panic(err)
+	}
+	return string(manifest)
 }
