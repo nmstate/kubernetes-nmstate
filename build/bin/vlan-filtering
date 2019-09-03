@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-vlan_range=1-4094
+vlan_range=2-4094
 
 for bridge in $@; do
    ip link set dev $bridge type bridge vlan_filtering 1
