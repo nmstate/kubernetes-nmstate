@@ -22,9 +22,6 @@ func hasVlans(result gjson.Result, maxVlan int) {
 var _ = Describe("NodeNetworkState", func() {
 	var (
 		bond1Up = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
   - name: bond1
     type: bond
     state: up
@@ -36,12 +33,6 @@ var _ = Describe("NodeNetworkState", func() {
         miimon: '120'
 `)
 		br1Up = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
-  - name: eth2
-    type: ethernet
-    state: up
   - name: br1
     type: linux-bridge
     state: up
@@ -55,9 +46,6 @@ var _ = Describe("NodeNetworkState", func() {
 `)
 
 		br1WithBond1Up = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
   - name: bond1
     type: bond
     state: up
