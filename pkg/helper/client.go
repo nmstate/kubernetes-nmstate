@@ -19,11 +19,10 @@ import (
 
 const nmstateCommand = "nmstatectl"
 
-var interfacesFilter string
-
-func init() {
-	interfacesFilter = os.Getenv("INTERFACES_FILTER")
-}
+var (
+	globCompiled      glob.Glob
+	globCompiledIsSet bool
+)
 
 func show(arguments ...string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "show")
@@ -107,7 +106,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
-	filteredState, err := filterOut(nmstatev1alpha1.State(currentState), interfacesFilter)
+	filteredState, err := filterOut(nmstatev1alpha1.State(currentState))
 	if err != nil {
 		return fmt.Errorf("error filtering out interfaces from NodeNetworkState: %v", err)
 	}
@@ -157,8 +156,18 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	return commandOutput, nil
 }
 
-func filterOut(currentState nmstatev1alpha1.State, interfacesFilter string) (nmstatev1alpha1.State, error) {
-	if interfacesFilter == "" {
+func getFilter() {
+	if !globCompiledIsSet {
+		interfacesFilter := os.Getenv("INTERFACES_FILTER")
+		globCompiled = glob.MustCompile(interfacesFilter)
+		globCompiledIsSet = true
+	}
+}
+
+func filterOut(currentState nmstatev1alpha1.State) (nmstatev1alpha1.State, error) {
+	getFilter()
+
+	if globCompiled.Match("") {
 		return currentState, nil
 	}
 
@@ -173,8 +182,7 @@ func filterOut(currentState nmstatev1alpha1.State, interfacesFilter string) (nms
 
 	for _, iface := range interfaces.([]interface{}) {
 		name := iface.(map[string]interface{})["name"]
-		g := glob.MustCompile(interfacesFilter)
-		if !g.Match(name.(string)) {
+		if !globCompiled.Match(name.(string)) {
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}

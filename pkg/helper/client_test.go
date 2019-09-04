@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"os"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -22,10 +24,15 @@ var _ = Describe("FilterOut", func() {
   state: down
   type: ethernet
 `)
+			setEnvFilter("")
+		})
+
+		AfterEach(func() {
+			globCompiledIsSet = false
 		})
 
 		It("should return same state", func() {
-			returnedState, err := filterOut(state, "")
+			returnedState, err := filterOut(state)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(Equal(state))
@@ -35,10 +42,15 @@ var _ = Describe("FilterOut", func() {
 	Context("when given invalid yaml", func() {
 		BeforeEach(func() {
 			state = nmstatev1alpha1.State(`invalid yaml`)
+			setEnvFilter("veth*")
+		})
+
+		AfterEach(func() {
+			globCompiledIsSet = false
 		})
 
 		It("should return err", func() {
-			_, err := filterOut(state, "veth*")
+			_, err := filterOut(state)
 
 			Expect(err).To(HaveOccurred())
 		})
@@ -59,10 +71,15 @@ var _ = Describe("FilterOut", func() {
   state: up
   type: ethernet
 `)
+			setEnvFilter("veth*")
+		})
+
+		AfterEach(func() {
+			globCompiledIsSet = false
 		})
 
 		It("should return filtered 1 interface without veth", func() {
-			returnedState, err := filterOut(state, "veth*")
+			returnedState, err := filterOut(state)
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(Equal(filteredState))
@@ -87,10 +104,15 @@ var _ = Describe("FilterOut", func() {
   state: up
   type: ethernet
 `)
+			setEnvFilter("veth*")
+		})
+
+		AfterEach(func() {
+			globCompiledIsSet = false
 		})
 
 		It("should return filtered 1 interface without veth", func() {
-			returnedState, err := filterOut(state, "veth*")
+			returnedState, err := filterOut(state)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(Equal(filteredState))
@@ -115,13 +137,22 @@ var _ = Describe("FilterOut", func() {
   state: up
   type: ethernet
 `)
+			setEnvFilter("{veth*,vnet*}")
+		})
+
+		AfterEach(func() {
+			globCompiledIsSet = false
 		})
 
 		It("should return filtered 1 interface without veth and vnet", func() {
-			returnedState, err := filterOut(state, "{veth*,vnet*}")
+			returnedState, err := filterOut(state)
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(Equal(filteredState))
 		})
 	})
 })
+
+func setEnvFilter(filter string) {
+	os.Setenv("INTERFACES_FILTER", filter)
+}
