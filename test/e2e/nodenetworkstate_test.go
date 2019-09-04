@@ -88,16 +88,6 @@ var _ = Describe("NodeNetworkState", func() {
     state: absent
 `)
 		bond0UpWithEth1AndEth2 = nmstatev1alpha1.State(`interfaces:
-- name: eth2
-  type: ethernet
-  state: up
-  ipv4:
-    enabled: false
-- name: eth1
-  type: ethernet
-  state: up
-  ipv4:
-    enabled: false
 - name: bond0
   type: bond
   state: up
