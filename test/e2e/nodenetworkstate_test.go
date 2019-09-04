@@ -252,6 +252,8 @@ var _ = Describe("NodeNetworkState", func() {
 				//       remove this ugly sleep
 				time.Sleep(1 * time.Second)
 
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("eth2")
 				deleteConnectionAtNodes("bond0")
 			})
 			It("should have the bond interface with 2 slaves at currentState", func() {
