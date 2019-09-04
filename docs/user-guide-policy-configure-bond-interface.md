@@ -24,16 +24,6 @@ metadata:
 spec:
   desiredState:
     interfaces:
-    - name: eth2
-      type: ethernet
-      state: up
-      ipv4:
-        enabled: false
-    - name: eth1
-      type: ethernet
-      state: up
-      ipv4:
-        enabled: false
     - name: bond0
       type: bond
       state: up
