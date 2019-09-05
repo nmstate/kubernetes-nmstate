@@ -13,6 +13,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/tidwall/gjson"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -138,6 +140,23 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
+func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
+	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	policy.Name = name
+	key := types.NamespacedName{Name: name}
+	Eventually(func() error {
+		err := framework.Global.Client.Get(context.TODO(), key, &policy)
+		policy.Spec.DesiredState = desiredState
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				return framework.Global.Client.Create(context.TODO(), &policy, &framework.CleanupOptions{})
+			}
+			return err
+		}
+		return framework.Global.Client.Update(context.TODO(), &policy)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+}
+
 func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 	key := types.NamespacedName{Name: node}
 	state := nmstatev1alpha1.NodeNetworkState{}
@@ -180,6 +199,13 @@ func deleteNodeNeworkStates() {
 		deleteErrors = append(deleteErrors, framework.Global.Client.Delete(context.TODO(), &nodeNetworkState))
 	}
 	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
+}
+
+func deletePolicy(name string) {
+	policy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	policy.Name = name
+	err := framework.Global.Client.Delete(context.TODO(), policy)
+	Expect(err).ToNot(HaveOccurred())
 }
 
 func run(node string, command ...string) (string, error) {
@@ -305,4 +331,19 @@ func toUnstructured(y string) interface{} {
 func bridgeVlansAtNodes() []string {
 	outputs, _ := runAtNodes("sudo", "bridge", "-j", "vlan", "show")
 	return outputs
+}
+
+func hasVlans(bridgeVlans string, connection string, minVlan int, maxVlan int) {
+
+	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
+	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
+	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
+
+	parsedBridgeVlans := gjson.Parse(bridgeVlans)
+	for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
+
+		vlanByIdAndConection := fmt.Sprintf("%s.#(vlan==%d)", connection, expectedVlan)
+		ExpectWithOffset(1, parsedBridgeVlans.Get(vlanByIdAndConection).Exists()).To(BeTrue(), fmt.Sprintf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans))
+
+	}
 }
