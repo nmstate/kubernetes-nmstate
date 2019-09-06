@@ -180,8 +180,6 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 	)
 	err = r.client.Status().Update(context.TODO(), instance)
 
-	// reqLogger.Info("nmstate", "client update conditions", instance)
-
 	for err != nil {
 		instance := &nmstatev1alpha1.NodeNetworkState{}
 		r.client.Get(context.TODO(), request.NamespacedName, instance)
