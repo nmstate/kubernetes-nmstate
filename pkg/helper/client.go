@@ -20,8 +20,8 @@ import (
 const nmstateCommand = "nmstatectl"
 
 var (
-	globCompiled      glob.Glob
-	globCompiledIsSet bool
+	interfacesFilterGlob      glob.Glob
+	interfacesFilterGlobIsSet bool
 )
 
 func show(arguments ...string) (string, error) {
@@ -156,18 +156,19 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	return commandOutput, nil
 }
 
-func getFilter() {
-	if !globCompiledIsSet {
+func getFilter() *glob.Glob {
+	if !interfacesFilterGlobIsSet {
 		interfacesFilter := os.Getenv("INTERFACES_FILTER")
-		globCompiled = glob.MustCompile(interfacesFilter)
-		globCompiledIsSet = true
+		interfacesFilterGlob = glob.MustCompile(interfacesFilter)
+		interfacesFilterGlobIsSet = true
 	}
+	return &interfacesFilterGlob
 }
 
 func filterOut(currentState nmstatev1alpha1.State) (nmstatev1alpha1.State, error) {
-	getFilter()
+	interfacesFilterGlob := getFilter()
 
-	if globCompiled.Match("") {
+	if (*interfacesFilterGlob).Match("") {
 		return currentState, nil
 	}
 
@@ -182,7 +183,7 @@ func filterOut(currentState nmstatev1alpha1.State) (nmstatev1alpha1.State, error
 
 	for _, iface := range interfaces.([]interface{}) {
 		name := iface.(map[string]interface{})["name"]
-		if !globCompiled.Match(name.(string)) {
+		if !(*interfacesFilterGlob).Match(name.(string)) {
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}

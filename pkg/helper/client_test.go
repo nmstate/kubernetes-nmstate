@@ -28,7 +28,7 @@ var _ = Describe("FilterOut", func() {
 		})
 
 		AfterEach(func() {
-			globCompiledIsSet = false
+			interfacesFilterGlobIsSet = false
 		})
 
 		It("should return same state", func() {
@@ -46,7 +46,7 @@ var _ = Describe("FilterOut", func() {
 		})
 
 		AfterEach(func() {
-			globCompiledIsSet = false
+			interfacesFilterGlobIsSet = false
 		})
 
 		It("should return err", func() {
@@ -75,7 +75,7 @@ var _ = Describe("FilterOut", func() {
 		})
 
 		AfterEach(func() {
-			globCompiledIsSet = false
+			interfacesFilterGlobIsSet = false
 		})
 
 		It("should return filtered 1 interface without veth", func() {
@@ -108,7 +108,7 @@ var _ = Describe("FilterOut", func() {
 		})
 
 		AfterEach(func() {
-			globCompiledIsSet = false
+			interfacesFilterGlobIsSet = false
 		})
 
 		It("should return filtered 1 interface without veth", func() {
@@ -141,7 +141,7 @@ var _ = Describe("FilterOut", func() {
 		})
 
 		AfterEach(func() {
-			globCompiledIsSet = false
+			interfacesFilterGlobIsSet = false
 		})
 
 		It("should return filtered 1 interface without veth and vnet", func() {
