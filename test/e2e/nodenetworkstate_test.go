@@ -256,9 +256,10 @@ var _ = Describe("NodeNetworkState", func() {
 				deleteConnectionAtNodes("eth2")
 				deleteConnectionAtNodes("bond0")
 			})
-			FIt("should have the bond interface with 2 slaves at currentState", func() {
+			It("should have the bond interface with 2 slaves at currentState", func() {
 				var (
-					expectedBond = interfaceByName(interfaces(bond0UpWithEth1AndEth2), "bond0")
+					expectedBond  = interfaceByName(interfaces(bond0UpWithEth1AndEth2), "bond0")
+					expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
 				)
 
 				for _, node := range nodes {
@@ -266,7 +267,9 @@ var _ = Describe("NodeNetworkState", func() {
 						HaveKeyWithValue("name", expectedBond["name"]),
 						HaveKeyWithValue("type", expectedBond["type"]),
 						HaveKeyWithValue("state", expectedBond["state"]),
-						//HaveKeyWithValue("link-aggregation", expectedBond["link-aggregation"]),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{"eth1", "eth2"}))),
 					)))
 				}
 			})
