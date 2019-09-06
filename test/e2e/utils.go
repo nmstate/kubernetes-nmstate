@@ -143,7 +143,9 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 	state := nmstatev1alpha1.NodeNetworkState{}
 	Eventually(func() error {
 		err := framework.Global.Client.Get(context.TODO(), key, &state)
-		Expect(err).ToNot(HaveOccurred())
+		if err != nil {
+			return err
+		}
 		state.Spec.DesiredState = desiredState
 		return framework.Global.Client.Update(context.TODO(), &state)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
