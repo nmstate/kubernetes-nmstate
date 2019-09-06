@@ -1,6 +1,6 @@
 FROM fedora:30
 
-RUN sudo dnf install -y nmstate && \
+RUN sudo dnf install -y nmstate iproute && \
     sudo dnf clean all
 
 # Cannot change the binary to nmstate-handler since the name
