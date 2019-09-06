@@ -39,6 +39,9 @@ var _ = Describe("NodeNetworkState", func() {
   - name: eth1
     type: ethernet
     state: up
+  - name: eth2
+    type: ethernet
+    state: up
   - name: br1
     type: linux-bridge
     state: up
@@ -48,10 +51,9 @@ var _ = Describe("NodeNetworkState", func() {
           enabled: false
       port:
         - name: eth1
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
+        - name: eth2
 `)
+
 		br1WithBond1Up = nmstatev1alpha1.State(`interfaces:
   - name: eth1
     type: ethernet
@@ -124,12 +126,23 @@ var _ = Describe("NodeNetworkState", func() {
 				// Let's clean the bridge directly in the node
 				// bypassing nmstate
 				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("eth2")
 				deleteConnectionAtNodes("br1")
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNode(node).Should(ContainElement("br1"))
 				}
+				Eventually(func() bool {
+					for _, bridgeVlans := range bridgeVlansAtNodes() {
+						parsedVlans := gjson.Parse(bridgeVlans)
+						hasVlans(parsedVlans.Get("eth1"), 4094)
+						hasVlans(parsedVlans.Get("eth2"), 4094)
+						hasVlans(parsedVlans.Get("br1"), 1)
+					}
+					return true
+				}).Should(BeTrue())
+
 			})
 		})
 		Context("with a linux bridge absent", func() {
@@ -225,7 +238,7 @@ var _ = Describe("NodeNetworkState", func() {
 						parsedVlans := gjson.Parse(bridgeVlans)
 
 						hasVlans(parsedVlans.Get("bond1"), 4094)
-						hasVlans(parsedVlans.Get("br1"), 4094)
+						hasVlans(parsedVlans.Get("br1"), 1)
 
 						eth1Vlans := parsedVlans.Get("eth1").Array()
 						Expect(eth1Vlans).To(BeEmpty())
