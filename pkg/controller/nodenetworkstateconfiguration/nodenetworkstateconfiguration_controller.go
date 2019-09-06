@@ -162,25 +162,7 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	instance = &nmstatev1alpha1.NodeNetworkState{}
-	r.client.Get(context.TODO(), request.NamespacedName, instance)
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-		corev1.ConditionTrue,
-		"Success",
-		"successfully reconciled NodeNetworkState",
-	)
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionFailing,
-		corev1.ConditionFalse,
-		"Failed",
-		"",
-	)
-	err = r.client.Status().Update(context.TODO(), instance)
-
-	for err != nil {
+	for i := 0; i < 5; i++ {
 		instance := &nmstatev1alpha1.NodeNetworkState{}
 		r.client.Get(context.TODO(), request.NamespacedName, instance)
 		conditions.SetCondition(
@@ -198,6 +180,9 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 			"",
 		)
 		err = r.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return reconcile.Result{}, err
+		}
 
 		time.Sleep(1 * time.Second)
 	}
