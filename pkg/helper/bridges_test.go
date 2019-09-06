@@ -78,7 +78,7 @@ var (
 
 var _ = Describe("Network desired state bridge parser", func() {
 	var (
-		obtainedBridges []string
+		obtainedBridges map[string][]string
 		desiredState    nmstatev1alpha1.State
 		err             error
 	)
@@ -126,7 +126,13 @@ var _ = Describe("Network desired state bridge parser", func() {
 		})
 		It("should return the slice with the bridges", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridges).To(ConsistOf("br1", "br2"))
+			Expect(len(obtainedBridges)).To(Equal(2))
+			ports, exist := obtainedBridges["br1"]
+			Expect(exist).To(BeTrue())
+			Expect(ports).To(ConsistOf("eth1"))
+			ports, exist = obtainedBridges["br2"]
+			Expect(exist).To(BeTrue())
+			Expect(ports).To(ConsistOf("eth2"))
 		})
 	})
 })

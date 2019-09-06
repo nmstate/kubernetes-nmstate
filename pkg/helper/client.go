@@ -27,8 +27,11 @@ func show(arguments ...string) (string, error) {
 	return stdout.String(), nil
 }
 
-func applyVlanFiltering(bridgesUp []string) (string, error) {
-	cmd := exec.Command("vlan-filtering", bridgesUp...)
+func applyVlanFiltering(bridgeName string,ports []string) (string, error) {
+	command := []string{bridgeName}
+	command = append(command, ports...)
+
+	cmd := exec.Command("vlan-filtering",command...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -125,14 +128,20 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	// set
 	// TODO: After implementing commit/rollack from nmstate we have to
 	//       rollback if vlanfiltering fails
-	bridgesUp, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
+	bridgesUpWithPorts, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
 	if err != nil {
 		return "", fmt.Errorf("error retrieving up bridges from desired state: %v", err)
 	}
-	outputVlanFiltering, err := applyVlanFiltering(bridgesUp)
-	if err != nil {
-		return outputVlanFiltering, err
+
+	commandOutput := ""
+	for bridge,ports := range bridgesUpWithPorts {
+		outputVlanFiltering, err := applyVlanFiltering(bridge,ports)
+		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n",bridge,ports,outputVlanFiltering)
+		if err != nil {
+			return commandOutput, err
+		}
 	}
 
-	return setOutput + outputVlanFiltering, nil
+	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
+	return commandOutput, nil
 }

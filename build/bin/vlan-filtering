@@ -2,14 +2,13 @@
 
 vlan_range=2-4094
 
-for bridge in $@; do
+for bridge in $1; do
    ip link set dev $bridge type bridge vlan_filtering 1
-   bridge vlan add dev $bridge vid $vlan_range self
+   #bridge vlan add dev $bridge vid $vlan_range self
 
    IFS=$'\n'
-   for port in $(bridge link show $bridge | grep -v @ | grep "state forwarding"); do
-      outbound=$(echo $port | sed -r "s/^.*: (.*) state .* :.*$/\1/")
-      bridge vlan add dev $outbound vid $vlan_range
+   for port in ${*:2}; do
+      bridge vlan add dev $port vid $vlan_range
    done
 
 done

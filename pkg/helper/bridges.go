@@ -10,12 +10,12 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-func getBridgesUp(desiredState nmstatev1alpha1.State) ([]string, error) {
-	foundBridges := []string{}
+func getBridgesUp(desiredState nmstatev1alpha1.State) (map[string][]string, error) {
+	foundBridgesWithPorts := map[string][]string{}
 
 	desiredStateYaml, err := yaml.YAMLToJSON([]byte(desiredState))
 	if err != nil {
-		return foundBridges, fmt.Errorf("error converting desiredState to JSON: %v", err)
+		return foundBridgesWithPorts, fmt.Errorf("error converting desiredState to JSON: %v", err)
 	}
 
 	queryResults := gjson.ParseBytes(desiredStateYaml).
@@ -24,8 +24,20 @@ func getBridgesUp(desiredState nmstatev1alpha1.State) ([]string, error) {
 		Array()
 
 	for _, queryResult := range queryResults {
-		foundBridges = append(foundBridges, queryResult.String())
+		portsQueryResults := gjson.ParseBytes(desiredStateYaml).
+			Get("interfaces.#(type==linux-bridge)#").
+			Get(fmt.Sprintf("#(name==%s)#.bridge.port.#.name",queryResult.String())).
+			Array()
+
+		portList := []string{}
+		for _, ports := range portsQueryResults {
+			for _, portName := range ports.Array() {
+				portList = append(portList,portName.String() )
+			}
+		}
+
+		foundBridgesWithPorts[queryResult.String()] = portList
 	}
 
-	return foundBridges, nil
+	return foundBridgesWithPorts, nil
 }
