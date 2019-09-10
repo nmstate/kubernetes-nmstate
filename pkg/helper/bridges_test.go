@@ -59,9 +59,6 @@ var (
           enabled: false
       port:
         - name: eth1
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
   - name: br2
     type: linux-bridge
     state: up
@@ -71,9 +68,6 @@ var (
           enabled: false
       port:
         - name: eth2
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
   - name: br3
     type: linux-bridge
     state: down

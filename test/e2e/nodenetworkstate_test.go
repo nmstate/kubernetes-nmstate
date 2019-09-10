@@ -76,9 +76,6 @@ var _ = Describe("NodeNetworkState", func() {
           enabled: false
       port:
         - name: bond1
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
 `)
 
 		br1Absent = nmstatev1alpha1.State(`interfaces:
@@ -213,10 +210,9 @@ var _ = Describe("NodeNetworkState", func() {
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
 				var (
-					expectedInterfaces  = interfaces(br1WithBond1Up)
-					expectedBond        = interfaceByName(expectedInterfaces, "bond1")
-					expectedBridge      = interfaceByName(expectedInterfaces, "br1")
-					expectedBridgePorts = expectedBridge["bridge"].(map[string]interface{})["port"]
+					expectedInterfaces = interfaces(br1WithBond1Up)
+					expectedBond       = interfaceByName(expectedInterfaces, "bond1")
+					expectedBridge     = interfaceByName(expectedInterfaces, "br1")
 				)
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
@@ -230,7 +226,8 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("name", expectedBridge["name"]),
 							HaveKeyWithValue("type", expectedBridge["type"]),
 							HaveKeyWithValue("state", expectedBridge["state"]),
-							HaveKeyWithValue("bridge", HaveKeyWithValue("port", expectedBridgePorts)),
+							HaveKeyWithValue("bridge", HaveKeyWithValue("port",
+								ContainElement(HaveKeyWithValue("name", "bond1")))),
 						))))
 				}
 				Eventually(func() bool {

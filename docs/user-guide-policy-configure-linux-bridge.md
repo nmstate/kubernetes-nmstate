@@ -38,9 +38,6 @@ spec:
               enabled: false
           port:
             - name: eth1
-              stp-hairpin-mode: false
-              stp-path-cost: 100
-              stp-priority: 32
 EOF
 ```
 
