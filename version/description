@@ -1,11 +1,7 @@
-Support untagged traffic at linux bridges
+Increase nmstate set timeout to 60 seconds
 
-There were some issues sending untagged traffic out of the bridge with
-https://github.com/nmstate/kubernetes-nmstate/pull/163 we fix that.
-
-Also:
-- Add policies to documentation
-- Use range 2-4094 for vlan filtering at linux bridges
+The nmstate main loop timeout is harcoded to 20 seconds this is problematic
+at some scenarios, this release increment it to 60 seconds.
 
 ```
 docker pull HANDLER_IMAGE
