@@ -1,7 +1,11 @@
-Upgrade nmstate to 0.0.8 version
+Support untagged traffic at linux bridges
 
-There is a problem deleting bridges at nmstate https://github.com/nmstate/nmstate/pull/445 this upgrade nmstate
-so we fix that
+There were some issues sending untagged traffic out of the bridge with
+https://github.com/nmstate/kubernetes-nmstate/pull/163 we fix that.
+
+Also:
+- Add policies to documentation
+- Use range 2-4094 for vlan filtering at linux bridges
 
 ```
 docker pull HANDLER_IMAGE
