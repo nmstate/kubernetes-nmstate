@@ -36,6 +36,13 @@ var (
     type: linux-bridge
     state: absent
 `)
+
+	bridgeWithNoPorts = nmstatev1alpha1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+`)
+
 	someBridgesUp = nmstatev1alpha1.State(`interfaces:
   - name: eth1
     type: ethernet
@@ -78,12 +85,12 @@ var (
 
 var _ = Describe("Network desired state bridge parser", func() {
 	var (
-		obtainedBridges []string
-		desiredState    nmstatev1alpha1.State
-		err             error
+		obtainedBridgesAndPorts map[string][]string
+		desiredState            nmstatev1alpha1.State
+		err                     error
 	)
 	JustBeforeEach(func() {
-		obtainedBridges, err = getBridgesUp(desiredState)
+		obtainedBridgesAndPorts, err = getBridgesUp(desiredState)
 	})
 	Context("when desired state is not a yaml", func() {
 		BeforeEach(func() {
@@ -97,36 +104,51 @@ var _ = Describe("Network desired state bridge parser", func() {
 		BeforeEach(func() {
 			desiredState = empty
 		})
-		It("should return empty slice", func() {
+		It("should return empty map", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridges).To(BeEmpty())
+			Expect(obtainedBridgesAndPorts).To(BeEmpty())
 		})
 	})
 	Context("when there is no bridges", func() {
 		BeforeEach(func() {
 			desiredState = noBridges
 		})
-		It("should return empty slice", func() {
+		It("should return empty map", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridges).To(BeEmpty())
+			Expect(obtainedBridgesAndPorts).To(BeEmpty())
 		})
 	})
 	Context("when there are no bridges up", func() {
 		BeforeEach(func() {
 			desiredState = noBridgesUp
 		})
-		It("should return empty slice", func() {
+		It("should return empty map", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridges).To(BeEmpty())
+			Expect(obtainedBridgesAndPorts).To(BeEmpty())
+		})
+	})
+	Context("when there are no ports in the bridge", func() {
+		BeforeEach(func() {
+			desiredState = bridgeWithNoPorts
+		})
+		It("should return empty map", func() {
+			Expect(err).ToNot(HaveOccurred())
+			Expect(obtainedBridgesAndPorts).To(BeEmpty())
 		})
 	})
 	Context("when there are bridges up", func() {
 		BeforeEach(func() {
 			desiredState = someBridgesUp
 		})
-		It("should return the slice with the bridges", func() {
+		It("should return the map with the bridges and ports", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridges).To(ConsistOf("br1", "br2"))
+			Expect(len(obtainedBridgesAndPorts)).To(Equal(2))
+			ports, exist := obtainedBridgesAndPorts["br1"]
+			Expect(exist).To(BeTrue())
+			Expect(ports).To(ConsistOf("eth1"))
+			ports, exist = obtainedBridgesAndPorts["br2"]
+			Expect(exist).To(BeTrue())
+			Expect(ports).To(ConsistOf("eth2"))
 		})
 	})
 })
