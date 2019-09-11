@@ -76,10 +76,6 @@ metadata:
 spec:
   desiredState:
     interfaces:
-    - name: eth1
-      description: An ethernet network interface
-      type: ethernet
-      state: up
     - name: br1
       description: Linux bridge with eth1 as a port
       type: linux-bridge
