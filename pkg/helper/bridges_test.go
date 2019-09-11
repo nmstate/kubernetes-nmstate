@@ -12,9 +12,6 @@ var (
 	empty   = nmstatev1alpha1.State("")
 
 	noBridges = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
   - name: bond1
     type: bond
     state: up
@@ -44,12 +41,6 @@ var (
 `)
 
 	someBridgesUp = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
-  - name: eth2
-    type: ethernet
-    state: up
   - name: br1
     type: linux-bridge
     state: up

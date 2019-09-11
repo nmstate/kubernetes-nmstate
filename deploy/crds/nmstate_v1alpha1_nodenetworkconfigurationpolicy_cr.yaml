@@ -5,12 +5,6 @@ metadata:
 spec:
   desiredState:
     interfaces:
-    - name: eth1
-      type: ethernet
-      state: up
-    - name: eth2
-      type: ethernet
-      state: up
     - name: br0
       type: linux-bridge
       state: up
