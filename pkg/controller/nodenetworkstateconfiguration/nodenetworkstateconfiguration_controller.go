@@ -143,21 +143,25 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
-		conditions.SetCondition(
-			instance,
-			nmstatev1alpha1.NodeNetworkStateConditionFailing,
-			corev1.ConditionTrue,
-			"Failed",
-			errmsg.Error(),
-		)
-		conditions.SetCondition(
-			instance,
-			nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-			corev1.ConditionFalse,
-			"Success",
-			"successfully reconciled NodeNetworkState",
-		)
-		r.client.Status().Update(context.TODO(), instance)
+		for i := 0; i < 5; i++ {
+			conditions.SetCondition(
+				instance,
+				nmstatev1alpha1.NodeNetworkStateConditionFailing,
+				corev1.ConditionTrue,
+				"Failed",
+				errmsg.Error(),
+			)
+			conditions.SetCondition(
+				instance,
+				nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+				corev1.ConditionFalse,
+				"Failed",
+				errmsg.Error(),
+			)
+			r.client.Status().Update(context.TODO(), instance)
+
+			time.Sleep(1 * time.Second)
+		}
 		return reconcile.Result{}, errmsg
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
@@ -176,7 +180,7 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 			instance,
 			nmstatev1alpha1.NodeNetworkStateConditionFailing,
 			corev1.ConditionFalse,
-			"Failed",
+			"Success",
 			"",
 		)
 		err = r.client.Status().Update(context.TODO(), instance)
