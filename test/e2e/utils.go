@@ -138,25 +138,28 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
-func updateDesiredStateAtNode(namespace string, node string, desiredState nmstatev1alpha1.State) {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
+func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
+	key := types.NamespacedName{Name: node}
 	state := nmstatev1alpha1.NodeNetworkState{}
-	err := framework.Global.Client.Get(context.TODO(), key, &state)
-	Expect(err).ToNot(HaveOccurred())
-	state.Spec.DesiredState = desiredState
-	err = framework.Global.Client.Update(context.TODO(), &state)
-	Expect(err).ToNot(HaveOccurred())
+	Eventually(func() error {
+		err := framework.Global.Client.Get(context.TODO(), key, &state)
+		if err != nil {
+			return err
+		}
+		state.Spec.DesiredState = desiredState
+		return framework.Global.Client.Update(context.TODO(), &state)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 }
 
-func updateDesiredState(namespace string, desiredState nmstatev1alpha1.State) {
+func updateDesiredState(desiredState nmstatev1alpha1.State) {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(namespace, node, desiredState)
+		updateDesiredStateAtNode(node, desiredState)
 	}
 }
 
-func resetDesiredStateForNodes(namespace string) {
+func resetDesiredStateForNodes() {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(namespace, node, nmstatev1alpha1.State(""))
+		updateDesiredStateAtNode(node, nmstatev1alpha1.State(""))
 	}
 }
 
@@ -179,8 +182,8 @@ func deleteNodeNeworkStates() {
 	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
 }
 
-func run(node string, command ...string) error {
-	ssh_command := []string{node}
+func run(node string, command ...string) (string, error) {
+	ssh_command := []string{node, "--"}
 	ssh_command = append(ssh_command, command...)
 	cmd := exec.Command("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
 	GinkgoWriter.Write([]byte(strings.Join(ssh_command, " ") + "\n"))
@@ -189,34 +192,58 @@ func run(node string, command ...string) error {
 	cmd.Stdout = &stdout
 	err := cmd.Run()
 	GinkgoWriter.Write([]byte(stdout.String() + stderr.String() + "\n"))
-	return err
+	// Remove first two lines from output, ssh.sh add garbage there
+	outputLines := strings.Split(stdout.String(), "\n")
+	output := strings.Join(outputLines[2:], "\n")
+	return output, err
 }
 
-func runAtNodes(command ...string) (errs []error) {
+func runAtNodes(command ...string) (outputs []string, errs []error) {
 	for _, node := range nodes {
-		errs = append(errs, run(node, command...))
+		output, err := run(node, command...)
+		outputs = append(outputs, output)
+		errs = append(errs, err)
+	}
+	return outputs, errs
+}
+
+func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
+	By(fmt.Sprintf("Delete bridge %s", bridgeName))
+	_, errs := runAtNodes("sudo", "ip", "link", "del", bridgeName)
+	for _, portName := range ports {
+		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
+		errs = append(errs, slaveErrors...)
 	}
 	return errs
 }
 
-func deleteBridgeAtNodes(bridgeName string) []error {
-	By(fmt.Sprintf("Delete bridge %s", bridgeName))
-	return runAtNodes("sudo", "nmcli", "con", "delete", bridgeName)
-}
-
-func createBridgeAtNodes(bridgeName string) []error {
+func createBridgeAtNodes(bridgeName string, ports ...string) []error {
 	By(fmt.Sprintf("Creating bridge %s", bridgeName))
-	return runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName)
+	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName, "con-name", bridgeName)
+	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", bridgeName)
+	errs = append(errs, upErrs...)
+	for _, portName := range ports {
+		conName := bridgeName + "-" + portName
+		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge-slave", "ifname", portName, "master", bridgeName, "con-name", conName)
+		_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", conName)
+		errs = append(errs, slaveErrors...)
+		errs = append(errs, upErrs...)
+	}
+	return errs
 }
 
 func createDummyAtNodes(dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
-	return runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
+	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
+	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", dummyName)
+	errs = append(errs, upErrs...)
+	return errs
 }
 
 func deleteConnectionAtNodes(name string) []error {
 	By(fmt.Sprintf("Delete connection %s", name))
-	return runAtNodes("sudo", "nmcli", "con", "delete", name)
+	_, errs := runAtNodes("sudo", "nmcli", "con", "delete", name)
+	return errs
 }
 
 func interfaces(state nmstatev1alpha1.State) []interface{} {
@@ -273,4 +300,9 @@ func toUnstructured(y string) interface{} {
 	err := yaml.Unmarshal([]byte(y), &u)
 	Expect(err).ToNot(HaveOccurred())
 	return u
+}
+
+func bridgeVlansAtNodes() []string {
+	outputs, _ := runAtNodes("sudo", "bridge", "-j", "vlan", "show")
+	return outputs
 }

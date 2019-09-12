@@ -1,0 +1,13 @@
+#!/bin/bash -xe
+
+bridge=$1
+shift
+ports=$@
+
+vlan_range=2-4094
+
+ip link set dev $bridge type bridge vlan_filtering 1
+
+for port in $ports; do
+    bridge vlan add dev $port vid $vlan_range
+done

@@ -36,25 +36,8 @@ systemctl start NetworkManager
 
 ## kubernetes-nmstate
 
-Finally, we can install kubernetes-nmstate on our cluster.
-
-### Kubernetes
-
-```shell
-# Install k8s resources and kubernets-nmstate operator
-for manifest in "service_account.yaml role.yaml role_binding.yaml crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml operator.yaml"; do
-    kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/latest/download/$manifest
-done
-```
-
-### OpenShift
-
-```shell
-# Install k8s resources , openshift scc and kubernets-nmstate operator
-for manifest in "service_account.yaml role.yaml role_binding.yaml openshift/scc.yaml crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml operator.yaml"; do
-    kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/latest/download/$manifest
-done
-```
+Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
+please use [Cluster Network Addons Operator Project](https://github.com/kubevirt/cluster-network-addons-operator#nmstate).
 
 You can stop here and play with the cluster on your own or continue with one of
 the [user guides](user-guide.md) that will guide you through requesting node

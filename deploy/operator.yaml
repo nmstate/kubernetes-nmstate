@@ -14,6 +14,10 @@ spec:
         app: kubernetes-nmstate
         name: nmstate-handler
     spec:
+      # Needed to force vlan filtering config with iproute commands until
+      # future nmstate/NM is in place.
+      # https://github.com/nmstate/nmstate/pull/440
+      hostNetwork: true
       serviceAccountName: nmstate-handler
       nodeSelector:
         beta.kubernetes.io/arch: amd64

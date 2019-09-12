@@ -6,15 +6,22 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/tidwall/gjson"
+
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
+
+func hasVlans(result gjson.Result, maxVlan int) {
+	vlans := result.Array()
+	ExpectWithOffset(1, vlans).To(HaveLen(maxVlan))
+	for i, vlan := range vlans {
+		Expect(vlan.Get("vlan").Int()).To(Equal(int64(i + 1)))
+	}
+}
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
 		bond1Up = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
   - name: bond1
     type: bond
     state: up
@@ -26,9 +33,6 @@ var _ = Describe("NodeNetworkState", func() {
         miimon: '120'
 `)
 		br1Up = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
   - name: br1
     type: linux-bridge
     state: up
@@ -38,14 +42,10 @@ var _ = Describe("NodeNetworkState", func() {
           enabled: false
       port:
         - name: eth1
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
+        - name: eth2
 `)
+
 		br1WithBond1Up = nmstatev1alpha1.State(`interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
   - name: bond1
     type: bond
     state: up
@@ -64,9 +64,6 @@ var _ = Describe("NodeNetworkState", func() {
           enabled: false
       port:
         - name: bond1
-          stp-hairpin-mode: false
-          stp-path-cost: 100
-          stp-priority: 32
 `)
 
 		br1Absent = nmstatev1alpha1.State(`interfaces:
@@ -77,17 +74,34 @@ var _ = Describe("NodeNetworkState", func() {
     type: ethernet
     state: absent
 `)
+		bond0UpWithEth1AndEth2 = nmstatev1alpha1.State(`interfaces:
+- name: bond0
+  type: bond
+  state: up
+  ipv4:
+    address:
+    - ip: 10.10.10.10
+      prefix-length: 24
+    enabled: true
+  link-aggregation:
+    mode: balance-rr
+    options:
+      miimon: '140'
+    slaves:
+    - eth1
+    - eth2
+`)
 	)
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
-				updateDesiredState(namespace, br1Up)
+				updateDesiredState(br1Up)
 			})
 			AfterEach(func() {
 
 				// First we clean desired state if we
 				// don't do that nmstate recreates the bridge
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 
 				// TODO: Add status conditions to ensure that
 				//       it has being really reset so we can
@@ -97,22 +111,33 @@ var _ = Describe("NodeNetworkState", func() {
 				// Let's clean the bridge directly in the node
 				// bypassing nmstate
 				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("eth2")
 				deleteConnectionAtNodes("br1")
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNode(node).Should(ContainElement("br1"))
 				}
+				Eventually(func() bool {
+					for _, bridgeVlans := range bridgeVlansAtNodes() {
+						parsedVlans := gjson.Parse(bridgeVlans)
+						hasVlans(parsedVlans.Get("eth1"), 4094)
+						hasVlans(parsedVlans.Get("eth2"), 4094)
+						hasVlans(parsedVlans.Get("br1"), 1)
+					}
+					return true
+				}).Should(BeTrue())
+
 			})
 		})
 		Context("with a linux bridge absent", func() {
 			BeforeEach(func() {
 				createBridgeAtNodes("br1")
-				updateDesiredState(namespace, br1Absent)
+				updateDesiredState(br1Absent)
 			})
 			AfterEach(func() {
 				// If not br1 is going to be removed if created manually
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
@@ -122,11 +147,11 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
-				updateDesiredState(namespace, bond1Up)
+				updateDesiredState(bond1Up)
 			})
 			AfterEach(func() {
 
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 
 				// TODO: Add status conditions to ensure that
 				//       it has being really reset so we can
@@ -153,11 +178,12 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
-				updateDesiredState(namespace, br1WithBond1Up)
+				createBridgeAtNodes("br2", "eth2")
+				updateDesiredState(br1WithBond1Up)
 			})
 			AfterEach(func() {
 
-				resetDesiredStateForNodes(namespace)
+				resetDesiredStateForNodes()
 
 				// TODO: Add status conditions to ensure that
 				//       it has being really reset so we can
@@ -165,15 +191,16 @@ var _ = Describe("NodeNetworkState", func() {
 				time.Sleep(1 * time.Second)
 
 				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("eth2")
 				deleteConnectionAtNodes("br1")
+				deleteConnectionAtNodes("br2")
 				deleteConnectionAtNodes("bond1")
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
 				var (
-					expectedInterfaces  = interfaces(br1WithBond1Up)
-					expectedBond        = interfaceByName(expectedInterfaces, "bond1")
-					expectedBridge      = interfaceByName(expectedInterfaces, "br1")
-					expectedBridgePorts = expectedBridge["bridge"].(map[string]interface{})["port"]
+					expectedInterfaces = interfaces(br1WithBond1Up)
+					expectedBond       = interfaceByName(expectedInterfaces, "bond1")
+					expectedBridge     = interfaceByName(expectedInterfaces, "br1")
 				)
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
@@ -187,8 +214,61 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("name", expectedBridge["name"]),
 							HaveKeyWithValue("type", expectedBridge["type"]),
 							HaveKeyWithValue("state", expectedBridge["state"]),
-							HaveKeyWithValue("bridge", HaveKeyWithValue("port", expectedBridgePorts)),
+							HaveKeyWithValue("bridge", HaveKeyWithValue("port",
+								ContainElement(HaveKeyWithValue("name", "bond1")))),
 						))))
+				}
+				Eventually(func() bool {
+					for _, bridgeVlans := range bridgeVlansAtNodes() {
+						parsedVlans := gjson.Parse(bridgeVlans)
+
+						hasVlans(parsedVlans.Get("bond1"), 4094)
+						hasVlans(parsedVlans.Get("br1"), 1)
+
+						eth1Vlans := parsedVlans.Get("eth1").Array()
+						Expect(eth1Vlans).To(BeEmpty())
+
+						br2 := parsedVlans.Get("br2")
+						hasVlans(br2, 1)
+
+						eth2Vlans := parsedVlans.Get("eth2")
+						hasVlans(eth2Vlans, 1)
+					}
+					return true
+				}).Should(BeTrue())
+			})
+		})
+		Context("with bond interface that has 2 eths as slaves", func() {
+			BeforeEach(func() {
+				updateDesiredState(bond0UpWithEth1AndEth2)
+			})
+			AfterEach(func() {
+				resetDesiredStateForNodes()
+
+				// TODO: Add status conditions to ensure that
+				//       it has being really reset so we can
+				//       remove this ugly sleep
+				time.Sleep(1 * time.Second)
+
+				deleteConnectionAtNodes("eth1")
+				deleteConnectionAtNodes("eth2")
+				deleteConnectionAtNodes("bond0")
+			})
+			It("should have the bond interface with 2 slaves at currentState", func() {
+				var (
+					expectedBond  = interfaceByName(interfaces(bond0UpWithEth1AndEth2), "bond0")
+					expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
+				)
+
+				for _, node := range nodes {
+					interfacesForNode(node).Should(ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", expectedBond["name"]),
+						HaveKeyWithValue("type", expectedBond["type"]),
+						HaveKeyWithValue("state", expectedBond["state"]),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{"eth1", "eth2"}))),
+					)))
 				}
 			})
 		})

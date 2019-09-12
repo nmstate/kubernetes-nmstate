@@ -1,11 +1,11 @@
-FROM centos:7
+FROM fedora:30
 
-RUN yum -y install epel-release && \
-    yum -y update && \
-    yum -y install \
-        https://kojipkgs.fedoraproject.org/packages/nmstate/0.0.6/2.el7/noarch/python2-libnmstate-0.0.6-2.el7.noarch.rpm \
-        https://kojipkgs.fedoraproject.org/packages/nmstate/0.0.6/2.el7/noarch/nmstate-0.0.6-2.el7.noarch.rpm \
-    yum clean all
+RUN sudo dnf install -y nmstate iproute && \
+    sudo dnf clean all
+
+# TODO: Delete this line after we update nmstate to include the change
+# https://github.com/nmstate/nmstate/commit/a4baaff50fef84d6d326977ff647bece1e917a26
+RUN sed -i "s/run(timeout=20/run(timeout=60/g" /usr/lib/python3.7/site-packages/libnmstate/netapplier.py
 
 # Cannot change the binary to nmstate-handler since the name
 # is taken from the directory name [1]

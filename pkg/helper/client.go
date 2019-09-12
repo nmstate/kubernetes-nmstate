@@ -27,6 +27,20 @@ func show(arguments ...string) (string, error) {
 	return stdout.String(), nil
 }
 
+func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
+	command := []string{bridgeName}
+	command = append(command, ports...)
+
+	cmd := exec.Command("vlan-filtering", command...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to execute vlan-filtering: '%v', '%s', '%s'", err, stdout.String(), stderr.String())
+	}
+	return stdout.String(), nil
+}
+
 func set(state string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "set")
 	var stdout, stderr bytes.Buffer
@@ -102,5 +116,32 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	if len(desiredState) == 0 {
 		return "Ignoring empty desired state", nil
 	}
-	return set(string(nodeNetworkState.Spec.DesiredState))
+
+	setOutput, err := set(string(nodeNetworkState.Spec.DesiredState))
+	if err != nil {
+		return setOutput, err
+	}
+
+	// Future versions of nmstate/NM will support vlan-filtering meanwhile
+	// we have to enforce it at the desiredState bridges and outbound ports
+	// they will be configured with vlan_filtering 1 and all the vlan id range
+	// set
+	// TODO: After implementing commit/rollack from nmstate we have to
+	//       rollback if vlanfiltering fails
+	bridgesUpWithPorts, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
+	if err != nil {
+		return "", fmt.Errorf("error retrieving up bridges from desired state: %v", err)
+	}
+
+	commandOutput := ""
+	for bridge, ports := range bridgesUpWithPorts {
+		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
+		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
+		if err != nil {
+			return commandOutput, err
+		}
+	}
+
+	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
+	return commandOutput, nil
 }

@@ -1,8 +1,7 @@
-Run nmstate at 'nmstate' namespace
+Increase nmstate set timeout to 60 seconds
 
-
-Although the CRD is cluster scope the infrastructure that handle it
-have to be under a namspace, also we no longer need exec.
+The nmstate main loop timeout is harcoded to 20 seconds this is problematic
+at some scenarios, this release increment it to 60 seconds.
 
 ```
 docker pull HANDLER_IMAGE
