@@ -1,5 +1,7 @@
 #!/bin/bash -ex
 
+export KUBEVIRT_PROVIDER=$TARGET
+
 kubectl() { cluster/kubectl.sh "$@"; }
 
 teardown() {
@@ -8,7 +10,6 @@ teardown() {
     make cluster-down
 }
 
-export KUBEVIRT_PROVIDER=$TARGET
 
 # Make sure that the VM is properly shut down on exit
 trap teardown EXIT SIGINT SIGTERM SIGSTOP

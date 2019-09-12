@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -19,7 +20,7 @@ import (
 
 // FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
 var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
-	createBridgeOnTheDefaultInterface := nmstatev1alpha1.State(`interfaces:
+	createBridgeOnTheDefaultInterface := nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: brext
     type: linux-bridge
     state: up
@@ -31,10 +32,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
         stp:
           enabled: false
       port:
-      - name: eth0
-`)
-	resetDefaultInterface := nmstatev1alpha1.State(`interfaces:
-  - name: eth0
+      - name: %s
+`, *primaryNic))
+	resetDefaultInterface := nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
     type: ethernet
     state: up
     ipv4:
@@ -43,43 +44,43 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
   - name: brext
     type: linux-bridge
     state: absent
-`)
+`, *primaryNic))
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
-			By("Check eth0 is the default route interface and has dynamic address")
+			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", *primaryNic))
 			for _, node := range nodes {
-				defaultRouteNextHopInterface(node).Should(Equal("eth0"))
-				Expect(dhcpFlag(node, "eth0")).Should(BeTrue())
+				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))
+				Expect(dhcpFlag(node, *primaryNic)).Should(BeTrue())
 			}
 
 			By("Fetching current IP address")
 			for _, node := range nodes {
 				address := ""
 				Eventually(func() string {
-					address = ipv4Address(node, "eth0")
+					address = ipv4Address(node, *primaryNic)
 					return address
-				}, 15*time.Second, 1*time.Second).ShouldNot(BeEmpty(), "Interface eth0 has no ipv4 address")
+				}, 15*time.Second, 1*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf("Interface %s has no ipv4 address", *primaryNic))
 				addressByNode[node] = address
 			}
 		})
 		AfterEach(func() {
-			By("Removing bridge and configuring eth0 with dhcp")
+			By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", *primaryNic))
 			setDesiredStateWithPolicy("default-network", resetDefaultInterface)
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
 
-			By("Check eth0 has the default ip address")
+			By(fmt.Sprintf("Check %s has the default ip address", *primaryNic))
 			for _, node := range nodes {
 				Eventually(func() string {
-					return ipv4Address(node, "eth0")
-				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), "Interface eth0 address is not the original one")
+					return ipv4Address(node, *primaryNic)
+				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", *primaryNic))
 			}
 
-			By("Check eth0 is back as the default route interface")
+			By(fmt.Sprintf("Check %s is back as the default route interface", *primaryNic))
 			for _, node := range nodes {
-				defaultRouteNextHopInterface(node).Should(Equal("eth0"))
+				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))
 			}
 
 			By("Remove the policy")
@@ -100,7 +101,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 			for _, node := range nodes {
 				Eventually(func() string {
 					return ipv4Address(node, "brext")
-				}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), "Interface brext has not take over the eth0 address")
+				}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface brext has not take over the %s address", *primaryNic))
 			}
 
 			By("Verify that next-hop-interface for default route is brext")
@@ -108,7 +109,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				defaultRouteNextHopInterface(node).Should(Equal("brext"))
 
 				By("Verify that VLAN configuration is done properly")
-				hasVlans(node, "eth0", 2, 4094).Should(Succeed())
+				hasVlans(node, *primaryNic, 2, 4094).Should(Succeed())
 				vlansCardinality(node, "brext").Should(Equal(0))
 			}
 		})

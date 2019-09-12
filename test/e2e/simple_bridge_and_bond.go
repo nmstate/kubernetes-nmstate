@@ -36,10 +36,10 @@ func bondUp(bondName string) nmstatev1alpha1.State {
     link-aggregation:
       mode: active-backup
       slaves:
-        - eth1
+        - %s
       options:
         miimon: '120'
-`, bondName))
+`, bondName, *firstSecondaryNic))
 }
 
 func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
@@ -50,7 +50,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
     link-aggregation:
       mode: active-backup
       slaves:
-        - eth1
+        - %s
       options:
         miimon: '120'
   - name: %s
@@ -62,7 +62,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
           enabled: false
       port:
         - name: %s
-`, bondName, bridgeName, bondName))
+`, bondName, *firstSecondaryNic, bridgeName, bondName))
 }
 
 func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
@@ -80,9 +80,9 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
     options:
       miimon: '140'
     slaves:
-    - eth1
-    - eth2
-`, bondName))
+    - %s
+    - %s
+`, bondName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
 var _ = Describe("NodeNetworkState", func() {
@@ -121,10 +121,10 @@ var _ = Describe("NodeNetworkState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					vlansCardinality(node, bridge1).Should(Equal(0))
-					getVLANFlagsEventually(node, "eth1", 1).Should(ConsistOf([]string{"PVID", "Egress Untagged"}))
-					hasVlans(node, "eth1", 2, 4094).Should(Succeed())
-					getVLANFlagsEventually(node, "eth2", 1).Should(ConsistOf([]string{"PVID", "Egress Untagged"}))
-					hasVlans(node, "eth2", 2, 4094).Should(Succeed())
+					getVLANFlagsEventually(node, *firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					hasVlans(node, *firstSecondaryNic, 2, 4094).Should(Succeed())
+					getVLANFlagsEventually(node, *secondSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					hasVlans(node, *secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})
 		})
@@ -190,9 +190,9 @@ var _ = Describe("NodeNetworkState", func() {
 
 					hasVlans(node, bond1, 2, 4094).Should(Succeed())
 					vlansCardinality(node, bridge1).Should(Equal(0))
-					getVLANFlagsEventually(node, bond1, 1).Should(ConsistOf([]string{"PVID", "Egress Untagged"}))
-					vlansCardinality(node, "eth1").Should(Equal(0))
-					vlansCardinality(node, "eth2").Should(Equal(0))
+					getVLANFlagsEventually(node, bond1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					vlansCardinality(node, *firstSecondaryNic).Should(Equal(0))
+					vlansCardinality(node, *secondSecondaryNic).Should(Equal(0))
 				}
 			})
 		})
@@ -220,7 +220,7 @@ var _ = Describe("NodeNetworkState", func() {
 						HaveKeyWithValue("state", expectedBond["state"]),
 						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
 						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{"eth1", "eth2"}))),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
 					)))
 				}
 			})
