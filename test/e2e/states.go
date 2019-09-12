@@ -22,8 +22,7 @@ func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
     bridge:
       port:
         - name: %s
-        - name: %s
-`, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
+`, bridgeName, *firstSecondaryNic))
 }
 
 func linuxBrAbsent(bridgeName string) nmstatev1alpha1.State {

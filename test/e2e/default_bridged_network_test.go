@@ -1,7 +1,6 @@
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -9,11 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/tidwall/gjson"
-
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
-
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -128,34 +122,4 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
-}
-
-func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
-	key := types.NamespacedName{Name: nodeName}
-	node := corev1.Node{}
-	// We use a special context here to ensure that Client.Get does not
-	// get stuck and honor the Eventually timeout and interval values.
-	// It will return a timeout error in case of .Get takes more time than
-	// expected so Eventually will retry after expected interval value.
-	oneSecondTimeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	err := framework.Global.Client.Get(oneSecondTimeoutCtx, key, &node)
-	if err != nil {
-		return "", err
-	}
-	for _, condition := range node.Status.Conditions {
-		if condition.Type == corev1.NodeReady {
-			return condition.Status, nil
-		}
-	}
-	return corev1.ConditionUnknown, nil
-}
-
-func waitForNodesReady() {
-	time.Sleep(5 * time.Second)
-	for _, node := range nodes {
-		EventuallyWithOffset(1, func() (corev1.ConditionStatus, error) {
-			return nodeReadyConditionStatus(node)
-		}, 5*time.Minute, 10*time.Second).Should(Equal(corev1.ConditionTrue))
-	}
 }

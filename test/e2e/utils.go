@@ -504,3 +504,39 @@ func ipv4Address(node string, name string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", name)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
+
+func macAddress(node string, name string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", name)
+	mac := gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+	return strings.ToLower(mac)
+}
+
+func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
+	key := types.NamespacedName{Name: nodeName}
+	node := corev1.Node{}
+	// We use a special context here to ensure that Client.Get does not
+	// get stuck and honor the Eventually timeout and interval values.
+	// It will return a timeout error in case of .Get takes more time than
+	// expected so Eventually will retry after expected interval value.
+	oneSecondTimeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	err := framework.Global.Client.Get(oneSecondTimeoutCtx, key, &node)
+	if err != nil {
+		return "", err
+	}
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady {
+			return condition.Status, nil
+		}
+	}
+	return corev1.ConditionUnknown, nil
+}
+
+func waitForNodesReady() {
+	time.Sleep(5 * time.Second)
+	for _, node := range nodes {
+		EventuallyWithOffset(1, func() (corev1.ConditionStatus, error) {
+			return nodeReadyConditionStatus(node)
+		}, 5*time.Minute, 10*time.Second).Should(Equal(corev1.ConditionTrue))
+	}
+}
