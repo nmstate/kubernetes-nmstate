@@ -42,7 +42,7 @@ var _ = Describe("FilterOut", func() {
 	Context("when given invalid yaml", func() {
 		BeforeEach(func() {
 			state = nmstatev1alpha1.State(`invalid yaml`)
-			setEnvFilter("veth*")
+			setEnvFilter("{veth*}")
 		})
 
 		AfterEach(func() {
@@ -71,7 +71,7 @@ var _ = Describe("FilterOut", func() {
   state: up
   type: ethernet
 `)
-			setEnvFilter("veth*")
+			setEnvFilter("{veth*}")
 		})
 
 		AfterEach(func() {
@@ -104,7 +104,7 @@ var _ = Describe("FilterOut", func() {
   state: up
   type: ethernet
 `)
-			setEnvFilter("veth*")
+			setEnvFilter("{veth*}")
 		})
 
 		AfterEach(func() {
