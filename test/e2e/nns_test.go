@@ -11,14 +11,6 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-func hasVlans(result gjson.Result, maxVlan int) {
-	vlans := result.Array()
-	ExpectWithOffset(1, vlans).To(HaveLen(maxVlan))
-	for i, vlan := range vlans {
-		Expect(vlan.Get("vlan").Int()).To(Equal(int64(i + 1)))
-	}
-}
-
 var _ = Describe("NodeNetworkState", func() {
 	var (
 		bond1Up = nmstatev1alpha1.State(`interfaces:
@@ -120,13 +112,12 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 				Eventually(func() bool {
 					for _, bridgeVlans := range bridgeVlansAtNodes() {
-						parsedVlans := gjson.Parse(bridgeVlans)
-						hasVlans(parsedVlans.Get("eth1"), 4094)
-						hasVlans(parsedVlans.Get("eth2"), 4094)
-						hasVlans(parsedVlans.Get("br1"), 1)
+						hasVlans(bridgeVlans, "eth1", 2, 4094)
+						hasVlans(bridgeVlans, "eth2", 2, 4094)
+						hasVlans(bridgeVlans, "br1", 1, 1)
 					}
 					return true
-				}).Should(BeTrue())
+				}).Should(BeTrue(), "Incorrect br1 bridge vlan ids")
 
 			})
 		})
@@ -222,17 +213,14 @@ var _ = Describe("NodeNetworkState", func() {
 					for _, bridgeVlans := range bridgeVlansAtNodes() {
 						parsedVlans := gjson.Parse(bridgeVlans)
 
-						hasVlans(parsedVlans.Get("bond1"), 4094)
-						hasVlans(parsedVlans.Get("br1"), 1)
+						hasVlans(bridgeVlans, "bond1", 2, 4094)
+						hasVlans(bridgeVlans, "br1", 1, 1)
 
 						eth1Vlans := parsedVlans.Get("eth1").Array()
 						Expect(eth1Vlans).To(BeEmpty())
 
-						br2 := parsedVlans.Get("br2")
-						hasVlans(br2, 1)
-
-						eth2Vlans := parsedVlans.Get("eth2")
-						hasVlans(eth2Vlans, 1)
+						hasVlans(bridgeVlans, "br2", 1, 1)
+						hasVlans(bridgeVlans, "eth2", 1, 1)
 					}
 					return true
 				}).Should(BeTrue())
