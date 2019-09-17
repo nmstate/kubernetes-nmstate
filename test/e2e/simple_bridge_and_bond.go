@@ -41,6 +41,17 @@ var _ = Describe("NodeNetworkState", func() {
         miimon: '120'
 `)
 
+		br1UpNoPorts = nmstatev1alpha1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port: []
+`)
+
 		br1Up = nmstatev1alpha1.State(`interfaces:
   - name: br1
     type: linux-bridge
@@ -94,6 +105,23 @@ var _ = Describe("NodeNetworkState", func() {
 `)
 	)
 	Context("when desiredState is configured", func() {
+		Context("with a linux bridge up with no ports", func() {
+			BeforeEach(func() {
+				updateDesiredState(br1UpNoPorts)
+			})
+			AfterEach(func() {
+				updateDesiredState(br1Absent)
+				for _, node := range nodes {
+					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+				}
+			})
+			It("should have the linux bridge at currentState with vlan_filtering 1", func() {
+				for _, node := range nodes {
+					interfacesNameForNode(node).Should(ContainElement("br1"))
+					bridgeDescription(node, "br1").Should(ContainSubstring("vlan_filtering 1"))
+				}
+			})
+		})
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
 				updateDesiredState(br1Up)
