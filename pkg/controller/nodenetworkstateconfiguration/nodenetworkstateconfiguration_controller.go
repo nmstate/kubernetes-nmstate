@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -228,22 +227,6 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 		return reconcile.Result{}, errmsg
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
-
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-		corev1.ConditionTrue,
-		"Success",
-		"successfully reconciled NodeNetworkState",
-	)
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionFailing,
-		corev1.ConditionFalse,
-		"Failed",
-		"",
-	)
-	r.client.Status().Update(context.TODO(), instance)
 
 	err = r.setCondition(true, "successfully reconciled NodeNetworkState", request.NamespacedName)
 	if err != nil {
