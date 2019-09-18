@@ -1,18 +1,34 @@
 package e2e
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/tidwall/gjson"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
+		br1Absent = nmstatev1alpha1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: absent
+`)
+
+		bond1Absent = nmstatev1alpha1.State(`interfaces:
+  - name: bond1
+    type: bond
+    state: absent
+`)
+		br1AndBond1Absent = nmstatev1alpha1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: absent
+  - name: bond1
+    type: bond
+    state: absent
+`)
+
 		bond1Up = nmstatev1alpha1.State(`interfaces:
   - name: bond1
     type: bond
@@ -24,6 +40,7 @@ var _ = Describe("NodeNetworkState", func() {
       options:
         miimon: '120'
 `)
+
 		br1Up = nmstatev1alpha1.State(`interfaces:
   - name: br1
     type: linux-bridge
@@ -58,16 +75,8 @@ var _ = Describe("NodeNetworkState", func() {
         - name: bond1
 `)
 
-		br1Absent = nmstatev1alpha1.State(`interfaces:
-  - name: br1
-    type: linux-bridge
-    state: absent
-  - name: eth1
-    type: ethernet
-    state: absent
-`)
-		bond0UpWithEth1AndEth2 = nmstatev1alpha1.State(`interfaces:
-- name: bond0
+		bond1UpWithEth1AndEth2 = nmstatev1alpha1.State(`interfaces:
+- name: bond1
   type: bond
   state: up
   ipv4:
@@ -90,49 +99,17 @@ var _ = Describe("NodeNetworkState", func() {
 				updateDesiredState(br1Up)
 			})
 			AfterEach(func() {
-
-				// First we clean desired state if we
-				// don't do that nmstate recreates the bridge
-				resetDesiredStateForNodes()
-
-				// TODO: Add status conditions to ensure that
-				//       it has being really reset so we can
-				//       remove this ugly sleep
-				time.Sleep(1 * time.Second)
-
-				// Let's clean the bridge directly in the node
-				// bypassing nmstate
-				deleteConnectionAtNodes("eth1")
-				deleteConnectionAtNodes("eth2")
-				deleteConnectionAtNodes("br1")
+				updateDesiredState(br1Absent)
+				for _, node := range nodes {
+					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+				}
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNode(node).Should(ContainElement("br1"))
-				}
-				Eventually(func() bool {
-					for _, bridgeVlans := range bridgeVlansAtNodes() {
-						hasVlans(bridgeVlans, "eth1", 2, 4094)
-						hasVlans(bridgeVlans, "eth2", 2, 4094)
-						hasVlans(bridgeVlans, "br1", 1, 1)
-					}
-					return true
-				}).Should(BeTrue(), "Incorrect br1 bridge vlan ids")
-
-			})
-		})
-		Context("with a linux bridge absent", func() {
-			BeforeEach(func() {
-				createBridgeAtNodes("br1")
-				updateDesiredState(br1Absent)
-			})
-			AfterEach(func() {
-				// If not br1 is going to be removed if created manually
-				resetDesiredStateForNodes()
-			})
-			It("should have the linux bridge at currentState", func() {
-				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+					vlansCardinality(node, "br1").Should(Equal(0))
+					hasVlans(node, "eth1", 2, 4094).Should(Succeed())
+					hasVlans(node, "eth2", 2, 4094).Should(Succeed())
 				}
 			})
 		})
@@ -141,16 +118,10 @@ var _ = Describe("NodeNetworkState", func() {
 				updateDesiredState(bond1Up)
 			})
 			AfterEach(func() {
-
-				resetDesiredStateForNodes()
-
-				// TODO: Add status conditions to ensure that
-				//       it has being really reset so we can
-				//       remove this ugly sleep
-				time.Sleep(1 * time.Second)
-
-				deleteConnectionAtNodes("bond1")
-				deleteConnectionAtNodes("eth1")
+				updateDesiredState(bond1Absent)
+				for _, node := range nodes {
+					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+				}
 			})
 			It("should have the bond interface at currentState", func() {
 				var (
@@ -169,23 +140,14 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
-				createBridgeAtNodes("br2", "eth2")
 				updateDesiredState(br1WithBond1Up)
 			})
 			AfterEach(func() {
-
-				resetDesiredStateForNodes()
-
-				// TODO: Add status conditions to ensure that
-				//       it has being really reset so we can
-				//       remove this ugly sleep
-				time.Sleep(1 * time.Second)
-
-				deleteConnectionAtNodes("eth1")
-				deleteConnectionAtNodes("eth2")
-				deleteConnectionAtNodes("br1")
-				deleteConnectionAtNodes("br2")
-				deleteConnectionAtNodes("bond1")
+				updateDesiredState(br1AndBond1Absent)
+				for _, node := range nodes {
+					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+				}
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
 				var (
@@ -208,43 +170,27 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("bridge", HaveKeyWithValue("port",
 								ContainElement(HaveKeyWithValue("name", "bond1")))),
 						))))
+
+					hasVlans(node, "bond1", 2, 4094).Should(Succeed())
+					vlansCardinality(node, "br1").Should(Equal(0))
+					vlansCardinality(node, "eth1").Should(Equal(0))
+					vlansCardinality(node, "eth2").Should(Equal(0))
 				}
-				Eventually(func() bool {
-					for _, bridgeVlans := range bridgeVlansAtNodes() {
-						parsedVlans := gjson.Parse(bridgeVlans)
-
-						hasVlans(bridgeVlans, "bond1", 2, 4094)
-						hasVlans(bridgeVlans, "br1", 1, 1)
-
-						eth1Vlans := parsedVlans.Get("eth1").Array()
-						Expect(eth1Vlans).To(BeEmpty())
-
-						hasVlans(bridgeVlans, "br2", 1, 1)
-						hasVlans(bridgeVlans, "eth2", 1, 1)
-					}
-					return true
-				}).Should(BeTrue())
 			})
 		})
 		Context("with bond interface that has 2 eths as slaves", func() {
 			BeforeEach(func() {
-				updateDesiredState(bond0UpWithEth1AndEth2)
+				updateDesiredState(bond1UpWithEth1AndEth2)
 			})
 			AfterEach(func() {
-				resetDesiredStateForNodes()
-
-				// TODO: Add status conditions to ensure that
-				//       it has being really reset so we can
-				//       remove this ugly sleep
-				time.Sleep(1 * time.Second)
-
-				deleteConnectionAtNodes("eth1")
-				deleteConnectionAtNodes("eth2")
-				deleteConnectionAtNodes("bond0")
+				updateDesiredState(bond1Absent)
+				for _, node := range nodes {
+					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+				}
 			})
 			It("should have the bond interface with 2 slaves at currentState", func() {
 				var (
-					expectedBond  = interfaceByName(interfaces(bond0UpWithEth1AndEth2), "bond0")
+					expectedBond  = interfaceByName(interfaces(bond1UpWithEth1AndEth2), "bond1")
 					expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
 				)
 

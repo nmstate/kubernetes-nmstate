@@ -17,7 +17,7 @@ ifdef UNIT_TEST_EXTRA_ARGS
 	UNIT_TEST_ARGS += $(UNIT_TEST_ARGS)
 endif
 
-E2E_TEST_ARGS ?= -test.v
+E2E_TEST_ARGS ?= -test.v --ginkgo.slowSpecThreshold=60
 ifdef E2E_TEST_FOCUS
 	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
 endif
