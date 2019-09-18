@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"time"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -104,6 +105,80 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
+func setCondtion(instance *nmstatev1alpha1.NodeNetworkState, reason string, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionTrue,
+		reason,
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionFalse,
+		reason,
+		message,
+	)
+}
+
+func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionTrue,
+		"Failed",
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionFalse,
+		"Failed",
+		message,
+	)
+}
+
+func setCondtionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionTrue,
+		"Success",
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionFalse,
+		"Success",
+		message,
+	)
+}
+
+func (r *ReconcileNodeNetworkStateConfiguration) setCondition(
+	available bool,
+	message string,
+	stateName types.NamespacedName,
+) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		instance := &nmstatev1alpha1.NodeNetworkState{}
+		getErr := r.client.Get(context.TODO(), stateName, instance)
+		if getErr != nil {
+			panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
+		}
+
+		if available {
+			setCondtionSuccess(instance, message)
+		} else {
+			setCondtionFailed(instance, message)
+		}
+
+		updateErr := r.client.Status().Update(context.TODO(), instance)
+		return updateErr
+	})
+}
+
 // blank assignment to verify that ReconcileNodeNetworkStateConfiguration implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileNodeNetworkStateConfiguration{}
 
@@ -143,52 +218,19 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
-		for i := 0; i < 5; i++ {
-			conditions.SetCondition(
-				instance,
-				nmstatev1alpha1.NodeNetworkStateConditionFailing,
-				corev1.ConditionTrue,
-				"Failed",
-				errmsg.Error(),
-			)
-			conditions.SetCondition(
-				instance,
-				nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-				corev1.ConditionFalse,
-				"Failed",
-				errmsg.Error(),
-			)
-			r.client.Status().Update(context.TODO(), instance)
 
-			time.Sleep(1 * time.Second)
+		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
+		if retryErr != nil {
+			reqLogger.Error(retryErr, "Failing condition update failed")
 		}
+
 		return reconcile.Result{}, errmsg
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	for i := 0; i < 5; i++ {
-		instance := &nmstatev1alpha1.NodeNetworkState{}
-		r.client.Get(context.TODO(), request.NamespacedName, instance)
-		conditions.SetCondition(
-			instance,
-			nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-			corev1.ConditionTrue,
-			"Success",
-			"successfully reconciled NodeNetworkState",
-		)
-		conditions.SetCondition(
-			instance,
-			nmstatev1alpha1.NodeNetworkStateConditionFailing,
-			corev1.ConditionFalse,
-			"Success",
-			"",
-		)
-		err = r.client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-
-		time.Sleep(1 * time.Second)
+	err = r.setCondition(true, "successfully reconciled NodeNetworkState", request.NamespacedName)
+	if err != nil {
+		reqLogger.Error(err, "Success condition update failed")
 	}
 
 	return reconcile.Result{}, nil
