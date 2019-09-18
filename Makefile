@@ -52,6 +52,8 @@ description = build/_output/description
 
 resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 
+export INTERFACES_FILTER = "{veth*}"
+
 all: check handler
 
 check: format vet

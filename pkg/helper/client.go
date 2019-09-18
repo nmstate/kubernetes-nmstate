@@ -20,9 +20,17 @@ import (
 const nmstateCommand = "nmstatectl"
 
 var (
-	interfacesFilterGlob      glob.Glob
-	interfacesFilterGlobIsSet bool
+	interfacesFilter     string
+	interfacesFilterGlob glob.Glob
 )
+
+func init() {
+	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
+	if !isSet {
+		panic("INTERFACES_FILTER is mandatory")
+	}
+	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
+}
 
 func show(arguments ...string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "show")
@@ -106,7 +114,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
 
-	filteredState, err := filterOut(nmstatev1alpha1.State(currentState))
+	filteredState, err := filterOut(nmstatev1alpha1.State(currentState), interfacesFilterGlob)
 	if err != nil {
 		return fmt.Errorf("error filtering out interfaces from NodeNetworkState: %v", err)
 	}
@@ -156,19 +164,8 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	return commandOutput, nil
 }
 
-func getFilter() *glob.Glob {
-	if !interfacesFilterGlobIsSet {
-		interfacesFilter := os.Getenv("INTERFACES_FILTER")
-		interfacesFilterGlob = glob.MustCompile(interfacesFilter)
-		interfacesFilterGlobIsSet = true
-	}
-	return &interfacesFilterGlob
-}
-
-func filterOut(currentState nmstatev1alpha1.State) (nmstatev1alpha1.State, error) {
-	interfacesFilterGlob := getFilter()
-
-	if (*interfacesFilterGlob).Match("") {
+func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glob) (nmstatev1alpha1.State, error) {
+	if interfacesFilterGlob.Match("") {
 		return currentState, nil
 	}
 
@@ -183,7 +180,7 @@ func filterOut(currentState nmstatev1alpha1.State) (nmstatev1alpha1.State, error
 
 	for _, iface := range interfaces.([]interface{}) {
 		name := iface.(map[string]interface{})["name"]
-		if !(*interfacesFilterGlob).Match(name.(string)) {
+		if !interfacesFilterGlob.Match(name.(string)) {
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}
