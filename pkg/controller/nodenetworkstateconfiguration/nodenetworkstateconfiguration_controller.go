@@ -105,23 +105,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-func setCondtion(instance *nmstatev1alpha1.NodeNetworkState, reason string, message string) {
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionFailing,
-		corev1.ConditionTrue,
-		reason,
-		message,
-	)
-	conditions.SetCondition(
-		instance,
-		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
-		corev1.ConditionFalse,
-		reason,
-		message,
-	)
-}
-
 func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message string) {
 	conditions.SetCondition(
 		instance,
@@ -163,9 +146,9 @@ func (r *ReconcileNodeNetworkStateConfiguration) setCondition(
 ) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &nmstatev1alpha1.NodeNetworkState{}
-		getErr := r.client.Get(context.TODO(), stateName, instance)
-		if getErr != nil {
-			panic(fmt.Errorf("Failed to get latest version of Deployment: %v", getErr))
+		err := r.client.Get(context.TODO(), stateName, instance)
+		if err != nil {
+			return err
 		}
 
 		if available {
@@ -174,8 +157,8 @@ func (r *ReconcileNodeNetworkStateConfiguration) setCondition(
 			setCondtionFailed(instance, message)
 		}
 
-		updateErr := r.client.Status().Update(context.TODO(), instance)
-		return updateErr
+		err = r.client.Status().Update(context.TODO(), instance)
+		return err
 	})
 }
 

@@ -1,9 +1,8 @@
 package e2e
 
 import (
-	"time"
-
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -20,6 +19,11 @@ var _ = Describe("NodeNetworkStateCondition", func() {
       port:
         - name: eth1
 `)
+		br1Absent = nmstatev1alpha1.State(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: absent
+`)
 		invalidConfig = nmstatev1alpha1.State(`interfaces:
   - name: br1
     type: linux-bridge
@@ -31,18 +35,10 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 			updateDesiredState(br1Up)
 		})
 		AfterEach(func() {
-			// First we clean desired state if we
-			// don't do that nmstate recreates the bridge
-			resetDesiredStateForNodes()
-
-			// TODO: Add status conditions to ensure that
-			//       it has being really reset so we can
-			//       remove this ugly sleep
-			time.Sleep(1 * time.Second)
-
-			// Let's clean the bridge directly in the node
-			// bypassing nmstate
-			deleteConnectionAtNodes("br1")
+			updateDesiredState(br1Absent)
+			for _, node := range nodes {
+				interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+			}
 		})
 		It("should have Available ConditionType set to true", func() {
 			for _, node := range nodes {
@@ -55,20 +51,6 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 	Context("when applying invalid configuration", func() {
 		BeforeEach(func() {
 			updateDesiredState(invalidConfig)
-		})
-		AfterEach(func() {
-			// First we clean desired state if we
-			// don't do that nmstate recreates the bridge
-			resetDesiredStateForNodes()
-
-			// TODO: Add status conditions to ensure that
-			//       it has being really reset so we can
-			//       remove this ugly sleep
-			time.Sleep(1 * time.Second)
-
-			// Let's clean the bridge directly in the node
-			// bypassing nmstate
-			deleteConnectionAtNodes("br1")
 		})
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {

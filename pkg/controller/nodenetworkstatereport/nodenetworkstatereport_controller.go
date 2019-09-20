@@ -119,12 +119,10 @@ func (r *ReconcileNodeNetworkStateReport) Reconcile(request reconcile.Request) (
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info(fmt.Sprintf("Status conditions before update: %s", instance.Status.Conditions))
 	err = nmstate.UpdateCurrentState(r.client, instance)
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
 	}
-	reqLogger.Info(fmt.Sprintf("Status conditions after update: %s", instance.Status.Conditions))
 
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
 }
