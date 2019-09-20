@@ -116,9 +116,9 @@ var _ = Describe("Network desired state bridge parser", func() {
 		BeforeEach(func() {
 			desiredState = bridgeWithNoPorts
 		})
-		It("should return empty map", func() {
+		It("should return the bridge with empty port list", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridgesAndPorts).To(BeEmpty())
+			Expect(obtainedBridgesAndPorts).To(HaveKeyWithValue("br1", BeEmpty()))
 		})
 	})
 	Context("when there are bridges up", func() {
