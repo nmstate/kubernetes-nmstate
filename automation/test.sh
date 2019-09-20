@@ -16,4 +16,13 @@ trap teardown EXIT SIGINT SIGTERM SIGSTOP
 make cluster-down
 make cluster-up
 make cluster-sync
-make E2E_TEST_EXTRA_ARGS="-ginkgo.noColor" test/e2e
+test_args="-ginkgo.v -ginkgo.noColor -test.timeout 20m"
+skip_tests=""
+
+# FIXME: Delete it when we migrate to okd4 provider, since os-3.11.0 is not
+#        working alright I we don't want to debug not supported providers.
+if [[ $KUBEVIRT_PROVIDER =~ os- ]]; then
+    skip_tests="move.*default.*IP"
+fi
+
+make E2E_TEST_EXTRA_ARGS="$test_args" E2E_TEST_SKIP="$skip_tests" test/e2e

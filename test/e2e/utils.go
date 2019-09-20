@@ -29,7 +29,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-const ReadTimeout = 15 * time.Second
+const ReadTimeout = 120 * time.Second
 const ReadInterval = 1 * time.Second
 
 func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) error {

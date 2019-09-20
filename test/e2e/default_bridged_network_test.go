@@ -46,22 +46,21 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
     type: linux-bridge
     state: absent
 `)
-	// FIXME: This is a pending spec since we have to discover why the
-	//        cluster never goes back at kubevirtci provider
-	XContext("when there is a default interface with dynamic address", func() {
+	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
 			By("Check eth0 is the default route interface and has dynamic address")
 			for _, node := range nodes {
-				Expect(defaultRouteNextHopInterface(node)).To(Equal("eth0"))
-				Expect(dhcpFlag(node, "eth0")).To(BeTrue())
+				defaultRouteNextHopInterface(node).Should(Equal("eth0"))
+				Expect(dhcpFlag(node, "eth0")).Should(BeTrue())
 			}
 
 			By("Fetching current IP address")
 			for _, node := range nodes {
 				address := ""
 				Eventually(func() string {
-					return ipv4Address(node, "eth0")
+					address = ipv4Address(node, "eth0")
+					return address
 				}, 15*time.Second, 1*time.Second).ShouldNot(BeEmpty(), "Interface eth0 has no ipv4 address")
 				addressByNode[node] = address
 			}
@@ -69,6 +68,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 		AfterEach(func() {
 			By("Removing bridge and configuring eth0 with dhcp")
 			setDesiredStateWithPolicy("default-network", resetDefaultInterface)
+
+			By("Waiting until the node becomes ready again")
+			waitForNodesReady()
 
 			By("Check eth0 has the default ip address")
 			for _, node := range nodes {
@@ -79,13 +81,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 			By("Check eth0 is back as the default route interface")
 			for _, node := range nodes {
-				Eventually(func() string {
-					return defaultRouteNextHopInterface(node)
-				}, 30*time.Second, 1*time.Second).Should(Equal("eth0"))
+				defaultRouteNextHopInterface(node).Should(Equal("eth0"))
 			}
-
-			By("Waiting until the node becomes ready again")
-			waitForNodesReady()
 
 			By("Remove the policy")
 			deletePolicy("default-network")
@@ -107,13 +104,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 			By("Verify that next-hop-interface for default route is brext")
 			for _, node := range nodes {
-				Eventually(func() string {
-					return defaultRouteNextHopInterface(node)
-				}, 30*time.Second, 1*time.Second).Should(Equal("brext"))
+				defaultRouteNextHopInterface(node).Should(Equal("brext"))
 
 				By("Verify that VLAN configuration is done properly")
 				hasVlans(node, "eth0", 2, 4094).Should(Succeed())
-				hasVlans(node, "brext", 1, 1).Should(Succeed())
+				vlansCardinality(node, "brext").Should(Equal(0))
 			}
 		})
 	})
@@ -132,9 +127,11 @@ func ipv4Address(node string, name string) string {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
-func defaultRouteNextHopInterface(node string) string {
-	path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+func defaultRouteNextHopInterface(node string) AsyncAssertion {
+	return Eventually(func() string {
+		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
+		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+	}, 15*time.Second, 1*time.Second)
 }
 
 func dhcpFlag(node string, name string) bool {
@@ -158,9 +155,10 @@ func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
 }
 
 func waitForNodesReady() {
+	time.Sleep(5 * time.Second)
 	for _, node := range nodes {
 		Eventually(func() (corev1.ConditionStatus, error) {
 			return nodeReadyConditionStatus(node)
-		}, 15*time.Second, 1*time.Second).Should(Equal(corev1.ConditionTrue))
+		}, 60*time.Second, 1*time.Second).Should(Equal(corev1.ConditionTrue))
 	}
 }
