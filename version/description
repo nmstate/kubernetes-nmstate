@@ -1,7 +1,9 @@
-Increase nmstate set timeout to 60 seconds
+Set vlan_filtering 1 if no ports at linux bridges
 
-The nmstate main loop timeout is harcoded to 20 seconds this is problematic
-at some scenarios, this release increment it to 60 seconds.
+After merging #163 vlan_filtering flag was not set if if the linux bridge
+was configured with no ports, that's it's a problem for communication in the
+same host between two interfaces with vlans different vlans, since
+communication will be possible.
 
 ```
 docker pull HANDLER_IMAGE
