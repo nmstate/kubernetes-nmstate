@@ -20,7 +20,6 @@ import (
 const nmstateCommand = "nmstatectl"
 
 var (
-	interfacesFilter     string
 	interfacesFilterGlob glob.Glob
 )
 

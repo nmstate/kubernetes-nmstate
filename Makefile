@@ -52,8 +52,6 @@ description = build/_output/description
 
 resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 
-export INTERFACES_FILTER = "{veth*}"
-
 all: check handler
 
 check: format vet
@@ -90,7 +88,7 @@ push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
+	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
 
 test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \

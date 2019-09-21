@@ -14,28 +14,6 @@ on [local cluster](deployment-local-cluster.md) or your
 
 The operator will periodically update the reported state of node interfaces.
 
-We can set the period of update time in seconds in config map in variable 
-named `node_network_state_refresh_interval`.
-
-We can also set filter for interfaces we wish to omit in reporting 
-in `interfaces_filter`. 
-`interfaces_filter` uses glob for pattern matching.
-For example we can use values such as: `""`, `"{veth*}"` and `"{veth*,vnet*}"`.
-Default value is `"{veth*}"`.
-
-Use `ConfigMap`:
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nmstate-config
-  namespace: nmstate
-data:
-  node_network_state_refresh_interval: "5"
-  interfaces_filter: "{veth*}"
-```
-
 Read `NodeNetworkStates` from all nodes:
 
 ```shell
@@ -271,3 +249,28 @@ status:
 ```
 
 If you want to learn more about the `observedState` API, see [nmstate documentation](https://nmstate.github.io/).
+
+## Additional configuration
+
+We can set the period of update time in seconds in config map in variable 
+named `node_network_state_refresh_interval`.
+
+We can also set filter for interfaces we wish to omit in reporting 
+via `interfaces_filter`. This variable uses glob for pattern matching.
+For example we can use values such as: `""` to keep all interfaces (disable
+filtering), `"veth*"` to omit all interfaces with `veth` prefix or
+`"{veth*,vnet*}"` to omit interfaces with either `veth` or `vnet` prefix.`
+The default value is `"veth*"`.
+
+These variables are controlled via a `ConfigMap`:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nmstate-config
+  namespace: nmstate
+data:
+  node_network_state_refresh_interval: "5"
+  interfaces_filter: "veth*"
+```
