@@ -4,3 +4,10 @@ go: "1.11"
 install: true
 script:
 - GINKGO_EXTRA_ARGS="--compilers=2" make all test/unit
+
+deploy:
+- provider: script
+  script: docker login -u="$DOCKER_USER" -p="$DOCKER_PASS" quay.io && make push-handler
+  skip_cleanup: true
+  on:
+    branch: master
