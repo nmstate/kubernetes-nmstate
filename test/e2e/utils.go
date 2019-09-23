@@ -328,22 +328,49 @@ func toUnstructured(y string) interface{} {
 	return u
 }
 
-func bridgeVlansAtNodes() []string {
-	outputs, _ := runAtNodes("sudo", "bridge", "-j", "vlan", "show")
-	return outputs
+func bridgeVlansAtNode(node string) (string, error) {
+	return run(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 
-func hasVlans(bridgeVlans string, connection string, minVlan int, maxVlan int) {
+func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
 
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
 
-	parsedBridgeVlans := gjson.Parse(bridgeVlans)
-	for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
+	return Eventually(func() error {
+		By("Getting vlans")
+		bridgeVlans, err := bridgeVlansAtNode(node)
+		if err != nil {
+			return err
+		}
 
-		vlanByIdAndConection := fmt.Sprintf("%s.#(vlan==%d)", connection, expectedVlan)
-		ExpectWithOffset(1, parsedBridgeVlans.Get(vlanByIdAndConection).Exists()).To(BeTrue(), fmt.Sprintf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans))
+		parsedBridgeVlans := gjson.Parse(bridgeVlans)
+		for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
+			vlanByIdAndConection := fmt.Sprintf("%s.#(vlan==%d)", connection, expectedVlan)
+			if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
+				return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
+			}
+		}
+		return nil
+	}, ReadTimeout, ReadInterval)
+}
 
-	}
+func vlansCardinality(node string, connection string) AsyncAssertion {
+	return Eventually(func() (int, error) {
+		By("Getting vlans")
+		bridgeVlans, err := bridgeVlansAtNode(node)
+		if err != nil {
+			return 0, err
+		}
+
+		return len(gjson.Parse(bridgeVlans).Get(connection).Array()), nil
+	}, ReadTimeout, ReadInterval)
+
+}
+
+func bridgeDescription(node string, bridgeName string) AsyncAssertion {
+	return Eventually(func() (string, error) {
+		return run(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
+	}, ReadTimeout, ReadTimeout)
 }

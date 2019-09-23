@@ -29,10 +29,7 @@ func getBridgesUp(desiredState nmstatev1alpha1.State) (map[string][]string, erro
 			portList = append(portList, port.String())
 		}
 
-		// Add only the bridge we have some outbound port to configure
-		if len(portList) > 0 {
-			foundBridgesWithPorts[bridgeUp.Get("name").String()] = portList
-		}
+		foundBridgesWithPorts[bridgeUp.Get("name").String()] = portList
 	}
 
 	return foundBridgesWithPorts, nil
