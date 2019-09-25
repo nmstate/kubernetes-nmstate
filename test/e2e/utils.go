@@ -27,6 +27,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 )
 
 const ReadTimeout = 120 * time.Second
@@ -289,6 +290,18 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
+func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateConditionType) AsyncAssertion {
+	key := types.NamespacedName{Name: node}
+	return Eventually(func() corev1.ConditionStatus {
+		state := nodeNetworkState(key)
+		condition := conditions.Condition(&state, conditionType)
+		if condition == nil {
+			return corev1.ConditionUnknown
+		}
+		return condition.Status
+	}, ReadTimeout, ReadInterval)
+}
+
 func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alpha1.State) AsyncAssertion {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
 	return Eventually(func() nmstatev1alpha1.State {
@@ -373,4 +386,12 @@ func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
 		return run(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
 	}, ReadTimeout, ReadTimeout)
+}
+
+func conditionsToYaml(conditions []nmstatev1alpha1.NodeNetworkStateCondition) string {
+	manifest, err := yaml.Marshal(conditions)
+	if err != nil {
+		panic(err)
+	}
+	return string(manifest)
 }

@@ -6,8 +6,11 @@ import (
 	"reflect"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -18,6 +21,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
@@ -101,6 +105,63 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
+func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionTrue,
+		"FailedToConfigure",
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionFalse,
+		"FailedToConfigure",
+		message,
+	)
+}
+
+func setCondtionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionTrue,
+		"SuccessfullyConfigured",
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionFalse,
+		"SuccessfullyConfigured",
+		"",
+	)
+}
+
+func (r *ReconcileNodeNetworkStateConfiguration) setCondition(
+	available bool,
+	message string,
+	stateName types.NamespacedName,
+) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		instance := &nmstatev1alpha1.NodeNetworkState{}
+		err := r.client.Get(context.TODO(), stateName, instance)
+		if err != nil {
+			return err
+		}
+
+		if available {
+			setCondtionSuccess(instance, message)
+		} else {
+			setCondtionFailed(instance, message)
+		}
+
+		err = r.client.Status().Update(context.TODO(), instance)
+		return err
+	})
+}
+
 // blank assignment to verify that ReconcileNodeNetworkStateConfiguration implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileNodeNetworkStateConfiguration{}
 
@@ -139,9 +200,21 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate configuration at desired state apply: %v", err)
+		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
+
+		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
+		if retryErr != nil {
+			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
+		}
+
+		return reconcile.Result{}, errmsg
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
+
+	err = r.setCondition(true, "successfully reconciled NodeNetworkState", request.NamespacedName)
+	if err != nil {
+		reqLogger.Error(err, "Success condition update failed while reporting success: %v", err)
+	}
 
 	return reconcile.Result{}, nil
 }
