@@ -110,14 +110,14 @@ func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message strin
 		instance,
 		nmstatev1alpha1.NodeNetworkStateConditionFailing,
 		corev1.ConditionTrue,
-		"Failed",
+		"FailedToConfigure",
 		message,
 	)
 	conditions.SetCondition(
 		instance,
 		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
 		corev1.ConditionFalse,
-		"Failed",
+		"FailedToConfigure",
 		message,
 	)
 }
@@ -127,15 +127,15 @@ func setCondtionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message stri
 		instance,
 		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
 		corev1.ConditionTrue,
-		"Success",
+		"SuccessfullyConfigured",
 		message,
 	)
 	conditions.SetCondition(
 		instance,
 		nmstatev1alpha1.NodeNetworkStateConditionFailing,
 		corev1.ConditionFalse,
-		"Success",
-		message,
+		"SuccessfullyConfigured",
+		"",
 	)
 }
 
@@ -204,7 +204,7 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 
 		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
 		if retryErr != nil {
-			reqLogger.Error(retryErr, "Failing condition update failed")
+			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
 		}
 
 		return reconcile.Result{}, errmsg
@@ -213,7 +213,7 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 
 	err = r.setCondition(true, "successfully reconciled NodeNetworkState", request.NamespacedName)
 	if err != nil {
-		reqLogger.Error(err, "Success condition update failed")
+		reqLogger.Error(err, "Success condition update failed while reporting success: %v", err)
 	}
 
 	return reconcile.Result{}, nil
