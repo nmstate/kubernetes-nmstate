@@ -274,3 +274,6 @@ data:
   node_network_state_refresh_interval: "5"
   interfaces_filter: "veth*"
 ```
+
+Please note that in order to apply changes from the `ConfigMap`, you have to
+restart nmstate handler pods. That can be done by simply deleting them.
