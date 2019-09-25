@@ -290,20 +290,16 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateConditionType, conditionStatus corev1.ConditionStatus) {
+func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateConditionType) AsyncAssertion {
 	key := types.NamespacedName{Name: node}
-	var state nmstatev1alpha1.NodeNetworkState
-	Eventually(func() corev1.ConditionStatus {
-		state = nodeNetworkState(key)
+	return Eventually(func() corev1.ConditionStatus {
+		state := nodeNetworkState(key)
 		condition := conditions.Condition(&state, conditionType)
 		if condition == nil {
 			return corev1.ConditionUnknown
 		}
 		return condition.Status
-	}, ReadTimeout, ReadInterval).Should(
-		Equal(conditionStatus),
-		fmt.Sprintf("Actual Conditions:\n%s", conditionsToYaml(state.Status.Conditions)),
-	)
+	}, ReadTimeout, ReadInterval)
 }
 
 func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alpha1.State) AsyncAssertion {

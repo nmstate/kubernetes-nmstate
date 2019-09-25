@@ -42,8 +42,12 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 		})
 		It("should have Available ConditionType set to true", func() {
 			for _, node := range nodes {
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable, corev1.ConditionTrue)
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing, corev1.ConditionFalse)
+				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable).Should(
+					Equal(corev1.ConditionTrue),
+				)
+				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing).Should(
+					Equal(corev1.ConditionFalse),
+				)
 			}
 		})
 	})
@@ -54,8 +58,12 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 		})
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing, corev1.ConditionTrue)
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable, corev1.ConditionFalse)
+				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing).Should(
+					Equal(corev1.ConditionTrue),
+				)
+				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable).Should(
+					Equal(corev1.ConditionFalse),
+				)
 			}
 		})
 	})
