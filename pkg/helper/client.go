@@ -108,17 +108,19 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
-	currentState, err := show()
+	observedStateRaw, err := show()
 	if err != nil {
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
+	observedState := nmstatev1alpha1.State(observedStateRaw)
 
-	filteredState, err := filterOut(nmstatev1alpha1.State(currentState), interfacesFilterGlob)
+	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
 	if err != nil {
-		return fmt.Errorf("error filtering out interfaces from NodeNetworkState: %v", err)
+		fmt.Printf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
+		stateToReport = observedState
 	}
 
-	nodeNetworkState.Status.CurrentState = filteredState
+	nodeNetworkState.Status.CurrentState = stateToReport
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
