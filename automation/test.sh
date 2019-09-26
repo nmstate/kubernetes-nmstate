@@ -8,7 +8,7 @@ teardown() {
     make cluster-down
 }
 
-export KUBEVIRT_PROVIDER=$TARGET
+export KUBEVIRT_PROVIDER=$(echo $TARGET| sed "s/6-.*/6/")
 
 # Make sure that the VM is properly shut down on exit
 trap teardown EXIT SIGINT SIGTERM SIGSTOP

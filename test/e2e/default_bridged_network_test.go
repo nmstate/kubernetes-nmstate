@@ -20,7 +20,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
+var _ = PDescribe("NodeNetworkConfigurationPolicy default bridged network", func() {
 	createBridgeOnTheDefaultInterface := nmstatev1alpha1.State(`interfaces:
   - name: brext
     type: linux-bridge
@@ -142,7 +142,9 @@ func dhcpFlag(node string, name string) bool {
 func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
 	key := types.NamespacedName{Name: nodeName}
 	node := corev1.Node{}
-	err := framework.Global.Client.Get(context.TODO(), key, &node)
+	oneSecondTimeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	err := framework.Global.Client.Get(oneSecondTimeoutCtx, key, &node)
 	if err != nil {
 		return "", err
 	}
@@ -157,8 +159,8 @@ func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
 func waitForNodesReady() {
 	time.Sleep(5 * time.Second)
 	for _, node := range nodes {
-		Eventually(func() (corev1.ConditionStatus, error) {
+		EventuallyWithOffset(1, func() (corev1.ConditionStatus, error) {
 			return nodeReadyConditionStatus(node)
-		}, 60*time.Second, 1*time.Second).Should(Equal(corev1.ConditionTrue))
+		}, 30*time.Minute, 10*time.Second).Should(Equal(corev1.ConditionTrue))
 	}
 }

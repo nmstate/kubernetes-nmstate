@@ -56,6 +56,12 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 		BeforeEach(func() {
 			updateDesiredState(invalidConfig)
 		})
+		AfterEach(func() {
+			updateDesiredState(br1Absent)
+			for _, node := range nodes {
+				interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+			}
+		})
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing).Should(
