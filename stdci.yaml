@@ -1,7 +1,17 @@
 sub-stages:
+  - k8s-1.14.6-1.default-bridge
+  - k8s-1.14.6-2.default-bridge
+  - k8s-1.14.6-3.default-bridge
+  - k8s-1.14.6-4.default-bridge
+  - k8s-1.14.6-5.default-bridge
   - k8s-1.14.6.default-bridge
   - k8s-1.14.6.node-removal
   - k8s-1.14.6
+  - k8s-1.14.6-1
+  - k8s-1.14.6-2
+  - k8s-1.14.6-3
+  - k8s-1.14.6-4
+  - k8s-1.14.6-5
   - okd-4.1.default-bridge
   - okd-4.1
 

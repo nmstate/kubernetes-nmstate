@@ -90,7 +90,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 			resetDesiredStateForNodes()
 		})
 
-		It("should successfully move default IP address on top of the bridge", func() {
+		FIt("should successfully move default IP address on top of the bridge", func() {
 			By("Creating the policy")
 			setDesiredStateWithPolicy("default-network", createBridgeOnTheDefaultInterface)
 
