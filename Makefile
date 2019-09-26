@@ -33,7 +33,7 @@ OPERATOR_SDK ?= build/_output/bin/operator-sdk
 GITHUB_RELEASE ?= build/_output/bin/github-release
 LOCAL_REGISTRY ?= registry:5000
 
-export KUBEVIRT_PROVIDER ?= k8s-1.13.3
+export KUBEVIRT_PROVIDER ?= k8s-1.14.6
 export KUBEVIRT_NUM_NODES ?= 1
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
