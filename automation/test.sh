@@ -16,7 +16,7 @@ trap teardown EXIT SIGINT SIGTERM SIGSTOP
 make cluster-down
 make cluster-up
 make cluster-sync
-test_args="-ginkgo.v -ginkgo.noColor -test.timeout 20m"
+test_args="-ginkgo.noColor"
 skip_tests=""
 
 # FIXME: Delete it when we migrate to okd4 provider, since os-3.11.0 is not
