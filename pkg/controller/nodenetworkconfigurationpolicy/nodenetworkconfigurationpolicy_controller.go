@@ -76,8 +76,7 @@ func forThisNodePredicate(cl client.Client) predicate.Funcs {
 			return nodeSelectorMatchesThisNode(cl, deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, updateEvent.ObjectOld) &&
-				nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew)
+			return nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
 			return nodeSelectorMatchesThisNode(cl, genericEvent.Object)

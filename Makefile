@@ -88,7 +88,7 @@ push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
+	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
 
 test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \
