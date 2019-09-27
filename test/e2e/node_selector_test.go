@@ -7,7 +7,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var _ = FDescribe("NodeSelector", func() {
+var _ = Describe("NodeSelector", func() {
 	br1Up := nmstatev1alpha1.State(`interfaces:
   - name: br1
     type: linux-bridge
