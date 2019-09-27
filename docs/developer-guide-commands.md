@@ -61,11 +61,11 @@ a new version is detrected the cluster command will re-install it.
 
 Use the following commands to control it:
 
-*note:* The default Provider is one node (master + worker) of Kubernetes 1.13.1.
+*note:* The default Provider is one node (master + worker) of Kubernetes 1.14.6.
 
 ```shell
 # Deploy local Kubernetes cluster
-export KUBEVIRT_PROVIDER=k8s-1.13.1 # k8s-1.13.1 for Kubernetes or os-3.11.0 for OpenShift
+export KUBEVIRT_PROVIDER=k8s-1.14.6 # k8s-1.14.6 for Kubernetes or os-3.11.0 for OpenShift
 export KUBEVIRT_NUM_NODES=3 # master + two nodes
 make cluster-up
 

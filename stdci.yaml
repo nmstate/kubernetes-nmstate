@@ -1,5 +1,5 @@
 sub-stages:
-  - k8s-1.13.3
+  - k8s-1.14.6
   - os-3.11.0
 
 runtime_requirements:
