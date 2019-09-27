@@ -9,7 +9,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var _ = Describe("NodeNetworkStateCondition", func() {
+var _ = FDescribe("NodeNetworkStateCondition", func() {
 	var (
 		br1Up = nmstatev1alpha1.State(`interfaces:
   - name: br1
