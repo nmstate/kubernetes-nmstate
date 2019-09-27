@@ -8,7 +8,7 @@ import (
 )
 
 var _ = FDescribe("NodeSelector", func() {
-	br1WithEth1AndEth2 := nmstatev1alpha1.State(`interfaces:
+	br1Up := nmstatev1alpha1.State(`interfaces:
   - name: br1
     type: linux-bridge
     state: up
@@ -17,8 +17,7 @@ var _ = FDescribe("NodeSelector", func() {
         stp:
           enabled: false
       port:
-        - name: eth1
-        - name: eth2
+      - name: eth1
 `)
 	br1Absent := nmstatev1alpha1.State(`interfaces:
 - name: br1
@@ -29,16 +28,16 @@ var _ = FDescribe("NodeSelector", func() {
 
 	Context("when policy is set with node selector not matching any nodes", func() {
 		BeforeEach(func() {
-			setDesiredStateWithPolicyAndNodeSelector("bridge1", br1WithEth1AndEth2, nonexistentNodeSelector)
+			setDesiredStateWithPolicyAndNodeSelector("br1", br1Up, nonexistentNodeSelector)
 		})
 
 		AfterEach(func() {
-			setDesiredStateWithPolicy("bridge1", br1Absent)
+			setDesiredStateWithPolicy("br1", br1Absent)
 			for _, node := range nodes {
 				interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
 			}
 
-			deletePolicy("bridge1")
+			deletePolicy("br1")
 		})
 
 		It("should not update any nodes", func() {
@@ -49,7 +48,7 @@ var _ = FDescribe("NodeSelector", func() {
 
 		Context("and we remove the node selector", func() {
 			BeforeEach(func() {
-				setDesiredStateWithPolicyAndNodeSelector("bridge1", br1WithEth1AndEth2, map[string]string{})
+				setDesiredStateWithPolicyAndNodeSelector("br1", br1Up, map[string]string{})
 			})
 
 			It("should update all nodes", func() {
