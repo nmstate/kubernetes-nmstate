@@ -141,13 +141,14 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
-func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
+func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev1alpha1.State, nodeSelector map[string]string) {
 	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
 	Eventually(func() error {
 		err := framework.Global.Client.Get(context.TODO(), key, &policy)
 		policy.Spec.DesiredState = desiredState
+		policy.Spec.NodeSelector = nodeSelector
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return framework.Global.Client.Create(context.TODO(), &policy, &framework.CleanupOptions{})
@@ -156,6 +157,10 @@ func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) 
 		}
 		return framework.Global.Client.Update(context.TODO(), &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+}
+
+func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
+	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, map[string]string{})
 }
 
 func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
