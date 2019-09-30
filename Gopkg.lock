@@ -1956,6 +1956,7 @@
   input-imports = [
     "github.com/aktau/github-release",
     "github.com/go-openapi/spec",
+    "github.com/gobwas/glob",
     "github.com/onsi/ginkgo",
     "github.com/onsi/ginkgo/extensions/table",
     "github.com/onsi/ginkgo/ginkgo",
@@ -1970,6 +1971,7 @@
     "github.com/spf13/pflag",
     "github.com/tidwall/gjson",
     "golang.org/x/tools/cmd/goimports",
+    "gopkg.in/yaml.v2",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",

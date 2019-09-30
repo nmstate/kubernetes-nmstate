@@ -5,16 +5,31 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	yaml "sigs.k8s.io/yaml"
 
+	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 const nmstateCommand = "nmstatectl"
+
+var (
+	interfacesFilterGlob glob.Glob
+)
+
+func init() {
+	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
+	if !isSet {
+		panic("INTERFACES_FILTER is mandatory")
+	}
+	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
+}
 
 func show(arguments ...string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "show")
@@ -93,13 +108,19 @@ func InitializeNodeNeworkState(client client.Client, nodeName string) error {
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
-	currentState, err := show()
+	observedStateRaw, err := show()
 	if err != nil {
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
+	observedState := nmstatev1alpha1.State(observedStateRaw)
 
-	// Let's update status with current network config from nmstatectl
-	nodeNetworkState.Status.CurrentState = nmstatev1alpha1.State(currentState)
+	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
+	if err != nil {
+		fmt.Printf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
+		stateToReport = observedState
+	}
+
+	nodeNetworkState.Status.CurrentState = stateToReport
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
@@ -142,4 +163,34 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 
 	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
 	return commandOutput, nil
+}
+
+func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glob) (nmstatev1alpha1.State, error) {
+	if interfacesFilterGlob.Match("") {
+		return currentState, nil
+	}
+
+	var state map[string]interface{}
+	err := yaml.Unmarshal([]byte(currentState), &state)
+	if err != nil {
+		return currentState, err
+	}
+
+	interfaces := state["interfaces"]
+	var filteredInterfaces []interface{}
+
+	for _, iface := range interfaces.([]interface{}) {
+		name := iface.(map[string]interface{})["name"]
+		if !interfacesFilterGlob.Match(name.(string)) {
+			filteredInterfaces = append(filteredInterfaces, iface)
+		}
+	}
+
+	state["interfaces"] = filteredInterfaces
+	filteredState, err := yaml.Marshal(state)
+	if err != nil {
+		return currentState, err
+	}
+
+	return filteredState, nil
 }
