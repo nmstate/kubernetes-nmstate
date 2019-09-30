@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os/exec"
 	"strings"
 	"testing"
@@ -57,12 +58,13 @@ func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) erro
 			continue
 		}
 		defer podLogs.Close()
-		_, err = io.Copy(writer, podLogs)
+		rawLogs, err := ioutil.ReadAll(podLogs)
 		if err != nil {
-			io.WriteString(writer, fmt.Sprintf("error in copy information from podLogs to buf: %v\n", err))
+			io.WriteString(writer, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
 			continue
 		}
-
+		formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
+		io.WriteString(writer, formattedLogs)
 	}
 	return nil
 }
