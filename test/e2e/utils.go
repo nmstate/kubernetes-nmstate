@@ -223,7 +223,7 @@ func run(node string, command ...string) (string, error) {
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	err := cmd.Run()
-	GinkgoWriter.Write([]byte(stdout.String() + stderr.String() + "\n"))
+	GinkgoWriter.Write([]byte(fmt.Sprintf("stdout: %.500s...\n, stderr %s\n", stdout.String(), stderr.String())))
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(stdout.String(), "\n")
 	output := strings.Join(outputLines[2:], "\n")
