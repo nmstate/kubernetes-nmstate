@@ -99,6 +99,7 @@ through node state reporting and interface configuration.
 
 - [Report node network state](docs/user-guide-state-reporting.md)
 - [Connect an Linux bridge to a node interface](docs/user-guide-policy-configure-linux-bridge.md)
+- [Configure Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
 
 ## Development and Contributing
 
