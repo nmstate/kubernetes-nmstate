@@ -392,7 +392,7 @@ func vlansCardinality(node string, connection string) AsyncAssertion {
 func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
 		return run(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
-	}, ReadTimeout, ReadTimeout)
+	}, ReadTimeout, ReadInterval)
 }
 
 func conditionsToYaml(conditions []nmstatev1alpha1.NodeNetworkStateCondition) string {
