@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -51,33 +52,59 @@ func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute vlan-filtering: '%v', '%s', '%s'", err, stdout.String(), stderr.String())
+		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", "vlan-filtering", err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
 }
 
-func set(state string) (string, error) {
-	cmd := exec.Command(nmstateCommand, "set")
+func nmstatectl(arguments []string, input string) (string, error) {
+	cmd := exec.Command(nmstateCommand, arguments...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
-	stdin, err := cmd.StdinPipe()
-	if err != nil {
-		return "", fmt.Errorf("failed to create pipe for writing into nmstate: %v", err)
-	}
-	go func() {
-		defer stdin.Close()
-		_, err = io.WriteString(stdin, state)
+	if input != "" {
+		stdin, err := cmd.StdinPipe()
 		if err != nil {
-			fmt.Printf("failed to write state into stdin: %v\n", err)
+			return "", fmt.Errorf("failed to create pipe for writing into %s: %v", nmstateCommand, err)
 		}
-	}()
+		go func() {
+			defer stdin.Close()
+			_, err = io.WriteString(stdin, input)
+			if err != nil {
+				fmt.Printf("failed to write input into stdin: %v\n", err)
+			}
+		}()
 
-	if err = cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute nmstate set: '%v' '%s' '%s'", err, stdout.String(), stderr.String())
 	}
-
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to execute %s %s: '%v' '%s' '%s'", nmstateCommand, strings.Join(arguments, " "), err, stdout.String(), stderr.String())
+	}
 	return stdout.String(), nil
+
+}
+
+func set(state string) (string, error) {
+	output := ""
+	var err error = nil
+	// FIXME: Remove this retries after nmstate team fixes
+	//        https://nmstate.atlassian.net/browse/NMSTATE-247
+	retries := 2
+	for retries > 0 {
+		output, err = nmstatectl([]string{"set", "--no-commit"}, state)
+		if err == nil {
+			break
+		}
+		retries--
+	}
+	return output, err
+}
+
+func rollback() (string, error) {
+	return nmstatectl([]string{"rollback"}, "")
+}
+
+func commit() (string, error) {
+	return nmstatectl([]string{"commit"}, "")
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {
