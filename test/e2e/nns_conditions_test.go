@@ -37,7 +37,7 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 		AfterEach(func() {
 			updateDesiredState(br1Absent)
 			for _, node := range nodes {
-				interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement("br1"))
 			}
 		})
 		It("should have Available ConditionType set to true", func() {

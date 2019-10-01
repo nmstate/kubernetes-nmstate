@@ -216,25 +216,52 @@ func deletePolicy(name string) {
 	Expect(err).ToNot(HaveOccurred())
 }
 
-func run(node string, command ...string) (string, error) {
-	ssh_command := []string{node, "--"}
-	ssh_command = append(ssh_command, command...)
-	cmd := exec.Command("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
-	GinkgoWriter.Write([]byte(strings.Join(ssh_command, " ") + "\n"))
+func run(command string, arguments ...string) (string, error) {
+	cmd := exec.Command(command, arguments...)
+	GinkgoWriter.Write([]byte(command + " " + strings.Join(arguments, " ") + "\n"))
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	err := cmd.Run()
 	GinkgoWriter.Write([]byte(fmt.Sprintf("stdout: %.500s...\n, stderr %s\n", stdout.String(), stderr.String())))
+	return stdout.String(), err
+}
+
+func runAtNode(node string, command ...string) (string, error) {
+	ssh_command := []string{node, "--"}
+	ssh_command = append(ssh_command, command...)
+	output, err := run("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
 	// Remove first two lines from output, ssh.sh add garbage there
-	outputLines := strings.Split(stdout.String(), "\n")
-	output := strings.Join(outputLines[2:], "\n")
+	outputLines := strings.Split(output, "\n")
+	output = strings.Join(outputLines[2:], "\n")
 	return output, err
+}
+
+func kubectl(arguments ...string) (string, error) {
+	return run("./kubevirtci/cluster-up/kubectl.sh", arguments...)
+}
+
+func nmstatePods() ([]string, error) {
+	output, err := kubectl("get", "pod", "-n", namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	names := strings.Split(strings.TrimSpace(output), "\n")
+	return names, err
+}
+
+func runAtPods(arguments ...string) {
+	nmstatePods, err := nmstatePods()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	for _, nmstatePod := range nmstatePods {
+		exec := []string{"exec", "-n", namespace, nmstatePod, "--"}
+		execArguments := append(exec, arguments...)
+		_, err := kubectl(execArguments...)
+		ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	}
 }
 
 func runAtNodes(command ...string) (outputs []string, errs []error) {
 	for _, node := range nodes {
-		output, err := run(node, command...)
+		output, err := runAtNode(node, command...)
 		outputs = append(outputs, output)
 		errs = append(errs, err)
 	}
@@ -316,17 +343,26 @@ func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alph
 		return *desiredStateYaml
 	}, ReadTimeout, ReadInterval)
 }
+func interfacesNameForNode(node string) []string {
+	var currentStateYaml nmstatev1alpha1.State
+	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
 
-func interfacesNameForNode(node string) AsyncAssertion {
+	interfaces := interfaces(currentStateYaml)
+	Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
+
+	return interfacesName(interfaces)
+}
+
+func interfacesNameForNodeEventually(node string) AsyncAssertion {
 	return Eventually(func() []string {
-		var currentStateYaml nmstatev1alpha1.State
-		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
-
-		interfaces := interfaces(currentStateYaml)
-		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
-
-		return interfacesName(interfaces)
+		return interfacesNameForNode(node)
 	}, ReadTimeout, ReadInterval)
+}
+
+func interfacesNameForNodeConsistently(node string) AsyncAssertion {
+	return Consistently(func() []string {
+		return interfacesNameForNode(node)
+	}, 10*time.Second, 1*time.Second)
 }
 
 func interfacesForNode(node string) AsyncAssertion {
@@ -349,7 +385,7 @@ func toUnstructured(y string) interface{} {
 }
 
 func bridgeVlansAtNode(node string) (string, error) {
-	return run(node, "sudo", "bridge", "-j", "vlan", "show")
+	return runAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 
 func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
@@ -391,7 +427,7 @@ func vlansCardinality(node string, connection string) AsyncAssertion {
 
 func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
-		return run(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
+		return runAtNode(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
 	}, ReadTimeout, ReadInterval)
 }
 

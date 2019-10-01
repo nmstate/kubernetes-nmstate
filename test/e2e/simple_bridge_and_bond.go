@@ -112,12 +112,12 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(br1Absent)
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement("br1"))
 				}
 			})
 			It("should have the linux bridge at currentState with vlan_filtering 1", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement("br1"))
+					interfacesNameForNodeEventually(node).Should(ContainElement("br1"))
 					bridgeDescription(node, "br1").Should(ContainSubstring("vlan_filtering 1"))
 				}
 			})
@@ -129,12 +129,12 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(br1Absent)
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement("br1"))
 				}
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement("br1"))
+					interfacesNameForNodeEventually(node).Should(ContainElement("br1"))
 					vlansCardinality(node, "br1").Should(Equal(0))
 					hasVlans(node, "eth1", 2, 4094).Should(Succeed())
 					hasVlans(node, "eth2", 2, 4094).Should(Succeed())
@@ -148,7 +148,7 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(bond1Absent)
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement("bond1"))
 				}
 			})
 			It("should have the bond interface at currentState", func() {
@@ -173,8 +173,8 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(br1AndBond1Absent)
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
-					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement("bond1"))
 				}
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
@@ -213,7 +213,7 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(bond1Absent)
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement("bond1"))
 				}
 			})
 			It("should have the bond interface with 2 slaves at currentState", func() {
