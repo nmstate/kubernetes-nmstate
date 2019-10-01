@@ -42,19 +42,6 @@ func bondUp(bondName string) nmstatev1alpha1.State {
 `, bondName))
 }
 
-func brUpNoPorts(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
-  - name: %s
-    type: linux-bridge
-    state: up
-    bridge:
-      options:
-        stp:
-          enabled: false
-      port: []
-`, bridgeName))
-}
-
 func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: %s
@@ -108,13 +95,13 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(brAbsent(bridge1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
 				resetDesiredStateForNodes()
 			})
 			It("should have the linux bridge at currentState with vlan_filtering 1", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 1"))
 				}
 			})
@@ -126,13 +113,13 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(brAbsent(bridge1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
 				resetDesiredStateForNodes()
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					vlansCardinality(node, bridge1).Should(Equal(0))
 					hasVlans(node, "eth1", 2, 4094).Should(Succeed())
 					hasVlans(node, "eth2", 2, 4094).Should(Succeed())
@@ -146,7 +133,7 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(bondAbsent(bond1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement(bond1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
 				resetDesiredStateForNodes()
 			})
@@ -172,8 +159,8 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(brAndBondAbsent(bridge1, bond1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
-					interfacesNameForNode(node).ShouldNot(ContainElement(bond1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
 				resetDesiredStateForNodes()
 			})
@@ -213,7 +200,7 @@ var _ = Describe("NodeNetworkState", func() {
 			AfterEach(func() {
 				updateDesiredState(bondAbsent(bond1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement(bond1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
 				resetDesiredStateForNodes()
 			})

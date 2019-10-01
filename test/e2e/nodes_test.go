@@ -9,7 +9,7 @@ var _ = Describe("Nodes", func() {
 	Context("when are up", func() {
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
-				interfacesNameForNode(node).Should(ContainElement("eth0"))
+				interfacesNameForNodeEventually(node).Should(ContainElement("eth0"))
 			}
 		})
 		Context("and node network state is deleted", func() {
@@ -18,7 +18,7 @@ var _ = Describe("Nodes", func() {
 			})
 			It("should recreate it with currentState", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement("eth0"))
+					interfacesNameForNodeEventually(node).Should(ContainElement("eth0"))
 				}
 			})
 		})
@@ -34,7 +34,7 @@ var _ = Describe("Nodes", func() {
 			})
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement(expectedDummyName))
+					interfacesNameForNodeEventually(node).Should(ContainElement(expectedDummyName))
 				}
 			})
 		})

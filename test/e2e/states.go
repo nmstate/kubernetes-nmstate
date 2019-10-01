@@ -25,3 +25,16 @@ func brAbsent(bridgeName string) nmstatev1alpha1.State {
     state: absent
 `, bridgeName))
 }
+
+func brUpNoPorts(bridgeName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port: []
+`, bridgeName))
+}
