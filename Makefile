@@ -145,8 +145,17 @@ cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
 	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
+<<<<<<< HEAD
 	# Set debug verbosity level for logs when using cluster-sync
 	sed "s#--v=production#--v=debug#" $(local_handler_manifest) | $(KUBECTL) create -f -
+=======
+	$(KUBECTL) create -f $(local_handler_manifest)
+	until [[ \
+		$$($(KUBECTL) get daemonset -n nmstate nmstate-handler -o=jsonpath='{.status.desiredNumberScheduled}') \
+		-eq \
+		$$($(KUBECTL) get daemonset -n nmstate nmstate-handler -o=jsonpath='{.status.numberAvailable}') \
+	]]; do sleep 1; done
+>>>>>>> Added waiting for cluster to be ready in makefile.
 
 cluster-sync: cluster-sync-handler
 
