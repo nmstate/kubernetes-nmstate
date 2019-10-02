@@ -121,7 +121,9 @@ var _ = Describe("NodeNetworkState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					vlansCardinality(node, bridge1).Should(Equal(0))
+					hasUntaggedVLAN(node, "eth1", 1).Should(Succeed())
 					hasVlans(node, "eth1", 2, 4094).Should(Succeed())
+					hasUntaggedVLAN(node, "eth2", 1).Should(Succeed())
 					hasVlans(node, "eth2", 2, 4094).Should(Succeed())
 				}
 			})
@@ -188,6 +190,7 @@ var _ = Describe("NodeNetworkState", func() {
 
 					hasVlans(node, bond1, 2, 4094).Should(Succeed())
 					vlansCardinality(node, bridge1).Should(Equal(0))
+					hasUntaggedVLAN(node, bond1, 1).Should(Succeed())
 					vlansCardinality(node, "eth1").Should(Equal(0))
 					vlansCardinality(node, "eth2").Should(Equal(0))
 				}
