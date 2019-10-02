@@ -90,21 +90,13 @@ func set(state string) (string, error) {
 	//        https://nmstate.atlassian.net/browse/NMSTATE-247
 	retries := 2
 	for retries > 0 {
-		output, err = nmstatectl([]string{"set", "--no-commit"}, state)
+		output, err = nmstatectl([]string{"set"}, state)
 		if err == nil {
 			break
 		}
 		retries--
 	}
 	return output, err
-}
-
-func rollback() (string, error) {
-	return nmstatectl([]string{"rollback"}, "")
-}
-
-func commit() (string, error) {
-	return nmstatectl([]string{"commit"}, "")
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {

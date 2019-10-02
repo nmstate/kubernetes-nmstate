@@ -34,6 +34,11 @@ import (
 const ReadTimeout = 120 * time.Second
 const ReadInterval = 1 * time.Second
 
+var (
+	bridgeCounter = 0
+	bondConunter  = 0
+)
+
 func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) error {
 	if framework.Global.LocalOperator {
 		return nil
@@ -184,6 +189,8 @@ func updateDesiredState(desiredState nmstatev1alpha1.State) {
 	}
 }
 
+// TODO: After we implement policy delete (it will cleanUp desiredState) we have
+//       to remove this
 func resetDesiredStateForNodes() {
 	for _, node := range nodes {
 		updateDesiredStateAtNode(node, nmstatev1alpha1.State(""))
@@ -401,4 +408,14 @@ func conditionsToYaml(conditions []nmstatev1alpha1.NodeNetworkStateCondition) st
 		panic(err)
 	}
 	return string(manifest)
+}
+
+func nextBridge() string {
+	bridgeCounter++
+	return fmt.Sprintf("br%d", bridgeCounter)
+}
+
+func nextBond() string {
+	bridgeCounter++
+	return fmt.Sprintf("bond%d", bondConunter)
 }

@@ -1,36 +1,36 @@
 package e2e
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var _ = Describe("NodeNetworkState", func() {
-	var (
-		br1Absent = nmstatev1alpha1.State(`interfaces:
-  - name: br1
-    type: linux-bridge
-    state: absent
-`)
-
-		bond1Absent = nmstatev1alpha1.State(`interfaces:
-  - name: bond1
+func bondAbsent(bondName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
     type: bond
     state: absent
-`)
-		br1AndBond1Absent = nmstatev1alpha1.State(`interfaces:
-  - name: br1
+`, bondName))
+}
+
+func brAndBondAbsent(bridgeName string, bondName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
     type: linux-bridge
     state: absent
-  - name: bond1
+  - name: %s
     type: bond
     state: absent
-`)
+`, bridgeName, bondName))
+}
 
-		bond1Up = nmstatev1alpha1.State(`interfaces:
-  - name: bond1
+func bondUp(bondName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
     type: bond
     state: up
     link-aggregation:
@@ -39,10 +39,12 @@ var _ = Describe("NodeNetworkState", func() {
         - eth1
       options:
         miimon: '120'
-`)
+`, bondName))
+}
 
-		br1UpNoPorts = nmstatev1alpha1.State(`interfaces:
-  - name: br1
+func brUpNoPorts(bridgeName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
     type: linux-bridge
     state: up
     bridge:
@@ -50,23 +52,12 @@ var _ = Describe("NodeNetworkState", func() {
         stp:
           enabled: false
       port: []
-`)
+`, bridgeName))
+}
 
-		br1Up = nmstatev1alpha1.State(`interfaces:
-  - name: br1
-    type: linux-bridge
-    state: up
-    bridge:
-      options:
-        stp:
-          enabled: false
-      port:
-        - name: eth1
-        - name: eth2
-`)
-
-		br1WithBond1Up = nmstatev1alpha1.State(`interfaces:
-  - name: bond1
+func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
     type: bond
     state: up
     link-aggregation:
@@ -75,7 +66,7 @@ var _ = Describe("NodeNetworkState", func() {
         - eth1
       options:
         miimon: '120'
-  - name: br1
+  - name: %s
     type: linux-bridge
     state: up
     bridge:
@@ -83,11 +74,13 @@ var _ = Describe("NodeNetworkState", func() {
         stp:
           enabled: false
       port:
-        - name: bond1
-`)
+        - name: %s
+`, bondName, bridgeName, bondName))
+}
 
-		bond1UpWithEth1AndEth2 = nmstatev1alpha1.State(`interfaces:
-- name: bond1
+func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+- name: %s
   type: bond
   state: up
   ipv4:
@@ -102,40 +95,45 @@ var _ = Describe("NodeNetworkState", func() {
     slaves:
     - eth1
     - eth2
-`)
-	)
+`, bondName))
+}
+
+var _ = Describe("NodeNetworkState", func() {
+	var ()
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
-				updateDesiredState(br1UpNoPorts)
+				updateDesiredState(brUpNoPorts(bridge1))
 			})
 			AfterEach(func() {
-				updateDesiredState(br1Absent)
+				updateDesiredState(brAbsent(bridge1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
 				}
+				resetDesiredStateForNodes()
 			})
 			It("should have the linux bridge at currentState with vlan_filtering 1", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement("br1"))
-					bridgeDescription(node, "br1").Should(ContainSubstring("vlan_filtering 1"))
+					interfacesNameForNode(node).Should(ContainElement(bridge1))
+					bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 1"))
 				}
 			})
 		})
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
-				updateDesiredState(br1Up)
+				updateDesiredState(brUp(bridge1))
 			})
 			AfterEach(func() {
-				updateDesiredState(br1Absent)
+				updateDesiredState(brAbsent(bridge1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
 				}
+				resetDesiredStateForNodes()
 			})
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement("br1"))
-					vlansCardinality(node, "br1").Should(Equal(0))
+					interfacesNameForNode(node).Should(ContainElement(bridge1))
+					vlansCardinality(node, bridge1).Should(Equal(0))
 					hasVlans(node, "eth1", 2, 4094).Should(Succeed())
 					hasVlans(node, "eth2", 2, 4094).Should(Succeed())
 				}
@@ -143,17 +141,18 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
-				updateDesiredState(bond1Up)
+				updateDesiredState(bondUp(bond1))
 			})
 			AfterEach(func() {
-				updateDesiredState(bond1Absent)
+				updateDesiredState(bondAbsent(bond1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement(bond1))
 				}
+				resetDesiredStateForNodes()
 			})
 			It("should have the bond interface at currentState", func() {
 				var (
-					expectedBond = interfaceByName(interfaces(bond1Up), "bond1")
+					expectedBond = interfaceByName(interfaces(bondUp(bond1)), bond1)
 				)
 
 				for _, node := range nodes {
@@ -168,20 +167,21 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
-				updateDesiredState(br1WithBond1Up)
+				updateDesiredState(brWithBondUp(bridge1, bond1))
 			})
 			AfterEach(func() {
-				updateDesiredState(br1AndBond1Absent)
+				updateDesiredState(brAndBondAbsent(bridge1, bond1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("br1"))
-					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
+					interfacesNameForNode(node).ShouldNot(ContainElement(bond1))
 				}
+				resetDesiredStateForNodes()
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
 				var (
-					expectedInterfaces = interfaces(br1WithBond1Up)
-					expectedBond       = interfaceByName(expectedInterfaces, "bond1")
-					expectedBridge     = interfaceByName(expectedInterfaces, "br1")
+					expectedInterfaces = interfaces(brWithBondUp(bridge1, bond1))
+					expectedBond       = interfaceByName(expectedInterfaces, bond1)
+					expectedBridge     = interfaceByName(expectedInterfaces, bridge1)
 				)
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
@@ -196,11 +196,11 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("type", expectedBridge["type"]),
 							HaveKeyWithValue("state", expectedBridge["state"]),
 							HaveKeyWithValue("bridge", HaveKeyWithValue("port",
-								ContainElement(HaveKeyWithValue("name", "bond1")))),
+								ContainElement(HaveKeyWithValue("name", bond1)))),
 						))))
 
-					hasVlans(node, "bond1", 2, 4094).Should(Succeed())
-					vlansCardinality(node, "br1").Should(Equal(0))
+					hasVlans(node, bond1, 2, 4094).Should(Succeed())
+					vlansCardinality(node, bridge1).Should(Equal(0))
 					vlansCardinality(node, "eth1").Should(Equal(0))
 					vlansCardinality(node, "eth2").Should(Equal(0))
 				}
@@ -208,17 +208,18 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with bond interface that has 2 eths as slaves", func() {
 			BeforeEach(func() {
-				updateDesiredState(bond1UpWithEth1AndEth2)
+				updateDesiredState(bondUpWithEth1AndEth2(bond1))
 			})
 			AfterEach(func() {
-				updateDesiredState(bond1Absent)
+				updateDesiredState(bondAbsent(bond1))
 				for _, node := range nodes {
-					interfacesNameForNode(node).ShouldNot(ContainElement("bond1"))
+					interfacesNameForNode(node).ShouldNot(ContainElement(bond1))
 				}
+				resetDesiredStateForNodes()
 			})
 			It("should have the bond interface with 2 slaves at currentState", func() {
 				var (
-					expectedBond  = interfaceByName(interfaces(bond1UpWithEth1AndEth2), "bond1")
+					expectedBond  = interfaceByName(interfaces(bondUpWithEth1AndEth2(bond1)), bond1)
 					expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
 				)
 

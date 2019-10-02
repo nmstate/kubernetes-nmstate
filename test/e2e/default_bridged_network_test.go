@@ -87,6 +87,9 @@ var _ = PDescribe("NodeNetworkConfigurationPolicy default bridged network", func
 
 			By("Remove the policy")
 			deletePolicy("default-network")
+
+			By("Reset desired state at all nodes")
+			resetDesiredStateForNodes()
 		})
 
 		It("should successfully move default IP address on top of the bridge", func() {
