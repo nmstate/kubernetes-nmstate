@@ -19,6 +19,7 @@ import (
 )
 
 const nmstateCommand = "nmstatectl"
+const vlanFilteringCommand = "vlan-filtering"
 
 var (
 	interfacesFilterGlob glob.Glob
@@ -47,12 +48,12 @@ func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 	command := []string{bridgeName}
 	command = append(command, ports...)
 
-	cmd := exec.Command("vlan-filtering", command...)
+	cmd := exec.Command(vlanFilteringCommand, command...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", "vlan-filtering", err, stdout.String(), stderr.String())
+		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", vlanFilteringCommand, err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
 }
@@ -90,13 +91,22 @@ func set(state string) (string, error) {
 	//        https://nmstate.atlassian.net/browse/NMSTATE-247
 	retries := 2
 	for retries > 0 {
-		output, err = nmstatectl([]string{"set"}, state)
+		output, err = nmstatectl([]string{"set", "--no-commit"}, state)
 		if err == nil {
 			break
 		}
 		retries--
 	}
 	return output, err
+}
+
+func commit() (string, error) {
+	return nmstatectl([]string{"commit"}, "")
+}
+
+func rollback(cause error) error {
+	_, err := nmstatectl([]string{"rollback"}, "")
+	return fmt.Errorf("rollback cause: %v, rollback error: %v", cause, err)
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {
@@ -164,11 +174,9 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	// we have to enforce it at the desiredState bridges and outbound ports
 	// they will be configured with vlan_filtering 1 and all the vlan id range
 	// set
-	// TODO: After implementing commit/rollack from nmstate we have to
-	//       rollback if vlanfiltering fails
 	bridgesUpWithPorts, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
 	if err != nil {
-		return "", fmt.Errorf("error retrieving up bridges from desired state: %v", err)
+		return "", rollback(fmt.Errorf("error retrieving up bridges from desired state"))
 	}
 
 	commandOutput := ""
@@ -176,10 +184,14 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
 		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
 		if err != nil {
-			return commandOutput, err
+			return commandOutput, rollback(err)
 		}
 	}
 
+	_, err = commit()
+	if err != nil {
+		return commandOutput, rollback(err)
+	}
 	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
 	return commandOutput, nil
 }

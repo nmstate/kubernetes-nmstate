@@ -27,7 +27,7 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 		AfterEach(func() {
 			updateDesiredState(brAbsent(bridge1))
 			for _, node := range nodes {
-				interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()

@@ -16,7 +16,7 @@ var _ = Describe("NodeSelector", func() {
 		AfterEach(func() {
 			setDesiredStateWithPolicy(bridge1, brAbsent(bridge1))
 			for _, node := range nodes {
-				interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
 
 			deletePolicy(bridge1)
@@ -25,7 +25,7 @@ var _ = Describe("NodeSelector", func() {
 
 		It("should not update any nodes", func() {
 			for _, node := range nodes {
-				interfacesNameForNode(node).ShouldNot(ContainElement(bridge1))
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
 		})
 
@@ -36,7 +36,7 @@ var _ = Describe("NodeSelector", func() {
 
 			It("should update all nodes", func() {
 				for _, node := range nodes {
-					interfacesNameForNode(node).Should(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 				}
 			})
 		})
