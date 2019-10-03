@@ -23,6 +23,8 @@ var (
 	namespace string
 	nodes     []string
 	startTime time.Time
+	bond1     string
+	bridge1   string
 )
 
 var _ = BeforeSuite(func() {
@@ -52,6 +54,8 @@ func TestE2E(tapi *testing.T) {
 }
 
 var _ = BeforeEach(func() {
+	bond1 = nextBond()
+	bridge1 = nextBridge()
 	_, namespace = prepare(t)
 	startTime = time.Now()
 })
