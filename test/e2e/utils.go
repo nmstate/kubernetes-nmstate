@@ -389,6 +389,32 @@ func bridgeVlansAtNode(node string) (string, error) {
 	return runAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 
+func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
+	return Eventually(func() []string {
+		By("Getting vlans")
+		bridgeVlans, err := bridgeVlansAtNode(node)
+		if err != nil {
+			return []string{}
+		}
+
+		parsedBridgeVlans := gjson.Parse(bridgeVlans)
+
+		vlanFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).flags", connection, vlan)
+
+		vlanFlags := parsedBridgeVlans.Get(vlanFlagsFilter)
+		if !vlanFlags.Exists() {
+			return []string{}
+		}
+
+		matchingVLANFlags := []string{}
+		for _, flag := range vlanFlags.Array() {
+			matchingVLANFlags = append(matchingVLANFlags, flag.String())
+		}
+
+		return matchingVLANFlags
+	}, ReadTimeout, ReadInterval)
+}
+
 func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
 
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
