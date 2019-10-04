@@ -411,17 +411,6 @@ func hasUntaggedVLAN(node string, connection string, vlan int) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
-/*
-{
-    "eth1": [{
-            "vlan": 1,
-            "flags": ["PVID","Egress Untagged"
-            ]
-        },{
-            "vlan": 2
-        },{
-*/
-
 func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
 
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
