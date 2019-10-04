@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml"
 
+	"github.com/tidwall/gjson"
+
 	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -159,6 +161,34 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	return nil
 }
 
+func ping(target string) (string, error) {
+	cmd := exec.Command("ping", "-c", "3", target)
+	var outputBuffer bytes.Buffer
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
+	return outputBuffer.String(), cmd.Run()
+}
+
+func defaultGw() (string, error) {
+	observedStateRaw, err := show()
+	if err != nil {
+		return "", fmt.Errorf("error running nmstatectl show: %v", err)
+	}
+
+	currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
+	if err != nil {
+		return "", fmt.Errorf("Impossible to convert current state to JSON")
+	}
+
+	defaultGw := gjson.ParseBytes([]byte(currentState)).
+		Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
+	if defaultGw == "" {
+		return "", fmt.Errorf("Impossible to retrieve default gw")
+	}
+
+	return defaultGw, nil
+}
+
 func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (string, error) {
 	desiredState := string(nodeNetworkState.Spec.DesiredState)
 	if len(desiredState) == 0 {
@@ -188,10 +218,21 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 		}
 	}
 
+	defaultGw, err := defaultGw()
+	if err != nil {
+		return commandOutput, rollback(err)
+	}
+
+	pingOutput, err := ping(defaultGw)
+	if err != nil {
+		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration: %v", err))
+	}
+
 	_, err = commit()
 	if err != nil {
 		return commandOutput, rollback(err)
 	}
+
 	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
 	return commandOutput, nil
 }
