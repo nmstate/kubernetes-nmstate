@@ -21,7 +21,7 @@ import (
 )
 
 // FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
-var _ = PDescribe("NodeNetworkConfigurationPolicy default bridged network", func() {
+var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
 	createBridgeOnTheDefaultInterface := nmstatev1alpha1.State(`interfaces:
   - name: brext
     type: linux-bridge
