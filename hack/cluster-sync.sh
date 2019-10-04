@@ -7,7 +7,7 @@ ${KUBECTL} delete --ignore-not-found -f ${local_handler_manifest}
 sed "s#--v=production#--v=debug#" $(local_handler_manifest) | $(KUBECTL) create -f -
 
 desiredNumberScheduled="$(${KUBECTL} get daemonset -n nmstate nmstate-handler -o=jsonpath='{.status.desiredNumberScheduled}')"
-for i in {60..0}; do
+for i in {300..0}; do
 	if [ $desiredNumberScheduled == "$(${KUBECTL} get daemonset -n nmstate nmstate-handler -o=jsonpath='{.status.numberAvailable}')" ]; then
 		echo "nmstate-handler DS is ready"
 		break
@@ -18,5 +18,5 @@ for i in {60..0}; do
 		exit 1
 	fi
 
-	sleep 5;
+	sleep 1
 done
