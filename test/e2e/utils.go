@@ -389,25 +389,29 @@ func bridgeVlansAtNode(node string) (string, error) {
 	return runAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 
-func hasUntaggedVLAN(node string, connection string, vlan int) AsyncAssertion {
-	return Eventually(func() error {
+func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
+	return Eventually(func() []string {
 		By("Getting vlans")
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
-			return err
+			return []string{}
 		}
 
 		parsedBridgeVlans := gjson.Parse(bridgeVlans)
 
-		flags := "[\"PVID\",\"Egress Untagged\"]"
-		matchingVLANFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).#(flags==%s)", connection, vlan, flags)
+		vlanFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).flags", connection, vlan)
 
-		matchingVLANFlags := parsedBridgeVlans.Get(matchingVLANFlagsFilter)
-		if !matchingVLANFlags.Exists() {
-			return fmt.Errorf("bridge connection %s has no vlan %d with flags matching %s , obtainedVlans: \n %s", connection, vlan, flags, bridgeVlans)
+		vlanFlags := parsedBridgeVlans.Get(vlanFlagsFilter)
+		if !vlanFlags.Exists() {
+			return []string{}
 		}
 
-		return nil
+		matchingVLANFlags := []string{}
+		for _, flag := range vlanFlags.Array() {
+			matchingVLANFlags = append(matchingVLANFlags, flag.String())
+		}
+
+		return matchingVLANFlags
 	}, ReadTimeout, ReadInterval)
 }
 
