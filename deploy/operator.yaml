@@ -27,6 +27,8 @@ spec:
           effect: NoSchedule
       containers:
         - name: nmstate-handler
+          args:
+          - --v=production
           # Replace this with the built image name
           image: REPLACE_IMAGE
           imagePullPolicy: Always

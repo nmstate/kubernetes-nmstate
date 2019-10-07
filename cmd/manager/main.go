@@ -39,10 +39,12 @@ func printVersion() {
 }
 
 func main() {
+	var logType string
+
 	// Add the zap logger flag set to the CLI. The flag set must
 	// be added before calling pflag.Parse().
 	pflag.CommandLine.AddFlagSet(zap.FlagSet())
-
+	pflag.StringVar(&logType, "v", "production", "Log type (debug/production).")
 	// Add flags registered by imported packages (e.g. glog and
 	// controller-runtime)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -57,7 +59,11 @@ func main() {
 	// implementing the logr.Logger interface. This logger will
 	// be propagated through the whole operator, generating
 	// uniform and structured logs.
-	logf.SetLogger(zap.Logger())
+	if logType == "debug" {
+		logf.SetLogger(logf.ZapLogger(true))
+	} else {
+		logf.SetLogger(logf.ZapLogger(false))
+	}
 
 	printVersion()
 
