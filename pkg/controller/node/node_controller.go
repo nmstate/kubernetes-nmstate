@@ -88,7 +88,7 @@ type ReconcileNode struct {
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling Node")
+	reqLogger.V(1).Info("Reconciling Node")
 
 	// Fetch the Node instance
 	instance := &corev1.Node{}
