@@ -1,13 +1,14 @@
 #!/bin/bash -xe
 
 main() {
-    TARGET="$0"
-    TARGET="${TARGET#./}"
+    export SCRIPT_NAME="$0"
+
+    TARGET="${SCRIPT_NAME#./}"
     TARGET="${TARGET%.*}"
     TARGET="${TARGET#*.}"
+    TARGET="${TARGET//[.]default-bridge/}"
     echo "TARGET=$TARGET"
     export TARGET
-
     echo "Setup Go paths"
     cd ..
     export GOROOT=/usr/local/go

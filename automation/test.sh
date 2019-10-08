@@ -18,11 +18,12 @@ make cluster-up
 make cluster-sync
 test_args="-ginkgo.noColor"
 skip_tests=""
+skip_tests=""
 
-# FIXME: Delete it when we migrate to okd4 provider, since os-3.11.0 is not
-#        working alright I we don't want to debug not supported providers.
-if [[ $KUBEVIRT_PROVIDER =~ os- ]]; then
-    skip_tests="move.*default.*IP"
+if [[ $SCRIPT_NAME =~ default-bridge ]]; then
+    focus_test=".*move.*default.*IP.*"
+else
+    skip_tests=".*move.*default.*IP.*"
 fi
 
-make E2E_TEST_EXTRA_ARGS="$test_args" E2E_TEST_SKIP="$skip_tests" test/e2e
+make E2E_TEST_EXTRA_ARGS="$test_args" E2E_TEST_FOCUS="$focus_tests" E2E_TEST_SKIP="$skip_tests" test/e2e

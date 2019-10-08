@@ -1,4 +1,5 @@
 sub-stages:
+  - k8s-1.14.6.default-bridge
   - k8s-1.14.6
   - os-3.11.0
 
