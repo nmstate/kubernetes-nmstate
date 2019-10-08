@@ -180,7 +180,7 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 		}
 		state.Spec.DesiredState = desiredState
 		return framework.Global.Client.Update(context.TODO(), &state)
-	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), string(desiredState))
 }
 
 func updateDesiredState(desiredState nmstatev1alpha1.State) {
@@ -315,7 +315,6 @@ func deleteConnectionAtNodes(name string) []error {
 }
 
 func interfaces(state nmstatev1alpha1.State) []interface{} {
-	By("unmarshal state yaml into unstructured golang")
 	var stateUnstructured map[string]interface{}
 	err := yaml.Unmarshal(state, &stateUnstructured)
 	Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", state)
@@ -474,4 +473,22 @@ func nextBridge() string {
 func nextBond() string {
 	bridgeCounter++
 	return fmt.Sprintf("bond%d", bondConunter)
+}
+
+func currentStateJSON(node string) []byte {
+	key := types.NamespacedName{Name: node}
+	currentState := nodeNetworkState(key).Status.CurrentState
+	currentStateJson, err := yaml.YAMLToJSON([]byte(currentState))
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	return currentStateJson
+}
+
+func dhcpFlag(node string, name string) bool {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.dhcp", name)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
+}
+
+func ipv4Address(node string, name string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", name)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }

@@ -1,6 +1,6 @@
 FROM fedora:30
 
-RUN sudo dnf install -y nmstate iproute && \
+RUN sudo dnf install -y nmstate iproute iputils && \
     sudo dnf clean all
 
 # TODO: Delete this line after we update nmstate to include the change

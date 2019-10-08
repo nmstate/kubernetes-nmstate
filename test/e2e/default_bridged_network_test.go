@@ -2,15 +2,12 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/tidwall/gjson"
-
-	yaml "sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -118,29 +115,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 	})
 })
 
-func currentStateJSON(node string) []byte {
-	key := types.NamespacedName{Name: node}
-	currentState := nodeNetworkState(key).Status.CurrentState
-	currentStateJson, err := yaml.YAMLToJSON([]byte(currentState))
-	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	return currentStateJson
-}
-
-func ipv4Address(node string, name string) string {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", name)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
-}
-
 func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	return Eventually(func() string {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
-}
-
-func dhcpFlag(node string, name string) bool {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.dhcp", name)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
 
 func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
