@@ -52,7 +52,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return nmstate.EventIsForThisNode(createEvent.Meta)
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
-			return false // TODO: implement delete
+			return false
 		},
 		UpdateFunc: func(event.UpdateEvent) bool {
 			return false
@@ -104,13 +104,12 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		return reconcile.Result{}, err
 	}
 
-	//TODO: Manage deletes
 	_, err = nmstate.GetNodeNetworkState(r.client, request.Name)
 	if err != nil {
 		if !errors.IsNotFound(err) {
 			return reconcile.Result{}, fmt.Errorf("error at node reconcile accessing NodeNetworkState: %v", err)
 		} else {
-			err = nmstate.InitializeNodeNeworkState(r.client, request.Name)
+			err = nmstate.InitializeNodeNeworkState(r.client, instance, r.scheme)
 			if err != nil {
 				return reconcile.Result{}, fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
 			}
