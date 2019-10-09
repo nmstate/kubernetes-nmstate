@@ -39,11 +39,11 @@ export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
 KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
-KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
+export KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
 CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
 CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
 CLI ?= $(CLUSTER_DIR)/cli.sh
-SSH ?= $(CLUSTER_DIR)/ssh.sh
+export SSH ?= $(CLUSTER_DIR)/ssh.sh
 
 install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
@@ -139,14 +139,8 @@ cluster-sync-resources: $(KUBECTL)
 cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
 	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
 				   make push-handler
-	# Temporary until image is updated with provisioner that sets this field
-	# This field is required by buildah tool
-	$(SSH) node01 'sudo sysctl -w user.max_user_namespaces=1024'
-	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
-	$(KUBECTL) apply -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
-	$(KUBECTL) delete --ignore-not-found -f $(local_handler_manifest)
-	# Set debug verbosity level for logs when using cluster-sync
-	sed "s#--v=production#--v=debug#" $(local_handler_manifest) | $(KUBECTL) create -f -
+	local_handler_manifest=$(local_handler_manifest) ./hack/cluster-sync.sh
+
 
 cluster-sync: cluster-sync-handler
 
