@@ -74,7 +74,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 			for _, node := range nodes {
 				Eventually(func() string {
 					return ipv4Address(node, "eth0")
-				}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), "Interface eth0 address is not the original one")
+				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), "Interface eth0 address is not the original one")
 			}
 
 			By("Check eth0 is back as the default route interface")

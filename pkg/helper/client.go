@@ -8,9 +8,11 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	yaml "sigs.k8s.io/yaml"
 
@@ -161,12 +163,20 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	return nil
 }
 
-func ping(target string) (string, error) {
-	cmd := exec.Command("ping", "-c", "3", target)
-	var outputBuffer bytes.Buffer
-	cmd.Stdout = &outputBuffer
-	cmd.Stderr = &outputBuffer
-	return outputBuffer.String(), cmd.Run()
+func ping(target string, timeout time.Duration) (string, error) {
+	output := ""
+	return output, wait.PollImmediate(1*time.Second, timeout, func() (bool, error) {
+		cmd := exec.Command("ping", "-c", "1", target)
+		var outputBuffer bytes.Buffer
+		cmd.Stdout = &outputBuffer
+		cmd.Stderr = &outputBuffer
+		err := cmd.Run()
+		output = fmt.Sprintf("cmd output: '%s'", outputBuffer.String())
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	})
 }
 
 func defaultGw() (string, error) {
@@ -223,14 +233,21 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 		return commandOutput, rollback(err)
 	}
 
-	pingOutput, err := ping(defaultGw)
+	currentState, err := show()
 	if err != nil {
-		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration: %v", err))
+		return "", rollback(err)
 	}
 
-	_, err = commit()
+	// TODO: Make ping timeout configurable with a config map
+	pingOutput, err := ping(defaultGw, 120*time.Second)
 	if err != nil {
-		return commandOutput, rollback(err)
+		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+	}
+
+	commitOutput, err := commit()
+	if err != nil {
+		// We cannot rollback if commit fails, just return the error
+		return commitOutput, err
 	}
 
 	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)

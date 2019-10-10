@@ -193,7 +193,7 @@ func updateDesiredState(desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(node, nmstatev1alpha1.State(""))
+		updateDesiredStateAtNode(node, ethernetNicUp("eth0"))
 	}
 }
 
@@ -363,6 +363,12 @@ func interfacesNameForNodeEventually(node string) AsyncAssertion {
 	return Eventually(func() []string {
 		return interfacesNameForNode(node)
 	}, ReadTimeout, ReadInterval)
+}
+
+func interfacesNameForNodeConsistently(node string) AsyncAssertion {
+	return Consistently(func() []string {
+		return interfacesNameForNode(node)
+	}, 5*time.Second, 1*time.Second)
 }
 
 func interfacesForNode(node string) AsyncAssertion {

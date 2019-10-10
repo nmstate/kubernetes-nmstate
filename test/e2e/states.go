@@ -6,6 +6,14 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
+func ethernetNicUp(nicName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+`, nicName))
+}
+
 func brUp(bridgeName string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: %s

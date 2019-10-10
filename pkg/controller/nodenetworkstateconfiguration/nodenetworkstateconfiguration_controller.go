@@ -200,14 +200,14 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
 	if err != nil {
-		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %v", err)
+		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %s, %v", nmstateOutput, err)
 
 		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
 		if retryErr != nil {
 			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
 		}
-
-		return reconcile.Result{}, errmsg
+		reqLogger.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
+		return reconcile.Result{}, nil
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 

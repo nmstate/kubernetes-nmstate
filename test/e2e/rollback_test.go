@@ -2,9 +2,13 @@ package e2e
 
 import (
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -30,6 +34,13 @@ routes:
 }
 
 var _ = Describe("rollback", func() {
+	BeforeEach(func() {
+		By("Check NodeNetworkState is not at failing condition")
+		for _, node := range nodes {
+			nodeNetworkStateFailingConditionStatusEventually(node).
+				Should(Equal(corev1.ConditionFalse), "NodeNetworkState should not be Failing before test")
+		}
+	})
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
@@ -42,16 +53,20 @@ var _ = Describe("rollback", func() {
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
+			resetDesiredStateForNodes()
 		})
 		It("should rollback failed state configuration", func() {
 			updateDesiredState(brUpNoPorts(bridge1))
 			for _, node := range nodes {
+				By("Wait for reconcile to fail")
+				nodeNetworkStateFailingConditionStatusEventually(node).
+					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
+
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-				By("Check that desiredState is applied")
-				interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
-				By(fmt.Sprintf("Check that %s is rolled back again", bridge1))
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+
+				By(fmt.Sprintf("Check that %s continue with rolled back state", bridge1))
+				interfacesNameForNodeConsistently(node).ShouldNot(ContainElement(bridge1))
 			}
 		})
 	})
@@ -73,16 +88,38 @@ var _ = Describe("rollback", func() {
 		})
 		It("should rollback to a good gw configuration", func() {
 			for _, node := range nodes {
-				By("Check that desiredState is applied")
-				Eventually(func() bool {
-					return dhcpFlag(node, "eth0")
-				}, ReadTimeout, ReadInterval).Should(BeFalse())
+				By("Wait for reconcile to fail")
+				nodeNetworkStateFailingConditionStatusEventually(node).
+					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
 
 				By("Check that eth0 is rolled back")
 				Eventually(func() bool {
 					return dhcpFlag(node, "eth0")
-				}, ReadTimeout, ReadInterval).Should(BeTrue())
+				}, ReadTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
+
+				By("Check that eth0 continue with rolled back state")
+				Consistently(func() bool {
+					return dhcpFlag(node, "eth0")
+				}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
+
 			}
 		})
 	})
 })
+
+func nodeNetworkStateConditionStatus(node string, expectedConditionType nmstatev1alpha1.NodeNetworkStateConditionType) corev1.ConditionStatus {
+	key := types.NamespacedName{Namespace: namespace, Name: node}
+	nodeNetworkState := nodeNetworkState(key)
+	for _, obtainedCondition := range nodeNetworkState.Status.Conditions {
+		if obtainedCondition.Type == expectedConditionType {
+			return obtainedCondition.Status
+		}
+	}
+	return corev1.ConditionUnknown
+}
+
+func nodeNetworkStateFailingConditionStatusEventually(node string) AsyncAssertion {
+	return Eventually(func() corev1.ConditionStatus {
+		return nodeNetworkStateConditionStatus(node, nmstatev1alpha1.NodeNetworkStateConditionFailing)
+	}, 180*time.Second, 1*time.Second)
+}
