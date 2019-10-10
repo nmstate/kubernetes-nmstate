@@ -17,11 +17,11 @@ make cluster-down
 make cluster-up
 make cluster-sync
 test_args="-ginkgo.noColor"
-skip_tests=""
+focus_tests=""
 skip_tests=""
 
 if [[ $SCRIPT_NAME =~ default-bridge ]]; then
-    focus_test=".*move.*default.*IP.*"
+    focus_tests=".*move.*default.*IP.*"
 else
     skip_tests=".*move.*default.*IP.*"
 fi
