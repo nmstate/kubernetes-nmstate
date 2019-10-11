@@ -137,9 +137,9 @@ cluster-sync-resources: $(KUBECTL)
 	fi
 
 cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
-	IMAGE_REGISTRY=localhost:$(shell $(CLI) ports registry | tr -d '\r') \
+	IMAGE_REGISTRY=localhost:$$($(CLI) ports registry | tr -d '\r') \
 				   make push-handler
-	local_handler_manifest=$(local_handler_manifest) ./hack/cluster-sync.sh
+	local_handler_manifest=$(local_handler_manifest) ./hack/cluster-sync-handler.sh
 
 
 cluster-sync: cluster-sync-handler
