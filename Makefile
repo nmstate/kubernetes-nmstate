@@ -21,8 +21,11 @@ E2E_TEST_ARGS ?= -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=6
 ifdef E2E_TEST_FOCUS
 	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
 endif
+# Unless explicitly focused, always skip the cleanup test (it removes a node)
 ifdef E2E_TEST_SKIP
-	E2E_TEST_ARGS +=  -ginkgo.skip $(E2E_TEST_SKIP)
+	E2E_TEST_ARGS +=  -ginkgo.skip .*NNS.*cleanup.*|$(E2E_TEST_SKIP)
+else
+	E2E_TEST_ARGS +=  -ginkgo.skip .*NNS.*cleanup.*
 endif
 ifdef E2E_TEST_EXTRA_ARGS
 	E2E_TEST_ARGS +=  $(E2E_TEST_EXTRA_ARGS)

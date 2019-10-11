@@ -10,7 +10,9 @@ import (
 	"strings"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -122,16 +124,20 @@ func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1
 	return nodeNetworkState, err
 }
 
-func InitializeNodeNeworkState(client client.Client, nodeName string) error {
+func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *runtime.Scheme) error {
+	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
+
 	nodeNetworkState := nmstatev1alpha1.NodeNetworkState{
 		// Create NodeNetworkState for this node
 		ObjectMeta: metav1.ObjectMeta{
-			Name: nodeName,
+			Name:            node.ObjectMeta.Name,
+			OwnerReferences: ownerRefList,
 		},
 		Spec: nmstatev1alpha1.NodeNetworkStateSpec{
-			NodeName: nodeName,
+			NodeName: node.ObjectMeta.Name,
 		},
 	}
+
 	err := client.Create(context.TODO(), &nodeNetworkState)
 	if err != nil {
 		return fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
