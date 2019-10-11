@@ -17,13 +17,20 @@ make cluster-down
 make cluster-up
 make cluster-sync
 test_args="-ginkgo.noColor"
+<<<<<<< HEAD
 focus_tests=""
+=======
+>>>>>>> Created ci for testing node removal in different branch
 skip_tests=""
 
 if [[ $SCRIPT_NAME =~ default-bridge ]]; then
     focus_tests=".*move.*default.*IP.*"
 else
     skip_tests=".*move.*default.*IP.*"
+fi
+
+if [[ $SCRIPT_NAME =~ node-removal ]]; then
+    focus_test=".*NNS.*cleanup.*"
 fi
 
 make E2E_TEST_EXTRA_ARGS="$test_args" E2E_TEST_FOCUS="$focus_tests" E2E_TEST_SKIP="$skip_tests" test/e2e

@@ -7,6 +7,7 @@ main() {
     TARGET="${TARGET%.*}"
     TARGET="${TARGET#*.}"
     TARGET="${TARGET//[.]default-bridge/}"
+    TARGET="${TARGET//[.]node-removal/}"
     echo "TARGET=$TARGET"
     export TARGET
     echo "Setup Go paths"
