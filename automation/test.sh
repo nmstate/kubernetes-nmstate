@@ -17,10 +17,7 @@ make cluster-down
 make cluster-up
 make cluster-sync
 test_args="-ginkgo.noColor"
-<<<<<<< HEAD
 focus_tests=""
-=======
->>>>>>> Created ci for testing node removal in different branch
 skip_tests=""
 
 if [[ $SCRIPT_NAME =~ default-bridge ]]; then

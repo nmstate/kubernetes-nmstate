@@ -61,7 +61,6 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 			return false
 		},
 	}
-	//TODO: Watch deletes too handling it correctly at Reconciler
 	// Watch for changes to primary resource Node
 	err = c.Watch(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestForObject{}, onCreationForThisNode)
 	if err != nil {
