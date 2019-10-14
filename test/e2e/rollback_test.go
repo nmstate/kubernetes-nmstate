@@ -76,10 +76,10 @@ var _ = Describe("rollback", func() {
 			for _, node := range nodes {
 				var address string
 				Eventually(func() string {
-					address = ipv4Address(node, "eth0")
+					address = ipv4Address(node, *primaryNic)
 					return address
 				}, ReadTimeout, ReadInterval).ShouldNot(BeEmpty())
-				updateDesiredStateAtNode(node, badDefaultGw(address, "eth0"))
+				updateDesiredStateAtNode(node, badDefaultGw(address, *primaryNic))
 			}
 		})
 		AfterEach(func() {
@@ -92,14 +92,14 @@ var _ = Describe("rollback", func() {
 				nodeNetworkStateFailingConditionStatusEventually(node).
 					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
 
-				By("Check that eth0 is rolled back")
+				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
 				Eventually(func() bool {
-					return dhcpFlag(node, "eth0")
+					return dhcpFlag(node, *primaryNic)
 				}, ReadTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
 
-				By("Check that eth0 continue with rolled back state")
+				By(fmt.Sprintf("Check that %s continue with rolled back state", *primaryNic))
 				Consistently(func() bool {
-					return dhcpFlag(node, "eth0")
+					return dhcpFlag(node, *primaryNic)
 				}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
 
 			}

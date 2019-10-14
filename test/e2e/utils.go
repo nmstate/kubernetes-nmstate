@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -193,7 +194,7 @@ func updateDesiredState(desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	for _, node := range nodes {
-		updateDesiredStateAtNode(node, ethernetNicUp("eth0"))
+		updateDesiredStateAtNode(node, ethernetNicUp(*primaryNic))
 	}
 }
 
@@ -285,24 +286,9 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 	return errs
 }
 
-func createBridgeAtNodes(bridgeName string, ports ...string) []error {
-	By(fmt.Sprintf("Creating bridge %s", bridgeName))
-	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge", "ifname", bridgeName, "con-name", bridgeName)
-	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", bridgeName)
-	errs = append(errs, upErrs...)
-	for _, portName := range ports {
-		conName := bridgeName + "-" + portName
-		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "add", "type", "bridge-slave", "ifname", portName, "master", bridgeName, "con-name", conName)
-		_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", conName)
-		errs = append(errs, slaveErrors...)
-		errs = append(errs, upErrs...)
-	}
-	return errs
-}
-
 func createDummyAtNodes(dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
-	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName)
+	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
 	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
 	return errs
@@ -393,30 +379,39 @@ func toUnstructured(y string) interface{} {
 func bridgeVlansAtNode(node string) (string, error) {
 	return runAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
-
 func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
+	By(fmt.Sprintf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan))
 	return Eventually(func() []string {
-		By("Getting vlans")
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
 			return []string{}
 		}
 
-		parsedBridgeVlans := gjson.Parse(bridgeVlans)
+		if !gjson.Valid(bridgeVlans) {
+			// There is a bug [1] at centos8 and output is and invalid json
+			// so it parses the non json output
+			// [1] https://bugs.centos.org/view.php?id=16533
+			cmd := exec.Command("test/e2e/get-bridge-vlans-flags-el8.sh", node, connection, strconv.Itoa(vlan))
+			output, err := cmd.Output()
+			GinkgoWriter.Write([]byte(fmt.Sprintf("%s -> output: %s\n", cmd.Path, output)))
+			Expect(err).ToNot(HaveOccurred())
+			return strings.Split(string(output), " ")
+		} else {
+			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 
-		vlanFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).flags", connection, vlan)
+			vlanFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).flags", connection, vlan)
 
-		vlanFlags := parsedBridgeVlans.Get(vlanFlagsFilter)
-		if !vlanFlags.Exists() {
-			return []string{}
+			vlanFlags := parsedBridgeVlans.Get(vlanFlagsFilter)
+			if !vlanFlags.Exists() {
+				return []string{}
+			}
+
+			matchingVLANFlags := []string{}
+			for _, flag := range vlanFlags.Array() {
+				matchingVLANFlags = append(matchingVLANFlags, flag.String())
+			}
+			return matchingVLANFlags
 		}
-
-		matchingVLANFlags := []string{}
-		for _, flag := range vlanFlags.Array() {
-			matchingVLANFlags = append(matchingVLANFlags, flag.String())
-		}
-
-		return matchingVLANFlags
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -426,18 +421,29 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
 
+	By(fmt.Sprintf("Check %s has %s with vlan filtering vids %d-%d", node, connection, minVlan, maxVlan))
 	return Eventually(func() error {
-		By("Getting vlans")
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
 			return err
 		}
-
-		parsedBridgeVlans := gjson.Parse(bridgeVlans)
-		for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
-			vlanByIdAndConection := fmt.Sprintf("%s.#(vlan==%d)", connection, expectedVlan)
-			if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
-				return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
+		if !gjson.Valid(bridgeVlans) {
+			// There is a bug [1] at centos8 and output is and invalid json
+			// so it parses the non json output
+			// [1] https://bugs.centos.org/view.php?id=16533
+			cmd := exec.Command("test/e2e/check-bridge-has-vlans-el8.sh", node, connection, strconv.Itoa(minVlan), strconv.Itoa(maxVlan))
+			output, err := cmd.Output()
+			GinkgoWriter.Write([]byte(fmt.Sprintf("%s -> output: %s\n", cmd.Path, output)))
+			if err != nil {
+				return err
+			}
+		} else {
+			parsedBridgeVlans := gjson.Parse(bridgeVlans)
+			for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
+				vlanByIdAndConection := fmt.Sprintf("%s.#(vlan==%d)", connection, expectedVlan)
+				if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
+					return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
+				}
 			}
 		}
 		return nil
@@ -445,8 +451,8 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 }
 
 func vlansCardinality(node string, connection string) AsyncAssertion {
+	By(fmt.Sprintf("Getting vlan cardinality for node %s connection %s", node, connection))
 	return Eventually(func() (int, error) {
-		By("Getting vlans")
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
 			return 0, err

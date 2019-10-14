@@ -21,9 +21,9 @@ func brUp(bridgeName string) nmstatev1alpha1.State {
     state: up
     bridge:
       port:
-        - name: eth1
-        - name: eth2
-`, bridgeName))
+        - name: %s
+        - name: %s
+`, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
 func brAbsent(bridgeName string) nmstatev1alpha1.State {

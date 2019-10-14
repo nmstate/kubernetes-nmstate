@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"flag"
 	"testing"
 	"time"
 
@@ -18,13 +19,16 @@ import (
 )
 
 var (
-	f         = framework.Global
-	t         *testing.T
-	namespace string
-	nodes     []string
-	startTime time.Time
-	bond1     string
-	bridge1   string
+	f                  = framework.Global
+	t                  *testing.T
+	namespace          string
+	nodes              []string
+	startTime          time.Time
+	bond1              string
+	bridge1            string
+	primaryNic         = flag.String("primaryNic", "eth0", "Primary network interface name")
+	firstSecondaryNic  = flag.String("firstSecondaryNic", "eth1", "First secondary network interface name")
+	secondSecondaryNic = flag.String("secondSecondaryNic", "eth2", "Second secondary network interface name")
 )
 
 var _ = BeforeSuite(func() {

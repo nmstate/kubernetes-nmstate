@@ -17,7 +17,17 @@ ifdef UNIT_TEST_EXTRA_ARGS
 	UNIT_TEST_ARGS += $(UNIT_TEST_ARGS)
 endif
 
-E2E_TEST_ARGS ?= -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60
+export KUBEVIRT_PROVIDER ?= k8s-1.14.6
+export KUBEVIRT_NUM_NODES ?= 1
+export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
+
+ifeq ($(findstring okd,$(KUBEVIRT_PROVIDER)),okd)
+	E2E_TEST_ARGS = -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
+else
+	E2E_TEST_ARGS = -primaryNic eth0 -firstSecondaryNic eth1 -secondSecondaryNic eth2
+endif
+
+E2E_TEST_ARGS += -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60
 ifdef E2E_TEST_FOCUS
 	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
 endif
@@ -36,9 +46,6 @@ OPERATOR_SDK ?= build/_output/bin/operator-sdk
 GITHUB_RELEASE ?= build/_output/bin/github-release
 LOCAL_REGISTRY ?= registry:5000
 
-export KUBEVIRT_PROVIDER ?= k8s-1.14.6
-export KUBEVIRT_NUM_NODES ?= 1
-export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
 KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
@@ -127,7 +134,7 @@ cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f deploy/
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi
 
@@ -135,13 +142,18 @@ cluster-sync-resources: $(KUBECTL)
 	for resource in $(resources); do \
 		$(KUBECTL) apply -f $$resource || exit 1; \
 	done
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^os-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
 		$(KUBECTL) apply -f deploy/openshift/; \
 	fi
 
 cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
-	IMAGE_REGISTRY=localhost:$$($(CLI) ports registry | tr -d '\r') \
-				   make push-handler
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+		IMAGE_REGISTRY=localhost:$$($(CLI) ports --container-name=cluster registry | tr -d '\r') \
+				   make push-handler;  \
+	else \
+		IMAGE_REGISTRY=localhost:$$($(CLI) ports registry | tr -d '\r') \
+				   make push-handler; \
+	fi
 	local_handler_manifest=$(local_handler_manifest) ./hack/cluster-sync-handler.sh
 
 

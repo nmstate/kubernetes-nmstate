@@ -1,13 +1,15 @@
 #!/bin/bash -e
 
 # TODO: Iterate all the nodes
+script_dir=$(dirname "$(readlink -f "$0")")
+ssh=$script_dir/../kubevirtci/cluster-up/ssh.sh
 
-node01_id=$(docker ps |grep node01 |awk '{print $1}')
+if [[ "$KUBEVIRT_PROVIDER" =~ k8s ]]; then
+    echo 'Install NetworkManager on the node'
+    $ssh node01 -- sudo yum install -y NetworkManager
+    $ssh node01 -- sudo systemctl daemon-reload
+    $ssh node01 -- sudo systemctl restart NetworkManager
 
-echo 'Install NetworkManager on the node'
-docker exec $node01_id ssh.sh sudo yum install -y NetworkManager
-docker exec $node01_id ssh.sh sudo systemctl daemon-reload
-docker exec $node01_id ssh.sh sudo systemctl restart NetworkManager
-
-echo 'Check NetworkManager is working fine'
-docker exec $node01_id ssh.sh nmcli device show > /dev/null
+    echo 'Check NetworkManager is working fine'
+    $ssh node01 -- nmcli device show > /dev/null
+fi
