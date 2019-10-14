@@ -1,15 +1,18 @@
 #!/bin/bash -e
 
-# TODO: Iterate all the nodes
-script_dir=$(dirname "$(readlink -f "$0")")
-ssh=$script_dir/../kubevirtci/cluster-up/ssh.sh
+ssh=kubevirtci/cluster-up/ssh.sh
+kubectl=kubevirtci/cluster-up/kubectl.sh
 
-if [[ "$KUBEVIRT_PROVIDER" =~ k8s ]]; then
-    echo 'Install NetworkManager on the node'
-    $ssh node01 -- sudo yum install -y NetworkManager
-    $ssh node01 -- sudo systemctl daemon-reload
-    $ssh node01 -- sudo systemctl restart NetworkManager
+function install_nm_on_node() {
+    node=$1
+    $ssh $node sudo -- yum install -y NetworkManager NetworkManager-ovs
+    $ssh $node sudo -- systemctl daemon-reload
+    $ssh $node sudo -- systemctl restart NetworkManager
+    echo "Check NetworkManager is working fine on node $node"
+    $ssh $node -- nmcli device show > /dev/null
+}
 
-    echo 'Check NetworkManager is working fine'
-    $ssh node01 -- nmcli device show > /dev/null
-fi
+echo 'Install NetworkManager on nodes'
+for node in $($kubectl get nodes --no-headers | awk '{print $1}'); do
+    install_nm_on_node "$node"
+done
