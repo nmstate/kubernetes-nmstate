@@ -10,6 +10,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -104,10 +105,20 @@ type ReconcileNodeNetworkStateReport struct {
 func (r *ReconcileNodeNetworkStateReport) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.V(1).Info("Reconciling NodeNetworkState report")
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		// Fetch the NodeNetworkState instance
+		instance := &nmstatev1alpha1.NodeNetworkState{}
+		err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+		if err != nil {
+			return err
+		}
 
-	// Fetch the NodeNetworkState instance
-	instance := &nmstatev1alpha1.NodeNetworkState{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+		err = nmstate.UpdateCurrentState(r.client, instance)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -115,14 +126,7 @@ func (r *ReconcileNodeNetworkStateReport) Reconcile(request reconcile.Request) (
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
-	err = nmstate.UpdateCurrentState(r.client, instance)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("error reconciling nodenetworkstate at update current state: %v", err)
-	}
-
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
 }

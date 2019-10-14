@@ -163,7 +163,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
-		return fmt.Errorf("error updating status of NodeNetworkState: %v", err)
+		return err
 	}
 
 	return nil
