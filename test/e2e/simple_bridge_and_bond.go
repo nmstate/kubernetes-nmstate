@@ -144,7 +144,7 @@ var _ = Describe("NodeNetworkState", func() {
 				)
 
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement(SatisfyAll(
+					interfacesForNodeEventually(node).Should(ContainElement(SatisfyAll(
 						HaveKeyWithValue("name", expectedBond["name"]),
 						HaveKeyWithValue("type", expectedBond["type"]),
 						HaveKeyWithValue("state", expectedBond["state"]),
@@ -172,7 +172,7 @@ var _ = Describe("NodeNetworkState", func() {
 					expectedBridge     = interfaceByName(expectedInterfaces, bridge1)
 				)
 				for _, node := range nodes {
-					interfacesForNode(node).Should(SatisfyAll(
+					interfacesForNodeEventually(node).Should(SatisfyAll(
 						ContainElement(SatisfyAll(
 							HaveKeyWithValue("name", expectedBond["name"]),
 							HaveKeyWithValue("type", expectedBond["type"]),
@@ -213,7 +213,7 @@ var _ = Describe("NodeNetworkState", func() {
 				)
 
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement(SatisfyAll(
+					interfacesForNodeEventually(node).Should(ContainElement(SatisfyAll(
 						HaveKeyWithValue("name", expectedBond["name"]),
 						HaveKeyWithValue("type", expectedBond["type"]),
 						HaveKeyWithValue("state", expectedBond["state"]),

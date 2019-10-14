@@ -19,7 +19,7 @@ var _ = Describe("Simple OVS bridge", func() {
 		})
 		It("should have the ovs bridge at currentState", func() {
 			for _, node := range nodes {
-				interfacesForNode(node).Should(ContainElement(SatisfyAll(
+				interfacesForNodeEventually(node).Should(ContainElement(SatisfyAll(
 					HaveKeyWithValue("name", bridge1),
 					HaveKeyWithValue("type", "ovs-bridge"),
 					HaveKeyWithValue("state", "up"),
@@ -40,7 +40,7 @@ var _ = Describe("Simple OVS bridge", func() {
 		})
 		It("should have the ovs bridge at currentState", func() {
 			for _, node := range nodes {
-				interfacesForNode(node).Should(SatisfyAll(
+				interfacesForNodeEventually(node).Should(SatisfyAll(
 					ContainElement(SatisfyAll(
 						HaveKeyWithValue("name", bridge1),
 						HaveKeyWithValue("type", "ovs-bridge"),

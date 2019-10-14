@@ -357,15 +357,17 @@ func interfacesNameForNodeConsistently(node string) AsyncAssertion {
 	}, 5*time.Second, 1*time.Second)
 }
 
-func interfacesForNode(node string) AsyncAssertion {
+func interfacesForNode(node string) []interface{} {
+	var currentStateYaml nmstatev1alpha1.State
+	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+	interfaces := interfaces(currentStateYaml)
+	Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
+	return interfaces
+}
+
+func interfacesForNodeEventually(node string) AsyncAssertion {
 	return Eventually(func() []interface{} {
-		var currentStateYaml nmstatev1alpha1.State
-		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
-
-		interfaces := interfaces(currentStateYaml)
-		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
-
-		return interfaces
+			return interfacesForNode(node) 
 	}, ReadTimeout, ReadInterval)
 }
 

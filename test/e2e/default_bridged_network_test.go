@@ -18,7 +18,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
+func createLinuxBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: brext
     type: linux-bridge
@@ -35,18 +35,39 @@ func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
 `, *primaryNic))
 }
 
-func resetDefaultInterface() nmstatev1alpha1.State {
+func createOvsBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
-  - name: %s
+	- name: ovs0
+	type: ovs-interface
+	state: up
+	ipv4:
+		enabled: true
+		dhcp: true
+	- name: brext
+	type: ovs-bridge
+	state: up
+	bridge:
+		options:
+		stp: false
+		port:
+		- name: %s
+		- name: ovs0`,
+		*primaryNic))
+}
+
+func resetDefaultInterface(bridgeType string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	- name: %s
     type: ethernet
     state: up
     ipv4:
       enabled: true
       dhcp: true
   - name: brext
-    type: linux-bridge
+    type: %s
     state: absent
-`, *primaryNic))
+`, *primaryNic,
+		bridgeType))
 }
 
 // FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
@@ -54,7 +75,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
-			By(string(createBridgeOnTheDefaultInterface()))
+			By(string(createLinuxBridgeOnTheDefaultInterface()))
 			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", *primaryNic))
 			for _, node := range nodes {
 				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))
@@ -73,7 +94,15 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 		})
 		AfterEach(func() {
 			By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", *primaryNic))
-			setDesiredStateWithPolicy("default-network", resetDefaultInterface())
+
+			// Fetching the bridge type from the first node since we expect all to be the same
+			node := nodes[0]
+			interfaces := interfacesForNode(node)
+			expectedBridge := interfaceByName(interfaces, "brext")
+			bridgeType, ok := expectedBridge["type"].(string)
+			Expect(ok).To(BeTrue())
+
+			setDesiredStateWithPolicy("default-network", resetDefaultInterface(bridgeType))
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
@@ -97,9 +126,33 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 			resetDesiredStateForNodes()
 		})
 
-		It("should successfully move default IP address on top of the bridge", func() {
+		It("should successfully move default IP address on top of the linux bridge", func() {
 			By("Creating the policy")
-			setDesiredStateWithPolicy("default-network", createBridgeOnTheDefaultInterface())
+			setDesiredStateWithPolicy("default-network", createLinuxBridgeOnTheDefaultInterface())
+
+			By("Waiting until the node becomes ready again")
+			waitForNodesReady()
+
+			By("Checking that obtained the same IP address")
+			for _, node := range nodes {
+				Eventually(func() string {
+					return ipv4Address(node, "brext")
+				}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), "Interface brext has not take over the eth0 address")
+			}
+
+			By("Verify that next-hop-interface for default route is brext")
+			for _, node := range nodes {
+				defaultRouteNextHopInterface(node).Should(Equal("brext"))
+
+				By("Verify that VLAN configuration is done properly")
+				hasVlans(node, "eth0", 2, 4094).Should(Succeed())
+				vlansCardinality(node, "brext").Should(Equal(0))
+			}
+		})
+
+		It("should successfully move default IP address on top of the ovs bridge", func() {
+			By("Creating the policy")
+			setDesiredStateWithPolicy("default-network", createOvsBridgeOnTheDefaultInterface())
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
