@@ -11,8 +11,11 @@ function install_ovs_on_node() {
     $ssh $node -- sudo systemctl restart openvswitch
 }
 
-echo 'Installing Open vSwitch on nodes'
+# we currently skip ovs for non k8s providers.
+if [[ "$KUBEVIRT_PROVIDER" =~  k8s- ]]; then
+    echo 'Installing Open vSwitch on nodes'
 
-for node in $($kubectl get nodes --no-headers | awk '{print $1}'); do
-    install_ovs_on_node "$node"
-done
+    for node in $($kubectl get nodes --no-headers | awk '{print $1}'); do
+        install_ovs_on_node "$node"
+    done
+fi
