@@ -16,12 +16,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	yaml "sigs.k8s.io/yaml"
 
 	"github.com/tidwall/gjson"
 
 	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+)
+
+var (
+	log = logf.Log.WithName("client")
 )
 
 const nmstateCommand = "nmstatectl"
@@ -95,13 +100,15 @@ func set(state string) (string, error) {
 	var err error = nil
 	// FIXME: Remove this retries after nmstate team fixes
 	//        https://nmstate.atlassian.net/browse/NMSTATE-247
-	retries := 2
+	retries := 3
 	for retries > 0 {
 		output, err = nmstatectl([]string{"set", "--no-commit"}, state)
 		if err == nil {
 			break
 		}
 		retries--
+		time.Sleep(1 * time.Second)
+		log.Info(fmt.Sprintf("%d retries left after nmstatectl set command error: %v", retries, err))
 	}
 	return output, err
 }
