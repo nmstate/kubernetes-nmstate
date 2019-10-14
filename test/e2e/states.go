@@ -14,7 +14,7 @@ func ethernetNicUp(nicName string) nmstatev1alpha1.State {
 `, nicName))
 }
 
-func brUp(bridgeName string) nmstatev1alpha1.State {
+func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
@@ -26,7 +26,7 @@ func brUp(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
-func brAbsent(bridgeName string) nmstatev1alpha1.State {
+func linuxBrAbsent(bridgeName string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
@@ -34,7 +34,7 @@ func brAbsent(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName))
 }
 
-func brUpNoPorts(bridgeName string) nmstatev1alpha1.State {
+func linuxBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
@@ -43,6 +43,39 @@ func brUpNoPorts(bridgeName string) nmstatev1alpha1.State {
       options:
         stp:
           enabled: false
+      port: []
+`, bridgeName))
+}
+
+func ovsBrAbsent(bridgeName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ovs-bridge
+    state: absent`, bridgeName))
+}
+
+func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        stp: false
+      port:
+        - name: eth1
+        - name: eth2
+`, bridgeName))
+}
+
+func ovsBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        stp: false
       port: []
 `, bridgeName))
 }

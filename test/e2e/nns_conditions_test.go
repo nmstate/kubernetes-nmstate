@@ -22,10 +22,10 @@ func invalidConfig(bridgeName string) nmstatev1alpha1.State {
 var _ = Describe("NodeNetworkStateCondition", func() {
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
-			updateDesiredState(brUp(bridge1))
+			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
-			updateDesiredState(brAbsent(bridge1))
+			updateDesiredState(linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
