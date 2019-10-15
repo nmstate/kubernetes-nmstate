@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,6 +32,7 @@ var (
 
 const nmstateCommand = "nmstatectl"
 const vlanFilteringCommand = "vlan-filtering"
+const defaultGwProbeTimeout = 120
 
 var (
 	interfacesFilterGlob glob.Glob
@@ -102,8 +104,12 @@ func set(state string) (string, error) {
 	//        https://nmstate.atlassian.net/browse/NMSTATE-247
 	retries := 3
 	for retries > 0 {
-		output, err = nmstatectl([]string{"set", "--no-commit"}, state)
+		// commit timeout doubles the default gw ping probe timeout, to
+		// ensure the Checkpoint is alive before rolling it back
+		// https://nmstate.github.io/cli_guide#manual-transaction-control
+		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(defaultGwProbeTimeout * 2)}, state)
 		if err == nil {
+			log.Info(fmt.Sprintf("nmstatectl set recovered, output: %s", output))
 			break
 		}
 		retries--
@@ -252,7 +258,7 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	}
 
 	// TODO: Make ping timeout configurable with a config map
-	pingOutput, err := ping(defaultGw, 120*time.Second)
+	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout*time.Second)
 	if err != nil {
 		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
