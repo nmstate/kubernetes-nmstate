@@ -5,8 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("OVSNodeNetworkState", func() {
-	var ()
+var _ = Describe("Simple OVS bridge", func() {
 	Context("when desiredState is configured", func() {
 		Context("with an ovs bridge up with no ports", func() {
 			BeforeEach(func() {

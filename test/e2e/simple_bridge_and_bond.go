@@ -86,7 +86,6 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
 }
 
 var _ = Describe("NodeNetworkState", func() {
-	var ()
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
