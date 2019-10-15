@@ -67,15 +67,3 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
         - name: eth2
 `, bridgeName))
 }
-
-func ovsBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
-  - name: %s
-    type: ovs-bridge
-    state: up
-    bridge:
-      options:
-        stp: false
-      port: []
-`, bridgeName))
-}
