@@ -1,4 +1,4 @@
-# Tutorial: Create a Ovs Bridge and Connect it to a Node Interface
+# Tutorial: Create a Open vSwitch Bridge and Connect it to a Node Interface
 
 Use Node Network Configuration Policy to configure a new ovs bridge `br1` connected
 to node interface `eth1`.
