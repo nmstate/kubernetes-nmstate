@@ -31,7 +31,7 @@ E2E_TEST_ARGS += -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=6
 ifdef E2E_TEST_FOCUS
 	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
 endif
-# skip ovs tests for non k8s providers
+# test ovs only for k8s providers
 ifeq (,$(findstring k8s-,$(KUBEVIRT_PROVIDER)))
 	E2E_TEST_SKIP += .*OVS.*
 endif

@@ -99,7 +99,7 @@ through node state reporting and interface configuration.
 
 - [Report node network state](docs/user-guide-state-reporting.md)
 - [Connect a Linux bridge to a node interface](docs/user-guide-policy-configure-linux-bridge.md)
-- [Configure a Open vSwitch bridge to a node interface](docs/user-guide-policy-configure-ovs-bridge.md)
+- [Configure an Open vSwitch bridge to a node interface](docs/user-guide-policy-configure-ovs-bridge.md)
 - [Configure a Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
 
 ## Development and Contributing
