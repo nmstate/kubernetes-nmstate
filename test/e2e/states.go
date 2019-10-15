@@ -67,3 +67,27 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
         - name: eth2
 `, bridgeName))
 }
+
+func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+  - name: ovs0
+    type: ovs-interface
+    state: up
+    ipv4:
+      enabled: true
+      address:
+        - ip: 192.0.2.1
+          prefix-length: 24
+  - name: %s
+    type: ovs-bridge
+    state: up
+    bridge:
+      options:
+        stp: true
+      port:
+        - name: eth1
+          type: system
+        - name: ovs0
+          type: internal`,
+		bridgeName))
+}
