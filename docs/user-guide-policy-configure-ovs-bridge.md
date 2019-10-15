@@ -40,7 +40,44 @@ spec:
 EOF
 ```
 
-You can also remove the bridge with following:
+By doing this though, we will be able to create an Open vSwitch bridge on the host but the host may loose connectivity since its nic is now connected to the bridge.
+In order to have the host accessible, we need to provide the bridge an ip address. This is achieved by using an Open vSwitch internal interface.
+
+```yaml
+cat <<EOF | kubectl create -f -
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: br1-eth1-policy
+spec:
+  desiredState:
+    interfaces:
+      - name: ovs0
+        type: ovs-interface
+        state: up
+        ipv4:
+          enabled: true
+          address:
+            - ip: 192.0.2.1
+              prefix-length: 24
+      - name: br1
+        description: ovs bridge with eth1 as a port and ovs0 as an internal interface
+        type: ovs-bridge
+        state: up
+        bridge:
+          options:
+            stp: true
+          port:
+            - name: eth1
+              type: system
+            - name: ovs0
+              type: internal
+EOF
+```
+
+
+
+You can also remove the bridge with the following command:
 
 ```yaml
 cat <<EOF | kubectl create -f -
