@@ -2,6 +2,9 @@
 
 function install_nm_on_node() {
     node=$1
+    # Use copr repository to get newer NetworkManager
+    $SSH $node sudo -- yum install -y yum-plugin-copr
+    $SSH $node sudo -- yum copr enable -y networkmanager/NetworkManager-1.20
     $SSH $node sudo -- yum install -y NetworkManager NetworkManager-ovs
     $SSH $node sudo -- systemctl daemon-reload
     $SSH $node sudo -- systemctl restart NetworkManager
