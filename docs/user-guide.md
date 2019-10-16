@@ -9,4 +9,5 @@ the tutorials.
 
 - [Report node network state](user-guide-state-reporting.md)
 - [Create a Linux bridge and connect it to a node interface](user-guide-policy-configure-linux-bridge.md)
-- [Configure Linux bonding interface](user-guide-policy-configure-linux-bond.md)
+- [Create an Open vSwitch bridge and connect it to a node interface](user-guide-policy-configure-ovs-bridge.md)
+- [Configure a Linux bonding interface](user-guide-policy-configure-linux-bond.md)

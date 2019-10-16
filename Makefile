@@ -31,12 +31,21 @@ E2E_TEST_ARGS += -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=6
 ifdef E2E_TEST_FOCUS
 	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
 endif
+
 # Unless explicitly focused, always skip the cleanup test (it removes a node)
-ifdef E2E_TEST_SKIP
-	E2E_TEST_ARGS +=  -ginkgo.skip .*NNS.*cleanup.*|$(E2E_TEST_SKIP)
-else
-	E2E_TEST_ARGS +=  -ginkgo.skip .*NNS.*cleanup.*
+E2E_TEST_SKIP = .*NNS.*cleanup.*
+
+# test ovs only for k8s providers
+ifeq (,$(findstring k8s-,$(KUBEVIRT_PROVIDER)))
+	E2E_TEST_SKIP := $(E2E_TEST_SKIP)|.*OVS.*
 endif
+
+ifdef E2E_EXTRA_SKIP
+	E2E_TEST_SKIP := $(E2E_TEST_SKIP)|$(E2E_EXTRA_SKIP)
+endif
+
+E2E_TEST_ARGS +=  -ginkgo.skip $(E2E_TEST_SKIP)
+
 ifdef E2E_TEST_EXTRA_ARGS
 	E2E_TEST_ARGS +=  $(E2E_TEST_EXTRA_ARGS)
 endif
@@ -126,6 +135,7 @@ cluster-up: $(CLUSTER_UP)
 	$(CLUSTER_UP)
 	hack/install-nm.sh
 	hack/flush-secondary-nics.sh
+	hack/install-ovs.sh
 
 cluster-down: $(CLUSTER_DOWN)
 	$(CLUSTER_DOWN)

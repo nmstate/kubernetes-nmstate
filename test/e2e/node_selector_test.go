@@ -10,11 +10,11 @@ var _ = Describe("NodeSelector", func() {
 
 	Context("when policy is set with node selector not matching any nodes", func() {
 		BeforeEach(func() {
-			setDesiredStateWithPolicyAndNodeSelector(bridge1, brUp(bridge1), nonexistentNodeSelector)
+			setDesiredStateWithPolicyAndNodeSelector(bridge1, linuxBrUp(bridge1), nonexistentNodeSelector)
 		})
 
 		AfterEach(func() {
-			setDesiredStateWithPolicy(bridge1, brAbsent(bridge1))
+			setDesiredStateWithPolicy(bridge1, linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
@@ -31,7 +31,7 @@ var _ = Describe("NodeSelector", func() {
 
 		Context("and we remove the node selector", func() {
 			BeforeEach(func() {
-				setDesiredStateWithPolicyAndNodeSelector(bridge1, brUp(bridge1), map[string]string{})
+				setDesiredStateWithPolicyAndNodeSelector(bridge1, linuxBrUp(bridge1), map[string]string{})
 			})
 
 			It("should update all nodes", func() {

@@ -31,4 +31,4 @@ if [[ $SCRIPT_NAME =~ node-removal ]]; then
     focus_tests=".*NNS.*cleanup.*"
 fi
 
-make E2E_TEST_EXTRA_ARGS="$test_args" E2E_TEST_FOCUS="$focus_tests" E2E_TEST_SKIP="$skip_tests" test/e2e
+make E2E_TEST_EXTRA_ARGS="$test_args" E2E_TEST_FOCUS="$focus_tests" E2E_EXTRA_SKIP="$skip_tests" test/e2e

@@ -86,14 +86,13 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
 }
 
 var _ = Describe("NodeNetworkState", func() {
-	var ()
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
-				updateDesiredState(brUpNoPorts(bridge1))
+				updateDesiredState(linuxBrUpNoPorts(bridge1))
 			})
 			AfterEach(func() {
-				updateDesiredState(brAbsent(bridge1))
+				updateDesiredState(linuxBrAbsent(bridge1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
@@ -108,10 +107,10 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
-				updateDesiredState(brUp(bridge1))
+				updateDesiredState(linuxBrUp(bridge1))
 			})
 			AfterEach(func() {
-				updateDesiredState(brAbsent(bridge1))
+				updateDesiredState(linuxBrAbsent(bridge1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}

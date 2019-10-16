@@ -49,14 +49,14 @@ var _ = Describe("rollback", func() {
 		AfterEach(func() {
 			By("Rename vlan-filtering.bak to vlan-filtering to leave it as it was")
 			runAtPods("sudo", "mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
-			updateDesiredState(brAbsent(bridge1))
+			updateDesiredState(linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
 			resetDesiredStateForNodes()
 		})
 		It("should rollback failed state configuration", func() {
-			updateDesiredState(brUpNoPorts(bridge1))
+			updateDesiredState(linuxBrUpNoPorts(bridge1))
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
 				nodeNetworkStateFailingConditionStatusEventually(node).
