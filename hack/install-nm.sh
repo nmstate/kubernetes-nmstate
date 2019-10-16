@@ -9,7 +9,9 @@ function install_nm_on_node() {
     $SSH $node -- nmcli device show > /dev/null
 }
 
-echo 'Install NetworkManager on nodes'
-for node in $($KUBECTL get nodes --no-headers | awk '{print $1}'); do
-    install_nm_on_node "$node"
-done
+if [[ "$KUBEVIRT_PROVIDER" =~  k8s- ]]; then
+    echo 'Install NetworkManager on nodes'
+    for node in $($KUBECTL get nodes --no-headers | awk '{print $1}'); do
+        install_nm_on_node "$node"
+    done
+fi
