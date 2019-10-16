@@ -75,8 +75,6 @@ spec:
 EOF
 ```
 
-
-
 You can also remove the bridge with the following command:
 
 ```yaml
