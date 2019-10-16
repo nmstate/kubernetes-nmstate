@@ -40,8 +40,8 @@ spec:
 EOF
 ```
 
-By doing this though, we will be able to create an Open vSwitch bridge on the host but the host may loose connectivity since its nic is now connected to the bridge.
-In order to have the host accessible, we need to provide the bridge an ip address. This is achieved by using an Open vSwitch internal interface.
+By doing this though, we will be able to create an Open vSwitch bridge but the bridge won't have an IP endpoint.
+In order to provide an ip address an Open vSwitch internal interface must be used.
 
 ```yaml
 cat <<EOF | kubectl create -f -
