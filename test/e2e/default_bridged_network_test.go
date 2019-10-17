@@ -18,9 +18,8 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-// FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
-var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
-	createBridgeOnTheDefaultInterface := nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: brext
     type: linux-bridge
     state: up
@@ -34,7 +33,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
       port:
       - name: %s
 `, *primaryNic))
-	resetDefaultInterface := nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+}
+
+func resetDefaultInterface() nmstatev1alpha1.State {
+	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
@@ -45,9 +47,14 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
     type: linux-bridge
     state: absent
 `, *primaryNic))
+}
+
+// FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
+var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
+			By(string(createBridgeOnTheDefaultInterface()))
 			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", *primaryNic))
 			for _, node := range nodes {
 				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))
@@ -66,7 +73,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 		})
 		AfterEach(func() {
 			By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", *primaryNic))
-			setDesiredStateWithPolicy("default-network", resetDefaultInterface)
+			setDesiredStateWithPolicy("default-network", resetDefaultInterface())
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
@@ -92,7 +99,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 		It("should successfully move default IP address on top of the bridge", func() {
 			By("Creating the policy")
-			setDesiredStateWithPolicy("default-network", createBridgeOnTheDefaultInterface)
+			setDesiredStateWithPolicy("default-network", createBridgeOnTheDefaultInterface())
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
