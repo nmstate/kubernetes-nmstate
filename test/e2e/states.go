@@ -63,9 +63,9 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
       options:
         stp: false
       port:
-        - name: eth1
-        - name: eth2
-`, bridgeName))
+        - name: %s
+        - name: %s
+`, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
 func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
@@ -85,9 +85,9 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
       options:
         stp: true
       port:
-        - name: eth1
+        - name: %s
           type: system
         - name: ovs0
           type: internal`,
-		bridgeName))
+		bridgeName, *firstSecondaryNic))
 }
