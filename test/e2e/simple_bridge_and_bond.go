@@ -119,7 +119,7 @@ var _ = Describe("NodeNetworkState", func() {
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
-					vlansCardinality(node, bridge1).Should(Equal(0))
+					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					getVLANFlagsEventually(node, *firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, *firstSecondaryNic, 2, 4094).Should(Succeed())
 					getVLANFlagsEventually(node, *secondSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
@@ -187,8 +187,8 @@ var _ = Describe("NodeNetworkState", func() {
 								ContainElement(HaveKeyWithValue("name", bond1)))),
 						))))
 
+					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, bond1, 2, 4094).Should(Succeed())
-					vlansCardinality(node, bridge1).Should(Equal(0))
 					getVLANFlagsEventually(node, bond1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					vlansCardinality(node, *firstSecondaryNic).Should(Equal(0))
 					vlansCardinality(node, *secondSecondaryNic).Should(Equal(0))

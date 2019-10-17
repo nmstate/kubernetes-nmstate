@@ -110,7 +110,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 				By("Verify that VLAN configuration is done properly")
 				hasVlans(node, *primaryNic, 2, 4094).Should(Succeed())
-				vlansCardinality(node, "brext").Should(Equal(0))
+				getVLANFlagsEventually(node, "brext", 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 			}
 		})
 	})
