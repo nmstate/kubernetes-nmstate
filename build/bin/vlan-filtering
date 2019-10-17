@@ -8,6 +8,8 @@ vlan_range=2-4094
 
 ip link set dev $bridge type bridge vlan_filtering 1
 
+bridge vlan add dev $bridge vid 1 pvid untagged self
+
 for port in $ports; do
     bridge vlan add dev $port vid $vlan_range
 done
