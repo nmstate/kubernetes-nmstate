@@ -1,4 +1,4 @@
-FROM fedora:30
+FROM fedora:31
 
 RUN sudo dnf install -y nmstate iproute iputils && \
     sudo dnf clean all
