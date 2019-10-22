@@ -1,9 +1,15 @@
-Set vlan_filtering 1 if no ports at linux bridges
+Increase resilience and force vlan_filtering at bridge
 
-After merging #163 vlan_filtering flag was not set if if the linux bridge
-was configured with no ports, that's it's a problem for communication in the
-same host between two interfaces with vlans different vlans, since
-communication will be possible.
+The NetworkManager < 1.20 present some race conditions that end with
+nmstatectl set with transitory failures, they can be overcome by some
+retry + sleep mechanism implemented in this release.
+
+A rollback mechanism has being implemented to go back to previous network
+configuration in case of error at running the vlan-filtering script or pinging
+default gw.
+
+The vlan-filtering script was not setting the pvid untagged flag at the bridge
+itself.
 
 ```
 docker pull HANDLER_IMAGE
