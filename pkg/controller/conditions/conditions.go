@@ -8,14 +8,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func SetCondition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.NodeNetworkStateConditionType, status corev1.ConditionStatus, reason, message string) {
-	condition := Condition(instance, conditionType)
+func SetCondition(conditions nmstatev1.ConditionList, conditionType nmstatev1.ConditionType, status corev1.ConditionStatus, reason, message string) nmstatev1.ConditionList {
+	condition := Condition(conditions, conditionType)
 	now := metav1.Time{
 		Time: time.Now(),
 	}
 	// If there isn't condition we want to change add new one
 	if condition == nil {
-		condition := nmstatev1.NodeNetworkStateCondition{
+		condition := nmstatev1.Condition{
 			Type:               conditionType,
 			Status:             status,
 			Reason:             reason,
@@ -23,8 +23,7 @@ func SetCondition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.
 			LastHeartbeatTime:  now,
 			LastTransitionTime: now,
 		}
-		instance.Status.Conditions = append(instance.Status.Conditions, condition)
-		return
+		return append(conditions, condition)
 	}
 
 	// If there is different status, reason or message update it
@@ -36,12 +35,14 @@ func SetCondition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.
 	}
 
 	condition.LastHeartbeatTime = now
+
+	return conditions
 }
 
-func Condition(instance *nmstatev1.NodeNetworkState, conditionType nmstatev1.NodeNetworkStateConditionType) *nmstatev1.NodeNetworkStateCondition {
-	for i, condition := range instance.Status.Conditions {
+func Condition(conditions nmstatev1.ConditionList, conditionType nmstatev1.ConditionType) *nmstatev1.Condition {
+	for i, condition := range conditions {
 		if condition.Type == conditionType {
-			return &instance.Status.Conditions[i]
+			return &conditions[i]
 		}
 	}
 	return nil

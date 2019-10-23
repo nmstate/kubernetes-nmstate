@@ -16,7 +16,7 @@ import (
 var _ = Describe("Conditions", func() {
 	Context("when instance is empty", func() {
 		It("should return nil", func() {
-			condition := conditions.Condition(&nmstatev1.NodeNetworkState{}, nmstatev1.NodeNetworkStateConditionFailing)
+			condition := conditions.Condition(nmstatev1.ConditionList{}, nmstatev1.NodeNetworkStateConditionFailing)
 			Expect(condition).To(BeNil())
 		})
 	})
@@ -24,12 +24,12 @@ var _ = Describe("Conditions", func() {
 	Context("when composed by one condition with known type and unknown status", func() {
 		nodeNetworkState := nmstatev1.NodeNetworkState{
 			Status: nmstatev1.NodeNetworkStateStatus{
-				Conditions: []nmstatev1.NodeNetworkStateCondition{
-					nmstatev1.NodeNetworkStateCondition{
+				Conditions: nmstatev1.ConditionList{
+					nmstatev1.Condition{
 						Type:   nmstatev1.NodeNetworkStateConditionAvailable,
 						Status: corev1.ConditionTrue,
 					},
-					nmstatev1.NodeNetworkStateCondition{
+					nmstatev1.Condition{
 						Type:   nmstatev1.NodeNetworkStateConditionFailing,
 						Status: corev1.ConditionUnknown,
 					},
@@ -39,7 +39,7 @@ var _ = Describe("Conditions", func() {
 
 		It("should find the correct condition", func() {
 			instance := nodeNetworkState.DeepCopy()
-			condition := conditions.Condition(instance, nmstatev1.NodeNetworkStateConditionFailing)
+			condition := conditions.Condition(instance.Status.Conditions, nmstatev1.NodeNetworkStateConditionFailing)
 			Expect(condition).ToNot(BeNil())
 			Expect(condition.Type).To(Equal(nmstatev1.NodeNetworkStateConditionFailing))
 			Expect(condition.Status).To(Equal(corev1.ConditionUnknown))
@@ -53,8 +53,8 @@ var _ = Describe("Conditions", func() {
 			instance := nodeNetworkState.DeepCopy()
 			conditionType := nmstatev1.NodeNetworkStateConditionFailing
 
-			conditions.SetCondition(instance, conditionType, corev1.ConditionFalse, "foo", "bar")
-			condition := conditions.Condition(instance, conditionType)
+			newConditions := conditions.SetCondition(instance.Status.Conditions, conditionType, corev1.ConditionFalse, "foo", "bar")
+			condition := conditions.Condition(newConditions, conditionType)
 
 			Expect(condition.Type).To(Equal(conditionType))
 			Expect(condition.Status).To(Equal(corev1.ConditionFalse))
@@ -67,8 +67,8 @@ var _ = Describe("Conditions", func() {
 	Context("when there is condition", func() {
 		nodeNetworkState := nmstatev1.NodeNetworkState{
 			Status: nmstatev1.NodeNetworkStateStatus{
-				Conditions: []nmstatev1.NodeNetworkStateCondition{
-					nmstatev1.NodeNetworkStateCondition{
+				Conditions: nmstatev1.ConditionList{
+					nmstatev1.Condition{
 						Type:    nmstatev1.NodeNetworkStateConditionFailing,
 						Status:  corev1.ConditionUnknown,
 						Reason:  "foo",
@@ -89,10 +89,10 @@ var _ = Describe("Conditions", func() {
 			conditionType := nmstatev1.NodeNetworkStateConditionAvailable
 
 			It("should add new condition", func() {
-				conditions.SetCondition(instance, conditionType, corev1.ConditionTrue, "foo", "bar")
-				Expect(len(instance.Status.Conditions)).To(Equal(len(nodeNetworkState.Status.Conditions) + 1))
+				newConditions := conditions.SetCondition(instance.Status.Conditions, conditionType, corev1.ConditionTrue, "foo", "bar")
+				Expect(len(newConditions)).To(Equal(len(nodeNetworkState.Status.Conditions) + 1))
 
-				condition := conditions.Condition(instance, conditionType)
+				condition := conditions.Condition(newConditions, conditionType)
 				Expect(condition.Type).To(Equal(conditionType))
 				Expect(condition.Status).To(Equal(corev1.ConditionTrue))
 				Expect(condition.Reason).To(Equal("foo"))
@@ -106,13 +106,13 @@ var _ = Describe("Conditions", func() {
 
 			It("should change LastHearbeatTime", func() {
 				instance := nodeNetworkState.DeepCopy()
-				conditions.SetCondition(instance, conditionType, corev1.ConditionFalse, "foo", "bar")
+				conditions.SetCondition(instance.Status.Conditions, conditionType, corev1.ConditionFalse, "foo", "bar")
 
 				By("Shouldn't add new condition")
 				Expect(len(instance.Status.Conditions)).To(Equal(len(nodeNetworkState.Status.Conditions)))
 
-				condition := conditions.Condition(instance, conditionType)
-				originalCondition := conditions.Condition(&nodeNetworkState, conditionType)
+				condition := conditions.Condition(instance.Status.Conditions, conditionType)
+				originalCondition := conditions.Condition(nodeNetworkState.Status.Conditions, conditionType)
 				By("Should change LastHeartbeatTime")
 				Expect(originalCondition.LastHeartbeatTime.Time.Before(condition.LastHeartbeatTime.Time)).To(BeTrue(), "LastHeartbeatTime of updated condition wasn't updated")
 			})
@@ -123,13 +123,13 @@ var _ = Describe("Conditions", func() {
 
 			It("should change values and update LastTransitionTime", func() {
 				instance := nodeNetworkState.DeepCopy()
-				conditions.SetCondition(instance, conditionType, corev1.ConditionTrue, "bar", "foo")
+				conditions.SetCondition(instance.Status.Conditions, conditionType, corev1.ConditionTrue, "bar", "foo")
 
 				By("Shouldn't add new condition")
 				Expect(len(instance.Status.Conditions)).To(Equal(len(nodeNetworkState.Status.Conditions)))
 
-				condition := conditions.Condition(instance, conditionType)
-				originalCondition := conditions.Condition(&nodeNetworkState, conditionType)
+				condition := conditions.Condition(instance.Status.Conditions, conditionType)
+				originalCondition := conditions.Condition(nodeNetworkState.Status.Conditions, conditionType)
 				By("Should change different values")
 				Expect(condition.Status).To(Equal(corev1.ConditionTrue))
 				Expect(condition.Reason).To(Equal("bar"))

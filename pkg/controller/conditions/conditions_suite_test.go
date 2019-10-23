@@ -9,5 +9,5 @@ import (
 
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "NodeNetworkState Test Suite")
+	RunSpecs(t, "Conditions Test Suite")
 }
