@@ -1,13 +1,10 @@
 FROM fedora:31
 
-RUN sudo dnf install -y nmstate iproute iputils && \
+RUN sudo dnf install -y dnf-plugins-core && \
+    sudo dnf copr enable -y nmstate/nmstate-git-fedora && \
+    sudo dnf install -y nmstate-0.0.8-0.20191022.669git5701bbe.fc31.noarch iproute iputils && \
+    sudo dnf remove -y dnf-plugins-core && \
     sudo dnf clean all
-
-# TODO: Delete this line after we update nmstate to include the change
-# https://github.com/nmstate/nmstate/commit/a4baaff50fef84d6d326977ff647bece1e917a26
-RUN sed -i "s/run(timeout=20/run(timeout=60/g" /usr/lib/python3.7/site-packages/libnmstate/netapplier.py
-# TODO: Delete this line after nmstate fixes https://github.com/nmstate/nmstate/issues/516
-RUN sed -i "s/nmclient.NM.DeviceType.OVS_INTERFACE,/nmclient.NM.DeviceType.OVS_INTERFACE, nmclient.NM.DeviceType.BRIDGE,/" /usr/lib/python3.7/site-packages/libnmstate/nm/applier.py
 
 # Cannot change the binary to nmstate-handler since the name
 # is taken from the directory name [1]
