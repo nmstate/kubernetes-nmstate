@@ -46,7 +46,7 @@ func init() {
 	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
 }
 
-func show(arguments ...string) (string, error) {
+func Show(arguments ...string) (string, error) {
 	cmd := exec.Command(nmstateCommand, "show")
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -197,7 +197,7 @@ func ping(target string, timeout time.Duration) (string, error) {
 }
 
 func defaultGw() (string, error) {
-	observedStateRaw, err := show()
+	observedStateRaw, err := Show()
 	if err != nil {
 		return "", fmt.Errorf("error running nmstatectl show: %v", err)
 	}
@@ -249,7 +249,7 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		return commandOutput, rollback(err)
 	}
 
-	currentState, err := show()
+	currentState, err := Show()
 	if err != nil {
 		return "", rollback(err)
 	}

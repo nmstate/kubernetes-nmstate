@@ -7,7 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
+	"gopkg.in/yaml.v2"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
@@ -25,7 +29,12 @@ import (
 )
 
 var (
+<<<<<<< HEAD:pkg/controller/nodenetworkstate/nodenetworkstate_controller.go
 	log                     = logf.Log.WithName("controller_nodenetworkstate")
+=======
+	interfacesFilterGlob    glob.Glob
+	log                     = logf.Log.WithName("controller_nodenetworkstatereport")
+>>>>>>> Moved conditions from configuration controller to report controller:pkg/controller/nodenetworkstatereport/nodenetworkstatereport_controller.go
 	nodenetworkstateRefresh time.Duration
 )
 
@@ -39,6 +48,12 @@ func init() {
 		panic(fmt.Sprintf("Failed while converting evnironment variable to int: %v", err))
 	}
 	nodenetworkstateRefresh = time.Duration(intRefreshTime) * time.Second
+
+	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
+	if !isSet {
+		panic("INTERFACES_FILTER is mandatory")
+	}
+	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
 }
 
 // Add creates a new NodeNetworkState Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -84,8 +99,92 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
+<<<<<<< HEAD:pkg/controller/nodenetworkstate/nodenetworkstate_controller.go
 // blank assignment to verify that ReconcileNodeNetworkState implements reconcile.Reconciler
 var _ reconcile.Reconciler = &ReconcileNodeNetworkState{}
+=======
+func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glob) (nmstatev1alpha1.State, error) {
+	if interfacesFilterGlob.Match("") {
+		return currentState, nil
+	}
+
+	var state map[string]interface{}
+	err := yaml.Unmarshal([]byte(currentState), &state)
+	if err != nil {
+		return currentState, err
+	}
+
+	interfaces := state["interfaces"]
+	var filteredInterfaces []interface{}
+
+	for _, iface := range interfaces.([]interface{}) {
+		name := iface.(map[interface{}]interface{})["name"]
+		if !interfacesFilterGlob.Match(name.(string)) {
+			filteredInterfaces = append(filteredInterfaces, iface)
+		}
+	}
+
+	state["interfaces"] = filteredInterfaces
+	filteredState, err := yaml.Marshal(state)
+	if err != nil {
+		return currentState, err
+	}
+
+	return filteredState, nil
+}
+
+func filteredOutState() (nmstatev1alpha1.State, error) {
+	observedStateRaw, err := nmstate.Show()
+	if err != nil {
+		return nil, fmt.Errorf("error running nmstatectl show: %v", err)
+	}
+	observedState := nmstatev1alpha1.State(observedStateRaw)
+
+	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
+	if err != nil {
+		return observedState, fmt.Errorf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
+	}
+
+	return stateToReport, nil
+}
+
+func setConditionFailed(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionTrue,
+		"FailedToObtain",
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionFalse,
+		"FailedToObtain",
+		message,
+	)
+}
+
+func setConditionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionTrue,
+		"SuccessfullyObtained",
+		message,
+	)
+	conditions.SetCondition(
+		instance,
+		nmstatev1alpha1.NodeNetworkStateConditionFailing,
+		corev1.ConditionFalse,
+		"SuccessfullyObtained",
+		"",
+	)
+}
+
+// blank assignment to verify that ReconcileNodeNetworkStateReport implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileNodeNetworkStateReport{}
+>>>>>>> Moved conditions from configuration controller to report controller:pkg/controller/nodenetworkstatereport/nodenetworkstatereport_controller.go
 
 // ReconcileNodeNetworkState reconciles a NodeNetworkState object
 type ReconcileNodeNetworkState struct {
@@ -113,10 +212,19 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 			return err
 		}
 
-		err = nmstate.UpdateCurrentState(r.client, instance)
+		stateToReport, err := filteredOutState()
+		if err != nil {
+			setConditionFailed(instance, err.Error())
+		} else {
+			instance.Status.CurrentState = stateToReport
+			setConditionSuccess(instance, "successfully reconciled NodeNetworkState")
+		}
+
+		err = r.client.Status().Update(context.Background(), instance)
 		if err != nil {
 			return err
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -128,5 +236,6 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		}
 		return reconcile.Result{}, err
 	}
+
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
 }
