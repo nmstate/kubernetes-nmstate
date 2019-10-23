@@ -44,11 +44,11 @@ var _ = Describe("rollback", func() {
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
-			runAtPods("sudo", "mv", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
+			runAtPods("mv", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
 		})
 		AfterEach(func() {
 			By("Rename vlan-filtering.bak to vlan-filtering to leave it as it was")
-			runAtPods("sudo", "mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
+			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
 			updateDesiredState(linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
