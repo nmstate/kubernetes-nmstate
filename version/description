@@ -1,15 +1,8 @@
-Increase resilience and force vlan_filtering at bridge
+Use latest nmstate obtained from master
 
-The NetworkManager < 1.20 present some race conditions that end with
-nmstatectl set with transitory failures, they can be overcome by some
-retry + sleep mechanism implemented in this release.
-
-A rollback mechanism has being implemented to go back to previous network
-configuration in case of error at running the vlan-filtering script or pinging
-default gw.
-
-The vlan-filtering script was not setting the pvid untagged flag at the bridge
-itself.
+The version 0.8.0 we used until now is pretty old and contains some major bugs.
+We are moving to use the current master until nmstate publishes a new stable
+release.
 
 ```
 docker pull HANDLER_IMAGE
