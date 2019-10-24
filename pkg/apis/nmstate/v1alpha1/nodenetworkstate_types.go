@@ -32,9 +32,13 @@ type NodeNetworkStateStatus struct {
 }
 
 const (
-	NodeNetworkStateConditionFailing     ConditionType = "Failing"
-	NodeNetworkStateConditionProgressing ConditionType = "Progressing"
-	NodeNetworkStateConditionAvailable   ConditionType = "Available"
+	NodeNetworkStateConditionAvailable ConditionType = "Available"
+	NodeNetworkStateConditionFailing   ConditionType = "Failing"
+)
+
+const (
+	NodeNetworkStateConditionFailedToConfigure      ConditionReason = "FailedToConfigure"
+	NodeNetworkStateConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
 )
 
 // +genclient

@@ -29,7 +29,6 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 )
 
 const ReadTimeout = 120 * time.Second
@@ -320,7 +319,7 @@ func checkCondition(node string, conditionType nmstatev1alpha1.ConditionType) As
 	key := types.NamespacedName{Name: node}
 	return Eventually(func() corev1.ConditionStatus {
 		state := nodeNetworkState(key)
-		condition := conditions.Condition(state.Status.Conditions, conditionType)
+		condition := state.Status.Conditions.Find(conditionType)
 		if condition == nil {
 			return corev1.ConditionUnknown
 		}
