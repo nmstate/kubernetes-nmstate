@@ -106,15 +106,15 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 }
 
 func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message string) {
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions = conditions.SetCondition(
+		instance.Status.Conditions,
 		nmstatev1alpha1.NodeNetworkStateConditionFailing,
 		corev1.ConditionTrue,
 		"FailedToConfigure",
 		message,
 	)
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions = conditions.SetCondition(
+		instance.Status.Conditions,
 		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
 		corev1.ConditionFalse,
 		"FailedToConfigure",
@@ -123,15 +123,15 @@ func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message strin
 }
 
 func setCondtionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message string) {
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions = conditions.SetCondition(
+		instance.Status.Conditions,
 		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
 		corev1.ConditionTrue,
 		"SuccessfullyConfigured",
 		message,
 	)
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions = conditions.SetCondition(
+		instance.Status.Conditions,
 		nmstatev1alpha1.NodeNetworkStateConditionFailing,
 		corev1.ConditionFalse,
 		"SuccessfullyConfigured",

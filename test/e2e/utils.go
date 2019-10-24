@@ -316,11 +316,11 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-func checkCondition(node string, conditionType nmstatev1alpha1.NodeNetworkStateConditionType) AsyncAssertion {
+func checkCondition(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
 	key := types.NamespacedName{Name: node}
 	return Eventually(func() corev1.ConditionStatus {
 		state := nodeNetworkState(key)
-		condition := conditions.Condition(&state, conditionType)
+		condition := conditions.Condition(state.Status.Conditions, conditionType)
 		if condition == nil {
 			return corev1.ConditionUnknown
 		}
@@ -469,7 +469,7 @@ func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
-func conditionsToYaml(conditions []nmstatev1alpha1.NodeNetworkStateCondition) string {
+func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
 	manifest, err := yaml.Marshal(conditions)
 	if err != nil {
 		panic(err)

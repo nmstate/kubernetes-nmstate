@@ -107,7 +107,7 @@ var _ = Describe("rollback", func() {
 	})
 })
 
-func nodeNetworkStateConditionStatus(node string, expectedConditionType nmstatev1alpha1.NodeNetworkStateConditionType) corev1.ConditionStatus {
+func nodeNetworkStateConditionStatus(node string, expectedConditionType nmstatev1alpha1.ConditionType) corev1.ConditionStatus {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
 	nodeNetworkState := nodeNetworkState(key)
 	for _, obtainedCondition := range nodeNetworkState.Status.Conditions {
