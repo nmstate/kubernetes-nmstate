@@ -6,10 +6,13 @@ RUN sudo dnf install -y dnf-plugins-core && \
     sudo dnf remove -y dnf-plugins-core && \
     sudo dnf clean all
 
+# Looks like 35 is not enough we need 60 to propertly recover after reboot
+# TODO: Remove this when we merge https://github.com/nmstate/nmstate/pull/555
+RUN sed -i "s/MAINLOOP_TIMEOUT = 35/MAINLOOP_TIMEOUT = 60/g" /usr/lib/python3.7/site-packages/libnmstate/netapplier.py
+
 # Cannot change the binary to nmstate-handler since the name
 # is taken from the directory name [1]
 # [1] https://github.com/operator-framework/operator-sdk/blob/master/cmd/operator-sdk/build/cmd.go#L103
-
 ENV OPERATOR=/usr/local/bin/kubernetes-nmstate \
     USER_UID=0 \
     USER_NAME=root
