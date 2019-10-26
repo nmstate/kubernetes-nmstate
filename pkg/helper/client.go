@@ -97,7 +97,7 @@ func nmstatectl(arguments []string, input string) (string, error) {
 
 }
 
-func set(state string) (string, error) {
+func set(desiredState nmstatev1alpha1.State) (string, error) {
 	output := ""
 	var err error = nil
 	// FIXME: Remove this retries after nmstate team fixes
@@ -107,7 +107,7 @@ func set(state string) (string, error) {
 		// commit timeout doubles the default gw ping probe timeout, to
 		// ensure the Checkpoint is alive before rolling it back
 		// https://nmstate.github.io/cli_guide#manual-transaction-control
-		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(defaultGwProbeTimeout * 2)}, state)
+		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(defaultGwProbeTimeout * 2)}, string(desiredState))
 		if err == nil {
 			log.Info(fmt.Sprintf("nmstatectl set recovered, output: %s", output))
 			break
@@ -145,9 +145,6 @@ func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            node.ObjectMeta.Name,
 			OwnerReferences: ownerRefList,
-		},
-		Spec: nmstatev1alpha1.NodeNetworkStateSpec{
-			NodeName: node.ObjectMeta.Name,
 		},
 	}
 
@@ -218,13 +215,12 @@ func defaultGw() (string, error) {
 	return defaultGw, nil
 }
 
-func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (string, error) {
-	desiredState := string(nodeNetworkState.Spec.DesiredState)
-	if len(desiredState) == 0 {
+func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
+	if len(string(desiredState)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
 
-	setOutput, err := set(string(nodeNetworkState.Spec.DesiredState))
+	setOutput, err := set(desiredState)
 	if err != nil {
 		return setOutput, err
 	}
@@ -233,7 +229,7 @@ func ApplyDesiredState(nodeNetworkState *nmstatev1alpha1.NodeNetworkState) (stri
 	// we have to enforce it at the desiredState bridges and outbound ports
 	// they will be configured with vlan_filtering 1 and all the vlan id range
 	// set
-	bridgesUpWithPorts, err := getBridgesUp(nodeNetworkState.Spec.DesiredState)
+	bridgesUpWithPorts, err := getBridgesUp(desiredState)
 	if err != nil {
 		return "", rollback(fmt.Errorf("error retrieving up bridges from desired state"))
 	}

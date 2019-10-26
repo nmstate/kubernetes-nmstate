@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -34,33 +33,31 @@ routes:
 }
 
 var _ = Describe("rollback", func() {
-	BeforeEach(func() {
-		By("Check NodeNetworkState is not at failing condition")
-		for _, node := range nodes {
-			nodeNetworkStateFailingConditionStatusEventually(node).
-				Should(Equal(corev1.ConditionFalse), "NodeNetworkState should not be Failing before test")
-		}
-	})
+	const policyName = "test-policy"
+
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
 			runAtPods("mv", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
 		})
+
 		AfterEach(func() {
 			By("Rename vlan-filtering.bak to vlan-filtering to leave it as it was")
 			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
-			updateDesiredState(linuxBrAbsent(bridge1))
+			setDesiredStateWithPolicy(policyName, linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
-			resetDesiredStateForNodes()
+			deletePolicy(policyName)
 		})
+
 		It("should rollback failed state configuration", func() {
-			updateDesiredState(linuxBrUpNoPorts(bridge1))
+			setDesiredStateWithPolicy(policyName, linuxBrUpNoPorts(bridge1))
+
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
-				nodeNetworkStateFailingConditionStatusEventually(node).
-					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
+				policyFailingConditionStatusEventually(policyName, node).
+					Should(Equal(corev1.ConditionTrue), "Policy should be marked as failing after rollback")
 
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
@@ -70,6 +67,7 @@ var _ = Describe("rollback", func() {
 			}
 		})
 	})
+
 	Context("when connectivity to default gw is lost after state configuration", func() {
 		BeforeEach(func() {
 			By("Configure a invalid default gw")
@@ -79,18 +77,21 @@ var _ = Describe("rollback", func() {
 					address = ipv4Address(node, *primaryNic)
 					return address
 				}, ReadTimeout, ReadInterval).ShouldNot(BeEmpty())
-				updateDesiredStateAtNode(node, badDefaultGw(address, *primaryNic))
+				setDesiredStateWithPolicyAndNodeSelector(fmt.Sprintf("%s-%s", policyName, node), badDefaultGw(address, *primaryNic), map[string]string{"kubernetes.io/hostname": node})
 			}
 		})
+
 		AfterEach(func() {
-			By("Clean up desired state")
-			resetDesiredStateForNodes()
+			for _, node := range nodes {
+				deletePolicy(fmt.Sprintf("%s-%s", policyName, node))
+			}
 		})
+
 		It("should rollback to a good gw configuration", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
-				nodeNetworkStateFailingConditionStatusEventually(node).
-					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
+				policyFailingConditionStatusEventually(fmt.Sprintf("%s-%s", policyName, node), node).
+					Should(Equal(corev1.ConditionTrue), "Policy should be marked as failing after rollback")
 
 				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
 				Eventually(func() bool {
@@ -106,20 +107,3 @@ var _ = Describe("rollback", func() {
 		})
 	})
 })
-
-func nodeNetworkStateConditionStatus(node string, expectedConditionType nmstatev1alpha1.ConditionType) corev1.ConditionStatus {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
-	nodeNetworkState := nodeNetworkState(key)
-	for _, obtainedCondition := range nodeNetworkState.Status.Conditions {
-		if obtainedCondition.Type == expectedConditionType {
-			return obtainedCondition.Status
-		}
-	}
-	return corev1.ConditionUnknown
-}
-
-func nodeNetworkStateFailingConditionStatusEventually(node string) AsyncAssertion {
-	return Eventually(func() corev1.ConditionStatus {
-		return nodeNetworkStateConditionStatus(node, nmstatev1alpha1.NodeNetworkStateConditionFailing)
-	}, 180*time.Second, 1*time.Second)
-}

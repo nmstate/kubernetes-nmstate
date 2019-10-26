@@ -148,6 +148,14 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 	return nil
 }
 
+func nodeNetworkConfigurationPolicy(key types.NamespacedName) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
+	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	Eventually(func() error {
+		return framework.Global.Client.Get(context.TODO(), key, &policy)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	return policy
+}
+
 func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev1alpha1.State, nodeSelector map[string]string) {
 	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
@@ -168,33 +176,6 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev
 
 func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
 	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, map[string]string{})
-}
-
-func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
-	key := types.NamespacedName{Name: node}
-	state := nmstatev1alpha1.NodeNetworkState{}
-	Eventually(func() error {
-		err := framework.Global.Client.Get(context.TODO(), key, &state)
-		if err != nil {
-			return err
-		}
-		state.Spec.DesiredState = desiredState
-		return framework.Global.Client.Update(context.TODO(), &state)
-	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), string(desiredState))
-}
-
-func updateDesiredState(desiredState nmstatev1alpha1.State) {
-	for _, node := range nodes {
-		updateDesiredStateAtNode(node, desiredState)
-	}
-}
-
-// TODO: After we implement policy delete (it will cleanUp desiredState) we have
-//       to remove this
-func resetDesiredStateForNodes() {
-	for _, node := range nodes {
-		updateDesiredStateAtNode(node, ethernetNicUp(*primaryNic))
-	}
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState {
@@ -315,25 +296,28 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-func checkCondition(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
-	key := types.NamespacedName{Name: node}
-	return Eventually(func() corev1.ConditionStatus {
-		state := nodeNetworkState(key)
-		condition := state.Status.Conditions.Find(conditionType)
-		if condition == nil {
-			return corev1.ConditionUnknown
-		}
-		return condition.Status
-	}, ReadTimeout, ReadInterval)
+func policyConditionStatus(policyName string, node string, expectedConditionType nmstatev1alpha1.ConditionType) corev1.ConditionStatus {
+	policy := nodeNetworkConfigurationPolicy(types.NamespacedName{Name: policyName})
+	fmt.Printf("XXX Policy status: %v\n", policy)
+	condition := policy.Status.Nodes.FindCondition(node, expectedConditionType)
+	if condition == nil {
+		return corev1.ConditionUnknown
+	}
+	return condition.Status
 }
 
-func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alpha1.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
-	return Eventually(func() nmstatev1alpha1.State {
-		*desiredStateYaml = nodeNetworkState(key).Spec.DesiredState
-		return *desiredStateYaml
-	}, ReadTimeout, ReadInterval)
+func policyAvailableConditionStatusEventually(policyName string, node string) AsyncAssertion {
+	return Eventually(func() corev1.ConditionStatus {
+		return policyConditionStatus(policyName, node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable)
+	}, 300*time.Second, 1*time.Second)
 }
+
+func policyFailingConditionStatusEventually(policyName string, node string) AsyncAssertion {
+	return Eventually(func() corev1.ConditionStatus {
+		return policyConditionStatus(policyName, node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing)
+	}, 300*time.Second, 1*time.Second)
+}
+
 func interfacesNameForNode(node string) []string {
 	var currentStateYaml nmstatev1alpha1.State
 	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())

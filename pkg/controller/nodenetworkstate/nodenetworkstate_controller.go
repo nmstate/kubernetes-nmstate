@@ -1,4 +1,4 @@
-package nodenetworkstatereport
+package nodenetworkstate
 
 import (
 	"context"
