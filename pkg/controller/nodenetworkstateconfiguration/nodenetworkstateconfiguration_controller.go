@@ -21,7 +21,6 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/conditions"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
@@ -106,35 +105,31 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 }
 
 func setCondtionFailed(instance *nmstatev1alpha1.NodeNetworkState, message string) {
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions.Set(
 		nmstatev1alpha1.NodeNetworkStateConditionFailing,
 		corev1.ConditionTrue,
-		"FailedToConfigure",
+		nmstatev1alpha1.NodeNetworkStateConditionFailedToConfigure,
 		message,
 	)
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions.Set(
 		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
 		corev1.ConditionFalse,
-		"FailedToConfigure",
-		message,
+		nmstatev1alpha1.NodeNetworkStateConditionFailedToConfigure,
+		"",
 	)
 }
 
 func setCondtionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message string) {
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions.Set(
 		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
 		corev1.ConditionTrue,
-		"SuccessfullyConfigured",
+		nmstatev1alpha1.NodeNetworkStateConditionSuccessfullyConfigured,
 		message,
 	)
-	conditions.SetCondition(
-		instance,
+	instance.Status.Conditions.Set(
 		nmstatev1alpha1.NodeNetworkStateConditionFailing,
 		corev1.ConditionFalse,
-		"SuccessfullyConfigured",
+		nmstatev1alpha1.NodeNetworkStateConditionSuccessfullyConfigured,
 		"",
 	)
 }
