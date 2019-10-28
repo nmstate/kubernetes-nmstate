@@ -19,50 +19,39 @@ func invalidConfig(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName))
 }
 
-var _ = Describe("NodeNetworkStateCondition", func() {
+var _ = Describe("NNCP Conditions", func() {
+	const policyName = "test-policy"
+
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
-			updateDesiredState(linuxBrUp(bridge1))
+			setDesiredStateWithPolicy(policyName, linuxBrUp(bridge1))
 		})
+
 		AfterEach(func() {
-			updateDesiredState(linuxBrAbsent(bridge1))
+			setDesiredStateWithPolicy(policyName, linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
-			By("Reset desired state at all nodes")
-			resetDesiredStateForNodes()
+			deletePolicy(policyName)
 		})
+
 		It("should have Available ConditionType set to true", func() {
 			for _, node := range nodes {
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable).Should(
-					Equal(corev1.ConditionTrue),
-				)
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing).Should(
-					Equal(corev1.ConditionFalse),
-				)
+				policyAvailableConditionStatusEventually(policyName, node).Should(Equal(corev1.ConditionTrue))
+				policyFailingConditionStatusEventually(policyName, node).Should(Equal(corev1.ConditionFalse))
 			}
 		})
 	})
 
 	Context("when applying invalid configuration", func() {
 		BeforeEach(func() {
-			updateDesiredState(invalidConfig(bridge1))
-
-		})
-
-		AfterEach(func() {
-			By("Reset desired state at all nodes")
-			resetDesiredStateForNodes()
+			setDesiredStateWithPolicy(policyName, invalidConfig(bridge1))
 		})
 
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionFailing).Should(
-					Equal(corev1.ConditionTrue),
-				)
-				checkCondition(node, nmstatev1alpha1.NodeNetworkStateConditionAvailable).Should(
-					Equal(corev1.ConditionFalse),
-				)
+				policyFailingConditionStatusEventually(policyName, node).Should(Equal(corev1.ConditionTrue))
+				policyAvailableConditionStatusEventually(policyName, node).Should(Equal(corev1.ConditionFalse))
 			}
 		})
 	})
