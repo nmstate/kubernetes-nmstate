@@ -1,6 +1,7 @@
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,15 +58,41 @@ type NodeInfo struct {
 	Conditions ConditionList `json:"conditions,omitempty"`
 }
 
+func NewNodeInfo(nodeName string) NodeInfo {
+	return NodeInfo{
+		Name:       nodeName,
+		Conditions: ConditionList{},
+	}
 }
 
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+func (list *NodeInfoList) SetCondition(nodeName string, conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) {
+	nodeInfo := list.find(nodeName)
 
-// NodeNetworkConfigurationPolicyList contains a list of NodeNetworkConfigurationPolicy
-type NodeNetworkConfigurationPolicyList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NodeNetworkConfigurationPolicy `json:"items"`
+	if nodeInfo == nil {
+		nodeInfo := NewNodeInfo(nodeName)
+		nodeInfo.Conditions.Set(conditionType, status, reason, message)
+		*list = append(*list, nodeInfo)
+		return
+	}
+
+	nodeInfo.Conditions.Set(conditionType, status, reason, message)
+}
+
+func (list NodeInfoList) FindCondition(nodeName string, conditionType ConditionType) *Condition {
+	nodeInfo := list.find(nodeName)
+	if nodeInfo == nil {
+		return nil
+	}
+	return nodeInfo.Conditions.Find(conditionType)
+}
+
+func (list NodeInfoList) find(nodeName string) *NodeInfo {
+	for i, nodeInfo := range list {
+		if nodeInfo.Name == nodeName {
+			return &list[i]
+		}
+	}
+	return nil
 }
 
 const (
