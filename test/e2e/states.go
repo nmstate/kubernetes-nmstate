@@ -68,7 +68,7 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
-func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
+func ovsBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
   - name: ovs0
     type: ovs-interface
