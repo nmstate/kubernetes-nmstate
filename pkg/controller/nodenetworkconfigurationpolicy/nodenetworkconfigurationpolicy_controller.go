@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -20,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
 var (
@@ -73,13 +75,19 @@ func forThisNodePredicate(cl client.Client) predicate.Funcs {
 			return nodeSelectorMatchesThisNode(cl, createEvent.Object)
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, deleteEvent.Object)
+			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew)
-		},
-		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, genericEvent.Object)
+			if !nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew) {
+				return false
+			}
+
+			// As described [1] if we want to ignore reconcile of status update we have
+			// to check generation since it does not change on status updates also force
+			// reconcile if finalizers have changes
+			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
+			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
+			return generationIsDifferent
 		},
 	}
 }
@@ -135,27 +143,91 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	nodeNetworkState := &nmstatev1alpha1.NodeNetworkState{}
-	nodeNetworkStateKey := types.NamespacedName{Name: nodeName}
-	err = r.client.Get(context.TODO(), nodeNetworkStateKey, nodeNetworkState)
+	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			reqLogger.Info(fmt.Sprintf("the NodeNetworkState for %s is not there yet, let's requeue", nodeName))
-			// If there is no NodeNetworkState let's requeue could be that
-			// we are in the middle of the creation
-			return reconcile.Result{Requeue: true}, nil
+		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
+
+		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
+		if retryErr != nil {
+			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
 		}
-		// Error reading the nodeNetworkState - requeue the request.
-		return reconcile.Result{}, err
+		reqLogger.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
+		return reconcile.Result{}, nil
 	}
+	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	// FIXME: We have to merge it somehow in case of multiple policies applied
-	nodeNetworkState.Spec.DesiredState = instance.Spec.DesiredState
-
-	// TODO: Use Patch instaed of Update
-	err = r.client.Update(context.TODO(), nodeNetworkState)
+	err = r.setCondition(true, "successfully reconciled", request.NamespacedName)
 	if err != nil {
-		return reconcile.Result{}, err
+		reqLogger.Error(err, "Success condition update failed while reporting success: %v", err)
 	}
+
 	return reconcile.Result{}, nil
+}
+
+func (r *ReconcileNodeNetworkConfigurationPolicy) setCondition(
+	available bool,
+	message string,
+	policyName types.NamespacedName,
+) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+		err := r.client.Get(context.TODO(), policyName, instance)
+		if err != nil {
+			return err
+		}
+
+		if available {
+			setConditionSuccess(&instance.Status.Enactments, message)
+		} else {
+			setConditionFailed(&instance.Status.Enactments, message)
+		}
+
+		err = r.client.Status().Update(context.TODO(), instance)
+		return err
+	})
+}
+
+func setConditionFailed(enactments *nmstatev1alpha1.EnactmentList, message string) {
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
+		message,
+	)
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		corev1.ConditionFalse,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
+		"",
+	)
+}
+
+func setConditionSuccess(enactments *nmstatev1alpha1.EnactmentList, message string) {
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
+		message,
+	)
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+		corev1.ConditionFalse,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
+		"",
+	)
+}
+
+func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {
+	var state nmstatev1alpha1.State
+	switch v := object.(type) {
+	default:
+		return nmstatev1alpha1.State{}, fmt.Errorf("unexpected type %T", v)
+	case *nmstatev1alpha1.NodeNetworkConfigurationPolicy:
+		state = v.Spec.DesiredState
+	}
+	return state, nil
 }
