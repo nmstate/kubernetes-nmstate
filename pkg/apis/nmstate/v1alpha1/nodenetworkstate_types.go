@@ -13,16 +13,6 @@ import (
 // +k8s:openapi-gen=true
 type State []byte
 
-// NodeNetworkStateSpec defines the desired state of NodeNetworkState
-// +k8s:openapi-gen=true
-type NodeNetworkStateSpec struct {
-	Managed bool `json:"managed"`
-	// Name of the node reporting this state
-	NodeName string `json:"nodeName"`
-	// The desired configuration for the node
-	DesiredState State `json:"desiredState,omitempty"`
-}
-
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
@@ -53,7 +43,6 @@ type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NodeNetworkStateSpec   `json:"spec,omitempty"`
 	Status NodeNetworkStateStatus `json:"status,omitempty"`
 }
 
