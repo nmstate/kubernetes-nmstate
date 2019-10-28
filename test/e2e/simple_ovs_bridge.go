@@ -6,17 +6,21 @@ import (
 )
 
 var _ = Describe("Simple OVS bridge", func() {
+	const policyName = "test-policy"
+
 	Context("when desiredState is configured with an ovs bridge up", func() {
 		BeforeEach(func() {
-			updateDesiredState(ovsBrUp(bridge1))
+			setDesiredStateWithPolicy(policyName, ovsBrUp(bridge1))
 		})
+
 		AfterEach(func() {
-			updateDesiredState(ovsBrAbsent(bridge1))
+			setDesiredStateWithPolicy(policyName, ovsBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
-			resetDesiredStateForNodes()
+			deletePolicy(policyName)
 		})
+
 		It("should have the ovs bridge at currentState", func() {
 			for _, node := range nodes {
 				interfacesForNode(node).Should(ContainElement(SatisfyAll(
@@ -27,17 +31,20 @@ var _ = Describe("Simple OVS bridge", func() {
 			}
 		})
 	})
+
 	Context("when desiredState is configured with an ovs bridge with internal port up", func() {
 		BeforeEach(func() {
-			updateDesiredState(ovsbBrWithInternalInterface(bridge1))
+			setDesiredStateWithPolicy(policyName, ovsBrWithInternalInterface(bridge1))
 		})
+
 		AfterEach(func() {
-			updateDesiredState(ovsBrAbsent(bridge1))
+			setDesiredStateWithPolicy(policyName, ovsBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
-			resetDesiredStateForNodes()
+			deletePolicy(policyName)
 		})
+
 		It("should have the ovs bridge at currentState", func() {
 			for _, node := range nodes {
 				interfacesForNode(node).Should(SatisfyAll(

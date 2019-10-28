@@ -85,19 +85,23 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
 `, bondName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
-var _ = Describe("NodeNetworkState", func() {
+var _ = Describe("Simple bridge and bond configuration", func() {
+	const policyName = "test-policy"
+
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
-				updateDesiredState(linuxBrUpNoPorts(bridge1))
+				setDesiredStateWithPolicy(policyName, linuxBrUpNoPorts(bridge1))
 			})
+
 			AfterEach(func() {
-				updateDesiredState(linuxBrAbsent(bridge1))
+				setDesiredStateWithPolicy(policyName, linuxBrAbsent(bridge1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
-				resetDesiredStateForNodes()
+				deletePolicy(policyName)
 			})
+
 			It("should have the linux bridge at currentState with vlan_filtering 1", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
@@ -105,17 +109,20 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
+
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
-				updateDesiredState(linuxBrUp(bridge1))
+				setDesiredStateWithPolicy(policyName, linuxBrUp(bridge1))
 			})
+
 			AfterEach(func() {
-				updateDesiredState(linuxBrAbsent(bridge1))
+				setDesiredStateWithPolicy(policyName, linuxBrAbsent(bridge1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
-				resetDesiredStateForNodes()
+				deletePolicy(policyName)
 			})
+
 			It("should have the linux bridge at currentState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
@@ -127,21 +134,22 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
+
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
-				updateDesiredState(bondUp(bond1))
+				setDesiredStateWithPolicy(policyName, bondUp(bond1))
 			})
+
 			AfterEach(func() {
-				updateDesiredState(bondAbsent(bond1))
+				setDesiredStateWithPolicy(policyName, bondAbsent(bond1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
-				resetDesiredStateForNodes()
+				deletePolicy(policyName)
 			})
+
 			It("should have the bond interface at currentState", func() {
-				var (
-					expectedBond = interfaceByName(interfaces(bondUp(bond1)), bond1)
-				)
+				var expectedBond = interfaceByName(interfaces(bondUp(bond1)), bond1)
 
 				for _, node := range nodes {
 					interfacesForNode(node).Should(ContainElement(SatisfyAll(
@@ -153,18 +161,21 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
+
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
-				updateDesiredState(brWithBondUp(bridge1, bond1))
+				setDesiredStateWithPolicy(policyName, brWithBondUp(bridge1, bond1))
 			})
+
 			AfterEach(func() {
-				updateDesiredState(brAndBondAbsent(bridge1, bond1))
+				setDesiredStateWithPolicy(policyName, brAndBondAbsent(bridge1, bond1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
-				resetDesiredStateForNodes()
+				deletePolicy(policyName)
 			})
+
 			It("should have the bond in the linux bridge as port at currentState", func() {
 				var (
 					expectedInterfaces = interfaces(brWithBondUp(bridge1, bond1))
@@ -195,18 +206,21 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
+
 		Context("with bond interface that has 2 eths as slaves", func() {
 			BeforeEach(func() {
-				updateDesiredState(bondUpWithEth1AndEth2(bond1))
+				setDesiredStateWithPolicy(policyName, bondUpWithEth1AndEth2(bond1))
 			})
+
 			AfterEach(func() {
-				updateDesiredState(bondAbsent(bond1))
+				setDesiredStateWithPolicy(policyName, bondAbsent(bond1))
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
-				resetDesiredStateForNodes()
+				deletePolicy(policyName)
 			})
-			It("should have the bond interface with 2 slaves at currentState", func() {
+
+			FIt("should have the bond interface with 2 slaves at currentState", func() {
 				var (
 					expectedBond  = interfaceByName(interfaces(bondUpWithEth1AndEth2(bond1)), bond1)
 					expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
