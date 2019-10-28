@@ -13,7 +13,7 @@ import (
 var _ = Describe("Conditions list", func() {
 	Context("is empty", func() {
 		It("should return nil when finding a condition", func() {
-			condition := ConditionList{}.Find(NodeNetworkStateConditionFailing)
+			condition := ConditionList{}.Find(NodeNetworkConfigurationPolicyConditionFailing)
 			Expect(condition).To(BeNil())
 		})
 	})
@@ -21,7 +21,7 @@ var _ = Describe("Conditions list", func() {
 	Context("contains a single item", func() {
 		originalConditions := ConditionList{
 			Condition{
-				Type:    NodeNetworkStateConditionFailing,
+				Type:    NodeNetworkConfigurationPolicyConditionFailing,
 				Status:  corev1.ConditionUnknown,
 				Reason:  ConditionReason("foo"),
 				Message: "bar",
@@ -40,7 +40,7 @@ var _ = Describe("Conditions list", func() {
 		})
 
 		Context("and we add a new one", func() {
-			addedConditionType := NodeNetworkStateConditionAvailable
+			addedConditionType := NodeNetworkConfigurationPolicyConditionAvailable
 			addedConditionStatus := corev1.ConditionTrue
 			addedConditionReason := ConditionReason("foo")
 			addedConditionMessage := "bar"
