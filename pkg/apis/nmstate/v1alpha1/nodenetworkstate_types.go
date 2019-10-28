@@ -15,19 +15,7 @@ type State []byte
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
 	CurrentState State `json:"currentState,omitempty"`
-
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
-
-const (
-	NodeNetworkStateConditionAvailable ConditionType = "Available"
-	NodeNetworkStateConditionFailing   ConditionType = "Failing"
-)
-
-const (
-	NodeNetworkStateConditionFailedToConfigure      ConditionReason = "FailedToConfigure"
-	NodeNetworkStateConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
-)
 
 // +genclient
 // +genclient:nonNamespaced
