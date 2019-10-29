@@ -87,6 +87,9 @@ var _ = Describe("rollback", func() {
 			}
 		})
 
+		// TODO: maybe the controller gets restarted during default gw configuration?
+		// it configures the bridge but logs contain nothing
+		// TODO: check if there is more restarts after the conf, keep checking logs
 		It("should rollback to a good gw configuration", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")

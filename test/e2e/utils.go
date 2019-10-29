@@ -298,7 +298,6 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 
 func policyConditionStatus(policyName string, node string, expectedConditionType nmstatev1alpha1.ConditionType) corev1.ConditionStatus {
 	policy := nodeNetworkConfigurationPolicy(types.NamespacedName{Name: policyName})
-	fmt.Printf("XXX Policy status: %v\n", policy)
 	condition := policy.Status.Nodes.FindCondition(node, expectedConditionType)
 	if condition == nil {
 		return corev1.ConditionUnknown

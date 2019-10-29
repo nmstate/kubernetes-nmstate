@@ -149,16 +149,16 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 
 		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
 		if retryErr != nil {
-			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
+			reqLogger.Error(retryErr, "Failing condition update failed while reporting error", "original error", errmsg)
 		}
-		reqLogger.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
+		reqLogger.Error(errmsg, "Rolling back network configuration, manual intervention needed")
 		return reconcile.Result{}, nil
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
 	err = r.setCondition(true, "successfully reconciled", request.NamespacedName)
 	if err != nil {
-		reqLogger.Error(err, "Success condition update failed while reporting success: %v", err)
+		reqLogger.Error(err, "Success condition update failed while reporting success")
 	}
 
 	return reconcile.Result{}, nil
@@ -188,6 +188,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) setCondition(
 }
 
 func setConditionFailed(nodeInfoList *nmstatev1alpha1.NodeInfoList, message string) {
+	log.Info("XXX FAILED %s", "msg", message)
 	nodeInfoList.SetCondition(
 		nodeName,
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
@@ -205,6 +206,7 @@ func setConditionFailed(nodeInfoList *nmstatev1alpha1.NodeInfoList, message stri
 }
 
 func setConditionSuccess(nodeInfoList *nmstatev1alpha1.NodeInfoList, message string) {
+	log.Info("XXX OK %s", "msg", message)
 	nodeInfoList.SetCondition(
 		nodeName,
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,

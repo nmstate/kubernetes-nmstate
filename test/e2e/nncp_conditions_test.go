@@ -9,6 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func invalidConfig(bridgeName string) nmstatev1alpha1.State {
@@ -37,6 +39,8 @@ var _ = Describe("NNCP Conditions", func() {
 
 		It("should have Available ConditionType set to true", func() {
 			for _, node := range nodes {
+				interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
+				By(fmt.Sprintf("XXX2 %v\n", nodeNetworkConfigurationPolicy(types.NamespacedName{Name: policyName})))
 				policyAvailableConditionStatusEventually(policyName, node).Should(Equal(corev1.ConditionTrue))
 				policyFailingConditionStatusEventually(policyName, node).Should(Equal(corev1.ConditionFalse))
 			}
