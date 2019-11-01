@@ -2,7 +2,7 @@ FROM fedora:31
 
 RUN sudo dnf install -y dnf-plugins-core && \
     sudo dnf copr enable -y nmstate/nmstate-git-fedora && \
-    sudo dnf install -y nmstate-0.0.8-0.20191022.669git5701bbe.fc31.noarch iproute iputils && \
+    sudo dnf install -y nmstate-0.1.1 iproute iputils && \
     sudo dnf remove -y dnf-plugins-core && \
     sudo dnf clean all
 
