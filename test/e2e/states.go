@@ -86,8 +86,6 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
         stp: true
       port:
         - name: %s
-          type: system
-        - name: ovs0
-          type: internal`,
+        - name: ovs0`,
 		bridgeName, *firstSecondaryNic))
 }
