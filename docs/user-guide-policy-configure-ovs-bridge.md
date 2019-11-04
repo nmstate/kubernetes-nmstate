@@ -69,9 +69,7 @@ spec:
             stp: true
           port:
             - name: eth1
-              type: system
             - name: ovs0
-              type: internal
 EOF
 ```
 
