@@ -1,8 +1,8 @@
-Use latest nmstate obtained from master
+v0.12.0
 
-The version 0.8.0 we used until now is pretty old and contains some major bugs.
-We are moving to use the current master until nmstate publishes a new stable
-release.
+* Workaround for nmstate mainloop timeout which is too short.
+* Use nsmtate RPM released under 0.1.1 version. This should reflect the current
+  master.
 
 ```
 docker pull HANDLER_IMAGE
