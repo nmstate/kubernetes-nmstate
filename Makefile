@@ -6,55 +6,23 @@ HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
-UNIT_TEST_ARGS ?=  -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_EXTRA_ARGS)
-ifdef UNIT_TEST_FOCUS
-	UNIT_TEST_ARGS += --focus $(UNIT_TEST_FOCUS)
-endif
-ifdef UNIT_TEST_SKIP
-	UNIT_TEST_ARGS += --skip $(UNIT_TEST_SKIP)
-endif
-ifdef UNIT_TEST_EXTRA_ARGS
-	UNIT_TEST_ARGS += $(UNIT_TEST_ARGS)
-endif
+unit_test_args ?=  -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
 export KUBEVIRT_PROVIDER ?= k8s-1.14.6
 export KUBEVIRT_NUM_NODES ?= 1
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
+e2e_test_args = -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
 ifeq ($(findstring okd,$(KUBEVIRT_PROVIDER)),okd)
-	E2E_TEST_ARGS = -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
+	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
 else
-	E2E_TEST_ARGS = -primaryNic eth0 -firstSecondaryNic eth1 -secondSecondaryNic eth2
-endif
-
-E2E_TEST_ARGS += -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60
-ifdef E2E_TEST_FOCUS
-	E2E_TEST_ARGS +=  -ginkgo.focus $(E2E_TEST_FOCUS)
-endif
-
-# Unless explicitly focused, always skip the cleanup test (it removes a node)
-E2E_TEST_SKIP = .*NNS.*cleanup.*
-
-# test ovs only for k8s providers
-ifeq (,$(findstring k8s-,$(KUBEVIRT_PROVIDER)))
-	E2E_TEST_SKIP := $(E2E_TEST_SKIP)|.*OVS.*
-endif
-
-ifdef E2E_EXTRA_SKIP
-	E2E_TEST_SKIP := $(E2E_TEST_SKIP)|$(E2E_EXTRA_SKIP)
-endif
-
-E2E_TEST_ARGS +=  -ginkgo.skip $(E2E_TEST_SKIP)
-
-ifdef E2E_TEST_EXTRA_ARGS
-	E2E_TEST_ARGS +=  $(E2E_TEST_EXTRA_ARGS)
+	e2e_test_args += -primaryNic eth0 -firstSecondaryNic eth1 -secondSecondaryNic eth2
 endif
 
 GINKGO ?= build/_output/bin/ginkgo
 OPERATOR_SDK ?= build/_output/bin/operator-sdk
 GITHUB_RELEASE ?= build/_output/bin/github-release
 LOCAL_REGISTRY ?= registry:5000
-
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
 KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
@@ -107,14 +75,14 @@ push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(UNIT_TEST_ARGS) ./pkg/
+	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) ./pkg/
 
 test/e2e: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace nmstate \
 		--no-setup \
-		--go-test-flags "$(E2E_TEST_ARGS)"
+		--go-test-flags "$(e2e_test_args)"
 
 $(local_handler_manifest): deploy/operator.yaml
 	mkdir -p $(dir $@)
