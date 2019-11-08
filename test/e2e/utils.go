@@ -47,7 +47,7 @@ func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) erro
 	podLogOpts := corev1.PodLogOptions{}
 	podLogOpts.SinceTime = &metav1.Time{sinceTime}
 	podList := &corev1.PodList{}
-	err := framework.Global.Client.List(context.TODO(), &dynclient.ListOptions{}, podList)
+	err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
 
@@ -126,7 +126,7 @@ func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, 
 		return nil
 	}
 	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
-		deployment, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{IncludeUninitialized: true})
+		deployment, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				t.Logf("Waiting for availability of %s daemonset\n", name)
@@ -207,7 +207,7 @@ func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState
 
 func deleteNodeNeworkStates() {
 	nodeNetworkStateList := &nmstatev1alpha1.NodeNetworkStateList{}
-	err := framework.Global.Client.List(context.TODO(), &dynclient.ListOptions{}, nodeNetworkStateList)
+	err := framework.Global.Client.List(context.TODO(), nodeNetworkStateList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	var deleteErrors []error
 	for _, nodeNetworkState := range nodeNetworkStateList.Items {

@@ -77,6 +77,8 @@ type ScorecardTestResult struct {
 	Suggestions []string `json:"suggestions"`
 	// Errors is a list of the errors that occured during the test (this can include both fatal and non-fatal errors)
 	Errors []string `json:"errors"`
+	// Labels used for v1alpha2, not included in v1alpha1 JSON output
+	Labels map[string]string `json:"-"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -90,7 +92,7 @@ type ScorecardOutput struct {
 
 	// Log contains the scorecard's log.
 	Log string `json:"log"`
-	// Results is an array of ScorecardResult for each suite of the curent scorecard run.
+	// Results is an array of ScorecardResult for each suite of the current scorecard run.
 	Results []ScorecardSuiteResult `json:"results"`
 }
 
