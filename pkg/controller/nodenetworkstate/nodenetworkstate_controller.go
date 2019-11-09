@@ -1,4 +1,4 @@
-package nodenetworkstatereport
+package nodenetworkstate
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	log                     = logf.Log.WithName("controller_nodenetworkstatereport")
+	log                     = logf.Log.WithName("controller_nodenetworkstate")
 	nodenetworkstateRefresh time.Duration
 )
 
@@ -49,13 +49,13 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNodeNetworkStateReport{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileNodeNetworkState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
-	c, err := controller.New("nodenetworkstatereport-controller", mgr, controller.Options{Reconciler: r})
+	c, err := controller.New("nodenetworkstate-controller", mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
 	}
@@ -84,11 +84,11 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileNodeNetworkStateReport implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileNodeNetworkStateReport{}
+// blank assignment to verify that ReconcileNodeNetworkState implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileNodeNetworkState{}
 
-// ReconcileNodeNetworkStateReport reconciles a NodeNetworkState object
-type ReconcileNodeNetworkStateReport struct {
+// ReconcileNodeNetworkState reconciles a NodeNetworkState object
+type ReconcileNodeNetworkState struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
@@ -102,9 +102,9 @@ type ReconcileNodeNetworkStateReport struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileNodeNetworkStateReport) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.V(1).Info("Reconciling NodeNetworkState report")
+	reqLogger.V(1).Info("Reconciling NodeNetworkState")
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		// Fetch the NodeNetworkState instance
 		instance := &nmstatev1alpha1.NodeNetworkState{}
