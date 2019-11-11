@@ -193,7 +193,7 @@ func (r *ReconcileNodeNetworkStateConfiguration) Reconcile(request reconcile.Req
 		return reconcile.Result{}, err
 	}
 
-	nmstateOutput, err := nmstate.ApplyDesiredState(instance)
+	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling nodenetworkstate at desired state apply: %s, %v", nmstateOutput, err)
 
