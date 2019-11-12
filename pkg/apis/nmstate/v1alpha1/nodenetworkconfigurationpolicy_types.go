@@ -48,50 +48,50 @@ type NodeNetworkConfigurationPolicySpec struct {
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 // +k8s:openapi-gen=true
 type NodeNetworkConfigurationPolicyStatus struct {
-	Nodes NodeInfoList `json:"nodes,omitempty" optional:"true"`
+	Enactments EnactmentList `json:"enactments,omitempty" optional:"true"`
 }
 
 // TODO: This is a temporary solution. This list will be replaced by a dedicated
 // NodeNetworkConfigurationEnactment object.
-type NodeInfoList []NodeInfo
+type EnactmentList []Enactment
 
-type NodeInfo struct {
-	Name       string        `json:"name"`
+type Enactment struct {
+	NodeName   string        `json:"nodeName"`
 	Conditions ConditionList `json:"conditions,omitempty"`
 }
 
-func NewNodeInfo(nodeName string) NodeInfo {
-	return NodeInfo{
-		Name:       nodeName,
+func NewEnactment(nodeName string) Enactment {
+	return Enactment{
+		NodeName:   nodeName,
 		Conditions: ConditionList{},
 	}
 }
 
-func (list *NodeInfoList) SetCondition(nodeName string, conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) {
-	nodeInfo := list.find(nodeName)
+func (enactments *EnactmentList) SetCondition(nodeName string, conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) {
+	enactment := enactments.find(nodeName)
 
-	if nodeInfo == nil {
-		nodeInfo := NewNodeInfo(nodeName)
-		nodeInfo.Conditions.Set(conditionType, status, reason, message)
-		*list = append(*list, nodeInfo)
+	if enactment == nil {
+		enactment := NewEnactment(nodeName)
+		enactment.Conditions.Set(conditionType, status, reason, message)
+		*enactments = append(*enactments, enactment)
 		return
 	}
 
-	nodeInfo.Conditions.Set(conditionType, status, reason, message)
+	enactment.Conditions.Set(conditionType, status, reason, message)
 }
 
-func (list NodeInfoList) FindCondition(nodeName string, conditionType ConditionType) *Condition {
-	nodeInfo := list.find(nodeName)
-	if nodeInfo == nil {
+func (enactments EnactmentList) FindCondition(nodeName string, conditionType ConditionType) *Condition {
+	enactment := enactments.find(nodeName)
+	if enactment == nil {
 		return nil
 	}
-	return nodeInfo.Conditions.Find(conditionType)
+	return enactment.Conditions.Find(conditionType)
 }
 
-func (list NodeInfoList) find(nodeName string) *NodeInfo {
-	for i, nodeInfo := range list {
-		if nodeInfo.Name == nodeName {
-			return &list[i]
+func (enactments EnactmentList) find(nodeName string) *Enactment {
+	for i, enactment := range enactments {
+		if enactment.NodeName == nodeName {
+			return &enactments[i]
 		}
 	}
 	return nil
