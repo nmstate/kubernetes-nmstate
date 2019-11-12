@@ -13,10 +13,10 @@ export KUBEVIRT_NUM_NODES ?= 1
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 e2e_test_args = -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
-ifeq ($(findstring okd,$(KUBEVIRT_PROVIDER)),okd)
-	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
-else
+ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 	e2e_test_args += -primaryNic eth0 -firstSecondaryNic eth1 -secondSecondaryNic eth2
+else
+	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
 endif
 
 GINKGO ?= build/_output/bin/ginkgo
@@ -113,7 +113,7 @@ cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f deploy/
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi
 
@@ -121,12 +121,12 @@ cluster-sync-resources: $(KUBECTL)
 	for resource in $(resources); do \
 		$(KUBECTL) apply -f $$resource || exit 1; \
 	done
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		$(KUBECTL) apply -f deploy/openshift/; \
 	fi
 
 cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		IMAGE_REGISTRY=localhost:$$($(CLI) ports --container-name=cluster registry | tr -d '\r') \
 				   make push-handler;  \
 	else \
