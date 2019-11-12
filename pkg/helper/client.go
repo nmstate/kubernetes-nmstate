@@ -146,9 +146,6 @@ func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *
 			Name:            node.ObjectMeta.Name,
 			OwnerReferences: ownerRefList,
 		},
-		Spec: nmstatev1alpha1.NodeNetworkStateSpec{
-			NodeName: node.ObjectMeta.Name,
-		},
 	}
 
 	err := client.Create(context.TODO(), &nodeNetworkState)
