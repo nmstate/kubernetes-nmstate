@@ -11,12 +11,6 @@ import (
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
-		desiredState = State(`
-interfaces:
-  - name: eth1
-    type: ethernet
-    state: up`)
-
 		currentState = State(`
 interfaces:
   - name: eth1
@@ -29,14 +23,6 @@ kind: NodeNetworkState
 metadata:
   name: node01
   creationTimestamp: "1970-01-01T00:00:00Z"
-spec:
-  managed: true
-  nodeName: node01
-  desiredState:
-    interfaces:
-      - name: eth1
-        type: ethernet
-        state: up
 status:
   currentState:
     interfaces:
@@ -54,11 +40,6 @@ status:
 				Name:              "node01",
 				CreationTimestamp: metav1.Unix(0, 0),
 			},
-			Spec: NodeNetworkStateSpec{
-				Managed:      true,
-				NodeName:     "node01",
-				DesiredState: desiredState,
-			},
 			Status: NodeNetworkStateStatus{
 				CurrentState: currentState,
 			},
@@ -73,16 +54,10 @@ status:
 			err := yaml.Unmarshal([]byte(nnsManifest), &nodeNetworkStateStruct)
 			Expect(err).ToNot(HaveOccurred())
 		})
-
-		It("should succesfully parse desiredState yaml", func() {
-			Expect(nodeNetworkStateStruct.Spec.DesiredState).To(MatchYAML([]byte(nnsStruct.Spec.DesiredState)))
-		})
 		It("should succesfully parse currentState yaml", func() {
 			Expect(nodeNetworkStateStruct.Status.CurrentState).To(MatchYAML([]byte(nnsStruct.Status.CurrentState)))
 		})
 		It("should succesfully parse non state attributes", func() {
-			Expect(nodeNetworkStateStruct.Spec.Managed).To(Equal(nnsStruct.Spec.Managed))
-			Expect(nodeNetworkStateStruct.Spec.NodeName).To(Equal(nnsStruct.Spec.NodeName))
 			Expect(nodeNetworkStateStruct.TypeMeta).To(Equal(nnsStruct.TypeMeta))
 			Expect(nodeNetworkStateStruct.ObjectMeta).To(Equal(nnsStruct.ObjectMeta))
 		})
