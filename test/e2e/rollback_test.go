@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -35,9 +34,9 @@ routes:
 
 var _ = Describe("rollback", func() {
 	BeforeEach(func() {
-		By("Check NodeNetworkState is not at failing condition")
+		By("Check Enactment is not at failing condition")
 		for _, node := range nodes {
-			nodeNetworkStateFailingConditionStatusEventually(node).
+			checkEnactmentConditionConsistently(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
 				Should(Equal(corev1.ConditionFalse), "NodeNetworkState should not be Failing before test")
 		}
 	})
@@ -59,7 +58,7 @@ var _ = Describe("rollback", func() {
 			updateDesiredState(linuxBrUpNoPorts(bridge1))
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
-				nodeNetworkStateFailingConditionStatusEventually(node).
+				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
 					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
 
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
@@ -89,7 +88,7 @@ var _ = Describe("rollback", func() {
 		It("should rollback to a good gw configuration", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
-				nodeNetworkStateFailingConditionStatusEventually(node).
+				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
 					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
 
 				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
@@ -106,20 +105,3 @@ var _ = Describe("rollback", func() {
 		})
 	})
 })
-
-func nodeNetworkStateConditionStatus(node string, expectedConditionType nmstatev1alpha1.ConditionType) corev1.ConditionStatus {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
-	nodeNetworkState := nodeNetworkState(key)
-	for _, obtainedCondition := range nodeNetworkState.Status.Conditions {
-		if obtainedCondition.Type == expectedConditionType {
-			return obtainedCondition.Status
-		}
-	}
-	return corev1.ConditionUnknown
-}
-
-func nodeNetworkStateFailingConditionStatusEventually(node string) AsyncAssertion {
-	return Eventually(func() corev1.ConditionStatus {
-		return nodeNetworkStateConditionStatus(node, nmstatev1alpha1.NodeNetworkStateConditionFailing)
-	}, 180*time.Second, 1*time.Second)
-}

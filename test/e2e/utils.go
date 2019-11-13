@@ -31,8 +31,9 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-const ReadTimeout = 120 * time.Second
+const ReadTimeout = 180 * time.Second
 const ReadInterval = 1 * time.Second
+const TestPolicy = "test-policy"
 
 var (
 	bridgeCounter = 0
@@ -170,31 +171,19 @@ func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) 
 	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, map[string]string{})
 }
 
-func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
-	key := types.NamespacedName{Name: node}
-	state := nmstatev1alpha1.NodeNetworkState{}
-	Eventually(func() error {
-		err := framework.Global.Client.Get(context.TODO(), key, &state)
-		if err != nil {
-			return err
-		}
-		state.Spec.DesiredState = desiredState
-		return framework.Global.Client.Update(context.TODO(), &state)
-	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), string(desiredState))
+func updateDesiredState(desiredState nmstatev1alpha1.State) {
+	setDesiredStateWithPolicy(TestPolicy, desiredState)
 }
 
-func updateDesiredState(desiredState nmstatev1alpha1.State) {
-	for _, node := range nodes {
-		updateDesiredStateAtNode(node, desiredState)
-	}
+func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
+	nodeSelector := map[string]string{"kubernetes.io/hostname": node}
+	setDesiredStateWithPolicyAndNodeSelector(TestPolicy, desiredState, nodeSelector)
 }
 
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
 //       to remove this
 func resetDesiredStateForNodes() {
-	for _, node := range nodes {
-		updateDesiredStateAtNode(node, ethernetNicUp(*primaryNic))
-	}
+	updateDesiredState(ethernetNicUp(*primaryNic))
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState {
@@ -203,6 +192,14 @@ func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState
 		return framework.Global.Client.Get(context.TODO(), key, &state)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return state
+}
+
+func nodeNetworkConfigurationPolicy(key types.NamespacedName) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
+	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	Eventually(func() error {
+		return framework.Global.Client.Get(context.TODO(), key, &policy)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	return policy
 }
 
 func deleteNodeNeworkStates() {
@@ -315,11 +312,11 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-func checkCondition(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
-	key := types.NamespacedName{Name: node}
+func checkEnactmentConditionEventually(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
+	key := types.NamespacedName{Name: TestPolicy}
 	return Eventually(func() corev1.ConditionStatus {
-		state := nodeNetworkState(key)
-		condition := state.Status.Conditions.Find(conditionType)
+		policy := nodeNetworkConfigurationPolicy(key)
+		condition := policy.Status.Enactments.FindCondition(node, conditionType)
 		if condition == nil {
 			return corev1.ConditionUnknown
 		}
@@ -327,12 +324,16 @@ func checkCondition(node string, conditionType nmstatev1alpha1.ConditionType) As
 	}, ReadTimeout, ReadInterval)
 }
 
-func desiredState(namespace string, node string, desiredStateYaml *nmstatev1alpha1.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
-	return Eventually(func() nmstatev1alpha1.State {
-		*desiredStateYaml = nodeNetworkState(key).Spec.DesiredState
-		return *desiredStateYaml
-	}, ReadTimeout, ReadInterval)
+func checkEnactmentConditionConsistently(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
+	key := types.NamespacedName{Name: TestPolicy}
+	return Eventually(func() corev1.ConditionStatus {
+		policy := nodeNetworkConfigurationPolicy(key)
+		condition := policy.Status.Enactments.FindCondition(node, conditionType)
+		if condition == nil {
+			return corev1.ConditionUnknown
+		}
+		return condition.Status
+	}, 5*time.Second, 1*time.Second)
 }
 func interfacesNameForNode(node string) []string {
 	var currentStateYaml nmstatev1alpha1.State
