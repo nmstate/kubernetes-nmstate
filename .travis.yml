@@ -1,5 +1,5 @@
 language: go
-go: "1.11"
+go: "1.12"
 
 install: true
 script:
