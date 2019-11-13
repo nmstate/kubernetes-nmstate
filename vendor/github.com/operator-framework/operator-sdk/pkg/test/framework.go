@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/discovery/cached"
+	cached "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/kubernetes"
 	cgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -114,12 +114,7 @@ type addToSchemeFunc func(*runtime.Scheme) error
 // the addToScheme function (located in the register.go file of their operator
 // project) and the List struct for their custom resource. For example, for a
 // memcached operator, the list stuct may look like:
-// &MemcachedList{
-//	TypeMeta: metav1.TypeMeta{
-//		Kind: "Memcached",
-//		APIVersion: "cache.example.com/v1alpha1",
-//		},
-//	}
+// &MemcachedList{}
 // The List object is needed because the CRD has not always been fully registered
 // by the time this function is called. If the CRD takes more than 5 seconds to
 // become ready, this function throws an error
@@ -137,9 +132,9 @@ func AddToFrameworkScheme(addToScheme addToSchemeFunc, obj runtime.Object) error
 	}
 	err = wait.PollImmediate(time.Second, time.Second*10, func() (done bool, err error) {
 		if *singleNamespace {
-			err = dynClient.List(goctx.TODO(), &dynclient.ListOptions{Namespace: Global.Namespace}, obj)
+			err = dynClient.List(goctx.TODO(), obj, dynclient.InNamespace(Global.Namespace))
 		} else {
-			err = dynClient.List(goctx.TODO(), &dynclient.ListOptions{Namespace: "default"}, obj)
+			err = dynClient.List(goctx.TODO(), obj, dynclient.InNamespace("default"))
 		}
 		if err != nil {
 			restMapper.Reset()

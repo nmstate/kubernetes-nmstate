@@ -17,8 +17,8 @@ package add
 import (
 	"fmt"
 
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold"
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold/input"
+	"github.com/operator-framework/operator-sdk/internal/scaffold"
+	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
 	log "github.com/sirupsen/logrus"
@@ -81,7 +81,7 @@ func controllerRun(cmd *cobra.Command, args []string) error {
 	}
 
 	cfg := &input.Config{
-		Repo:           projutil.CheckAndGetProjectGoPkg(),
+		Repo:           projutil.GetGoPkg(),
 		AbsProjectPath: projutil.MustGetwd(),
 	}
 	s := &scaffold.Scaffold{}

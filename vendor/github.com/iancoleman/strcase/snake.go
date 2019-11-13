@@ -23,38 +23,39 @@
  * SOFTWARE.
  */
 
+// Package strcase converts strings to snake_case or CamelCase
 package strcase
 
 import (
 	"strings"
 )
 
-// ToSnake converts a string to snake_case
+// Converts a string to snake_case
 func ToSnake(s string) string {
 	return ToDelimited(s, '_')
 }
 
-// ToScreamingSnake converts a string to SCREAMING_SNAKE_CASE
+// Converts a string to SCREAMING_SNAKE_CASE
 func ToScreamingSnake(s string) string {
 	return ToScreamingDelimited(s, '_', true)
 }
 
-// ToKebab converts a string to kebab-case
+// Converts a string to kebab-case
 func ToKebab(s string) string {
 	return ToDelimited(s, '-')
 }
 
-// ToScreamingKebab converts a string to SCREAMING-KEBAB-CASE
+// Converts a string to SCREAMING-KEBAB-CASE
 func ToScreamingKebab(s string) string {
 	return ToScreamingDelimited(s, '-', true)
 }
 
-// ToDelimited converts a string to delimited.snake.case (in this case `del = '.'`)
+// Converts a string to delimited.snake.case (in this case `del = '.'`)
 func ToDelimited(s string, del uint8) string {
 	return ToScreamingDelimited(s, del, false)
 }
 
-// ToScreamingDelimited converts a string to SCREAMING.DELIMITED.SNAKE.CASE (in this case `del = '.'; screaming = true`) or delimited.snake.case (in this case `del = '.'; screaming = false`)
+// Converts a string to SCREAMING.DELIMITED.SNAKE.CASE (in this case `del = '.'; screaming = true`) or delimited.snake.case (in this case `del = '.'; screaming = false`)
 func ToScreamingDelimited(s string, del uint8, screaming bool) string {
 	s = addWordBoundariesToNumbers(s)
 	s = strings.Trim(s, " ")

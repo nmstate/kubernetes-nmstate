@@ -23,10 +23,11 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold"
+	"github.com/operator-framework/operator-sdk/internal/scaffold"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 
@@ -42,6 +43,7 @@ const (
 	SingleNamespaceFlag   = "singleNamespace"
 	TestNamespaceEnv      = "TEST_NAMESPACE"
 	LocalOperatorFlag     = "localOperator"
+	LocalOperatorArgs     = "localOperatorArgs"
 )
 
 func MainEntry(m *testing.M) {
@@ -51,6 +53,7 @@ func MainEntry(m *testing.M) {
 	namespacedManPath := flag.String(NamespacedManPathFlag, "", "path to rbac manifest")
 	singleNamespace = flag.Bool(SingleNamespaceFlag, false, "enable single namespace mode")
 	localOperator := flag.Bool(LocalOperatorFlag, false, "enable if operator is running locally (not in cluster)")
+	localOperatorArgs := flag.String(LocalOperatorArgs, "", "flags that the operator needs (while using --up-local). example: \"--flag1 value1 --flag2=value2\"")
 	flag.Parse()
 	// go test always runs from the test directory; change to project root
 	err := os.Chdir(*projRoot)
@@ -69,12 +72,15 @@ func MainEntry(m *testing.M) {
 		opts := projutil.GoCmdOptions{
 			BinName:     outputBinName,
 			PackagePath: filepath.Join(scaffold.ManagerDir, scaffold.CmdFile),
-			GoMod:       projutil.IsDepManagerGoMod(),
 		}
 		if err := projutil.GoBuild(opts); err != nil {
 			log.Fatalf("Failed to build local operator binary: %s", err)
 		}
-		localCmd = exec.Command(outputBinName)
+		args := []string{}
+		if *localOperatorArgs != "" {
+			args = append(args, strings.Split(*localOperatorArgs, " ")...)
+		}
+		localCmd = exec.Command(outputBinName, args...)
 		localCmd.Stdout = &localCmdOutBuf
 		localCmd.Stderr = &localCmdErrBuf
 		c := make(chan os.Signal)

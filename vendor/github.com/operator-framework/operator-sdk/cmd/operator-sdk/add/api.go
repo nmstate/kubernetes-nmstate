@@ -16,19 +16,24 @@ package add
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/internal/genutil"
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold"
-	"github.com/operator-framework/operator-sdk/internal/pkg/scaffold/input"
+	"github.com/operator-framework/operator-sdk/internal/scaffold"
+	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var (
-	apiVersion string
-	kind       string
+	apiVersion     string
+	kind           string
+	skipGeneration bool
 )
 
 func newAddApiCmd() *cobra.Command {
@@ -41,12 +46,13 @@ run from the project root directory. If the api already exists at
 pkg/apis/<group>/<version> then the command will not overwrite and return an
 error.
 
-This command runs Kubernetes deepcopy and OpenAPI V3 generators on tagged
-types in all paths under pkg/apis. Go code is generated under
+By default, this command runs Kubernetes deepcopy and OpenAPI V3 generators on
+tagged types in all paths under pkg/apis. Go code is generated under
 pkg/apis/<group>/<version>/zz_generated.{deepcopy,openapi}.go. CRD's are
 generated, or updated if they exist for a particular group + version + kind,
-under deploy/crds/<group>_<version>_<kind>_crd.yaml; OpenAPI V3 validation YAML
-is generated as a 'validation' object.
+under deploy/crds/<full group>_<resource>_crd.yaml; OpenAPI V3 validation YAML
+is generated as a 'validation' object. Generation can be disabled with the
+--skip-generation flag.
 
 Example:
 	$ operator-sdk add api --api-version=app.example.com/v1alpha1 --kind=AppService
@@ -62,8 +68,8 @@ Example:
 			├── zz_generated.deepcopy.go
 			├── zz_generated.openapi.go
 	$ tree deploy/crds
-	├── deploy/crds/app_v1alpha1_appservice_cr.yaml
-	├── deploy/crds/app_v1alpha1_appservice_crd.yaml
+	├── deploy/crds/app.example.com_v1alpha1_appservice_cr.yaml
+	├── deploy/crds/app.example.com_appservices_crd.yaml
 `,
 		RunE: apiRun,
 	}
@@ -76,6 +82,7 @@ Example:
 	if err := apiCmd.MarkFlagRequired("kind"); err != nil {
 		log.Fatalf("Failed to mark `kind` flag for `add api` subcommand as required")
 	}
+	apiCmd.Flags().BoolVar(&skipGeneration, "skip-generation", false, "Skip generation of deepcopy and OpenAPI code and OpenAPI CRD specs")
 
 	return apiCmd
 }
@@ -99,11 +106,18 @@ func apiRun(cmd *cobra.Command, args []string) error {
 	absProjectPath := projutil.MustGetwd()
 
 	cfg := &input.Config{
-		Repo:           projutil.CheckAndGetProjectGoPkg(),
+		Repo:           projutil.GetGoPkg(),
 		AbsProjectPath: absProjectPath,
 	}
-
 	s := &scaffold.Scaffold{}
+
+	// Check if any package files for this API group dir exist, and if not
+	// scaffold a group.go to prevent erroneous gengo parse errors.
+	group := &scaffold.Group{Resource: r}
+	if err := scaffoldIfNoPkgFileExists(s, cfg, group); err != nil {
+		return errors.Wrap(err, "scaffold group file")
+	}
+
 	err = s.Execute(cfg,
 		&scaffold.Types{Resource: r},
 		&scaffold.AddToScheme{Resource: r},
@@ -121,16 +135,41 @@ func apiRun(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to update the RBAC manifest for the resource (%v, %v): (%v)", r.APIVersion, r.Kind, err)
 	}
 
-	// Run k8s codegen for deepcopy
-	if err := genutil.K8sCodegen(); err != nil {
-		return err
-	}
+	if !skipGeneration {
+		// Run k8s codegen for deepcopy
+		if err := genutil.K8sCodegen(); err != nil {
+			return err
+		}
 
-	// Generate a validation spec for the new CRD.
-	if err := genutil.OpenAPIGen(); err != nil {
-		return err
+		// Generate a validation spec for the new CRD.
+		if err := genutil.OpenAPIGen(); err != nil {
+			return err
+		}
 	}
 
 	log.Info("API generation complete.")
 	return nil
+}
+
+// scaffoldIfNoPkgFileExists executes f using s and cfg if no go files
+// in f's directory exist.
+func scaffoldIfNoPkgFileExists(s *scaffold.Scaffold, cfg *input.Config, f input.File) error {
+	i, err := f.GetInput()
+	if err != nil {
+		return errors.Wrapf(err, "error getting file %s input", i.Path)
+	}
+	groupDir := filepath.Dir(i.Path)
+	gdInfos, err := ioutil.ReadDir(groupDir)
+	if err != nil && !os.IsNotExist(err) {
+		return errors.Wrapf(err, "error reading dir %s", groupDir)
+	}
+	if err == nil {
+		for _, info := range gdInfos {
+			if !info.IsDir() && filepath.Ext(info.Name()) == ".go" {
+				return nil
+			}
+		}
+	}
+	// err must be a non-existence error or no go files exist, so execute f.
+	return s.Execute(cfg, f)
 }
