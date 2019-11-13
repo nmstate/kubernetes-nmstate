@@ -1,4 +1,4 @@
-module github.com/nmsate/kubernetes-nmstate
+module github.com/nmstate/kubernetes-nmstate
 
 go 1.12
 
@@ -11,7 +11,6 @@ require (
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-openapi/spec v0.19.0
 	github.com/gobwas/glob v0.2.3
-	github.com/nmstate/kubernetes-nmstate v0.12.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
