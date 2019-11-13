@@ -11,9 +11,9 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
 
-	"github.com/nmsate/kubernetes-nmstate/pkg/apis"
-	"github.com/nmsate/kubernetes-nmstate/pkg/controller"
-	"github.com/nmsate/kubernetes-nmstate/version"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller"
+	"github.com/nmstate/kubernetes-nmstate/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
