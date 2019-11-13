@@ -12,16 +12,20 @@ export KUBEVIRT_PROVIDER ?= k8s-1.14.6
 export KUBEVIRT_NUM_NODES ?= 1
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
-e2e_test_args = -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
-ifeq ($(findstring okd,$(KUBEVIRT_PROVIDER)),okd)
-	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
-else
+export GOFLAGS=-mod=vendor
+export GO111MODULE=on
+
+e2e_test_args = -singleNamespace=true -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
+ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 	e2e_test_args += -primaryNic eth0 -firstSecondaryNic eth1 -secondSecondaryNic eth2
+else
+	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
 endif
 
-GINKGO ?= build/_output/bin/ginkgo
-OPERATOR_SDK ?= build/_output/bin/operator-sdk
-GITHUB_RELEASE ?= build/_output/bin/github-release
+BIN_DIR = build/_output/bin/
+GINKGO ?= $(BIN_DIR)/ginkgo
+OPERATOR_SDK ?= $(BIN_DIR)/operator-sdk
+GITHUB_RELEASE ?= $(BIN_DIR)/github-release
 LOCAL_REGISTRY ?= registry:5000
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
@@ -38,7 +42,6 @@ versioned_operator_manifest = build/_output/versioned/operator.yaml
 description = build/_output/description
 
 resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
-
 all: check handler
 
 check: format vet
@@ -49,14 +52,14 @@ format:
 vet:
 	go vet ./cmd/... ./pkg/...
 
-$(GINKGO): Gopkg.toml
-	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/onsi/ginkgo/ginkgo
+$(GINKGO): go.mod
+	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
 
-$(OPERATOR_SDK): Gopkg.toml
-	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
+$(OPERATOR_SDK): go.mod
+	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 
-$(GITHUB_RELEASE): Gopkg.toml
-	GOBIN=$$(pwd)/build/_output/bin/ go install ./vendor/github.com/aktau/github-release
+$(GITHUB_RELEASE): go.mod
+	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/aktau/github-release
 
 handler: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
@@ -78,7 +81,9 @@ test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) ./pkg/
 
 test/e2e: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) test local ./test/e2e \
+	# We have to unset mod=vendor here since operator-sdk is already
+	# building with it, and go tool fail if it's specified twice
+	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace nmstate \
 		--no-setup \
@@ -113,7 +118,7 @@ cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f deploy/
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi
 
@@ -121,12 +126,12 @@ cluster-sync-resources: $(KUBECTL)
 	for resource in $(resources); do \
 		$(KUBECTL) apply -f $$resource || exit 1; \
 	done
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		$(KUBECTL) apply -f deploy/openshift/; \
 	fi
 
 cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^okd-.*$$ ]]; then \
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		IMAGE_REGISTRY=localhost:$$($(CLI) ports --container-name=cluster registry | tr -d '\r') \
 				   make push-handler;  \
 	else \
@@ -156,6 +161,10 @@ release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_REL
 				   		$(resources) \
 						$(versioned_operator_manifest) \
 						$(shell find deploy/crds/ deploy/openshift -type f)
+
+tools-vendoring:
+	./hack/vendor-tools.sh $$(pwd)/$(BIN_DIR) $$(pwd)/tools.go
+
 .PHONY: \
 	all \
 	check \

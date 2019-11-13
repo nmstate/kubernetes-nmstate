@@ -10,8 +10,8 @@ export GOPATH=/tmp/kubernetes-nmstate/go/path
 mkdir -p $GOPATH
 export PATH=${GOPATH}/bin:${GOROOT}/bin:${PATH}
 
-echo 'Install Go 1.11'
-export GIMME_GO_VERSION=1.11
+export GIMME_GO_VERSION=1.12
+echo "Install Go $GIMME_GO_VERSION"
 GIMME=/tmp/kubernetes-nmstate/go/gimme
 mkdir -p $GIMME
 curl -sL https://raw.githubusercontent.com/travis-ci/gimme/master/gimme | HOME=${GIMME} bash >> ${GIMME}/gimme.sh
