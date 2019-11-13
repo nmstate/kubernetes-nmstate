@@ -27,7 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	apitypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/cli-runtime/pkg/genericclioptions/resource"
+	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/rest"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/kube"
@@ -144,7 +144,7 @@ func (m *manager) Sync(ctx context.Context) error {
 }
 
 func notFoundErr(err error) bool {
-	return strings.Contains(err.Error(), "not found")
+	return err != nil && strings.Contains(err.Error(), "not found")
 }
 
 func (m manager) loadChartAndConfig() (*cpb.Chart, *cpb.Config, error) {
@@ -226,15 +226,24 @@ func installRelease(ctx context.Context, tiller *tiller.ReleaseServer, namespace
 		// Workaround for helm/helm#3338
 		if releaseResponse.GetRelease() != nil {
 			uninstallReq := &services.UninstallReleaseRequest{
-				Name:  releaseResponse.GetRelease().GetName(),
+				Name:  name,
 				Purge: true,
 			}
 			_, uninstallErr := tiller.UninstallRelease(ctx, uninstallReq)
-			if uninstallErr != nil {
-				return nil, fmt.Errorf("failed to roll back failed installation: %s: %s", uninstallErr, err)
+
+			// In certain cases, InstallRelease will return a partial release in
+			// the response even when it doesn't record the release in its release
+			// store (e.g. when there is an error rendering the release manifest).
+			// In that case the rollback will fail with a not found error because
+			// there was nothing to rollback.
+			//
+			// Only log a message about a rollback failure if the failure was caused
+			// by something other than the release not being found.
+			if uninstallErr != nil && !notFoundErr(uninstallErr) {
+				return nil, fmt.Errorf("failed installation (%s) and failed rollback (%s)", err, uninstallErr)
 			}
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to install release: %s", err)
 	}
 	return releaseResponse.GetRelease(), nil
 }
@@ -260,12 +269,18 @@ func updateRelease(ctx context.Context, tiller *tiller.ReleaseServer, name strin
 				Name:  name,
 				Force: true,
 			}
+
+			// As of Helm 2.13, if UpdateRelease returns a non-nil release, that
+			// means the release was also recorded in the release store.
+			// Therefore, we should perform the rollback when we have a non-nil
+			// release. Any rollback error here would be unexpected, so always
+			// log both the update and rollback errors.
 			_, rollbackErr := tiller.RollbackRelease(ctx, rollbackReq)
 			if rollbackErr != nil {
-				return nil, fmt.Errorf("failed to roll back failed update: %s: %s", rollbackErr, err)
+				return nil, fmt.Errorf("failed update (%s) and failed rollback (%s)", err, rollbackErr)
 			}
 		}
-		return nil, err
+		return nil, fmt.Errorf("failed to update release: %s", err)
 	}
 	return releaseResponse.GetRelease(), nil
 }
@@ -311,7 +326,7 @@ func reconcileRelease(ctx context.Context, tillerKubeClient *kube.Client, namesp
 			return nil
 		}
 
-		_, err = helper.Patch(expected.Namespace, expected.Name, apitypes.JSONPatchType, patch, &metav1.UpdateOptions{})
+		_, err = helper.Patch(expected.Namespace, expected.Name, apitypes.JSONPatchType, patch, &metav1.PatchOptions{})
 		if err != nil {
 			return fmt.Errorf("patch error: %s", err)
 		}

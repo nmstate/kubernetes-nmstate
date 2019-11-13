@@ -39,7 +39,7 @@ var _ = BeforeSuite(func() {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err = framework.Global.Client.List(context.TODO(), &dynclient.ListOptions{}, &nodeList)
+	err = framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 
 	for _, node := range nodeList.Items {
