@@ -37,7 +37,7 @@ var _ = Describe("rollback", func() {
 		By("Check Enactment is not at failing condition")
 		for _, node := range nodes {
 			checkEnactmentConditionConsistently(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
-				Should(Equal(corev1.ConditionFalse), "NodeNetworkState should not be Failing before test")
+				Should(Equal(corev1.ConditionFalse), "Enactment should not be Failing before test")
 		}
 	})
 	Context("when an error happens during state configuration", func() {
@@ -59,7 +59,7 @@ var _ = Describe("rollback", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
 				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
-					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
+					Should(Equal(corev1.ConditionTrue), "Enactment should be failing after rollback")
 
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
@@ -89,7 +89,7 @@ var _ = Describe("rollback", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
 				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
-					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
+					Should(Equal(corev1.ConditionTrue), "Enactment should be failing after rollback")
 
 				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
 				Eventually(func() bool {

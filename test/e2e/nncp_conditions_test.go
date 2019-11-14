@@ -19,7 +19,7 @@ func invalidConfig(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName))
 }
 
-var _ = Describe("NodeNetworkStateCondition", func() {
+var _ = Describe("EnactmentCondition", func() {
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
 			updateDesiredState(linuxBrUp(bridge1))
