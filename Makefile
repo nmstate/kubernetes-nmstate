@@ -116,8 +116,8 @@ cluster-down: $(CLUSTER_DOWN)
 cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f build/_output/
 	$(KUBECTL) delete --ignore-not-found -f deploy/
-	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkstate_crd.yaml
-	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate_v1alpha1_nodenetworkconfigurationpolicy_crd.yaml
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates_crd.yaml
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
 	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi

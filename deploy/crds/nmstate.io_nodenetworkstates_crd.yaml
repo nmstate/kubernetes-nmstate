@@ -16,6 +16,7 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
+      description: NodeNetworkState is the Schema for the nodenetworkstates API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -30,6 +31,7 @@ spec:
         metadata:
           type: object
         spec:
+          description: NodeNetworkStateSpec defines the desired state of NodeNetworkState
           properties:
             desiredState:
               description: The desired configuration for the node
@@ -44,10 +46,38 @@ spec:
           - nodeName
           type: object
         status:
+          description: NodeNetworkStateStatus is the status of the NodeNetworkState
+            of a specific node
           properties:
+            conditions:
+              items:
+                properties:
+                  lastHearbeatTime:
+                    format: date-time
+                    type: string
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - status
+                - type
+                type: object
+              type: array
             currentState:
+              description: "State contains the namestatectl yaml [1] as string instead
+                of golang struct so we don't need to be in sync with the schema. \n
+                [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
               type: object
           type: object
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1
