@@ -45,14 +45,44 @@ spec:
                 policy to be applied to the node. Selector which must match a node''s
                 labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
               type: object
-            priority:
-              description: In case of multiple policies applying for the same node
-                this priority define the order from low to high
-              type: integer
           type: object
         status:
           description: NodeNetworkConfigurationPolicyStatus defines the observed state
             of NodeNetworkConfigurationPolicy
+          properties:
+            enactments:
+              description: 'TODO: This is a temporary solution. This list will be
+                replaced by a dedicated NodeNetworkConfigurationEnactment object.'
+              items:
+                properties:
+                  conditions:
+                    items:
+                      properties:
+                        lastHearbeatTime:
+                          format: date-time
+                          type: string
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        message:
+                          type: string
+                        reason:
+                          type: string
+                        status:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                  nodeName:
+                    type: string
+                required:
+                - nodeName
+                type: object
+              type: array
           type: object
       type: object
   version: v1alpha1

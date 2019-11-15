@@ -16,7 +16,6 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec":   schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref),
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref),
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkState":                     schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateSpec":                 schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateSpec(ref),
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus":               schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref),
 	}
 }
@@ -121,13 +120,6 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref com
 				Description: "NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"priority": {
-						SchemaProps: spec.SchemaProps{
-							Description: "In case of multiple policies applying for the same node this priority define the order from low to high",
-							Type:        []string{"integer"},
-							Format:      "int32",
-						},
-					},
 					"nodeSelector": {
 						SchemaProps: spec.SchemaProps{
 							Description: "NodeSelector is a selector which must be true for the policy to be applied to the node. Selector which must match a node's labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/",
@@ -161,8 +153,24 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref c
 			SchemaProps: spec.SchemaProps{
 				Description: "NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy",
 				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"enactments": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/nmstate/v1alpha1.Enactment"),
+									},
+								},
+							},
+						},
+					},
+				},
 			},
 		},
+		Dependencies: []string{
+			"./pkg/apis/nmstate/v1alpha1.Enactment"},
 	}
 }
 
@@ -192,11 +200,6 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref common.ReferenceCallb
 							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"),
 						},
 					},
-					"spec": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkStateSpec"),
-						},
-					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
 							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus"),
@@ -206,40 +209,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref common.ReferenceCallb
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateSpec", "./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateSpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkStateSpec defines the desired state of NodeNetworkState",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"managed": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"boolean"},
-							Format: "",
-						},
-					},
-					"nodeName": {
-						SchemaProps: spec.SchemaProps{
-							Description: "Name of the node reporting this state",
-							Type:        []string{"string"},
-							Format:      "",
-						},
-					},
-					"desiredState": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The desired configuration for the node",
-							Type:        []string{"object"},
-						},
-					},
-				},
-				Required: []string{"managed", "nodeName"},
-			},
-		},
+			"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 

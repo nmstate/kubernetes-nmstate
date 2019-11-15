@@ -30,21 +30,6 @@ spec:
           type: string
         metadata:
           type: object
-        spec:
-          description: NodeNetworkStateSpec defines the desired state of NodeNetworkState
-          properties:
-            desiredState:
-              description: The desired configuration for the node
-              type: object
-            managed:
-              type: boolean
-            nodeName:
-              description: Name of the node reporting this state
-              type: string
-          required:
-          - managed
-          - nodeName
-          type: object
         status:
           description: NodeNetworkStateStatus is the status of the NodeNetworkState
             of a specific node
