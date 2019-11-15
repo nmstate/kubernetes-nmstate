@@ -6,7 +6,7 @@ import (
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// State containes the namestatectl yaml [1] as string instead of golang struct
+// State contains the namestatectl yaml [1] as string instead of golang struct
 // so we don't need to be in sync with the schema.
 //
 // [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml
@@ -31,14 +31,12 @@ const (
 	NodeNetworkStateConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
 )
 
-// +genclient
-// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // NodeNetworkState is the Schema for the nodenetworkstates API
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:path=nodenetworkstates,shortName=nns
+// +kubebuilder:resource:path=nodenetworkstates,shortName=nns,scope=Cluster
 type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

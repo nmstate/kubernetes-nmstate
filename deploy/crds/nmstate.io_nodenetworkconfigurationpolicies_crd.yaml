@@ -16,6 +16,8 @@ spec:
     status: {}
   validation:
     openAPIV3Schema:
+      description: NodeNetworkConfigurationPolicy is the Schema for the nodenetworkconfigurationpolicies
+        API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -30,6 +32,8 @@ spec:
         metadata:
           type: object
         spec:
+          description: NodeNetworkConfigurationPolicySpec defines the desired state
+            of NodeNetworkConfigurationPolicy
           properties:
             desiredState:
               description: The desired configuration of the policy
@@ -44,11 +48,13 @@ spec:
             priority:
               description: In case of multiple policies applying for the same node
                 this priority define the order from low to high
-              format: int64
               type: integer
           type: object
         status:
+          description: NodeNetworkConfigurationPolicyStatus defines the observed state
+            of NodeNetworkConfigurationPolicy
           type: object
+      type: object
   version: v1alpha1
   versions:
   - name: v1alpha1
