@@ -13,7 +13,7 @@ import (
 )
 
 func badDefaultGw(address string, nic string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
@@ -34,6 +34,9 @@ routes:
 
 var _ = Describe("rollback", func() {
 	BeforeEach(func() {
+		By("Initialize desiredState")
+		resetDesiredStateForNodes()
+
 		By("Check Enactment is not at failing condition")
 		for _, node := range nodes {
 			checkEnactmentConditionConsistently(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).

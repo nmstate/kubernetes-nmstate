@@ -16,7 +16,7 @@ var _ = Describe("FilterOut", func() {
 
 	Context("when the filter is set to empty and there is a list of interfaces", func() {
 		BeforeEach(func() {
-			state = nmstatev1alpha1.State(`interfaces:
+			state = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
@@ -36,7 +36,7 @@ var _ = Describe("FilterOut", func() {
 
 	Context("when the filter is matching one of the interfaces in the list", func() {
 		BeforeEach(func() {
-			state = nmstatev1alpha1.State(`interfaces:
+			state = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
@@ -44,7 +44,7 @@ var _ = Describe("FilterOut", func() {
   state: down
   type: ethernet
 `)
-			filteredState = nmstatev1alpha1.State(`interfaces:
+			filteredState = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
@@ -61,7 +61,7 @@ var _ = Describe("FilterOut", func() {
 
 	Context("when the filter is matching multiple interfaces in the list", func() {
 		BeforeEach(func() {
-			state = nmstatev1alpha1.State(`interfaces:
+			state = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
@@ -72,7 +72,7 @@ var _ = Describe("FilterOut", func() {
   state: down
   type: ethernet
 `)
-			filteredState = nmstatev1alpha1.State(`interfaces:
+			filteredState = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
@@ -89,7 +89,7 @@ var _ = Describe("FilterOut", func() {
 
 	Context("when the filter is matching multiple prefixes", func() {
 		BeforeEach(func() {
-			state = nmstatev1alpha1.State(`interfaces:
+			state = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
@@ -100,7 +100,7 @@ var _ = Describe("FilterOut", func() {
   state: down
   type: ethernet
 `)
-			filteredState = nmstatev1alpha1.State(`interfaces:
+			filteredState = nmstatev1alpha1.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet

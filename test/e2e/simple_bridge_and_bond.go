@@ -10,7 +10,7 @@ import (
 )
 
 func bondAbsent(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: absent
@@ -18,7 +18,7 @@ func bondAbsent(bondName string) nmstatev1alpha1.State {
 }
 
 func brAndBondAbsent(bridgeName string, bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: absent
@@ -29,7 +29,7 @@ func brAndBondAbsent(bridgeName string, bondName string) nmstatev1alpha1.State {
 }
 
 func bondUp(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: up
@@ -43,7 +43,7 @@ func bondUp(bondName string) nmstatev1alpha1.State {
 }
 
 func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: up
@@ -66,7 +66,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
 }
 
 func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
 - name: %s
   type: bond
   state: up

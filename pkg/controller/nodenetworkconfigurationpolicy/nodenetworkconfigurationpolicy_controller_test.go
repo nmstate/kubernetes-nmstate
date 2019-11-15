@@ -44,7 +44,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			nodeNetworkConfigurationPolicy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
 				Spec: nmstatev1alpha1.NodeNetworkConfigurationPolicySpec{
 					NodeSelector: c.NodeSelector,
-					DesiredState: nil, // TODO
+					DesiredState: nmstatev1alpha1.State{Raw: nil}, // TODO
 				},
 			}
 

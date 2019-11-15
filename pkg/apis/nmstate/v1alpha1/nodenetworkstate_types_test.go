@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
-		currentState = State(`
+		currentState = NewState(`
 interfaces:
   - name: eth1
     type: ethernet
@@ -55,7 +55,7 @@ status:
 			Expect(err).ToNot(HaveOccurred())
 		})
 		It("should succesfully parse currentState yaml", func() {
-			Expect(nodeNetworkStateStruct.Status.CurrentState).To(MatchYAML([]byte(nnsStruct.Status.CurrentState)))
+			Expect(string(nodeNetworkStateStruct.Status.CurrentState.Raw)).To(MatchYAML(string(nnsStruct.Status.CurrentState.Raw)))
 		})
 		It("should succesfully parse non state attributes", func() {
 			Expect(nodeNetworkStateStruct.TypeMeta).To(Equal(nnsStruct.TypeMeta))

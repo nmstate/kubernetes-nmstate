@@ -4,15 +4,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-// State contains the namestatectl yaml [1] as string instead of golang struct
-// so we don't need to be in sync with the schema.
-//
-// [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml
-// +k8s:openapi-gen=true
-type State []byte
-
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {

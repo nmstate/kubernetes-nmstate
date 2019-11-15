@@ -13,7 +13,7 @@ import (
 func getBridgesUp(desiredState nmstatev1alpha1.State) (map[string][]string, error) {
 	foundBridgesWithPorts := map[string][]string{}
 
-	desiredStateYaml, err := yaml.YAMLToJSON([]byte(desiredState))
+	desiredStateYaml, err := yaml.YAMLToJSON([]byte(desiredState.Raw))
 	if err != nil {
 		return foundBridgesWithPorts, fmt.Errorf("error converting desiredState to JSON: %v", err)
 	}

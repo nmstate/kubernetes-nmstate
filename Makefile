@@ -68,10 +68,6 @@ gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
 
 gen-openapi: $(OPERATOR_SDK)
-	@echo "WARNING!!!"
-	@echo "WARNING!!! kubernets-nmstate has some manual overrides of generated"
-	@echo "WARNING!!! openapi code, be sure that code get propertly reviewed by team."
-	@echo "WARNING!!!"
 	$(OPERATOR_SDK) generate openapi
 
 push-handler: handler

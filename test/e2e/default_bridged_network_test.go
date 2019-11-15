@@ -19,7 +19,7 @@ import (
 )
 
 func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: brext
     type: linux-bridge
     state: up
@@ -36,7 +36,7 @@ func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
 }
 
 func resetDefaultInterface() nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
@@ -54,7 +54,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
-			By(string(createBridgeOnTheDefaultInterface()))
+			By(string(createBridgeOnTheDefaultInterface().Raw))
 			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", *primaryNic))
 			for _, node := range nodes {
 				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))

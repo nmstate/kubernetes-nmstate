@@ -298,7 +298,7 @@ func deleteConnectionAtNodes(name string) []error {
 
 func interfaces(state nmstatev1alpha1.State) []interface{} {
 	var stateUnstructured map[string]interface{}
-	err := yaml.Unmarshal(state, &stateUnstructured)
+	err := yaml.Unmarshal(state.Raw, &stateUnstructured)
 	Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", state)
 	interfaces := stateUnstructured["interfaces"].([]interface{})
 	return interfaces
@@ -306,9 +306,9 @@ func interfaces(state nmstatev1alpha1.State) []interface{} {
 
 func currentState(namespace string, node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
 	key := types.NamespacedName{Namespace: namespace, Name: node}
-	return Eventually(func() nmstatev1alpha1.State {
+	return Eventually(func() nmstatev1alpha1.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
-		return *currentStateYaml
+		return currentStateYaml.Raw
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -490,7 +490,7 @@ func nextBond() string {
 func currentStateJSON(node string) []byte {
 	key := types.NamespacedName{Name: node}
 	currentState := nodeNetworkState(key).Status.CurrentState
-	currentStateJson, err := yaml.YAMLToJSON([]byte(currentState))
+	currentStateJson, err := yaml.YAMLToJSON(currentState.Raw)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	return currentStateJson
 }
