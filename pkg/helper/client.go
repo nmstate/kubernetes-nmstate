@@ -107,7 +107,7 @@ func set(desiredState nmstatev1alpha1.State) (string, error) {
 		// commit timeout doubles the default gw ping probe timeout, to
 		// ensure the Checkpoint is alive before rolling it back
 		// https://nmstate.github.io/cli_guide#manual-transaction-control
-		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(defaultGwProbeTimeout * 2)}, string(desiredState))
+		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(defaultGwProbeTimeout * 2)}, string(desiredState.Raw))
 		if err == nil {
 			log.Info(fmt.Sprintf("nmstatectl set recovered, output: %s", output))
 			break
@@ -161,7 +161,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	if err != nil {
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
-	observedState := nmstatev1alpha1.State(observedStateRaw)
+	observedState := nmstatev1alpha1.State{Raw: []byte(observedStateRaw)}
 
 	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
 	if err != nil {
@@ -216,7 +216,7 @@ func defaultGw() (string, error) {
 }
 
 func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
-	if len(string(desiredState)) == 0 {
+	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
 
@@ -275,7 +275,7 @@ func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glo
 	}
 
 	var state map[string]interface{}
-	err := yaml.Unmarshal([]byte(currentState), &state)
+	err := yaml.Unmarshal(currentState.Raw, &state)
 	if err != nil {
 		return currentState, err
 	}
@@ -296,5 +296,5 @@ func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glo
 		return currentState, err
 	}
 
-	return filteredState, nil
+	return nmstatev1alpha1.State{Raw: filteredState}, nil
 }

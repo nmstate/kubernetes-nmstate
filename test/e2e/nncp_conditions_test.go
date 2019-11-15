@@ -12,7 +12,7 @@ import (
 )
 
 func invalidConfig(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: invalid_state

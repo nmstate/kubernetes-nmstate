@@ -7,7 +7,7 @@ import (
 )
 
 func ethernetNicUp(nicName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
@@ -15,7 +15,7 @@ func ethernetNicUp(nicName string) nmstatev1alpha1.State {
 }
 
 func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: up
@@ -27,7 +27,7 @@ func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
 }
 
 func linuxBrAbsent(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: absent
@@ -35,7 +35,7 @@ func linuxBrAbsent(bridgeName string) nmstatev1alpha1.State {
 }
 
 func linuxBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: up
@@ -48,14 +48,14 @@ func linuxBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
 }
 
 func ovsBrAbsent(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ovs-bridge
     state: absent`, bridgeName))
 }
 
 func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ovs-bridge
     state: up
@@ -69,7 +69,7 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
 }
 
 func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.State(fmt.Sprintf(`interfaces:
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: ovs0
     type: ovs-interface
     state: up

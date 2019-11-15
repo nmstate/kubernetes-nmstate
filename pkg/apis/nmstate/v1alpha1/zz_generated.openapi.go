@@ -17,6 +17,7 @@ func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenA
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref),
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkState":                     schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
 		"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus":               schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref),
+		"./pkg/apis/nmstate/v1alpha1.State":                                schema_pkg_apis_nmstate_v1alpha1_State(ref),
 	}
 }
 
@@ -138,12 +139,14 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref com
 					"desiredState": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The desired configuration of the policy",
-							Type:        []string{"object"},
+							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
 				},
 			},
 		},
+		Dependencies: []string{
+			"./pkg/apis/nmstate/v1alpha1.State"},
 	}
 }
 
@@ -222,7 +225,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"currentState": {
 						SchemaProps: spec.SchemaProps{
-							Type: []string{"object"},
+							Ref: ref("./pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
 					"conditions": {
@@ -241,6 +244,17 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition"},
+			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State"},
+	}
+}
+
+func schema_pkg_apis_nmstate_v1alpha1_State(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "State contains the namestatectl yaml [1] as string instead of golang struct so we don't need to be in sync with the schema.\n\n[1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml",
+				Type:        []string{"object"},
+			},
+		},
 	}
 }

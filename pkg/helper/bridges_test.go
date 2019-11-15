@@ -8,10 +8,10 @@ import (
 )
 
 var (
-	badYaml = nmstatev1alpha1.State("}")
-	empty   = nmstatev1alpha1.State("")
+	badYaml = nmstatev1alpha1.NewState("}")
+	empty   = nmstatev1alpha1.NewState("")
 
-	noBridges = nmstatev1alpha1.State(`interfaces:
+	noBridges = nmstatev1alpha1.NewState(`interfaces:
   - name: bond1
     type: bond
     state: up
@@ -22,7 +22,7 @@ var (
       options:
         miimon: '120'
 `)
-	noBridgesUp = nmstatev1alpha1.State(`interfaces:
+	noBridgesUp = nmstatev1alpha1.NewState(`interfaces:
   - name: eth1
     type: ethernet
     state: up
@@ -34,13 +34,13 @@ var (
     state: absent
 `)
 
-	bridgeWithNoPorts = nmstatev1alpha1.State(`interfaces:
+	bridgeWithNoPorts = nmstatev1alpha1.NewState(`interfaces:
   - name: br1
     type: linux-bridge
     state: up
 `)
 
-	someBridgesUp = nmstatev1alpha1.State(`interfaces:
+	someBridgesUp = nmstatev1alpha1.NewState(`interfaces:
   - name: br1
     type: linux-bridge
     state: up

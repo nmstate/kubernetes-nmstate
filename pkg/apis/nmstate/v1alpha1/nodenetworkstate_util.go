@@ -16,7 +16,7 @@ import (
 // json here for golang to work well, the upper yaml parser will convert it
 // to yaml making nmstate yaml transparent to kubernetes-nmstate
 func (t State) MarshalJSON() (output []byte, err error) {
-	return yaml.YAMLToJSON([]byte(t))
+	return yaml.YAMLToJSON([]byte(t.Raw))
 }
 
 // Bypass State parsing and directly store it as yaml string to later on
@@ -26,11 +26,11 @@ func (t *State) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	*t = State(output)
+	*t = State{Raw: output}
 	return nil
 }
 
 // Simple stringer for State
 func (t State) String() string {
-	return string(t)
+	return string(t.Raw)
 }
