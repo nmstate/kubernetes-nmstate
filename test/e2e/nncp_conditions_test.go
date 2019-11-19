@@ -19,12 +19,17 @@ func invalidConfig(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName))
 }
 
-var _ = Describe("NodeNetworkStateCondition", func() {
+var _ = Describe("EnactmentCondition", func() {
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
+			By("Add some sleep time to vlan-filtering")
+			runAtPods("cp", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
+			runAtPods("sed", "-i", "$ a\\sleep 10", "/usr/local/bin/vlan-filtering")
 			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
+			By("Restore original vlan-filtering")
+			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
 			updateDesiredState(linuxBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
@@ -32,14 +37,39 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
-		It("should have Available ConditionType set to true", func() {
+		It("should go from Progressing to Available", func() {
+			progressConditions := []nmstatev1alpha1.Condition{
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+					Status: corev1.ConditionTrue,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+					Status: corev1.ConditionUnknown,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Status: corev1.ConditionUnknown,
+				},
+			}
+			availableConditions := []nmstatev1alpha1.Condition{
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+					Status: corev1.ConditionFalse,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+					Status: corev1.ConditionTrue,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Status: corev1.ConditionFalse,
+				},
+			}
 			for _, node := range nodes {
-				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable).Should(
-					Equal(corev1.ConditionTrue),
-				)
-				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).Should(
-					Equal(corev1.ConditionFalse),
-				)
+				checkEnactmentConditionsStatusEventually(node, progressConditions)
+				checkEnactmentConditionsStatusEventually(node, availableConditions)
+				checkEnactmentConditionsStatusConsistently(node, availableConditions)
 			}
 		})
 	})
@@ -57,12 +87,20 @@ var _ = Describe("NodeNetworkStateCondition", func() {
 
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
-				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).Should(
-					Equal(corev1.ConditionTrue),
-				)
-				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable).Should(
-					Equal(corev1.ConditionFalse),
-				)
+				checkEnactmentConditionsStatusEventually(node, []nmstatev1alpha1.Condition{
+					nmstatev1alpha1.Condition{
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+						Status: corev1.ConditionTrue,
+					},
+					nmstatev1alpha1.Condition{
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+						Status: corev1.ConditionFalse,
+					},
+					nmstatev1alpha1.Condition{
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+						Status: corev1.ConditionFalse,
+					},
+				})
 			}
 		})
 	})

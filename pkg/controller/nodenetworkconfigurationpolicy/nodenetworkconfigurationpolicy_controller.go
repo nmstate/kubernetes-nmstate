@@ -143,11 +143,12 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	err = r.setCondition(setConditionProgressing, "Applying desired state", request.NamespacedName)
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
-		retryErr := r.setCondition(false, errmsg.Error(), request.NamespacedName)
+		retryErr := r.setCondition(setConditionFailed, errmsg.Error(), request.NamespacedName)
 		if retryErr != nil {
 			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
 		}
@@ -156,7 +157,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	err = r.setCondition(true, "successfully reconciled", request.NamespacedName)
+	err = r.setCondition(setConditionSuccess, "successfully reconciled", request.NamespacedName)
 	if err != nil {
 		reqLogger.Error(err, "Success condition update failed while reporting success: %v", err)
 	}
@@ -165,10 +166,11 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) setCondition(
-	available bool,
+	condition func(enactments *nmstatev1alpha1.EnactmentList, message string),
 	message string,
 	policyName types.NamespacedName,
 ) error {
+	// Set enactment condition
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 		err := r.client.Get(context.TODO(), policyName, instance)
@@ -176,11 +178,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) setCondition(
 			return err
 		}
 
-		if available {
-			setConditionSuccess(&instance.Status.Enactments, message)
-		} else {
-			setConditionFailed(&instance.Status.Enactments, message)
-		}
+		condition(&instance.Status.Enactments, message)
 
 		err = r.client.Status().Update(context.TODO(), instance)
 		return err
@@ -202,6 +200,13 @@ func setConditionFailed(enactments *nmstatev1alpha1.EnactmentList, message strin
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		"",
 	)
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
+		"",
+	)
 }
 
 func setConditionSuccess(enactments *nmstatev1alpha1.EnactmentList, message string) {
@@ -218,6 +223,23 @@ func setConditionSuccess(enactments *nmstatev1alpha1.EnactmentList, message stri
 		corev1.ConditionFalse,
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
 		"",
+	)
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
+		message,
+	)
+}
+
+func setConditionProgressing(enactments *nmstatev1alpha1.EnactmentList, message string) {
+	enactments.SetCondition(
+		nodeName,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		message,
 	)
 }
 

@@ -39,8 +39,12 @@ var _ = Describe("rollback", func() {
 
 		By("Check Enactment is not at failing condition")
 		for _, node := range nodes {
-			checkEnactmentConditionConsistently(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
-				Should(Equal(corev1.ConditionFalse), "NodeNetworkState should not be Failing before test")
+			checkEnactmentConditionsStatusConsistently(node, []nmstatev1alpha1.Condition{
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Status: corev1.ConditionFalse,
+				},
+			})
 		}
 	})
 	Context("when an error happens during state configuration", func() {
@@ -61,9 +65,12 @@ var _ = Describe("rollback", func() {
 			updateDesiredState(linuxBrUpNoPorts(bridge1))
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
-				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
-					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
-
+				checkEnactmentConditionsStatusEventually(node, []nmstatev1alpha1.Condition{
+					nmstatev1alpha1.Condition{
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+						Status: corev1.ConditionTrue,
+					},
+				})
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 
@@ -91,9 +98,12 @@ var _ = Describe("rollback", func() {
 		It("should rollback to a good gw configuration", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
-				checkEnactmentConditionEventually(node, nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing).
-					Should(Equal(corev1.ConditionTrue), "NodeNetworkState should be failing after rollback")
-
+				checkEnactmentConditionsStatusEventually(node, []nmstatev1alpha1.Condition{
+					nmstatev1alpha1.Condition{
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+						Status: corev1.ConditionTrue,
+					},
+				})
 				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
 				Eventually(func() bool {
 					return dhcpFlag(node, *primaryNic)

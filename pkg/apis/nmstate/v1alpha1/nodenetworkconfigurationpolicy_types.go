@@ -50,13 +50,15 @@ type NodeNetworkConfigurationPolicyStatus struct {
 }
 
 const (
-	NodeNetworkConfigurationPolicyConditionAvailable ConditionType = "Available"
-	NodeNetworkConfigurationPolicyConditionFailing   ConditionType = "Failing"
+	NodeNetworkConfigurationPolicyConditionAvailable   ConditionType = "Available"
+	NodeNetworkConfigurationPolicyConditionFailing     ConditionType = "Failing"
+	NodeNetworkConfigurationPolicyConditionProgressing ConditionType = "Progressing"
 )
 
 const (
-	NodeNetworkConfigurationPolicyConditionFailedToConfigure      ConditionReason = "FailedToConfigure"
-	NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
+	NodeNetworkConfigurationPolicyConditionFailedToConfigure        ConditionReason = "FailedToConfigure"
+	NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured   ConditionReason = "SuccessfullyConfigured"
+	NodeNetworkConfigurationPolicyConditionConfigurationProgressing ConditionReason = "ConfigurationProgressing"
 )
 
 func init() {
