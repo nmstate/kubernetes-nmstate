@@ -24,7 +24,7 @@ var _ = Describe("EnactmentCondition", func() {
 		BeforeEach(func() {
 			By("Add some sleep time to vlan-filtering")
 			runAtPods("cp", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
-			runAtPods("sed", "-i", "$ a\\sleep 10", "/usr/local/bin/vlan-filtering")
+			runAtPods("sed", "-i", "$ a\\sleep 5", "/usr/local/bin/vlan-filtering")
 			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
@@ -67,8 +67,13 @@ var _ = Describe("EnactmentCondition", func() {
 				},
 			}
 			for _, node := range nodes {
+				By("Check progressing state is reached")
 				checkEnactmentConditionsStatusEventually(node, progressConditions)
+
+				By("Check available is the next condition")
 				checkEnactmentConditionsStatusEventually(node, availableConditions)
+
+				By("Check that we available is keep")
 				checkEnactmentConditionsStatusConsistently(node, availableConditions)
 			}
 		})

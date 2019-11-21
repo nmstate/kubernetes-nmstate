@@ -51,14 +51,14 @@ func (enactments EnactmentList) find(nodeName string) *Enactment {
 }
 
 const (
-	NodeNetworkConfigurationEnactmentConditionMatching    ConditionType = "Matching"
 	NodeNetworkConfigurationEnactmentConditionAvailable   ConditionType = "Available"
 	NodeNetworkConfigurationEnactmentConditionFailing     ConditionType = "Failing"
 	NodeNetworkConfigurationEnactmentConditionProgressing ConditionType = "Progressing"
 )
 
 const (
-	NodeNetworkConfigurationEnactmentConditionReason                                   = "FailedToConfigure"
+	NodeNetworkConfigurationEnactmentConditionFailedToFindPolicy       ConditionReason = "FailedToFindPolicy"
+	NodeNetworkConfigurationEnactmentConditionFailedToConfigure        ConditionReason = "FailedToConfigure"
 	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured   ConditionReason = "SuccessfullyConfigured"
 	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing ConditionReason = "ConfigurationProgressing"
 )
