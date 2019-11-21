@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -21,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/conditions"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
@@ -129,6 +129,8 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling NodeNetworkConfigurationPolicy")
 
+	conditionsManager := conditions.NewManager(r.client, nodeName, request.NamespacedName)
+
 	// Fetch the NodeNetworkConfigurationPolicy instance
 	instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -139,108 +141,26 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
+		conditionsManager.FailedToFindPolicy(err)
+		reqLogger.Error(err, "Error retrieving policy")
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	err = r.setCondition(setConditionProgressing, "Applying desired state", request.NamespacedName)
+	conditionsManager.Progressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
-		retryErr := r.setCondition(setConditionFailed, errmsg.Error(), request.NamespacedName)
-		if retryErr != nil {
-			reqLogger.Error(retryErr, "Failing condition update failed while reporting error: %v", errmsg)
-		}
+		conditionsManager.FailedToConfigure(errmsg)
 		reqLogger.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
 		return reconcile.Result{}, nil
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	err = r.setCondition(setConditionSuccess, "successfully reconciled", request.NamespacedName)
-	if err != nil {
-		reqLogger.Error(err, "Success condition update failed while reporting success: %v", err)
-	}
+	conditionsManager.Success()
 
 	return reconcile.Result{}, nil
-}
-
-func (r *ReconcileNodeNetworkConfigurationPolicy) setCondition(
-	condition func(enactments *nmstatev1alpha1.EnactmentList, message string),
-	message string,
-	policyName types.NamespacedName,
-) error {
-	// Set enactment condition
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
-		err := r.client.Get(context.TODO(), policyName, instance)
-		if err != nil {
-			return err
-		}
-
-		condition(&instance.Status.Enactments, message)
-
-		err = r.client.Status().Update(context.TODO(), instance)
-		return err
-	})
-}
-
-func setConditionFailed(enactments *nmstatev1alpha1.EnactmentList, message string) {
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
-		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
-		message,
-	)
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
-		"",
-	)
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
-		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
-		"",
-	)
-}
-
-func setConditionSuccess(enactments *nmstatev1alpha1.EnactmentList, message string) {
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
-		message,
-	)
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
-		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
-		"",
-	)
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
-		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
-		message,
-	)
-}
-
-func setConditionProgressing(enactments *nmstatev1alpha1.EnactmentList, message string) {
-	enactments.SetCondition(
-		nodeName,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
-		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
-		message,
-	)
 }
 
 func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {

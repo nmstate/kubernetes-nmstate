@@ -40,7 +40,7 @@ func checkEnactmentConditionsStatus(node string, expectedConditions []nmstatev1a
 func checkEnactmentConditionsStatusEventually(node string, expectedConditions []nmstatev1alpha1.Condition) {
 	Eventually(func() bool {
 		return checkEnactmentConditionsStatus(node, expectedConditions)
-	}, ReadTimeout, ReadInterval).Should(BeTrue())
+	}, 180*time.Second, 1*time.Second).Should(BeTrue())
 }
 
 func checkEnactmentConditionsStatusConsistently(node string, expectedConditions []nmstatev1alpha1.Condition) {
