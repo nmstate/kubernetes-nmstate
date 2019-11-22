@@ -13,7 +13,10 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("policy/conditions/manager")
+	log                 = logf.Log.WithName("policy/conditions/manager")
+	setEnactmentMessage = func(policy *nmstatev1alpha1.NodeNetworkConfigurationPolicy, nodeName string, message string) {
+		policy.SetEnactmentMessage(nodeName, message)
+	}
 )
 
 type Manager struct {
@@ -59,8 +62,22 @@ func (m *Manager) Success() {
 	}
 }
 
+func (m *Manager) NotMatching() {
+	err := m.updateEnactmentCondition(setEnactmentMessage, "Following node selectors do not match the node:\n TODO")
+	if err != nil {
+		m.logger.Error(err, "Updating enactment not matching message failed: %v", err)
+	}
+}
+
+func (m *Manager) Matching() {
+	err := m.updateEnactmentCondition(setEnactmentMessage, "policy matches this node")
+	if err != nil {
+		m.logger.Error(err, "Update enactment matching message failed: %v", err)
+	}
+}
+
 func (m *Manager) updateEnactmentCondition(
-	condition func(*nmstatev1alpha1.EnactmentList, string, string),
+	condition func(*nmstatev1alpha1.NodeNetworkConfigurationPolicy, string, string),
 	message string,
 ) error {
 	// Set enactment condition
@@ -71,7 +88,7 @@ func (m *Manager) updateEnactmentCondition(
 			return err
 		}
 
-		condition(&instance.Status.Enactments, m.nodeName, message)
+		condition(instance, m.nodeName, message)
 
 		err = m.client.Status().Update(context.TODO(), instance)
 		return err

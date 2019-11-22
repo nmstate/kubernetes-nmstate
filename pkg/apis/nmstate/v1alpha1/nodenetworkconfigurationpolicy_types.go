@@ -1,6 +1,9 @@
 package v1alpha1
 
 import (
+	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -46,7 +49,18 @@ type NodeNetworkConfigurationPolicySpec struct {
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 // +k8s:openapi-gen=true
 type NodeNetworkConfigurationPolicyStatus struct {
-	Enactments EnactmentList `json:"enactments,omitempty" optional:"true"`
+	Enactments PolicyEnactmentList `json:"enactments,omitempty" optional:"true"`
+}
+
+// +k8s:openapi-gen=true
+type PolicyEnactmentList []PolicyEnactment
+
+// +k8s:openapi-gen=true
+type PolicyEnactment struct {
+	NodeName string `json:"nodeName,omitempty"`
+	Message  string `json:"message,omitempty"`
+	//TODO: Change this type to proper CDR lnk
+	Ref *NodeNetworkConfigurationEnactment
 }
 
 const (
@@ -61,6 +75,57 @@ const (
 	NodeNetworkConfigurationPolicyConditionConfigurationProgressing ConditionReason = "ConfigurationProgressing"
 )
 
+func (policy *NodeNetworkConfigurationPolicy) SetEnactmentMessage(nodeName string, message string) {
+	enactment := policy.findEnactment(nodeName)
+	if enactment == nil {
+		policy.Status.Enactments = append(policy.Status.Enactments, PolicyEnactment{
+			NodeName: nodeName,
+			Message:  message,
+		})
+	} else {
+		enactment.Message = message
+	}
+}
+
+func (policy *NodeNetworkConfigurationPolicy) SetEnactmentCondition(nodeName string, conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) error {
+	enactment := policy.findEnactment(nodeName)
+
+	if enactment == nil {
+		return fmt.Errorf("Enactment should be already there")
+	}
+	if enactment.Ref == nil {
+		//TODO: Create the CR with client
+		enactment.Ref = &NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: nodeName + "-" + policy.Name,
+			},
+		}
+	}
+	//TODO: Update the status with client
+	enactment.Ref.Status.Conditions.Set(conditionType, status, reason, message)
+
+	return nil
+}
+
+func (policy *NodeNetworkConfigurationPolicy) FindEnactmentCondition(nodeName string, conditionType ConditionType) *Condition {
+	enactment := policy.findEnactment(nodeName)
+	if enactment == nil {
+		return nil
+	}
+	if enactment.Ref == nil {
+		return nil
+	}
+	return enactment.Ref.Status.Conditions.Find(conditionType)
+}
+
+func (policy *NodeNetworkConfigurationPolicy) findEnactment(nodeName string) *PolicyEnactment {
+	for i, enactment := range policy.Status.Enactments {
+		if enactment.NodeName == nodeName {
+			return &policy.Status.Enactments[i]
+		}
+	}
+	return nil
+}
 func init() {
 	SchemeBuilder.Register(&NodeNetworkConfigurationPolicy{}, &NodeNetworkConfigurationPolicyList{})
 }

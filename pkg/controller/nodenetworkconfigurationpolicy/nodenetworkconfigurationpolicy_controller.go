@@ -72,7 +72,16 @@ func nodeSelectorMatchesThisNode(cl client.Client, eventObject runtime.Object) b
 func forThisNodePredicate(cl client.Client) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, createEvent.Object)
+			matchesThisNode := nodeSelectorMatchesThisNode(cl, createEvent.Object)
+			policy := createEvent.Object.(*nmstatev1alpha1.NodeNetworkConfigurationPolicy)
+			conditionsManager := conditions.NewManager(cl, nodeName, types.NamespacedName{Name: policy.Name})
+			if !matchesThisNode {
+				//TODO: Pass not matching selectors to print them
+				conditionsManager.NotMatching()
+			} else {
+				conditionsManager.Matching()
+			}
+			return matchesThisNode
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
 			return false

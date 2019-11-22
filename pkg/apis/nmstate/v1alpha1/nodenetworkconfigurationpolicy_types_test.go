@@ -5,22 +5,32 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var _ = Describe("Policy Enactments list", func() {
 	Context("is empty", func() {
-		var originalEnactments, newEnactments EnactmentList
+		var originalPolicy, newPolicy NodeNetworkConfigurationPolicy
 
 		BeforeEach(func() {
-			originalEnactments = EnactmentList{}
+			originalPolicy = NodeNetworkConfigurationPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "policy-1",
+				},
+			}
+			newPolicy = originalPolicy
 		})
 
 		It("should return nil when finding a condition", func() {
-			foundCondition := newEnactments.FindCondition("foo_node", ConditionType("bar"))
+			foundCondition := newPolicy.FindEnactmentCondition("foo_node", ConditionType("bar"))
 			Expect(foundCondition).To(BeNil())
 		})
-
-		Context("and we set a new condition", func() {
+		It("should return error when seting condition", func() {
+			err := newPolicy.SetEnactmentCondition("arrakis", ConditionType("foo"), corev1.ConditionTrue, ConditionReason("bar"), "baz")
+			Expect(err).To(HaveOccurred())
+		})
+		Context("and we set a new message and condition", func() {
+			message := "Enactment matching"
 			addedNodeName := "shruberry"
 			addedConditionType := ConditionType("foo")
 			addedConditionStatus := corev1.ConditionTrue
@@ -28,39 +38,50 @@ var _ = Describe("Policy Enactments list", func() {
 			addedConditionMessage := "baz"
 
 			BeforeEach(func() {
-				newEnactments.SetCondition(addedNodeName, addedConditionType, addedConditionStatus, addedConditionReason, addedConditionMessage)
+				newPolicy.SetEnactmentMessage(addedNodeName, message)
+				err := newPolicy.SetEnactmentCondition(addedNodeName, addedConditionType, addedConditionStatus, addedConditionReason, addedConditionMessage)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should extend the list", func() {
-				Expect(newEnactments).To(HaveLen(len(originalEnactments) + 1))
+				Expect(newPolicy.Status.Enactments).To(HaveLen(len(originalPolicy.Status.Enactments) + 1))
 			})
 
 			It("should add expected node entry to the list", func() {
-				Expect(newEnactments[0].NodeName).To(Equal(addedNodeName))
+				Expect(newPolicy.Status.Enactments[0].NodeName).To(Equal(addedNodeName))
 			})
-
+			It("should create NodeNetworkConfigurationEnactment", func() {
+				nnce := newPolicy.Status.Enactments[0].Ref
+				Expect(nnce.Name).To(Equal(addedNodeName + "-" + originalPolicy.Name))
+			})
 			It("should be able to find the added condition", func() {
-				addedCondition := newEnactments.FindCondition(addedNodeName, addedConditionType)
+				addedCondition := newPolicy.FindEnactmentCondition(addedNodeName, addedConditionType)
 				Expect(addedCondition).NotTo(BeNil())
 				Expect(addedCondition.Type).To(Equal(addedConditionType))
 				Expect(addedCondition.Status).To(Equal(addedConditionStatus))
 			})
 		})
 	})
-
 	Context("contains a single node info entry", func() {
+		message := "Enactment matching"
 		existingNodeName := "existing_shruberry"
 		existingConditionType := ConditionType("existing_foo")
 		existingConditionStatus := corev1.ConditionTrue
 		existingConditionReason := ConditionReason("existing_bar")
 		existingConditionMessage := "existing_baz"
 
-		originalEnactments := EnactmentList{}
-		originalEnactments.SetCondition(existingNodeName, existingConditionType, existingConditionStatus, existingConditionReason, existingConditionMessage)
-		var newEnactments EnactmentList
+		originalPolicy := NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "policy-1",
+			},
+		}
+		var newPolicy NodeNetworkConfigurationPolicy
 
 		BeforeEach(func() {
-			newEnactments = originalEnactments.DeepCopy()
+			originalPolicy.SetEnactmentMessage(existingNodeName, message)
+			err := originalPolicy.SetEnactmentCondition(existingNodeName, existingConditionType, existingConditionStatus, existingConditionReason, existingConditionMessage)
+			Expect(err).ToNot(HaveOccurred())
+			newPolicy = originalPolicy
 		})
 
 		Context("and we add a new condition to it", func() {
@@ -70,41 +91,44 @@ var _ = Describe("Policy Enactments list", func() {
 			addedConditionMessage := "added_baz"
 
 			BeforeEach(func() {
-				newEnactments.SetCondition(existingNodeName, addedConditionType, addedConditionStatus, addedConditionReason, addedConditionMessage)
+				newPolicy.SetEnactmentMessage(existingNodeName, message)
+				err := newPolicy.SetEnactmentCondition(existingNodeName, addedConditionType, addedConditionStatus, addedConditionReason, addedConditionMessage)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not add a new node entry to the list", func() {
-				Expect(newEnactments).To(HaveLen(len(originalEnactments)))
+				Expect(newPolicy.Status.Enactments).To(HaveLen(len(originalPolicy.Status.Enactments)))
 			})
 
 			It("should contain both the old and new conditions", func() {
-				existingCondition := newEnactments.FindCondition(existingNodeName, existingConditionType)
+				existingCondition := newPolicy.FindEnactmentCondition(existingNodeName, existingConditionType)
 				Expect(existingCondition).NotTo(BeNil())
 
-				addedCondition := newEnactments.FindCondition(existingNodeName, addedConditionType)
+				addedCondition := newPolicy.FindEnactmentCondition(existingNodeName, addedConditionType)
 				Expect(addedCondition).NotTo(BeNil())
 			})
 		})
-
 		Context("and we change its condition", func() {
 			updatedConditionStatus := corev1.ConditionFalse
 			updatedConditionReason := ConditionReason("updated_bar")
 			updatedConditionMessage := "updated_baz"
 
 			BeforeEach(func() {
-				newEnactments.SetCondition(existingNodeName, existingConditionType, updatedConditionStatus, updatedConditionReason, updatedConditionMessage)
+				newPolicy.SetEnactmentMessage(existingNodeName, message)
+				err := newPolicy.SetEnactmentCondition(existingNodeName, existingConditionType, updatedConditionStatus, updatedConditionReason, updatedConditionMessage)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should not add a new entry to the list", func() {
-				Expect(newEnactments).To(HaveLen(len(originalEnactments)))
+				Expect(newPolicy.Status.Enactments).To(HaveLen(len(originalPolicy.Status.Enactments)))
 			})
 
 			It("should not add a new condition to the existing entry", func() {
-				Expect(newEnactments[0].Conditions).To(HaveLen(len(originalEnactments[0].Conditions)))
+				Expect(newPolicy.Status.Enactments[0].Ref.Status.Conditions).To(HaveLen(len(originalPolicy.Status.Enactments[0].Ref.Status.Conditions)))
 			})
 
 			It("should be changed", func() {
-				updatedCondition := newEnactments.FindCondition(existingNodeName, existingConditionType)
+				updatedCondition := newPolicy.FindEnactmentCondition(existingNodeName, existingConditionType)
 				Expect(updatedCondition.Status).To(Equal(updatedConditionStatus))
 			})
 		})
@@ -117,18 +141,20 @@ var _ = Describe("Policy Enactments list", func() {
 			addedConditionMessage := "added_baz"
 
 			BeforeEach(func() {
-				newEnactments.SetCondition(addedNodeName, addedConditionType, addedConditionStatus, addedConditionReason, addedConditionMessage)
+				newPolicy.SetEnactmentMessage(addedNodeName, message)
+				err := newPolicy.SetEnactmentCondition(addedNodeName, addedConditionType, addedConditionStatus, addedConditionReason, addedConditionMessage)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("should extend the list", func() {
-				Expect(newEnactments).To(HaveLen(len(originalEnactments) + 1))
+				Expect(newPolicy.Status.Enactments).To(HaveLen(len(originalPolicy.Status.Enactments) + 1))
 			})
 
 			It("should contain both the old and the new conditions", func() {
-				existingCondition := newEnactments.FindCondition(existingNodeName, existingConditionType)
+				existingCondition := newPolicy.FindEnactmentCondition(existingNodeName, existingConditionType)
 				Expect(existingCondition).NotTo(BeNil())
 
-				addedCondition := newEnactments.FindCondition(addedNodeName, addedConditionType)
+				addedCondition := newPolicy.FindEnactmentCondition(addedNodeName, addedConditionType)
 				Expect(addedCondition).NotTo(BeNil())
 			})
 		})

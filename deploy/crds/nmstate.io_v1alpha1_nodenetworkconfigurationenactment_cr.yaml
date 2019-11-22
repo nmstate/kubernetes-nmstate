@@ -1,0 +1,7 @@
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationEnactment
+metadata:
+  name: example-nodenetworkconfigurationenactment
+spec:
+  # Add fields here
+  size: 3

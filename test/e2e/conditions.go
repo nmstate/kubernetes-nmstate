@@ -24,7 +24,7 @@ func checkEnactmentConditionsStatus(node string, expectedConditions []nmstatev1a
 	key := types.NamespacedName{Name: TestPolicy}
 	policy := nodeNetworkConfigurationPolicy(key)
 	for _, expectedCondition := range expectedConditions {
-		obtainedCondition := policy.Status.Enactments.FindCondition(node, expectedCondition.Type)
+		obtainedCondition := policy.FindEnactmentCondition(node, expectedCondition.Type)
 		obtainedConditionStatus := corev1.ConditionUnknown
 		if obtainedCondition != nil {
 			obtainedConditionStatus = obtainedCondition.Status

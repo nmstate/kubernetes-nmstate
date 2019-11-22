@@ -1,16 +1,16 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: nodenetworkconfigurationpolicies.nmstate.io
+  name: nodenetworkconfigurationenactments.nmstate.io
 spec:
   group: nmstate.io
   names:
-    kind: NodeNetworkConfigurationPolicy
-    listKind: NodeNetworkConfigurationPolicyList
-    plural: nodenetworkconfigurationpolicies
+    kind: NodeNetworkConfigurationEnactment
+    listKind: NodeNetworkConfigurationEnactmentList
+    plural: nodenetworkconfigurationenactments
     shortNames:
     - nncp
-    singular: nodenetworkconfigurationpolicy
+    singular: nodenetworkconfigurationenactment
   scope: Cluster
   subresources:
     status: {}
@@ -31,32 +31,30 @@ spec:
           type: string
         metadata:
           type: object
-        spec:
-          description: NodeNetworkConfigurationPolicySpec defines the desired state
-            of NodeNetworkConfigurationPolicy
-          properties:
-            desiredState:
-              description: The desired configuration of the policy
-              type: object
-            nodeSelector:
-              additionalProperties:
-                type: string
-              description: 'NodeSelector is a selector which must be true for the
-                policy to be applied to the node. Selector which must match a node''s
-                labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
-              type: object
-          type: object
         status:
           description: NodeNetworkConfigurationPolicyStatus defines the observed state
             of NodeNetworkConfigurationPolicy
           properties:
-            enactments:
+            conditions:
               items:
                 properties:
+                  lastHearbeatTime:
+                    format: date-time
+                    type: string
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
                   message:
                     type: string
-                  nodeName:
+                  reason:
                     type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - status
+                - type
                 type: object
               type: array
           type: object
