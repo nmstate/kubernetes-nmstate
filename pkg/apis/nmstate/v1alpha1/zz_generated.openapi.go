@@ -157,13 +157,13 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref c
 				Description: "NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
-					"enactments": {
+					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Enactment"),
+										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
 									},
 								},
 							},
@@ -173,7 +173,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref c
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Enactment"},
+			"./pkg/apis/nmstate/v1alpha1.Condition"},
 	}
 }
 
@@ -240,11 +240,23 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 							},
 						},
 					},
+					"enactments": {
+						SchemaProps: spec.SchemaProps{
+							Type: []string{"array"},
+							Items: &spec.SchemaOrArray{
+								Schema: &spec.Schema{
+									SchemaProps: spec.SchemaProps{
+										Ref: ref("./pkg/apis/nmstate/v1alpha1.Enactment"),
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State"},
+			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.Enactment", "./pkg/apis/nmstate/v1alpha1.State"},
 	}
 }
 

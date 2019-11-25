@@ -61,6 +61,39 @@ spec:
                 of golang struct so we don't need to be in sync with the schema. \n
                 [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
               type: object
+            enactments:
+              description: 'TODO: This is a temporary solution. This list will be
+                replaced by a dedicated NodeNetworkConfigurationEnactment object.'
+              items:
+                properties:
+                  conditions:
+                    items:
+                      properties:
+                        lastHearbeatTime:
+                          format: date-time
+                          type: string
+                        lastTransitionTime:
+                          format: date-time
+                          type: string
+                        message:
+                          type: string
+                        reason:
+                          type: string
+                        status:
+                          type: string
+                        type:
+                          type: string
+                      required:
+                      - status
+                      - type
+                      type: object
+                    type: array
+                  nodeName:
+                    type: string
+                required:
+                - nodeName
+                type: object
+              type: array
           type: object
       type: object
   version: v1alpha1
