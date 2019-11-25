@@ -10,6 +10,7 @@ type NodeNetworkStateStatus struct {
 	CurrentState State `json:"currentState,omitempty"`
 
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+	Enactments EnactmentList `json:"enactments,omitempty" optional:"true"`
 }
 
 const (

@@ -65,13 +65,13 @@ func (m *Manager) updateEnactmentCondition(
 ) error {
 	// Set enactment condition
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
-		err := m.client.Get(context.TODO(), m.policyName, instance)
+		instance := &nmstatev1alpha1.NodeNetworkState{}
+		err := m.client.Get(context.TODO(), types.NamespacedName{Name: m.nodeName}, instance)
 		if err != nil {
 			return err
 		}
 
-		condition(&instance.Status.Enactments, m.nodeName, message)
+		condition(&instance.Status.Enactments, m.policyName.Name, message)
 
 		err = m.client.Status().Update(context.TODO(), instance)
 		return err

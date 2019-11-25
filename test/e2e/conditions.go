@@ -26,8 +26,8 @@ func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
 	return string(manifest)
 }
 func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
-	key := types.NamespacedName{Name: TestPolicy}
-	policy := nodeNetworkConfigurationPolicy(key)
+	key := types.NamespacedName{Name: node}
+	state := nodeNetworkState(key)
 	enactmentsConditionTypes := []nmstatev1alpha1.ConditionType{
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
@@ -35,7 +35,7 @@ func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
 	}
 	obtainedConditions := nmstatev1alpha1.ConditionList{}
 	for _, enactmentsConditionType := range enactmentsConditionTypes {
-		obtainedCondition := policy.Status.Enactments.FindCondition(node, enactmentsConditionType)
+		obtainedCondition := state.Status.Enactments.FindCondition(TestPolicy, enactmentsConditionType)
 		obtainedConditionStatus := corev1.ConditionUnknown
 		if obtainedCondition != nil {
 			obtainedConditionStatus = obtainedCondition.Status
