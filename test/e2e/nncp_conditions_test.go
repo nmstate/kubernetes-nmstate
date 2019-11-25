@@ -68,13 +68,13 @@ var _ = Describe("EnactmentCondition", func() {
 			}
 			for _, node := range nodes {
 				By("Check progressing state is reached")
-				checkEnactmentConditionsStatusEventually(node, progressConditions)
+				enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
 
 				By("Check available is the next condition")
-				checkEnactmentConditionsStatusEventually(node, availableConditions)
+				enactmentConditionsStatusEventually(node).Should(ConsistOf(availableConditions))
 
 				By("Check that we available is keep")
-				checkEnactmentConditionsStatusConsistently(node, availableConditions)
+				enactmentConditionsStatusConsistently(node).Should(ConsistOf(availableConditions))
 			}
 		})
 	})
@@ -92,7 +92,7 @@ var _ = Describe("EnactmentCondition", func() {
 
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
-				checkEnactmentConditionsStatusEventually(node, []nmstatev1alpha1.Condition{
+				enactmentConditionsStatusEventually(node).Should(ConsistOf(
 					nmstatev1alpha1.Condition{
 						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
 						Status: corev1.ConditionTrue,
@@ -105,7 +105,7 @@ var _ = Describe("EnactmentCondition", func() {
 						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
 						Status: corev1.ConditionFalse,
 					},
-				})
+				))
 			}
 		})
 	})
