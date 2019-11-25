@@ -13,6 +13,11 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
+type ExpectedConditionsStatus struct {
+	Node       string
+	conditions nmstatev1alpha1.ConditionList
+}
+
 func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
 	manifest, err := yaml.Marshal(conditions)
 	if err != nil {
@@ -20,31 +25,37 @@ func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
 	}
 	return string(manifest)
 }
-func checkEnactmentConditionsStatus(node string, expectedConditions []nmstatev1alpha1.Condition) bool {
+func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
 	key := types.NamespacedName{Name: TestPolicy}
 	policy := nodeNetworkConfigurationPolicy(key)
-	for _, expectedCondition := range expectedConditions {
-		obtainedCondition := policy.Status.Enactments.FindCondition(node, expectedCondition.Type)
+	enactmentsConditionTypes := []nmstatev1alpha1.ConditionType{
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+	}
+	obtainedConditions := nmstatev1alpha1.ConditionList{}
+	for _, enactmentsConditionType := range enactmentsConditionTypes {
+		obtainedCondition := policy.Status.Enactments.FindCondition(node, enactmentsConditionType)
 		obtainedConditionStatus := corev1.ConditionUnknown
 		if obtainedCondition != nil {
 			obtainedConditionStatus = obtainedCondition.Status
 		}
-		//TODO: Add context info to debug test failures
-		if obtainedConditionStatus != expectedCondition.Status {
-			return false
-		}
+		obtainedConditions = append(obtainedConditions, nmstatev1alpha1.Condition{
+			Type:   enactmentsConditionType,
+			Status: obtainedConditionStatus,
+		})
 	}
-	return true
+	return obtainedConditions
 }
 
-func checkEnactmentConditionsStatusEventually(node string, expectedConditions []nmstatev1alpha1.Condition) {
-	Eventually(func() bool {
-		return checkEnactmentConditionsStatus(node, expectedConditions)
-	}, 180*time.Second, 1*time.Second).Should(BeTrue())
+func enactmentConditionsStatusEventually(node string) AsyncAssertion {
+	return Eventually(func() nmstatev1alpha1.ConditionList {
+		return enactmentConditionsStatus(node)
+	}, 180*time.Second, 1*time.Second)
 }
 
-func checkEnactmentConditionsStatusConsistently(node string, expectedConditions []nmstatev1alpha1.Condition) {
-	Consistently(func() bool {
-		return checkEnactmentConditionsStatus(node, expectedConditions)
-	}, 5*time.Second, 1*time.Second).Should(BeTrue())
+func enactmentConditionsStatusConsistently(node string) AsyncAssertion {
+	return Consistently(func() nmstatev1alpha1.ConditionList {
+		return enactmentConditionsStatus(node)
+	}, 5*time.Second, 1*time.Second)
 }
