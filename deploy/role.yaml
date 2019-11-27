@@ -15,6 +15,7 @@ rules:
   - events
   - configmaps
   - secrets
+  - pods
   verbs:
   - '*'
 - apiGroups:
@@ -62,3 +63,4 @@ rules:
   verbs:
   - get
   - list
+  - watch
