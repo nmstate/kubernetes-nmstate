@@ -33,24 +33,6 @@ routes:
 }
 
 var _ = Describe("rollback", func() {
-	BeforeEach(func() {
-		By("Initialize desiredState")
-		resetDesiredStateForNodes()
-
-		By("Check Enactment is not at failing condition")
-		for _, node := range nodes {
-			enactmentConditionsStatusConsistently(node).Should(SatisfyAny(
-				ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionFalse,
-				}),
-				ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionUnknown,
-				}),
-			))
-		}
-	})
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
