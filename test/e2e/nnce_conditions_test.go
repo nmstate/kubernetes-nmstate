@@ -40,29 +40,29 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should go from Progressing to Available", func() {
 			progressConditions := []nmstatev1alpha1.Condition{
 				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
 					Status: corev1.ConditionTrue,
 				},
 				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
 					Status: corev1.ConditionUnknown,
 				},
 				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionUnknown,
 				},
 			}
 			availableConditions := []nmstatev1alpha1.Condition{
 				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
 					Status: corev1.ConditionFalse,
 				},
 				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
 					Status: corev1.ConditionTrue,
 				},
 				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionFalse,
 				},
 			}
@@ -94,15 +94,15 @@ var _ = Describe("EnactmentCondition", func() {
 			for _, node := range nodes {
 				enactmentConditionsStatusEventually(node).Should(ConsistOf(
 					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 						Status: corev1.ConditionTrue,
 					},
 					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
 						Status: corev1.ConditionFalse,
 					},
 					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionProgressing,
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
 						Status: corev1.ConditionFalse,
 					},
 				))

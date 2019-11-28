@@ -41,11 +41,11 @@ var _ = Describe("rollback", func() {
 		for _, node := range nodes {
 			enactmentConditionsStatusConsistently(node).Should(SatisfyAny(
 				ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionFalse,
 				}),
 				ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionUnknown,
 				}),
 			))
@@ -70,7 +70,7 @@ var _ = Describe("rollback", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
 				enactmentConditionsStatusEventually(node).Should(ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionTrue,
 				}))
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
@@ -101,7 +101,7 @@ var _ = Describe("rollback", func() {
 			for _, node := range nodes {
 				By("Wait for reconcile to fail")
 				enactmentConditionsStatusEventually(node).Should(ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailing,
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionTrue,
 				}))
 				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))

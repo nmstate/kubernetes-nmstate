@@ -12,10 +12,6 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var (
-	log = logf.Log.WithName("policy/conditions/manager")
-)
-
 type Manager struct {
 	client     client.Client
 	nodeName   string
@@ -28,42 +24,34 @@ func NewManager(client client.Client, nodeName string, policyName types.Namespac
 		client:     client,
 		nodeName:   nodeName,
 		policyName: policyName,
-		logger:     log.WithValues("node", nodeName, "policy", policyName),
+		logger:     logf.Log.WithName("policy/conditions/manager").WithValues("node", nodeName, "policy", policyName),
 	}
 }
 
-func (m *Manager) Progressing() {
+func (m *Manager) NotifyProgressing() {
 	err := m.updateEnactmentCondition(setEnactmentProgressing, "Applying desired state")
 	if err != nil {
-		m.logger.Error(err, "Error change state to progressing")
+		m.logger.Error(err, "Error notifying state Progressing")
 	}
 }
-func (m *Manager) FailedToConfigure(failedErr error) {
+func (m *Manager) NotifyFailedToConfigure(failedErr error) {
 	err := m.updateEnactmentCondition(setEnactmentFailedToConfigure, failedErr.Error())
 	if err != nil {
-		m.logger.Error(err, "Error chaing state to failing at configure with error: %v", failedErr)
+		m.logger.Error(err, "Error notifying state FailingToConfigure")
 	}
 }
 
-func (m *Manager) FailedToFindPolicy(failedErr error) {
-	err := m.updateEnactmentCondition(setEnactmentFailedToFindPolicy, failedErr.Error())
-	if err != nil {
-		m.logger.Error(err, "Error changing state to finling at finding policy with error: %v", failedErr)
-	}
-}
-
-func (m *Manager) Success() {
+func (m *Manager) NotifySuccess() {
 	err := m.updateEnactmentCondition(setEnactmentSuccess, "successfully reconciled")
 	if err != nil {
-		m.logger.Error(err, "Success condition update failed while reporting success: %v", err)
+		m.logger.Error(err, "Error notifying state Success")
 	}
 }
 
 func (m *Manager) updateEnactmentCondition(
-	condition func(*nmstatev1alpha1.EnactmentList, string, string),
+	conditionsSetter func(*nmstatev1alpha1.EnactmentList, string, string),
 	message string,
 ) error {
-	// Set enactment condition
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 		err := m.client.Get(context.TODO(), m.policyName, instance)
@@ -71,7 +59,7 @@ func (m *Manager) updateEnactmentCondition(
 			return err
 		}
 
-		condition(&instance.Status.Enactments, m.nodeName, message)
+		conditionsSetter(&instance.Status.Enactments, m.nodeName, message)
 
 		err = m.client.Status().Update(context.TODO(), instance)
 		return err

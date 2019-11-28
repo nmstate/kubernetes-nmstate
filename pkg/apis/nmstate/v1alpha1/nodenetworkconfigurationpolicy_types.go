@@ -49,18 +49,6 @@ type NodeNetworkConfigurationPolicyStatus struct {
 	Enactments EnactmentList `json:"enactments,omitempty" optional:"true"`
 }
 
-const (
-	NodeNetworkConfigurationPolicyConditionAvailable   ConditionType = "Available"
-	NodeNetworkConfigurationPolicyConditionFailing     ConditionType = "Failing"
-	NodeNetworkConfigurationPolicyConditionProgressing ConditionType = "Progressing"
-)
-
-const (
-	NodeNetworkConfigurationPolicyConditionFailedToConfigure        ConditionReason = "FailedToConfigure"
-	NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured   ConditionReason = "SuccessfullyConfigured"
-	NodeNetworkConfigurationPolicyConditionConfigurationProgressing ConditionReason = "ConfigurationProgressing"
-)
-
 func init() {
 	SchemeBuilder.Register(&NodeNetworkConfigurationPolicy{}, &NodeNetworkConfigurationPolicyList{})
 }

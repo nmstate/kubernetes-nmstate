@@ -57,7 +57,6 @@ const (
 )
 
 const (
-	NodeNetworkConfigurationEnactmentConditionFailedToFindPolicy       ConditionReason = "FailedToFindPolicy"
 	NodeNetworkConfigurationEnactmentConditionFailedToConfigure        ConditionReason = "FailedToConfigure"
 	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured   ConditionReason = "SuccessfullyConfigured"
 	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing ConditionReason = "ConfigurationProgressing"

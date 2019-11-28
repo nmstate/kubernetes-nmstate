@@ -141,24 +141,23 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		conditionsManager.FailedToFindPolicy(err)
 		reqLogger.Error(err, "Error retrieving policy")
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	conditionsManager.Progressing()
+	conditionsManager.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
-		conditionsManager.FailedToConfigure(errmsg)
+		conditionsManager.NotifyFailedToConfigure(errmsg)
 		reqLogger.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
 		return reconcile.Result{}, nil
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	conditionsManager.Success()
+	conditionsManager.NotifySuccess()
 
 	return reconcile.Result{}, nil
 }

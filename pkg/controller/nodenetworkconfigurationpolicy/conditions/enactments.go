@@ -10,10 +10,6 @@ func setEnactmentFailedToConfigure(enactments *nmstatev1alpha1.EnactmentList, no
 	setEnactmentFailed(enactments, nodeName, nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, message)
 }
 
-func setEnactmentFailedToFindPolicy(enactments *nmstatev1alpha1.EnactmentList, nodeName string, message string) {
-	setEnactmentFailed(enactments, nodeName, nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailedToFindPolicy, message)
-}
-
 func setEnactmentFailed(enactments *nmstatev1alpha1.EnactmentList, nodeName string, reason nmstatev1alpha1.ConditionReason, message string) {
 	enactments.SetCondition(
 		nodeName,

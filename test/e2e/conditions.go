@@ -13,7 +13,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-type ExpectedConditionsStatus struct {
+type expectedConditionsStatus struct {
 	Node       string
 	conditions nmstatev1alpha1.ConditionList
 }
@@ -25,6 +25,7 @@ func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
 	}
 	return string(manifest)
 }
+
 func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
 	key := types.NamespacedName{Name: TestPolicy}
 	policy := nodeNetworkConfigurationPolicy(key)
