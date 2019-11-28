@@ -114,6 +114,7 @@ cluster-clean: $(KUBECTL)
 	$(KUBECTL) delete --ignore-not-found -f deploy/
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates_crd.yaml
 	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
+	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
 	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
 	fi

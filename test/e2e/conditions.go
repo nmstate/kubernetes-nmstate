@@ -1,12 +1,15 @@
 package e2e
 
 import (
+	"context"
 	"time"
 
 	. "github.com/onsi/gomega"
 
 	"k8s.io/apimachinery/pkg/types"
 	yaml "sigs.k8s.io/yaml"
+
+	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -26,9 +29,18 @@ func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
 	return string(manifest)
 }
 
+func nodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1alpha1.NodeNetworkConfigurationEnactment {
+	state := nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
+	Eventually(func() error {
+		return framework.Global.Client.Get(context.TODO(), key, &state)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	return state
+}
+
 func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
-	key := types.NamespacedName{Name: TestPolicy}
-	policy := nodeNetworkConfigurationPolicy(key)
+	//TODO: Take the format from pkg
+	key := types.NamespacedName{Name: node + "-" + TestPolicy}
+	enactment := nodeNetworkConfigurationEnactment(key)
 	enactmentsConditionTypes := []nmstatev1alpha1.ConditionType{
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
@@ -36,7 +48,7 @@ func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
 	}
 	obtainedConditions := nmstatev1alpha1.ConditionList{}
 	for _, enactmentsConditionType := range enactmentsConditionTypes {
-		obtainedCondition := policy.Status.Enactments.FindCondition(node, enactmentsConditionType)
+		obtainedCondition := enactment.Status.Conditions.Find(enactmentsConditionType)
 		obtainedConditionStatus := corev1.ConditionUnknown
 		if obtainedCondition != nil {
 			obtainedConditionStatus = obtainedCondition.Status

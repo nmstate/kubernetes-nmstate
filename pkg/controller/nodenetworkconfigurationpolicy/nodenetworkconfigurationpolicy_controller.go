@@ -129,8 +129,6 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling NodeNetworkConfigurationPolicy")
 
-	conditionsManager := conditions.NewManager(r.client, nodeName, request.NamespacedName)
-
 	// Fetch the NodeNetworkConfigurationPolicy instance
 	instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
@@ -145,6 +143,8 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	conditionsManager := conditions.NewManager(r.client, nodeName, *instance)
 
 	conditionsManager.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)

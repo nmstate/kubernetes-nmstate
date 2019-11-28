@@ -51,38 +51,106 @@ spec:
             of NodeNetworkConfigurationPolicy
           properties:
             enactments:
-              description: 'TODO: This is a temporary solution. This list will be
-                replaced by a dedicated NodeNetworkConfigurationEnactment object.'
-              items:
-                properties:
-                  conditions:
-                    items:
-                      properties:
-                        lastHearbeatTime:
-                          format: date-time
-                          type: string
-                        lastTransitionTime:
-                          format: date-time
-                          type: string
-                        message:
-                          type: string
-                        reason:
-                          type: string
-                        status:
-                          type: string
-                        type:
-                          type: string
-                      required:
-                      - status
-                      - type
-                      type: object
-                    type: array
-                  nodeName:
-                    type: string
-                required:
-                - nodeName
-                type: object
-              type: array
+              description: NodeNetworkConfigurationPolicyList contains a list of NodeNetworkConfigurationPolicy
+              properties:
+                apiVersion:
+                  description: 'APIVersion defines the versioned schema of this representation
+                    of an object. Servers should convert recognized schemas to the
+                    latest internal value, and may reject unrecognized values. More
+                    info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                  type: string
+                items:
+                  items:
+                    description: NodeNetworkConfigurationPolicy is the Schema for
+                      the nodenetworkconfigurationpolicies API
+                    properties:
+                      apiVersion:
+                        description: 'APIVersion defines the versioned schema of this
+                          representation of an object. Servers should convert recognized
+                          schemas to the latest internal value, and may reject unrecognized
+                          values. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#resources'
+                        type: string
+                      kind:
+                        description: 'Kind is a string value representing the REST
+                          resource this object represents. Servers may infer this
+                          from the endpoint the client submits requests to. Cannot
+                          be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                        type: string
+                      metadata:
+                        type: object
+                      spec:
+                        description: NodeNetworkConfigurationPolicySpec defines the
+                          desired state of NodeNetworkConfigurationPolicy
+                        properties:
+                          desiredState:
+                            description: The desired configuration of the policy
+                            type: object
+                          nodeSelector:
+                            additionalProperties:
+                              type: string
+                            description: 'NodeSelector is a selector which must be
+                              true for the policy to be applied to the node. Selector
+                              which must match a node''s labels for the policy to
+                              be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                            type: object
+                        type: object
+                      status: {}
+                    type: object
+                  type: array
+                kind:
+                  description: 'Kind is a string value representing the REST resource
+                    this object represents. Servers may infer this from the endpoint
+                    the client submits requests to. Cannot be updated. In CamelCase.
+                    More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#types-kinds'
+                  type: string
+                metadata:
+                  description: ListMeta describes metadata that synthetic resources
+                    must have, including lists and various status objects. A resource
+                    may have only one of {ObjectMeta, ListMeta}.
+                  properties:
+                    continue:
+                      description: continue may be set if the user set a limit on
+                        the number of items returned, and indicates that the server
+                        has more data available. The value is opaque and may be used
+                        to issue another request to the endpoint that served this
+                        list to retrieve the next set of available objects. Continuing
+                        a consistent list may not be possible if the server configuration
+                        has changed or more than a few minutes have passed. The resourceVersion
+                        field returned when using this continue value will be identical
+                        to the value in the first response, unless you have received
+                        this token from an error message.
+                      type: string
+                    remainingItemCount:
+                      description: "remainingItemCount is the number of subsequent
+                        items in the list which are not included in this list response.
+                        If the list request contained label or field selectors, then
+                        the number of remaining items is unknown and the field will
+                        be left unset and omitted during serialization. If the list
+                        is complete (either because it is not chunking or because
+                        this is the last chunk), then there are no more remaining
+                        items and this field will be left unset and omitted during
+                        serialization. Servers older than v1.15 do not set this field.
+                        The intended use of the remainingItemCount is *estimating*
+                        the size of a collection. Clients should not rely on the remainingItemCount
+                        to be set or to be exact. \n This field is alpha and can be
+                        changed or removed without notice."
+                      format: int64
+                      type: integer
+                    resourceVersion:
+                      description: 'String that identifies the server''s internal
+                        version of this object that can be used by clients to determine
+                        when objects have changed. Value must be treated as opaque
+                        by clients and passed unmodified back to the server. Populated
+                        by the system. Read-only. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#concurrency-control-and-consistency'
+                      type: string
+                    selfLink:
+                      description: selfLink is a URL representing this object. Populated
+                        by the system. Read-only.
+                      type: string
+                  type: object
+              required:
+              - items
+              type: object
           type: object
       type: object
   version: v1alpha1
