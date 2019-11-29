@@ -3,6 +3,11 @@ kind: CustomResourceDefinition
 metadata:
   name: nodenetworkconfigurationenactments.nmstate.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.phase
+    description: Foo
+    name: Status
+    type: string
   group: nmstate.io
   names:
     kind: NodeNetworkConfigurationEnactment
@@ -57,6 +62,8 @@ spec:
                 - type
                 type: object
               type: array
+            phase:
+              type: string
           type: object
       type: object
   version: v1alpha1

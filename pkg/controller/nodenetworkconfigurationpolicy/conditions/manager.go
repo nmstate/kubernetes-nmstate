@@ -69,6 +69,8 @@ func (m *Manager) initializeEnactment() (*nmstatev1alpha1.NodeNetworkConfigurati
 		return nil, fmt.Errorf("error creating NodeNetworkConfigurationEnactment: %v, %+v", err, enactment)
 	}
 
+	//  We don't know yet at what phase we are
+	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseUnknown
 	return &enactment, nil
 }
 

@@ -29,6 +29,7 @@ func setEnactmentFailed(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnact
 		reason,
 		"",
 	)
+	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseFailing
 }
 
 func setEnactmentSuccess(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnactment, message string) {
@@ -50,6 +51,7 @@ func setEnactmentSuccess(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnac
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
 		"",
 	)
+	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseAvailable
 }
 
 func setEnactmentProgressing(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnactment, message string) {
@@ -71,4 +73,5 @@ func setEnactmentProgressing(enactment *nmstatev1alpha1.NodeNetworkConfiguration
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
 		"",
 	)
+	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseProgressing
 }

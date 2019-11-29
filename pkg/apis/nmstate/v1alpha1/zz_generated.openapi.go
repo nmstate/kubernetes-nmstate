@@ -130,6 +130,12 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 							},
 						},
 					},
+					"phase": {
+						SchemaProps: spec.SchemaProps{
+							Type:   []string{"string"},
+							Format: "",
+						},
+					},
 				},
 			},
 		},
