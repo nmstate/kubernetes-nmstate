@@ -312,29 +312,6 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 	}, ReadTimeout, ReadInterval)
 }
 
-func checkEnactmentConditionEventually(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
-	key := types.NamespacedName{Name: TestPolicy}
-	return Eventually(func() corev1.ConditionStatus {
-		policy := nodeNetworkConfigurationPolicy(key)
-		condition := policy.Status.Enactments.FindCondition(node, conditionType)
-		if condition == nil {
-			return corev1.ConditionUnknown
-		}
-		return condition.Status
-	}, ReadTimeout, ReadInterval)
-}
-
-func checkEnactmentConditionConsistently(node string, conditionType nmstatev1alpha1.ConditionType) AsyncAssertion {
-	key := types.NamespacedName{Name: TestPolicy}
-	return Eventually(func() corev1.ConditionStatus {
-		policy := nodeNetworkConfigurationPolicy(key)
-		condition := policy.Status.Enactments.FindCondition(node, conditionType)
-		if condition == nil {
-			return corev1.ConditionUnknown
-		}
-		return condition.Status
-	}, 5*time.Second, 1*time.Second)
-}
 func interfacesNameForNode(node string) []string {
 	var currentStateYaml nmstatev1alpha1.State
 	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
@@ -467,14 +444,6 @@ func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
 		return runAtNode(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
 	}, ReadTimeout, ReadInterval)
-}
-
-func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
-	manifest, err := yaml.Marshal(conditions)
-	if err != nil {
-		panic(err)
-	}
-	return string(manifest)
 }
 
 func nextBridge() string {
