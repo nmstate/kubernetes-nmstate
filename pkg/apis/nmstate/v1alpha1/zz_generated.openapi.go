@@ -228,6 +228,11 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 							Ref: ref("./pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
+					"lastSuccessfulUpdateTime": {
+						SchemaProps: spec.SchemaProps{
+							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
 					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
@@ -244,7 +249,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State"},
+			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

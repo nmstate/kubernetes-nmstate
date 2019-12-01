@@ -7,7 +7,8 @@ import (
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 // +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
-	CurrentState State `json:"currentState,omitempty"`
+	CurrentState             State       `json:"currentState,omitempty"`
+	LastSuccessfulUpdateTime metav1.Time `json:"lastSuccessfulUpdateTime,omitempty"`
 
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
