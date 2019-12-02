@@ -21,12 +21,15 @@ main() {
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
-    make \
-        E2E_TEST_ARGS='-ginkgo.noColor -ginkgo.skip .*NNS.*cleanup.*' \
-        test/e2e
-    make \
-        E2E_TEST_ARGS='-ginkgo.noColor -ginkgo.focus .*NNS.*cleanup.*' \
-        test/e2e
+    cnt=10
+    for i in $(seq 1 $cnt); do
+        make \
+            E2E_TEST_ARGS='-ginkgo.noColor -ginkgo.skip .*NNS.*cleanup.*' \
+            test/e2e
+        make \
+            E2E_TEST_ARGS='-ginkgo.noColor -ginkgo.focus .*NNS.*cleanup.*' \
+            test/e2e
+    done
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"
