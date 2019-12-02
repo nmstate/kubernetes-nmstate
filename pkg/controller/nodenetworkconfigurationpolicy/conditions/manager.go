@@ -31,7 +31,18 @@ func NewManager(client client.Client, nodeName string, policy nmstatev1alpha1.No
 	manager.logger = logf.Log.WithName("policy/conditions/manager").WithValues("enactment", manager.enactmentName)
 	return manager
 }
-
+func (m *Manager) NotifyNodeSelectorNotMatching(message string) {
+	err := m.updateEnactmentCondition(setEnactmentNodeSelectorNotMatching, message)
+	if err != nil {
+		m.logger.Error(err, "Error notifying state NodeSelectorNotMatching")
+	}
+}
+func (m *Manager) NotifyMatching() {
+	err := m.updateEnactmentCondition(setEnactmentMatching, "All policy selectors are matching the node")
+	if err != nil {
+		m.logger.Error(err, "Error notifying state Matching")
+	}
+}
 func (m *Manager) NotifyProgressing() {
 	err := m.updateEnactmentCondition(setEnactmentProgressing, "Applying desired state")
 	if err != nil {
