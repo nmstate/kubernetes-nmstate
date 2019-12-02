@@ -37,14 +37,15 @@ func nodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1alpha1
 	return state
 }
 
-func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
+func enactmentConditionsStatus(node string, policy string) nmstatev1alpha1.ConditionList {
 	//TODO: Take the format from pkg
-	key := types.NamespacedName{Name: node + "-" + TestPolicy}
+	key := types.NamespacedName{Name: node + "-" + policy}
 	enactment := nodeNetworkConfigurationEnactment(key)
 	enactmentsConditionTypes := []nmstatev1alpha1.ConditionType{
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
 	}
 	obtainedConditions := nmstatev1alpha1.ConditionList{}
 	for _, enactmentsConditionType := range enactmentsConditionTypes {
@@ -61,14 +62,22 @@ func enactmentConditionsStatus(node string) nmstatev1alpha1.ConditionList {
 	return obtainedConditions
 }
 
-func enactmentConditionsStatusEventually(node string) AsyncAssertion {
+func enactmentConditionsStatusForPolicyEventually(node string, policy string) AsyncAssertion {
 	return Eventually(func() nmstatev1alpha1.ConditionList {
-		return enactmentConditionsStatus(node)
+		return enactmentConditionsStatus(node, policy)
+	}, 5*time.Second, 1*time.Second)
+}
+
+func enactmentConditionsStatusForPolicyConsistently(node string, policy string) AsyncAssertion {
+	return Consistently(func() nmstatev1alpha1.ConditionList {
+		return enactmentConditionsStatus(node, policy)
 	}, 180*time.Second, 1*time.Second)
 }
 
+func enactmentConditionsStatusEventually(node string) AsyncAssertion {
+	return enactmentConditionsStatusForPolicyEventually(node, TestPolicy)
+}
+
 func enactmentConditionsStatusConsistently(node string) AsyncAssertion {
-	return Consistently(func() nmstatev1alpha1.ConditionList {
-		return enactmentConditionsStatus(node)
-	}, 5*time.Second, 1*time.Second)
+	return enactmentConditionsStatusForPolicyConsistently(node, TestPolicy)
 }

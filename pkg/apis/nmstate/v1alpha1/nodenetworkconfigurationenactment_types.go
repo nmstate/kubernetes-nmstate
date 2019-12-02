@@ -42,19 +42,24 @@ const (
 	NodeNetworkConfigurationEnactmentConditionAvailable   ConditionType = "Available"
 	NodeNetworkConfigurationEnactmentConditionFailing     ConditionType = "Failing"
 	NodeNetworkConfigurationEnactmentConditionProgressing ConditionType = "Progressing"
+	NodeNetworkConfigurationEnactmentConditionMatching    ConditionType = "Matching"
 )
 
 const (
 	NodeNetworkConfigurationEnactmentPhaseAvailable   EnactmentPhase = "Available"
 	NodeNetworkConfigurationEnactmentPhaseFailing     EnactmentPhase = "Failing"
 	NodeNetworkConfigurationEnactmentPhaseProgressing EnactmentPhase = "Progressing"
+	NodeNetworkConfigurationEnactmentPhaseNotMatching EnactmentPhase = "NotMatching"
+	NodeNetworkConfigurationEnactmentPhaseMatching    EnactmentPhase = "Matching"
 	NodeNetworkConfigurationEnactmentPhaseUnknown     EnactmentPhase = "Unknown"
 )
 
 const (
-	NodeNetworkConfigurationEnactmentConditionFailedToConfigure        ConditionReason = "FailedToConfigure"
-	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured   ConditionReason = "SuccessfullyConfigured"
-	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing ConditionReason = "ConfigurationProgressing"
+	NodeNetworkConfigurationEnactmentConditionFailedToConfigure                 ConditionReason = "FailedToConfigure"
+	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured            ConditionReason = "SuccessfullyConfigured"
+	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing          ConditionReason = "ConfigurationProgressing"
+	NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching           ConditionReason = "NodeSelectorNotMatching"
+	NodeNetworkConfigurationEnactmentConditionNodeSelectorAllConditionsMatching ConditionReason = "AllConditionsMatching"
 )
 
 func init() {

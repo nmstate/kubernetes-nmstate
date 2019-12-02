@@ -75,3 +75,62 @@ func setEnactmentProgressing(enactment *nmstatev1alpha1.NodeNetworkConfiguration
 	)
 	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseProgressing
 }
+
+func setEnactmentNodeSelectorNotMatching(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnactment, message string) {
+	setEnactmentNotMatching(enactment, nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching, message)
+	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseNotMatching
+}
+func setEnactmentNotMatching(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnactment, reason nmstatev1alpha1.ConditionReason, message string) {
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+		corev1.ConditionFalse,
+		reason,
+		message,
+	)
+}
+
+func setEnactmentMatching(enactment *nmstatev1alpha1.NodeNetworkConfigurationEnactment, message string) {
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionUnknown,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllConditionsMatching,
+		"",
+	)
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionUnknown,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllConditionsMatching,
+		"",
+	)
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionUnknown,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllConditionsMatching,
+		"",
+	)
+	enactment.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllConditionsMatching,
+		message,
+	)
+	enactment.Status.Phase = nmstatev1alpha1.NodeNetworkConfigurationEnactmentPhaseMatching
+}

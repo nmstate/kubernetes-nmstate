@@ -72,15 +72,25 @@ func nodeSelectorMatchesThisNode(cl client.Client, eventObject runtime.Object) b
 func forThisNodePredicate(cl client.Client) predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, createEvent.Object)
+			conditionsManager := conditions.NewManager(cl, nodeName, *createEvent.Object.(*nmstatev1alpha1.NodeNetworkConfigurationPolicy))
+			if !nodeSelectorMatchesThisNode(cl, createEvent.Object) {
+				conditionsManager.NotifyNodeSelectorNotMatching("TODO")
+				return false
+			}
+			conditionsManager.NotifyMatching()
+			return true
+
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
 			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			conditionsManager := conditions.NewManager(cl, nodeName, *updateEvent.ObjectNew.(*nmstatev1alpha1.NodeNetworkConfigurationPolicy))
 			if !nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew) {
+				conditionsManager.NotifyNodeSelectorNotMatching("TODO")
 				return false
 			}
+			conditionsManager.NotifyMatching()
 
 			// As described [1] if we want to ignore reconcile of status update we have
 			// to check generation since it does not change on status updates also force
