@@ -165,7 +165,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		log.Error(err, "Error initializing enactment")
 	}
 
-	conditionsManager := conditions.NewManager(r.client, nodeName, *instance)
+	conditionsManager := conditions.NewManager(r.client, nodeName, instance)
 	policySelectors := selectors.NewManager(r.client, nodeName, *instance)
 	if unmatchingLabels, matches := policySelectors.MatchesThisNode(); !matches {
 		reqLogger.Info("Policy node selectors does not match node")

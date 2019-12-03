@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -16,12 +17,12 @@ import (
 
 type Manager struct {
 	client   client.Client
-	policy   nmstatev1alpha1.NodeNetworkConfigurationPolicy
+	policy   *nmstatev1alpha1.NodeNetworkConfigurationPolicy
 	nodeName string
 	logger   logr.Logger
 }
 
-func NewManager(client client.Client, nodeName string, policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) Manager {
+func NewManager(client client.Client, nodeName string, policy *nmstatev1alpha1.NodeNetworkConfigurationPolicy) Manager {
 	manager := Manager{
 		client:   client,
 		policy:   policy,
@@ -68,6 +69,35 @@ func (m *Manager) NotifySuccess() {
 	}
 }
 
+func (m *Manager) refreshPolicyConditions() error {
+
+	enactments := nmstatev1alpha1.NodeNetworkConfigurationEnactmentList{}
+
+	//TODO: filter labels
+	err := m.client.List(context.TODO(), &enactments)
+	if err != nil {
+		return errors.Wrap(err, "getting enactments failed")
+	}
+	// Let's get conditions with true status frequency
+	trueConditionsFrequency := map[nmstatev1alpha1.ConditionType]int{}
+	for _, enactment := range enactments.Items {
+		for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
+			condition := enactment.Status.Conditions.Find(conditionType)
+			if condition.Status == corev1.ConditionTrue {
+				trueConditionsFrequency[conditionType] += 1
+			}
+		}
+	}
+	//TODO: Add the rest of conditions
+	if trueConditionsFrequency[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing] > 0 {
+		err := m.updatePolicyConditions(setPolicyProgressing, "TODO")
+		if err != nil {
+			m.logger.Error(err, "Error notifying state Progressing")
+		}
+	}
+	return nil
+}
+
 func (m *Manager) updateEnactmentConditions(
 	conditionsSetter func(*nmstatev1alpha1.ConditionList, string),
 	message string,
@@ -82,6 +112,22 @@ func (m *Manager) updateEnactmentConditions(
 		conditionsSetter(&instance.Status.Conditions, message)
 
 		err = m.client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+}
+
+func (m *Manager) updatePolicyConditions(
+	conditionsSetter func(*nmstatev1alpha1.ConditionList, string),
+	message string,
+) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
+		conditionsSetter(&m.policy.Status.Conditions, message)
+
+		err := m.client.Status().Update(context.TODO(), m.policy)
 		if err != nil {
 			return err
 		}
