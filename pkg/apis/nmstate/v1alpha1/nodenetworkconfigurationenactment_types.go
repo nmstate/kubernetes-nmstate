@@ -38,6 +38,7 @@ type NodeNetworkConfigurationEnactmentStatus struct {
 }
 
 const (
+	EnactmentPolicyLabel                                                = "nmstate.io/policy"
 	NodeNetworkConfigurationEnactmentConditionAvailable   ConditionType = "Available"
 	NodeNetworkConfigurationEnactmentConditionFailing     ConditionType = "Failing"
 	NodeNetworkConfigurationEnactmentConditionProgressing ConditionType = "Progressing"
@@ -69,6 +70,10 @@ func NewEnactment(node corev1.Node, policy NodeNetworkConfigurationPolicy) NodeN
 			Name: EnactmentKey(node.Name, policy.Name).Name,
 			OwnerReferences: []metav1.OwnerReference{
 				{Name: policy.Name, Kind: policy.TypeMeta.Kind, APIVersion: policy.TypeMeta.APIVersion, UID: policy.UID},
+			},
+			// Associate policy with the enactment using labels
+			Labels: map[string]string{
+				EnactmentPolicyLabel: policy.Name,
 			},
 		},
 	}

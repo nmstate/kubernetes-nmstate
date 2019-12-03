@@ -49,12 +49,12 @@ var _ = Describe("rollback", func() {
 		})
 		It("should rollback failed state configuration", func() {
 			updateDesiredState(linuxBrUpNoPorts(bridge1))
+			By("Wait for reconcile to fail")
+			policyConditionsStatusEventually().Should(ContainElement(nmstatev1alpha1.Condition{
+				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+				Status: corev1.ConditionTrue,
+			}))
 			for _, node := range nodes {
-				By("Wait for reconcile to fail")
-				enactmentConditionsStatusEventually(node).Should(ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionTrue,
-				}))
 				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 
@@ -80,12 +80,12 @@ var _ = Describe("rollback", func() {
 			resetDesiredStateForNodes()
 		})
 		It("should rollback to a good gw configuration", func() {
+			By("Wait for reconcile to fail")
+			policyConditionsStatusEventually().Should(ContainElement(nmstatev1alpha1.Condition{
+				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+				Status: corev1.ConditionTrue,
+			}))
 			for _, node := range nodes {
-				By("Wait for reconcile to fail")
-				enactmentConditionsStatusEventually(node).Should(ContainElement(nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionTrue,
-				}))
 				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
 				Eventually(func() bool {
 					return dhcpFlag(node, *primaryNic)

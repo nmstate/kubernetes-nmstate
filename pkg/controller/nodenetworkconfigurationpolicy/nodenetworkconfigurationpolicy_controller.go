@@ -24,7 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/conditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentconditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/selectors"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
@@ -165,33 +166,39 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		log.Error(err, "Error initializing enactment")
 	}
 
-	conditionsManager := conditions.NewManager(r.client, nodeName, *instance)
+	enactmentConditions := enactmentconditions.New(r.client, nmstatev1alpha1.EnactmentKey(nodeName, instance.Name))
+
+	// Policy conditions will be updated at the end so updating it
+	// does not impact at applying state, it will increase just
+	// reconcile time.
+	defer policyconditions.Update(r.client, instance)
+
 	policySelectors := selectors.NewFromPolicy(r.client, *instance)
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)
 	if err != nil {
 		reqLogger.Error(err, "failed checking node selectors")
-		conditionsManager.NotifyNodeSelectorFailure(err)
+		enactmentConditions.NotifyNodeSelectorFailure(err)
 	}
 	if len(unmatchingNodeLabels) > 0 {
 		reqLogger.Info("Policy node selectors does not match node")
-		conditionsManager.NotifyNodeSelectorNotMatching(unmatchingNodeLabels)
+		enactmentConditions.NotifyNodeSelectorNotMatching(unmatchingNodeLabels)
 		return reconcile.Result{}, nil
 	}
 
-	conditionsManager.NotifyMatching()
+	enactmentConditions.NotifyMatching()
 
-	conditionsManager.NotifyProgressing()
+	enactmentConditions.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
-		conditionsManager.NotifyFailedToConfigure(errmsg)
+		enactmentConditions.NotifyFailedToConfigure(errmsg)
 		reqLogger.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
 		return reconcile.Result{}, nil
 	}
 	reqLogger.Info("nmstate", "output", nmstateOutput)
 
-	conditionsManager.NotifySuccess()
+	enactmentConditions.NotifySuccess()
 
 	return reconcile.Result{}, nil
 }
