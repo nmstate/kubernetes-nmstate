@@ -165,7 +165,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		log.Error(err, "Error initializing enactment")
 	}
 
-	conditionsManager := conditions.NewManager(r.client, nodeName, *instance)
+	conditionsManager := conditions.NewManager(r.client, nodeName, instance)
 	selectors := selectors.New(r.client, nodeName, *instance)
 	unmatchingLabels, err := selectors.UnmatchedLabels()
 	if err != nil {

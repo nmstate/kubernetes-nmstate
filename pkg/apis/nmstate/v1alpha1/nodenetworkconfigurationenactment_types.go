@@ -79,6 +79,21 @@ func NewEnactment(node corev1.Node, policy NodeNetworkConfigurationPolicy) NodeN
 	return enactment
 }
 
+func (enactments NodeNetworkConfigurationEnactmentList) TrueConditionsFrequency() map[ConditionType]int {
+	trueConditionsFrequency := map[ConditionType]int{}
+	for _, enactment := range enactments.Items {
+		for _, conditionType := range NodeNetworkConfigurationEnactmentConditionTypes {
+			condition := enactment.Status.Conditions.Find(conditionType)
+			if condition != nil {
+				if condition.Status == corev1.ConditionTrue {
+					trueConditionsFrequency[conditionType] += 1
+				}
+			}
+		}
+	}
+	return trueConditionsFrequency
+}
+
 func init() {
 	SchemeBuilder.Register(&NodeNetworkConfigurationEnactment{}, &NodeNetworkConfigurationEnactmentList{})
 }

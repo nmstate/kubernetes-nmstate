@@ -253,14 +253,6 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
 github.com/mxk/go-flowrate/flowrate
-# github.com/nmstate/kubernetes-nmstate v0.12.0
-github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1
-github.com/nmstate/kubernetes-nmstate/pkg/controller/node
-github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy
-github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkstateconfiguration
-github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkstatereport
-github.com/nmstate/kubernetes-nmstate/pkg/helper
-github.com/nmstate/kubernetes-nmstate/pkg/apis
 # github.com/onsi/ginkgo v1.8.0
 github.com/onsi/ginkgo/ginkgo
 github.com/onsi/ginkgo
@@ -290,13 +282,15 @@ github.com/onsi/ginkgo/internal/spec
 github.com/onsi/ginkgo/internal/specrunner
 # github.com/onsi/gomega v1.5.0
 github.com/onsi/gomega
+github.com/onsi/gomega/gstruct
+github.com/onsi/gomega/types
 github.com/onsi/gomega/internal/assertion
 github.com/onsi/gomega/internal/asyncassertion
 github.com/onsi/gomega/internal/testingtsupport
 github.com/onsi/gomega/matchers
-github.com/onsi/gomega/types
-github.com/onsi/gomega/internal/oraclematcher
 github.com/onsi/gomega/format
+github.com/onsi/gomega/gstruct/errors
+github.com/onsi/gomega/internal/oraclematcher
 github.com/onsi/gomega/matchers/support/goraph/bipartitegraph
 github.com/onsi/gomega/matchers/support/goraph/edge
 github.com/onsi/gomega/matchers/support/goraph/node
@@ -667,8 +661,8 @@ k8s.io/apimachinery/pkg/util/intstr
 k8s.io/apimachinery/pkg/runtime
 k8s.io/apimachinery/pkg/apis/meta/v1
 k8s.io/apimachinery/pkg/runtime/schema
-k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/types
+k8s.io/apimachinery/pkg/api/errors
 k8s.io/apimachinery/pkg/util/wait
 k8s.io/apimachinery/pkg/apis/meta/v1/unstructured
 k8s.io/apimachinery/pkg/runtime/serializer

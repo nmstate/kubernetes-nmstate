@@ -46,9 +46,21 @@ type NodeNetworkConfigurationPolicySpec struct {
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 // +k8s:openapi-gen=true
 type NodeNetworkConfigurationPolicyStatus struct {
-	// TODO: Add overall condition
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
+
+const (
+	NodeNetworkConfigurationPolicyConditionAvailable   ConditionType = "Available"
+	NodeNetworkConfigurationPolicyConditionDegraded    ConditionType = "Degraded"
+	NodeNetworkConfigurationPolicyConditionProgressing ConditionType = "Progressing"
+)
+
+const (
+	NodeNetworkConfigurationPolicyConditionFailedToConfigure            ConditionReason = "FailedToConfigure"
+	NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured       ConditionReason = "SuccessfullyConfigured"
+	NodeNetworkConfigurationPolicyConditionConfigurationProgressing     ConditionReason = "ConfigurationProgressing"
+	NodeNetworkConfigurationPolicyConditionConfigurationNotMatchingNode ConditionReason = "NotMatchingNode"
+)
 
 func init() {
 	SchemeBuilder.Register(&NodeNetworkConfigurationPolicy{}, &NodeNetworkConfigurationPolicyList{})
