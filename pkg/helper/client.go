@@ -170,6 +170,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	}
 
 	nodeNetworkState.Status.CurrentState = stateToReport
+	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {

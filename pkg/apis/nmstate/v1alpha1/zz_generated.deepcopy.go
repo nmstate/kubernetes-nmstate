@@ -265,6 +265,7 @@ func (in *NodeNetworkStateList) DeepCopyObject() runtime.Object {
 func (in *NodeNetworkStateStatus) DeepCopyInto(out *NodeNetworkStateStatus) {
 	*out = *in
 	in.CurrentState.DeepCopyInto(&out.CurrentState)
+	in.LastSuccessfulUpdateTime.DeepCopyInto(&out.LastSuccessfulUpdateTime)
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make(ConditionList, len(*in))

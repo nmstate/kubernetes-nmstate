@@ -29,6 +29,7 @@ status:
       - name: eth1
         type: ethernet
         state: down
+  lastSuccessfulUpdateTime: "1970-01-01T00:00:00Z"
 
 `
 		nnsStruct = NodeNetworkState{
@@ -41,7 +42,8 @@ status:
 				CreationTimestamp: metav1.Unix(0, 0),
 			},
 			Status: NodeNetworkStateStatus{
-				CurrentState: currentState,
+				CurrentState:             currentState,
+				LastSuccessfulUpdateTime: metav1.Unix(0, 0),
 			},
 		}
 	)
