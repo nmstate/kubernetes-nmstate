@@ -184,6 +184,7 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	updateDesiredState(ethernetNicUp(*primaryNic))
+	deletePolicy(TestPolicy)
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState {

@@ -1,7 +1,188 @@
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkState
 metadata:
-  name: example-nodenetworkstate
-spec:
-  # Add fields here
-  size: 3
+  creationTimestamp: "2019-12-03T08:31:04Z"
+  generation: 1
+  name: node01
+  ownerReferences:
+  - apiVersion: v1
+    kind: Node
+    name: node01
+    uid: d3c4563b-ece3-49a3-b0b6-81d12b112e89
+  resourceVersion: "728"
+  selfLink: /apis/nmstate.io/v1alpha1/nodenetworkstates/node01
+  uid: d8b24483-3162-44ce-a335-666844569562
+status:
+  currentState:
+    dns-resolver:
+      config:
+        search: []
+        server: []
+      running:
+        search: []
+        server:
+        - 192.168.66.2
+    interfaces:
+    - bridge:
+        options:
+          group-forward-mask: 0
+          mac-ageing-time: 300
+          multicast-snooping: true
+          stp:
+            enabled: false
+            forward-delay: 15
+            hello-time: 2
+            max-age: 20
+            priority: 32768
+        port: []
+      ipv4:
+        address:
+        - ip: 10.244.0.1
+          prefix-length: 24
+        dhcp: false
+        enabled: true
+      ipv6:
+        address:
+        - ip: fe80::5ccc:abff:fe0a:db1e
+          prefix-length: 64
+        autoconf: false
+        dhcp: false
+        enabled: true
+      mac-address: 5E:CC:AB:0A:DB:1E
+      mtu: 1450
+      name: cni0
+      state: up
+      type: linux-bridge
+    - bridge:
+        options:
+          group-forward-mask: 0
+          mac-ageing-time: 300
+          multicast-snooping: true
+          stp:
+            enabled: false
+            forward-delay: 15
+            hello-time: 2
+            max-age: 20
+            priority: 32768
+        port: []
+      ipv4:
+        address:
+        - ip: 172.17.0.1
+          prefix-length: 16
+        dhcp: false
+        enabled: true
+      ipv6:
+        autoconf: false
+        dhcp: false
+        enabled: false
+      mac-address: 02:42:DD:B5:49:60
+      mtu: 1500
+      name: docker0
+      state: up
+      type: linux-bridge
+    - ipv4:
+        address:
+        - ip: 192.168.66.101
+          prefix-length: 24
+        auto-dns: true
+        auto-gateway: true
+        auto-routes: true
+        dhcp: true
+        enabled: true
+      ipv6:
+        address:
+        - ip: fe80::5055:ff:fed1:5501
+          prefix-length: 64
+        autoconf: false
+        dhcp: false
+        enabled: true
+      mac-address: 52:55:00:D1:55:01
+      mtu: 1500
+      name: eth0
+      state: up
+      type: ethernet
+    - ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mac-address: 52:55:00:D1:56:00
+      mtu: 1500
+      name: eth1
+      state: down
+      type: ethernet
+    - ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mac-address: 52:55:00:D1:56:01
+      mtu: 1500
+      name: eth2
+      state: down
+      type: ethernet
+    - ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mac-address: 8A:58:1B:E1:ED:CA
+      mtu: 1450
+      name: flannel.1
+      state: down
+      type: vxlan
+      vxlan:
+        base-iface: eth0
+        destination-port: 8472
+        id: 1
+        remote: ""
+    - ipv4:
+        enabled: false
+      ipv6:
+        enabled: false
+      mtu: 65536
+      name: lo
+      state: down
+      type: unknown
+    route-rules:
+      config: []
+    routes:
+      config: []
+      running:
+      - destination: 10.244.0.0/24
+        metric: 0
+        next-hop-address: ""
+        next-hop-interface: cni0
+        table-id: 254
+      - destination: 172.17.0.0/16
+        metric: 0
+        next-hop-address: ""
+        next-hop-interface: docker0
+        table-id: 254
+      - destination: 0.0.0.0/0
+        metric: 100
+        next-hop-address: 192.168.66.2
+        next-hop-interface: eth0
+        table-id: 254
+      - destination: 192.168.66.0/24
+        metric: 100
+        next-hop-address: ""
+        next-hop-interface: eth0
+        table-id: 254
+      - destination: fe80::/64
+        metric: 256
+        next-hop-address: ""
+        next-hop-interface: cni0
+        table-id: 254
+      - destination: fe80::/64
+        metric: 100
+        next-hop-address: ""
+        next-hop-interface: eth0
+        table-id: 254
+      - destination: ff00::/8
+        metric: 256
+        next-hop-address: ""
+        next-hop-interface: cni0
+        table-id: 255
+      - destination: ff00::/8
+        metric: 256
+        next-hop-address: ""
+        next-hop-interface: eth0
+        table-id: 255
