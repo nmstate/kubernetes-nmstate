@@ -85,6 +85,37 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
 `, bondName, *firstSecondaryNic, *secondSecondaryNic))
 }
 
+func bondUpWithEth1Eth2AndVlan(bondName string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+- name: %s
+  type: bond
+  state: up
+  ipv4:
+    address:
+    - ip: 10.10.10.10
+      prefix-length: 24
+    enabled: true
+  link-aggregation:
+    mode: balance-rr
+    options:
+      miimon: '140'
+    slaves:
+    - %s
+    - %s
+- name: %s.102
+  type: vlan
+  state: up
+  ipv4:
+    address:
+    - ip: 10.102.10.10
+      prefix-length: 24
+    enabled: true
+  vlan:
+    base-iface: %s
+    id: 102
+`, bondName, *firstSecondaryNic, *secondSecondaryNic,bondName,bondName))
+}
+
 var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
@@ -221,6 +252,41 @@ var _ = Describe("NodeNetworkState", func() {
 						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
 						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
 					)))
+				}
+			})
+		})
+		Context("with bond interface that has 2 eths as slaves and vlan tag on the bond", func() {
+			BeforeEach(func() {
+				updateDesiredState(bondUpWithEth1Eth2AndVlan(bond1))
+			})
+			AfterEach(func() {
+				updateDesiredState(bondAbsent(bond1))
+				for _, node := range nodes {
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
+				}
+				resetDesiredStateForNodes()
+			})
+			It("should have the bond interface with 2 slaves at currentState", func() {
+				var (
+					expectedBond = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), bond1)
+					expectedVlanBond102 = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), fmt.Sprintf("%s.102", bond1))
+					expectedSpecs      = expectedBond["link-aggregation"].(map[string]interface{})
+				)
+
+				for _, node := range nodes {
+					interfacesForNode(node).Should(SatisfyAll(
+						ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", expectedBond["name"]),
+						HaveKeyWithValue("type", expectedBond["type"]),
+						HaveKeyWithValue("state", expectedBond["state"]),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
+					)),
+					ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", expectedVlanBond102["name"]),
+						HaveKeyWithValue("type", expectedVlanBond102["type"]),
+						HaveKeyWithValue("state", expectedVlanBond102["state"])))))
 				}
 			})
 		})
