@@ -46,7 +46,8 @@ type NodeNetworkConfigurationPolicySpec struct {
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 // +k8s:openapi-gen=true
 type NodeNetworkConfigurationPolicyStatus struct {
-	Enactments EnactmentList `json:"enactments,omitempty" optional:"true"`
+	// TODO: Add overall condition
+	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
 func init() {

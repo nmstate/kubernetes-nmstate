@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
+
+	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -120,6 +124,48 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 	scheme *runtime.Scheme
 }
 
+func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
+	var enactment nmstatev1alpha1.NodeNetworkConfigurationEnactment
+	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+		err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &enactment)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				// Let's retry after a while, sometimes it takes some time
+				// for enactment to be created
+				return false, nil
+			}
+			return false, err
+		}
+		return true, nil
+	})
+
+	return pollErr
+}
+
+func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
+
+	// Return if it's already initialize or we cannot retrieve it
+	err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
+	if err == nil || !k8s_errors.IsNotFound(err) {
+		return err
+	}
+
+	node := corev1.Node{}
+	err = r.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("cannot get node %s", nodeName))
+	}
+
+	enactment := nmstatev1alpha1.NewEnactment(node, policy)
+
+	err = r.client.Create(context.TODO(), &enactment)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
+	}
+
+	return r.waitEnactmentCreated(policy)
+}
+
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
 // and what is in the NodeNetworkConfigurationPolicy.Spec
 // Note:
@@ -129,13 +175,11 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling NodeNetworkConfigurationPolicy")
 
-	conditionsManager := conditions.NewManager(r.client, nodeName, request.NamespacedName)
-
 	// Fetch the NodeNetworkConfigurationPolicy instance
 	instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8s_errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -145,6 +189,13 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
+
+	err = r.initializeEnactment(*instance)
+	if err != nil {
+		log.Error(err, "Error initializing enactment")
+	}
+
+	conditionsManager := conditions.NewManager(r.client, nodeName, *instance)
 
 	conditionsManager.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
