@@ -11,3 +11,4 @@ the tutorials.
 - [Create a Linux bridge and connect it to a node interface](user-guide-policy-configure-linux-bridge.md)
 - [Create an Open vSwitch bridge and connect it to a node interface](user-guide-policy-configure-ovs-bridge.md)
 - [Configure a Linux bonding interface](user-guide-policy-configure-linux-bond.md)
+- [Configure a Linux bonding interface with sub vlan interfaces](user-guide-policy-configure-linux-bond-with-vlans.md)
