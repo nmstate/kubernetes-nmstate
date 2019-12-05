@@ -15,7 +15,7 @@ teardown() {
 }
 
 main() {
-    export KUBEVIRT_PROVIDER='okd-4.1'
+    export KUBEVIRT_PROVIDER='okd-4.2'
 
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}

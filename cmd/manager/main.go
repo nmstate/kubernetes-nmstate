@@ -33,8 +33,8 @@ import (
 // Change below variables to serve metrics on different host or port.
 var (
 	metricsHost               = "0.0.0.0"
-	metricsPort         int32 = 8383
-	operatorMetricsPort int32 = 8686
+	metricsPort         int32 = 18383
+	operatorMetricsPort int32 = 18686
 )
 var log = logf.Log.WithName("cmd")
 
@@ -160,11 +160,9 @@ func serveCRMetrics(cfg *rest.Config) error {
 	if err != nil {
 		return err
 	}
-	// Get the namespace the operator is currently deployed in.
-	operatorNs, err := k8sutil.GetOperatorNamespace()
-	if err != nil {
-		return err
-	}
+	// This operator is cluster scoped there is no namespace
+	operatorNs := ""
+
 	// To generate metrics in other namespaces, add the values below.
 	ns := []string{operatorNs}
 	// Generate and serve custom resource specific metrics.
