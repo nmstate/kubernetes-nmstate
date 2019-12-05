@@ -72,3 +72,61 @@ func setEnactmentProgressing(conditions *nmstatev1alpha1.ConditionList, message 
 		"",
 	)
 }
+
+func setEnactmentNodeSelectorNotMatching(conditions *nmstatev1alpha1.ConditionList, message string) {
+	setEnactmentNotMatching(conditions, nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching, message)
+}
+
+func setEnactmentNotMatching(conditions *nmstatev1alpha1.ConditionList, reason nmstatev1alpha1.ConditionReason, message string) {
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+		corev1.ConditionFalse,
+		reason,
+		message,
+	)
+}
+
+func setEnactmentMatching(conditions *nmstatev1alpha1.ConditionList, message string) {
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionUnknown,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		"",
+	)
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionUnknown,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		"",
+	)
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionUnknown,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		"",
+	)
+	conditions.Set(
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		message,
+	)
+}
