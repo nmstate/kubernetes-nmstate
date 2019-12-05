@@ -2,6 +2,7 @@ package conditions
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -29,7 +30,26 @@ func NewManager(client client.Client, nodeName string, policy nmstatev1alpha1.No
 	manager.logger = logf.Log.WithName("policy/conditions/manager").WithValues("enactment", nmstatev1alpha1.EnactmentKey(nodeName, policy.Name).Name)
 	return manager
 }
-
+func (m *Manager) NotifyNodeSelectorFailure(err error) {
+	message := fmt.Sprintf("failure checking node selectors for %s: %v", m.nodeName, err)
+	err = m.updateEnactmentConditions(setEnactmentNodeSelectorNotMatching, message)
+	if err != nil {
+		m.logger.Error(err, "Error notifying state NodeSelectorNotMatching with failure")
+	}
+}
+func (m *Manager) NotifyNodeSelectorNotMatching(unmatchingLabels map[string]string) {
+	message := fmt.Sprintf("Unmatching labels: %v", unmatchingLabels)
+	err := m.updateEnactmentConditions(setEnactmentNodeSelectorNotMatching, message)
+	if err != nil {
+		m.logger.Error(err, "Error notifying state NodeSelectorNotMatching")
+	}
+}
+func (m *Manager) NotifyMatching() {
+	err := m.updateEnactmentConditions(setEnactmentMatching, "All policy selectors are matching the node")
+	if err != nil {
+		m.logger.Error(err, "Error notifying state Matching")
+	}
+}
 func (m *Manager) NotifyProgressing() {
 	err := m.updateEnactmentConditions(setEnactmentProgressing, "Applying desired state")
 	if err != nil {

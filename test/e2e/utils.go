@@ -215,10 +215,17 @@ func deleteNodeNeworkStates() {
 }
 
 func deletePolicy(name string) {
+	By(fmt.Sprintf("Deleting policy %s", name))
 	policy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	err := framework.Global.Client.Delete(context.TODO(), policy)
 	Expect(err).ToNot(HaveOccurred())
+
+	policy = nil
+	Eventually(func() bool {
+		err := framework.Global.Client.Get(context.TODO(), types.NamespacedName{Name: name}, policy)
+		return apierrors.IsNotFound(err)
+	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
 }
 
 func run(command string, arguments ...string) (string, error) {

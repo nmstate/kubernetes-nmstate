@@ -51,6 +51,10 @@ var _ = Describe("EnactmentCondition", func() {
 					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionUnknown,
 				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+					Status: corev1.ConditionTrue,
+				},
 			}
 			availableConditions := []nmstatev1alpha1.Condition{
 				nmstatev1alpha1.Condition{
@@ -64,6 +68,10 @@ var _ = Describe("EnactmentCondition", func() {
 				nmstatev1alpha1.Condition{
 					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionFalse,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+					Status: corev1.ConditionTrue,
 				},
 			}
 			for _, node := range nodes {
@@ -104,6 +112,10 @@ var _ = Describe("EnactmentCondition", func() {
 					nmstatev1alpha1.Condition{
 						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
 						Status: corev1.ConditionFalse,
+					},
+					nmstatev1alpha1.Condition{
+						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+						Status: corev1.ConditionTrue,
 					},
 				))
 			}
