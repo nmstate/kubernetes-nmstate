@@ -44,13 +44,19 @@ description = build/_output/description
 resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 all: check handler
 
-check: format vet
+check: format vet whitespace-check
 
-format:
+format: whitespace-format
 	gofmt -d cmd/ pkg/
 
 vet:
 	go vet ./cmd/... ./pkg/...
+
+whitespace-format:
+	hack/whitespace.sh format
+
+whitespace-check:
+	hack/whitespace.sh check
 
 $(GINKGO): go.mod
 	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
@@ -177,4 +183,6 @@ tools-vendoring:
 	cluster-sync-handler \
 	cluster-sync \
 	cluster-clean \
-	release
+	release \
+	whitespace-check \
+	whitespace-format
