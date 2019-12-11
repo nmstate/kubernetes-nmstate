@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 
