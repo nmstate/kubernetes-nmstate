@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,12 +25,26 @@ import (
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/conditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/selectors"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
 var (
-	log      = logf.Log.WithName("controller_nodenetworkconfigurationpolicy")
-	nodeName string
+	log            = logf.Log.WithName("controller_nodenetworkconfigurationpolicy")
+	nodeName       string
+	watchPredicate = predicate.Funcs{
+		CreateFunc: func(createEvent event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+			return false
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
+			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
+			return generationIsDifferent
+		},
+	}
 )
 
 func init() {
@@ -52,50 +66,6 @@ func newReconciler(mgr manager.Manager) reconcile.Reconciler {
 	return &ReconcileNodeNetworkConfigurationPolicy{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
-func matches(nodeSelector map[string]string, labels map[string]string) bool {
-	for key, value := range nodeSelector {
-		if foundValue, hasKey := labels[key]; !hasKey || foundValue != value {
-			return false
-		}
-	}
-	return true
-}
-
-func nodeSelectorMatchesThisNode(cl client.Client, eventObject runtime.Object) bool {
-	node := corev1.Node{}
-	err := cl.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
-	if err != nil {
-		log.Info("Cannot find corev1.Node", "nodeName", nodeName)
-		return false
-	}
-
-	policyNodeSelector := eventObject.(*nmstatev1alpha1.NodeNetworkConfigurationPolicy).Spec.NodeSelector
-	return matches(policyNodeSelector, node.ObjectMeta.Labels)
-}
-
-func forThisNodePredicate(cl client.Client) predicate.Funcs {
-	return predicate.Funcs{
-		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nodeSelectorMatchesThisNode(cl, createEvent.Object)
-		},
-		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return false
-		},
-		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			if !nodeSelectorMatchesThisNode(cl, updateEvent.ObjectNew) {
-				return false
-			}
-
-			// As described [1] if we want to ignore reconcile of status update we have
-			// to check generation since it does not change on status updates also force
-			// reconcile if finalizers have changes
-			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
-			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
-			return generationIsDifferent
-		},
-	}
-}
-
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
 func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// Create a new controller
@@ -105,7 +75,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource NodeNetworkConfigurationPolicy
-	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}}, &handler.EnqueueRequestForObject{}, forThisNodePredicate(mgr.GetClient()))
+	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}}, &handler.EnqueueRequestForObject{}, watchPredicate)
 	if err != nil {
 		return err
 	}
@@ -129,7 +99,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nm
 	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
 		err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &enactment)
 		if err != nil {
-			if k8s_errors.IsNotFound(err) {
+			if apierrors.IsNotFound(err) {
 				// Let's retry after a while, sometimes it takes some time
 				// for enactment to be created
 				return false, nil
@@ -146,7 +116,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nms
 
 	// Return if it's already initialize or we cannot retrieve it
 	err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
-	if err == nil || !k8s_errors.IsNotFound(err) {
+	if err == nil || !apierrors.IsNotFound(err) {
 		return err
 	}
 
@@ -179,7 +149,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
@@ -196,6 +166,19 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	}
 
 	conditionsManager := conditions.NewManager(r.client, nodeName, *instance)
+	policySelectors := selectors.NewFromPolicy(r.client, *instance)
+	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)
+	if err != nil {
+		reqLogger.Error(err, "failed checking node selectors")
+		conditionsManager.NotifyNodeSelectorFailure(err)
+	}
+	if len(unmatchingNodeLabels) > 0 {
+		reqLogger.Info("Policy node selectors does not match node")
+		conditionsManager.NotifyNodeSelectorNotMatching(unmatchingNodeLabels)
+		return reconcile.Result{}, nil
+	}
+
+	conditionsManager.NotifyMatching()
 
 	conditionsManager.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
