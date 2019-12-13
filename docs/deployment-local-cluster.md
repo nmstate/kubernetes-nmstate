@@ -23,7 +23,6 @@ make cluster-up
 Stop the local cluster
 
 ```shell
-
 make cluster-down
 ```
 

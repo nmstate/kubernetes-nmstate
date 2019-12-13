@@ -1,32 +1,39 @@
-# Tutorial: Reporting State
+# 101: Reporting State
 
-In this example, we will use kubernetes-nmstate to report state of network
+TODO In this example, we will use kubernetes-nmstate to report state of network
 interfaces on our cluster nodes.
 
-## Requirements
-
-Before we start, please make sure that you have your Kubernetes/OpenShift
-cluster ready with OVS. In order to do that, you can follow guides of deployment
-on [local cluster](deployment-local-cluster.md) or your
-[arbitrary cluster](deployment-arbitrary-cluster.md).
-
-## Periodically report state from all nodes
+## List all handled nodes
 
 The operator will periodically update the reported state of node interfaces.
 
 Read `NodeNetworkStates` from all nodes:
 
 ```shell
-kubectl get nodenetworkstates -o yaml
+kubectl get nodenetworkstates
 ```
 
-Or from a specific node:
+```
+output
+```
+
+You can also use short name `nns` to reach the same effect:
 
 ```shell
-kubectl get nodenetworkstate <node-name> -o yaml
+kubectl get nns
 ```
 
-The output of such command may look like this:
+```
+output
+```
+
+## Read state of a specific node
+
+Or from a specific node. By using `-o yaml` you obtain the full object:
+
+```shell
+kubectl get nodenetworkstate node01 -o yaml
+```
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1
@@ -167,42 +174,6 @@ status:
       name: lo
       state: down
       type: unknown
-    - ipv4:
-        enabled: false
-      ipv6:
-        enabled: false
-      mac-address: 0A:F0:1C:B9:08:F2
-      mtu: 1450
-      name: veth1dff4e1e
-      state: down
-      type: ethernet
-    - ipv4:
-        enabled: false
-      ipv6:
-        enabled: false
-      mac-address: EE:61:20:58:66:3A
-      mtu: 1450
-      name: veth812db8a0
-      state: down
-      type: ethernet
-    - ipv4:
-        enabled: false
-      ipv6:
-        enabled: false
-      mac-address: 82:40:08:CB:ED:30
-      mtu: 1450
-      name: vethb7811613
-      state: down
-      type: ethernet
-    - ipv4:
-        enabled: false
-      ipv6:
-        enabled: false
-      mac-address: 2E:8E:F1:AE:B0:21
-      mtu: 1450
-      name: vethc5fd44f6
-      state: down
-      type: ethernet
     routes:
       config: []
       running:
@@ -248,12 +219,32 @@ status:
         table-id: 255
 ```
 
-If you want to learn more about the `observedState` API, see [nmstate documentation](https://nmstate.github.io/).
+TODO mention it contains `observedState`, main sections `interfaces`, `routes` and
+`dns-resolver`. More about that in the lesson TODO link.
 
-## Additional configuration
+It also contains `conditions`. Usually they should be Available, but in case something bad and unexpected happens on the node, Degraded condition will have the answer.
+
+Since the report is updated periocally, there is `the timestamp object` which keeps the timestamp of the last successful update.
+
+## Configure refresh interval
 
 We can set the period of update time in seconds in config map in variable
 named `node_network_state_refresh_interval`.
+
+```shell
+kubectl create configmap special-config --from-literal=special.how=very
+```
+
+In order for the config to take effect, it is needed to restart all handlers:
+
+```shell
+kubectl kill
+kubectl wait for ds
+```
+
+Now will be the NNS updated only once every 30 seconds.
+
+## Filter Out Interfaces
 
 We can also set filter for interfaces we wish to omit in reporting
 via `interfaces_filter`. This variable uses glob for pattern matching.
@@ -275,5 +266,26 @@ data:
   interfaces_filter: "veth*"
 ```
 
-Please note that in order to apply changes from the `ConfigMap`, you have to
-restart nmstate handler pods. That can be done by simply deleting them.
+TODO change the filter, drop veth
+
+Same as with the refresh interval, in order for the config to take effect, it is
+needed to restart all handlers:
+
+```shell
+kubectl kill
+kubectl wait for ds
+```
+
+Now will the NNS contain all interfaces, including veths:
+
+```shell
+kubectl get nns | grep 'name: veth'
+```
+
+```
+output
+```
+
+## The Next Lesson
+
+TODO: link the next unit

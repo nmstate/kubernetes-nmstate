@@ -1,7 +1,7 @@
-# Tutorial: Create a Bond Interface and Connect it to a Node Interface
+# Tutorial: Create a Bond with sub Vlan Interfaces and Connect it to a Node Interface
 
-Use Node Network Configuration Policy to configure a new bond interface `bond0`
-with slaves `eth1` and `eth2`.
+Use Node Network Configuration Policy to configure one new bond interface `bond0`
+with slaves `eth1` and `eth2` and one vlan interface with `bond0` as parent interface
 
 ## Requirements
 
@@ -10,17 +10,17 @@ cluster ready. In order to do that, you can follow the guides of deployment on
 [local cluster](deployment-local-cluster.md) or your
 [arbitrary cluster](deployment-arbitrary-cluster.md).
 
-## Configure bond
+## Configure bond with vlan
 
-All you have to do in order to create the bond on all nodes across cluster is
+All you have to do in order to create the bond and the sub vlan interface on all nodes across cluster is
 to apply the following policy:
 
 ```yaml
-cat <<EOF | ./kubevirtci/cluster-up/kubectl.sh create -f -
+cat <<EOF | kubectl create -f -
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-  name: bond0-eth1-eth2-policy
+  name: bond0-vlan-eth1-eth2-policy
 spec:
   desiredState:
     interfaces:
@@ -39,17 +39,28 @@ spec:
         slaves:
         - eth1
         - eth2
+    - name: bond0.102
+      type: vlan
+      state: up
+      ipv4:
+        address:
+        - ip: 10.102.10.10
+          prefix-length: 24
+        enabled: true
+      vlan:
+        base-iface: bond0
+        id: 102
 EOF
 ```
 
-You can also remove the bond with following:
+You can also remove the bond and all is sub vlans with following:
 
 ```yaml
 cat <<EOF | kubectl create -f -
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-  name: bond0-eth1-eth2-policy
+  name: bond0-vlan-eth1-eth2-policy
 spec:
   desiredState:
     interfaces:

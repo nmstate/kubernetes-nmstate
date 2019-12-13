@@ -53,35 +53,3 @@ spec:
         state: absent
 EOF
 ```
-
-## Selecting nodes
-
-`NodeNetworkConfigurationPolicy` supports node selectors. Thanks to them you can
-select a subset of nodes or a specific node by its name:
-
-```yaml
-cat <<EOF | kubectl create -f -
-apiVersion: nmstate.io/v1alpha1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: br1-eth1-policy
-spec:
-  nodeSelector:
-    kubernetes.io/hostname: node01
-  desiredState:
-    interfaces:
-      - name: br1
-        description: Linux bridge with eth1 as a port
-        type: linux-bridge
-        state: up
-        bridge:
-          options:
-            stp:
-              enabled: false
-          port:
-            - name: eth1
-              stp-hairpin-mode: false
-              stp-path-cost: 100
-              stp-priority: 32
-EOF
-```
