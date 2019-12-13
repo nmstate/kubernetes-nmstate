@@ -28,6 +28,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/selectors"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/rollout"
 )
 
 var (
@@ -64,7 +65,16 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNodeNetworkConfigurationPolicy{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	rollout, err := rollout.NewRollout(mgr.GetConfig(), mgr.GetScheme())
+	if err != nil {
+		panic("failed to create roullout manager " + err.Error())
+	}
+
+	return &ReconcileNodeNetworkStateConfiguration{
+		client:  mgr.GetClient(),
+		scheme:  mgr.GetScheme(),
+		rollout: rollout,
+	}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -91,8 +101,9 @@ var _ reconcile.Reconciler = &ReconcileNodeNetworkConfigurationPolicy{}
 type ReconcileNodeNetworkConfigurationPolicy struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client  client.Client
+	scheme  *runtime.Scheme
+	rollout *rollout.Rollout
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
@@ -187,7 +198,10 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 
 	enactmentConditions.NotifyMatching()
 
-	enactmentConditions.NotifyProgressing()
+	unlock := r.rollout.Lock()
+	defer unlock()
+
+	conditionsManager.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
