@@ -105,31 +105,39 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		}
 
 		nodes := corev1.NodeList{}
-		nodeSelectorFilter := client.MatchingLabels(policy.Spec.NodeSelector)
-		err = cli.List(context.TODO(), &nodes, nodeSelectorFilter)
+		err = cli.List(context.TODO(), &nodes)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes failed")
 		}
-		numberOfNodesAffected := len(nodes.Items)
+		numberOfReadyNodes := 0
+		for _, node := range nodes.Items {
+			for _, condition := range node.Status.Conditions {
+				if condition.Type == corev1.NodeReady &&
+					condition.Status == corev1.ConditionTrue {
+					numberOfReadyNodes += 1
+				}
+			}
+		}
 
 		// Let's get conditions with true status count
 		enactmentsCount := enactmentconditions.Count(enactments)
 
-		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount.String()))
+		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching()
 
-		if numberOfNodesAffected == 0 {
-			message := "Policy does not match any node"
-			setPolicyNotMatching(&policy.Status.Conditions, message)
-		} else if enactmentsCount.Failed()+enactmentsCount.Available() == numberOfNodesAffected {
-			if enactmentsCount.Failed() > 0 {
-				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), numberOfNodesAffected)
+		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
+		if numberOfFinishedEnactments < numberOfReadyNodes {
+			setPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfReadyNodes))
+		} else {
+			if enactmentsCount.Matching() == 0 {
+				message := "Policy does not match any node"
+				setPolicyNotMatching(&policy.Status.Conditions, message)
+			} else if enactmentsCount.Failed() > 0 {
+				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), enactmentsCount.Matching())
 				setPolicyFailedToConfigure(&policy.Status.Conditions, message)
 			} else {
-				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), numberOfNodesAffected)
+				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), enactmentsCount.Available())
 				setPolicySuccess(&policy.Status.Conditions, message)
 			}
-		} else {
-			setPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progresssing at %d nodes: %s", numberOfNodesAffected, enactmentsCount))
 		}
 
 		err = cli.Status().Update(context.TODO(), policy)
