@@ -3,6 +3,8 @@ package enactmentconditions
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -34,6 +37,7 @@ func New(client client.Client, enactmentKey types.NamespacedName) EnactmentCondi
 }
 
 func (ec *EnactmentConditions) NotifyNodeSelectorFailure(err error) {
+	ec.logger.Info("NotifyNodeSelectorFailure")
 	message := fmt.Sprintf("failure checking node selectors : %v", err)
 	err = ec.updateEnactmentConditions(SetNodeSelectorNotMatching, message)
 	if err != nil {
@@ -42,6 +46,7 @@ func (ec *EnactmentConditions) NotifyNodeSelectorFailure(err error) {
 }
 
 func (ec *EnactmentConditions) NotifyNodeSelectorNotMatching(unmatchingLabels map[string]string) {
+	ec.logger.Info("NotifyNodeSelectorNotMatching")
 	message := fmt.Sprintf("Unmatching labels: %v", unmatchingLabels)
 	err := ec.updateEnactmentConditions(SetNodeSelectorNotMatching, message)
 	if err != nil {
@@ -50,6 +55,7 @@ func (ec *EnactmentConditions) NotifyNodeSelectorNotMatching(unmatchingLabels ma
 }
 
 func (ec *EnactmentConditions) NotifyMatching() {
+	ec.logger.Info("NotifyMatching")
 	err := ec.updateEnactmentConditions(SetMatching, "All policy selectors are matching the node")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Matching")
@@ -57,6 +63,7 @@ func (ec *EnactmentConditions) NotifyMatching() {
 }
 
 func (ec *EnactmentConditions) NotifyProgressing() {
+	ec.logger.Info("NotifyProgressing")
 	err := ec.updateEnactmentConditions(SetProgressing, "Applying desired state")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Progressing")
@@ -64,6 +71,7 @@ func (ec *EnactmentConditions) NotifyProgressing() {
 }
 
 func (ec *EnactmentConditions) NotifyFailedToConfigure(failedErr error) {
+	ec.logger.Info("NotifyFailedToConfigure")
 	err := ec.updateEnactmentConditions(SetFailedToConfigure, failedErr.Error())
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state FailingToConfigure")
@@ -71,6 +79,7 @@ func (ec *EnactmentConditions) NotifyFailedToConfigure(failedErr error) {
 }
 
 func (ec *EnactmentConditions) NotifySuccess() {
+	ec.logger.Info("NotifySuccess")
 	err := ec.updateEnactmentConditions(SetSuccess, "successfully reconciled")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Success")
@@ -94,7 +103,19 @@ func (ec *EnactmentConditions) updateEnactmentConditions(
 		if err != nil {
 			return err
 		}
-		return nil
+
+		// Wait until enactment has being updated at the node
+		expectedStatus := instance.Status
+		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) {
+			err = ec.client.Get(context.TODO(), ec.enactmentKey, instance)
+			if err != nil {
+				return false, err
+			}
+
+			isEqual := reflect.DeepEqual(expectedStatus, instance.Status)
+			ec.logger.Info(fmt.Sprintf("enactment updated at the node: %t", isEqual))
+			return isEqual, nil
+		})
 	})
 }
 
