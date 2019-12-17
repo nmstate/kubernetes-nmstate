@@ -73,3 +73,43 @@ func enactmentConditionsStatusEventually(node string) AsyncAssertion {
 func enactmentConditionsStatusConsistently(node string) AsyncAssertion {
 	return enactmentConditionsStatusForPolicyConsistently(node, TestPolicy)
 }
+
+// In case a condition does not exist create with Unknonw type, this way
+// is easier to just use gomega matchers to check in a homogenous way that
+// condition is not present or unknown.
+func policyConditionsStatus(policyName string) nmstatev1alpha1.ConditionList {
+	policy := nodeNetworkConfigurationPolicy(policyName)
+	obtainedConditions := nmstatev1alpha1.ConditionList{}
+	for _, policyConditionType := range nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionTypes {
+		obtainedCondition := policy.Status.Conditions.Find(policyConditionType)
+		obtainedConditionStatus := corev1.ConditionUnknown
+		if obtainedCondition != nil {
+			obtainedConditionStatus = obtainedCondition.Status
+		}
+		obtainedConditions = append(obtainedConditions, nmstatev1alpha1.Condition{
+			Type:   policyConditionType,
+			Status: obtainedConditionStatus,
+		})
+	}
+	return obtainedConditions
+}
+
+func policyConditionsStatusForPolicyEventually(policy string) AsyncAssertion {
+	return Eventually(func() nmstatev1alpha1.ConditionList {
+		return policyConditionsStatus(policy)
+	}, 180*time.Second, 1*time.Second)
+}
+
+func policyConditionsStatusForPolicyConsistently(policy string) AsyncAssertion {
+	return Consistently(func() nmstatev1alpha1.ConditionList {
+		return policyConditionsStatus(policy)
+	}, 5*time.Second, 1*time.Second)
+}
+
+func policyConditionsStatusEventually() AsyncAssertion {
+	return policyConditionsStatusForPolicyEventually(TestPolicy)
+}
+
+func policyConditionsStatusConsistently() AsyncAssertion {
+	return policyConditionsStatusForPolicyConsistently(TestPolicy)
+}

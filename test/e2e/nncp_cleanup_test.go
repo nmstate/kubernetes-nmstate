@@ -21,14 +21,12 @@ var _ = Describe("NNCP cleanup", func() {
 		setDesiredStateWithPolicy(bridge1, linuxBrUp(bridge1))
 
 		By("Wait for policy to be ready")
-		for _, node := range nodes {
-			enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			))
-		}
+		policyConditionsStatusForPolicyEventually(bridge1).Should(ContainElement(
+			nmstatev1alpha1.Condition{
+				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+				Status: corev1.ConditionTrue,
+			},
+		))
 	})
 
 	AfterEach(func() {
