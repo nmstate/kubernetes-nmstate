@@ -28,6 +28,9 @@ spec:
         description: Linux bridge with eth1 as a port
         type: linux-bridge
         state: up
+        ipv4:
+          dhcp: true
+          enabled: true
         bridge:
           options:
             stp:
@@ -74,6 +77,10 @@ spec:
         description: Linux bridge with eth1 as a port
         type: linux-bridge
         state: up
+        ipv4:
+          address:
+          - ip: 192.0.2.10
+            prefix-length: 24
         bridge:
           options:
             stp:

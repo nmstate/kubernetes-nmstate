@@ -56,10 +56,8 @@ spec:
         type: ovs-interface
         state: up
         ipv4:
+          dhcp: true
           enabled: true
-          address:
-            - ip: 192.0.2.1
-              prefix-length: 24
       - name: br1
         description: ovs bridge with eth1 as a port and ovs0 as an internal interface
         type: ovs-bridge
@@ -110,6 +108,10 @@ spec:
         description: Ovs bridge with eth1 as a port
         type: ovs-bridge
         state: up
+        ipv4:
+          address:
+          - ip: 192.0.2.10
+            prefix-length: 24
         bridge:
           options:
             stp: false
