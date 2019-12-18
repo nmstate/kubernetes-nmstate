@@ -25,21 +25,19 @@ type Rollout struct {
 }
 
 // NewRollout creates new Rollou
-func NewRollout(cfg *rest.Config, scheme *runtime.Scheme) (*Rollout, error) {
-	startedLeadingChannel := make(chan interface{})
-
-	clientset, err := kubernetes.NewForConfig(cfg)
+func NewRollout(config *rest.Config, scheme *runtime.Scheme) (*Rollout, error) {
+	clientSet, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("failed to initialize apiserver client: %v", err)
+		return nil, fmt.Errorf("failed to init clientSet: %v", err)
 	}
 
-	recorderProvider, err := NewProvider(cfg, scheme, log.WithName("record_provider"))
+	recorderProvider, err := NewProvider(clientSet, scheme, log.WithName("record_provider"))
 	if err != nil {
 		return nil, fmt.Errorf("fail to create new record provider: %v", err)
 	}
 
 	id := uuid.New().String()
-	lock, err := resourcelock.New(resourcelock.ConfigMapsResourceLock, "nmstate", "leader-lock", clientset.CoreV1(), resourcelock.ResourceLockConfig{
+	lock, err := resourcelock.New(resourcelock.ConfigMapsResourceLock, "nmstate", "leader-lock", clientSet.CoreV1(), clientSet.CoordinationV1(), resourcelock.ResourceLockConfig{
 		Identity:      id,
 		EventRecorder: recorderProvider.GetEventRecorderFor(id),
 	})
@@ -47,10 +45,11 @@ func NewRollout(cfg *rest.Config, scheme *runtime.Scheme) (*Rollout, error) {
 		return nil, fmt.Errorf("Failed to create resource lock: %v", err)
 	}
 
+	startedLeadingChannel := make(chan interface{})
+
 	// create new leader elector
 	leaderElector, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
-		Lock: lock,
-		// ReleaseOnCancel: true, // TODO: unknown field
+		Lock:          lock,
 		LeaseDuration: 3 * time.Second,
 		RenewDeadline: 2 * time.Second,
 		RetryPeriod:   1 * time.Second,
@@ -60,11 +59,13 @@ func NewRollout(cfg *rest.Config, scheme *runtime.Scheme) (*Rollout, error) {
 				startedLeadingChannel <- true
 			},
 			OnStoppedLeading: func() {
+				close(startedLeadingChannel)
 				log.Info("Node is unlocked")
 			},
 		},
 	})
 	if err != nil {
+		close(startedLeadingChannel)
 		return nil, fmt.Errorf("Error while creating new leader: %v", err)
 	}
 

@@ -14,14 +14,11 @@ limitations under the License.
 package rollout
 
 import (
-	"fmt"
-
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	typedcorev1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/recorder"
 )
@@ -36,12 +33,7 @@ type provider struct {
 }
 
 // NewProvider create a new Provider instance.
-func NewProvider(config *rest.Config, scheme *runtime.Scheme, logger logr.Logger) (recorder.Provider, error) {
-	clientSet, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("failed to init clientSet: %v", err)
-	}
-
+func NewProvider(clientSet *kubernetes.Clientset, scheme *runtime.Scheme, logger logr.Logger) (recorder.Provider, error) {
 	p := &provider{scheme: scheme, logger: logger}
 	p.eventBroadcaster = record.NewBroadcaster()
 	p.eventBroadcaster.StartRecordingToSink(&typedcorev1.EventSinkImpl{Interface: clientSet.CoreV1().Events("")})

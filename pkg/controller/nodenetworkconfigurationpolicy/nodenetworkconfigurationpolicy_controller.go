@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -65,15 +66,10 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	rollout, err := rollout.NewRollout(mgr.GetConfig(), mgr.GetScheme())
-	if err != nil {
-		panic("failed to create roullout manager " + err.Error())
-	}
-
 	return &ReconcileNodeNetworkStateConfiguration{
-		client:  mgr.GetClient(),
-		scheme:  mgr.GetScheme(),
-		rollout: rollout,
+		client: mgr.GetClient(),
+		scheme: mgr.GetScheme(),
+		config: mgr.GetConfig(),
 	}
 }
 
@@ -101,9 +97,9 @@ var _ reconcile.Reconciler = &ReconcileNodeNetworkConfigurationPolicy{}
 type ReconcileNodeNetworkConfigurationPolicy struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client  client.Client
-	scheme  *runtime.Scheme
-	rollout *rollout.Rollout
+	client client.Client
+	scheme *runtime.Scheme
+	config *rest.Config
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
@@ -198,11 +194,16 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 
 	enactmentConditions.NotifyMatching()
 
-	unlock := r.rollout.Lock()
-	defer unlock()
+	rollout, err := rollout.NewRollout(r.config, r.scheme)
+	if err != nil {
+		panic("failed to create roullout manager " + err.Error())
+	}
+	unlock := rollout.Lock()
 
 	conditionsManager.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
+	unlock()
+
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
