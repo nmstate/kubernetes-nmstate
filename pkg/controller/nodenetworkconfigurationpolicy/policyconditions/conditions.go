@@ -7,6 +7,7 @@ import (
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -16,10 +17,11 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("policy")
+	log = logf.Log.WithName("policyconditions")
 )
 
 func setPolicyProgressing(conditions *nmstatev1alpha1.ConditionList, message string) {
+	log.Info("setPolicyProgressing")
 	conditions.Set(
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionUnknown,
@@ -35,6 +37,7 @@ func setPolicyProgressing(conditions *nmstatev1alpha1.ConditionList, message str
 }
 
 func setPolicySuccess(conditions *nmstatev1alpha1.ConditionList, message string) {
+	log.Info("setPolicySuccess")
 	conditions.Set(
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
@@ -50,6 +53,7 @@ func setPolicySuccess(conditions *nmstatev1alpha1.ConditionList, message string)
 }
 
 func setPolicyNotMatching(conditions *nmstatev1alpha1.ConditionList, message string) {
+	log.Info("setPolicyNotMatching")
 	conditions.Set(
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
@@ -65,6 +69,7 @@ func setPolicyNotMatching(conditions *nmstatev1alpha1.ConditionList, message str
 }
 
 func setPolicyFailedToConfigure(conditions *nmstatev1alpha1.ConditionList, message string) {
+	log.Info("setPolicyFailedToConfigure")
 	conditions.Set(
 		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionTrue,
@@ -122,8 +127,36 @@ func Update(cli client.Client, policy *nmstatev1alpha1.NodeNetworkConfigurationP
 
 		err = cli.Status().Update(context.TODO(), policy)
 		if err != nil {
+			if apierrors.IsConflict(err) {
+				logger.Info("conflict updating policy conditions, retrying")
+			} else {
+				logger.Error(err, "failed to update policy conditions")
+			}
 			return err
 		}
 		return nil
 	})
+}
+
+func Reset(cli client.Client, policy *nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
+	logger := log.WithValues("policy", policy.Name)
+	// On conflict we need to re-retrieve enactments since the
+	// conflict can denote that the calculated policy conditions
+	// are now not accurate.
+	if len(policy.Status.Conditions) > 0 {
+		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			policy.Status.Conditions = nmstatev1alpha1.ConditionList{}
+			err := cli.Status().Update(context.TODO(), policy)
+			if err != nil {
+				if apierrors.IsConflict(err) {
+					logger.Info("conflict reseting policy conditions, retrying")
+				} else {
+					logger.Error(err, "failed to reset policy conditions")
+				}
+				return err
+			}
+			return nil
+		})
+	}
+	return nil
 }

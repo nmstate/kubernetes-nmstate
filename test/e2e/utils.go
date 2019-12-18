@@ -165,6 +165,10 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev
 		}
 		return framework.Global.Client.Update(context.TODO(), &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	//FIXME: until we don't have webhook we have to wait for reconcile
+	//       to start so we are sure that conditions are reset and we can
+	//       check them correctly
+	time.Sleep(1 * time.Second)
 }
 
 func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
@@ -184,6 +188,10 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	updateDesiredState(ethernetNicUp(*primaryNic))
+	policyConditionsStatusEventually().Should(ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		Status: corev1.ConditionTrue,
+	}))
 	deletePolicy(TestPolicy)
 }
 

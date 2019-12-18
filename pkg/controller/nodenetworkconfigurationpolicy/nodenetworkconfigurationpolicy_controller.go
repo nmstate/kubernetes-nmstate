@@ -161,6 +161,8 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	policyconditions.Reset(r.client, instance)
+
 	err = r.initializeEnactment(*instance)
 	if err != nil {
 		log.Error(err, "Error initializing enactment")
