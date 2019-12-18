@@ -28,9 +28,7 @@ spec:
       type: bond
       state: up
       ipv4:
-        address:
-        - ip: 10.10.10.10
-          prefix-length: 24
+        dhcp: true
         enabled: true
       link-aggregation:
         mode: balance-rr
