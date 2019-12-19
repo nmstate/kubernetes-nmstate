@@ -204,13 +204,13 @@ func defaultGw() (string, error) {
 
 	currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
 	if err != nil {
-		return "", fmt.Errorf("Impossible to convert current state to JSON")
+		return "", fmt.Errorf("Impossible to convert current state to JSON: %v", err)
 	}
 
 	defaultGw := gjson.ParseBytes([]byte(currentState)).
 		Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
 	if defaultGw == "" {
-		return "", fmt.Errorf("Impossible to retrieve default gw")
+		return "", fmt.Errorf("Impossible to retrieve default gw, state: %s", string(observedStateRaw))
 	}
 
 	return defaultGw, nil
