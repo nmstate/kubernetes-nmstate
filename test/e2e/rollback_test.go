@@ -34,7 +34,7 @@ routes:
 `, nic, address, nic))
 }
 
-var _ = FDescribe("rollback", func() {
+var _ = Describe("rollback", func() {
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")

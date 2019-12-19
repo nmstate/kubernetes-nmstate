@@ -122,6 +122,8 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nms
 	}
 	if err == nil {
 		logger.Info("enactment already initialized")
+		enactmentConditions := enactmentconditions.New(r.client, enactmentKey)
+		enactmentConditions.Reset()
 		return nil
 	}
 	enactment := nmstatev1alpha1.NewEnactment(nodeName, policy)
