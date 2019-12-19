@@ -230,10 +230,21 @@ func deletePolicy(name string) {
 	err := framework.Global.Client.Delete(context.TODO(), policy)
 	Expect(err).ToNot(HaveOccurred())
 
+	// Wait for policy to be removed
 	Eventually(func() bool {
 		err := framework.Global.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
+
+	// Wait for enactments to be removed
+	for _, node := range nodes {
+		enactmentKey := nmstatev1alpha1.EnactmentKey(node, name)
+		Eventually(func() bool {
+			err := framework.Global.Client.Get(context.TODO(), enactmentKey, &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
+			return apierrors.IsNotFound(err)
+		}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Enactment %s not deleted", enactmentKey.Name))
+	}
+
 }
 
 func run(command string, arguments ...string) (string, error) {

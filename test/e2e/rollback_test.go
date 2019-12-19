@@ -12,6 +12,8 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
+// We cannot change routes at nmstate if the interface is with dhcp true
+// that's why we need to set it static with the same ip it has previously.
 func badDefaultGw(address string, nic string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
@@ -32,7 +34,7 @@ routes:
 `, nic, address, nic))
 }
 
-var _ = Describe("rollback", func() {
+var _ = FDescribe("rollback", func() {
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
@@ -63,17 +65,17 @@ var _ = Describe("rollback", func() {
 			}
 		})
 	})
+	// This spec is done only at first node since policy has to be different
+	// per node (ip addresses has to be different at cluster).
 	Context("when connectivity to default gw is lost after state configuration", func() {
 		BeforeEach(func() {
 			By("Configure a invalid default gw")
-			for _, node := range nodes {
-				var address string
-				Eventually(func() string {
-					address = ipv4Address(node, *primaryNic)
-					return address
-				}, ReadTimeout, ReadInterval).ShouldNot(BeEmpty())
-				updateDesiredStateAtNode(node, badDefaultGw(address, *primaryNic))
-			}
+			var address string
+			Eventually(func() string {
+				address = ipv4Address(nodes[0], *primaryNic)
+				return address
+			}, ReadTimeout, ReadInterval).ShouldNot(BeEmpty())
+			updateDesiredStateAtNode(nodes[0], badDefaultGw(address, *primaryNic))
 		})
 		AfterEach(func() {
 			By("Clean up desired state")
@@ -85,18 +87,15 @@ var _ = Describe("rollback", func() {
 				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
 				Status: corev1.ConditionTrue,
 			}))
-			for _, node := range nodes {
-				By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
-				Eventually(func() bool {
-					return dhcpFlag(node, *primaryNic)
-				}, ReadTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
+			By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
+			Eventually(func() bool {
+				return dhcpFlag(nodes[0], *primaryNic)
+			}, ReadTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
 
-				By(fmt.Sprintf("Check that %s continue with rolled back state", *primaryNic))
-				Consistently(func() bool {
-					return dhcpFlag(node, *primaryNic)
-				}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
-
-			}
+			By(fmt.Sprintf("Check that %s continue with rolled back state", *primaryNic))
+			Consistently(func() bool {
+				return dhcpFlag(nodes[0], *primaryNic)
+			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
 		})
 	})
 })

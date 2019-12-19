@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -95,10 +94,10 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 	scheme *runtime.Scheme
 }
 
-func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
+func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
 	var enactment nmstatev1alpha1.NodeNetworkConfigurationEnactment
 	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
-		err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &enactment)
+		err := r.client.Get(context.TODO(), enactmentKey, &enactment)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				// Let's retry after a while, sometimes it takes some time
@@ -114,27 +113,26 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nm
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
-
+	enactmentKey := nmstatev1alpha1.EnactmentKey(nodeName, policy.Name)
+	logger := log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
-	err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
-	if err == nil || !apierrors.IsNotFound(err) {
-		return err
+	err := r.client.Get(context.TODO(), enactmentKey, &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrap(err, "failed getting enactment ")
 	}
-
-	node := corev1.Node{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("cannot get node %s", nodeName))
+	if err == nil {
+		logger.Info("enactment already initialized")
+		return nil
 	}
+	enactment := nmstatev1alpha1.NewEnactment(nodeName, policy)
 
-	enactment := nmstatev1alpha1.NewEnactment(node, policy)
-
+	logger.Info("creating enactment")
 	err = r.client.Create(context.TODO(), &enactment)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
 	}
 
-	return r.waitEnactmentCreated(policy)
+	return r.waitEnactmentCreated(enactmentKey)
 }
 
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
