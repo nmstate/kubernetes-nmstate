@@ -3,11 +3,16 @@ package e2e
 import (
 	"context"
 	"flag"
+	"fmt"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/onsi/ginkgo/reporters"
 
 	corev1 "k8s.io/api/core/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,7 +59,9 @@ func TestMain(m *testing.M) {
 func TestE2E(tapi *testing.T) {
 	t = tapi
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "E2E Test Suite")
+	junitReporter := reporters.NewJUnitReporter("junit.e2e.xml")
+	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", []Reporter{junitReporter})
+
 }
 
 var _ = BeforeEach(func() {
@@ -67,3 +74,18 @@ var _ = BeforeEach(func() {
 var _ = AfterEach(func() {
 	writePodsLogs(namespace, startTime, GinkgoWriter)
 })
+
+func getMaxFailsFromEnv() int {
+	maxFailsEnv := os.Getenv("REPORTER_MAX_FAILS")
+	if maxFailsEnv == "" {
+		return 10
+	}
+
+	maxFails, err := strconv.Atoi(maxFailsEnv)
+	if err != nil { // if the variable is set with a non int value
+		fmt.Println("Invalid REPORTER_MAX_FAILS variable, defaulting to 10")
+		return 10
+	}
+
+	return maxFails
+}

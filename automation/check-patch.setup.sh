@@ -19,5 +19,9 @@ mkdir -p $gimme_dir
 curl -sL https://raw.githubusercontent.com/travis-ci/gimme/master/gimme | HOME=${gimme_dir} bash >> ${gimme_dir}/gimme.sh
 source $gimme_dir/gimme.sh
 
+
 export TMP_PROJECT_PATH=$tmp_dir/kubernetes-nmstate
+export ARTIFACTS=${ARTIFACTS-$tmp_dir/artifacts}
+mkdir -p $ARTIFACTS
 rsync -rt --links --filter=':- .gitignore' $(pwd)/ $TMP_PROJECT_PATH
+
