@@ -86,6 +86,16 @@ func (ec *EnactmentConditions) NotifySuccess() {
 	}
 }
 
+func (ec *EnactmentConditions) Reset() {
+	ec.logger.Info("Reset")
+	err := ec.updateEnactmentConditions(func(conditionList *nmstatev1alpha1.ConditionList, message string) {
+		conditionList = &nmstatev1alpha1.ConditionList{}
+	}, "")
+	if err != nil {
+		ec.logger.Error(err, "Error resetting conditions")
+	}
+}
+
 func (ec *EnactmentConditions) updateEnactmentConditions(
 	conditionsSetter func(*nmstatev1alpha1.ConditionList, string),
 	message string,

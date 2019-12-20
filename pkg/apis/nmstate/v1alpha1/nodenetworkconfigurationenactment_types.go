@@ -64,10 +64,10 @@ func EnactmentKey(node string, policy string) types.NamespacedName {
 	return types.NamespacedName{Name: fmt.Sprintf("%s.%s", node, policy)}
 }
 
-func NewEnactment(node corev1.Node, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+func NewEnactment(nodeName string, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: EnactmentKey(node.Name, policy.Name).Name,
+			Name: EnactmentKey(nodeName, policy.Name).Name,
 			OwnerReferences: []metav1.OwnerReference{
 				{Name: policy.Name, Kind: policy.TypeMeta.Kind, APIVersion: policy.TypeMeta.APIVersion, UID: policy.UID},
 			},

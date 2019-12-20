@@ -165,6 +165,10 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev
 		}
 		return framework.Global.Client.Update(context.TODO(), &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	//FIXME: until we don't have webhook we have to wait for reconcile
+	//       to start so we are sure that conditions are reset and we can
+	//       check them correctly
+	time.Sleep(1 * time.Second)
 }
 
 func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
@@ -184,6 +188,10 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	updateDesiredState(ethernetNicUp(*primaryNic))
+	policyConditionsStatusEventually().Should(ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		Status: corev1.ConditionTrue,
+	}))
 	deletePolicy(TestPolicy)
 }
 
@@ -222,10 +230,21 @@ func deletePolicy(name string) {
 	err := framework.Global.Client.Delete(context.TODO(), policy)
 	Expect(err).ToNot(HaveOccurred())
 
+	// Wait for policy to be removed
 	Eventually(func() bool {
 		err := framework.Global.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
+
+	// Wait for enactments to be removed
+	for _, node := range nodes {
+		enactmentKey := nmstatev1alpha1.EnactmentKey(node, name)
+		Eventually(func() bool {
+			err := framework.Global.Client.Get(context.TODO(), enactmentKey, &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
+			return apierrors.IsNotFound(err)
+		}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Enactment %s not deleted", enactmentKey.Name))
+	}
+
 }
 
 func run(command string, arguments ...string) (string, error) {
