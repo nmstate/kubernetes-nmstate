@@ -118,6 +118,12 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 				Description: "NodeNetworkConfigurationEnactmentStatus defines the observed state of NodeNetworkConfigurationEnactment",
 				Type:        []string{"object"},
 				Properties: map[string]spec.Schema{
+					"desiredState": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The desired state rendered for the enactment's node using the policy desiredState as template",
+							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
+						},
+					},
 					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
@@ -131,11 +137,10 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 						},
 					},
 				},
-				Required: []string{"conditions"},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition"},
+			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State"},
 	}
 }
 

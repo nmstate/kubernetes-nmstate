@@ -57,8 +57,10 @@ spec:
                 - type
                 type: object
               type: array
-          required:
-          - conditions
+            desiredState:
+              description: The desired state rendered for the enactment's node using
+                the policy desiredState as template
+              type: object
           type: object
       type: object
   version: v1alpha1
