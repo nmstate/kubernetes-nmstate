@@ -31,6 +31,12 @@ var _ = Describe("NNCP cleanup", func() {
 
 	AfterEach(func() {
 		updateDesiredState(linuxBrAbsent(bridge1))
+		policyConditionsStatusEventually().Should(ContainElement(
+			nmstatev1alpha1.Condition{
+				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+				Status: corev1.ConditionTrue,
+			},
+		))
 		resetDesiredStateForNodes()
 	})
 

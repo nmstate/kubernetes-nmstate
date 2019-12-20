@@ -113,7 +113,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstatev1alpha1.State {
   vlan:
     base-iface: %s
     id: 102
-`, bondName, *firstSecondaryNic, *secondSecondaryNic,bondName,bondName))
+`, bondName, *firstSecondaryNic, *secondSecondaryNic, bondName, bondName))
 }
 
 var _ = Describe("NodeNetworkState", func() {
@@ -268,25 +268,25 @@ var _ = Describe("NodeNetworkState", func() {
 			})
 			It("should have the bond interface with 2 slaves at currentState", func() {
 				var (
-					expectedBond = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), bond1)
+					expectedBond        = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), bond1)
 					expectedVlanBond102 = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), fmt.Sprintf("%s.102", bond1))
-					expectedSpecs      = expectedBond["link-aggregation"].(map[string]interface{})
+					expectedSpecs       = expectedBond["link-aggregation"].(map[string]interface{})
 				)
 
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
 						ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", expectedBond["name"]),
-						HaveKeyWithValue("type", expectedBond["type"]),
-						HaveKeyWithValue("state", expectedBond["state"]),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
-					)),
-					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", expectedVlanBond102["name"]),
-						HaveKeyWithValue("type", expectedVlanBond102["type"]),
-						HaveKeyWithValue("state", expectedVlanBond102["state"])))))
+							HaveKeyWithValue("name", expectedBond["name"]),
+							HaveKeyWithValue("type", expectedBond["type"]),
+							HaveKeyWithValue("state", expectedBond["state"]),
+							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
+							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
+							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
+						)),
+						ContainElement(SatisfyAll(
+							HaveKeyWithValue("name", expectedVlanBond102["name"]),
+							HaveKeyWithValue("type", expectedVlanBond102["type"]),
+							HaveKeyWithValue("state", expectedVlanBond102["state"])))))
 				}
 			})
 		})
