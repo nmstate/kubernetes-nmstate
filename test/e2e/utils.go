@@ -206,7 +206,7 @@ func nodeNetworkState(key types.NamespacedName) nmstatev1alpha1.NodeNetworkState
 func nodeNetworkConfigurationPolicy(policyName string) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
 	key := types.NamespacedName{Name: policyName}
 	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
-	Eventually(func() error {
+	EventuallyWithOffset(1, func() error {
 		return framework.Global.Client.Get(context.TODO(), key, &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return policy
@@ -228,10 +228,10 @@ func deletePolicy(name string) {
 	policy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	err := framework.Global.Client.Delete(context.TODO(), policy)
-	Expect(err).ToNot(HaveOccurred())
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 
 	// Wait for policy to be removed
-	Eventually(func() bool {
+	EventuallyWithOffset(1, func() bool {
 		err := framework.Global.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1alpha1.NodeNetworkConfigurationPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))

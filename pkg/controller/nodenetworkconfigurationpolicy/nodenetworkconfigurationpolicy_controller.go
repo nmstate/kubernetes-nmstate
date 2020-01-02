@@ -161,7 +161,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		return reconcile.Result{}, err
 	}
 
-	policyconditions.Reset(r.client, instance)
+	policyconditions.Reset(r.client, request.NamespacedName)
 
 	err = r.initializeEnactment(*instance)
 	if err != nil {
@@ -173,7 +173,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
-	defer policyconditions.Update(r.client, instance)
+	defer policyconditions.Update(r.client, request.NamespacedName)
 
 	policySelectors := selectors.NewFromPolicy(r.client, *instance)
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)
