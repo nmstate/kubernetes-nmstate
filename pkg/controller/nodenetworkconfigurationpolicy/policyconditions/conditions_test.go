@@ -1,6 +1,7 @@
 package policyconditions
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -112,7 +114,10 @@ var _ = Describe("Policy Conditions", func() {
 			objs = append(objs, updatedPolicy)
 
 			client := fake.NewFakeClientWithScheme(s, objs...)
-			err := Update(client, updatedPolicy)
+			key := types.NamespacedName{Name: updatedPolicy.Name}
+			err := Update(client, key)
+			Expect(err).ToNot(HaveOccurred())
+			err = client.Get(context.TODO(), key, updatedPolicy)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(cleanTimestamps(updatedPolicy.Status.Conditions)).To(ConsistOf(cleanTimestamps(c.Policy.Status.Conditions)))
 		},
