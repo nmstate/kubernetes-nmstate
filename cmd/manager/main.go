@@ -13,6 +13,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/pkg/apis"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller"
+	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 	"github.com/nmstate/kubernetes-nmstate/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -111,6 +112,12 @@ func main() {
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
 		log.Error(err, "")
+		os.Exit(1)
+	}
+
+	// Setup webhook
+	if err := mgr.Add(webhook.Server()); err != nil {
+		log.Error(err, "Cannot initialize webhook server")
 		os.Exit(1)
 	}
 

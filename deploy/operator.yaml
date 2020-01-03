@@ -60,6 +60,9 @@ spec:
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
+          - name: webhook-certs
+            mountPath: /etc/webhook/certs
+            readOnly: true
           securityContext:
             privileged: true
       volumes:
@@ -67,6 +70,9 @@ spec:
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
+      - name: webhook-certs
+        secret:
+          secretName: nmstate-webhook-certs
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -76,3 +82,39 @@ metadata:
 data:
   node_network_state_refresh_interval: "5"
   interfaces_filter: "veth*"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nmstate-webhook
+  namespace: nmstate
+  labels:
+    app: kubernetes-nmstate
+spec:
+  publishNotReadyAddresses: true
+  ports:
+    - port: 443
+      targetPort: 8443
+  selector:
+    app: kubernetes-nmstate
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: nmstate
+  namespace: nmstate
+  labels:
+    app: kubernetes-nmstate
+webhooks:
+  - name: mutating.nmstate.io
+    clientConfig:
+      caBundle: REPLACE_CA_BUNDLE
+      service:
+        name: nmstate-webhook
+        namespace: nmstate
+        path: "/mutating"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1"]
+        resources: ["nodenetworkconfigurationpolicies"]
