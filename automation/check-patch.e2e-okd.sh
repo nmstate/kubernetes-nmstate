@@ -17,8 +17,11 @@ teardown() {
 main() {
     export KUBEVIRT_PROVIDER='okd-4.1'
 
-    source automation/check-patch.e2e.setup.sh
+    source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
+
+    # Let's fail fast if it's not compiling
+    make handler
 
     make cluster-down
     make cluster-up
