@@ -165,5 +165,4 @@ func Reset(cli client.Client, policyKey types.NamespacedName) error {
 		}
 		return nil
 	})
-	return nil
 }
