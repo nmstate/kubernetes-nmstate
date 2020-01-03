@@ -51,10 +51,12 @@ func resetDefaultInterface() nmstatev1alpha1.State {
 
 // FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
 var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
+	var (
+		DefaultNetwork = "default-network"
+	)
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
-			By(string(createBridgeOnTheDefaultInterface().Raw))
 			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", *primaryNic))
 			for _, node := range nodes {
 				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))
@@ -73,10 +75,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 		})
 		AfterEach(func() {
 			By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", *primaryNic))
-			setDesiredStateWithPolicy("default-network", resetDefaultInterface())
+			setDesiredStateWithPolicy(DefaultNetwork, resetDefaultInterface())
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
+
+			By("Wait for policy to be ready")
+			waitForAvailablePolicy(DefaultNetwork)
 
 			By(fmt.Sprintf("Check %s has the default ip address", *primaryNic))
 			for _, node := range nodes {
@@ -91,7 +96,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 			}
 
 			By("Remove the policy")
-			deletePolicy("default-network")
+			deletePolicy(DefaultNetwork)
 
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
@@ -99,10 +104,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 		It("should successfully move default IP address on top of the bridge", func() {
 			By("Creating the policy")
-			setDesiredStateWithPolicy("default-network", createBridgeOnTheDefaultInterface())
+			setDesiredStateWithPolicy(DefaultNetwork, createBridgeOnTheDefaultInterface())
 
 			By("Waiting until the node becomes ready again")
 			waitForNodesReady()
+
+			By("Waiting for policy to be ready")
+			waitForAvailablePolicy(DefaultNetwork)
 
 			By("Checking that obtained the same IP address")
 			for _, node := range nodes {

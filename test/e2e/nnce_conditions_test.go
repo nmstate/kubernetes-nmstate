@@ -31,14 +31,11 @@ var _ = Describe("EnactmentCondition", func() {
 		AfterEach(func() {
 			By("Restore original vlan-filtering")
 			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
+
 			By("Remove the bridge")
 			updateDesiredState(linuxBrAbsent(bridge1))
-			policyConditionsStatusEventually().Should(ContainElement(
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			))
+			waitForAvailableTestPolicy()
+
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
@@ -97,12 +94,7 @@ var _ = Describe("EnactmentCondition", func() {
 			}
 			wg.Wait()
 			By("Check policy is at available state")
-			policyConditionsStatusEventually().Should(ContainElement(
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			))
+			waitForAvailableTestPolicy()
 		})
 	})
 
@@ -138,6 +130,8 @@ var _ = Describe("EnactmentCondition", func() {
 					},
 				))
 			}
+			By("Check policy is at degraded state")
+			waitForDegradedTestPolicy()
 		})
 	})
 })

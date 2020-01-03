@@ -9,9 +9,11 @@ var _ = Describe("Simple OVS bridge", func() {
 	Context("when desiredState is configured with an ovs bridge up", func() {
 		BeforeEach(func() {
 			updateDesiredState(ovsBrUp(bridge1))
+			waitForAvailableTestPolicy()
 		})
 		AfterEach(func() {
 			updateDesiredState(ovsBrAbsent(bridge1))
+			waitForAvailableTestPolicy()
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
@@ -30,9 +32,11 @@ var _ = Describe("Simple OVS bridge", func() {
 	Context("when desiredState is configured with an ovs bridge with internal port up", func() {
 		BeforeEach(func() {
 			updateDesiredState(ovsbBrWithInternalInterface(bridge1))
+			waitForAvailableTestPolicy()
 		})
 		AfterEach(func() {
 			updateDesiredState(ovsBrAbsent(bridge1))
+			waitForAvailableTestPolicy()
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}

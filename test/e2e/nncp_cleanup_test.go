@@ -6,7 +6,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -21,22 +20,12 @@ var _ = Describe("NNCP cleanup", func() {
 		setDesiredStateWithPolicy(bridge1, linuxBrUp(bridge1))
 
 		By("Wait for policy to be ready")
-		policyConditionsStatusForPolicyEventually(bridge1).Should(ContainElement(
-			nmstatev1alpha1.Condition{
-				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-				Status: corev1.ConditionTrue,
-			},
-		))
+		waitForAvailablePolicy(bridge1)
 	})
 
 	AfterEach(func() {
 		updateDesiredState(linuxBrAbsent(bridge1))
-		policyConditionsStatusEventually().Should(ContainElement(
-			nmstatev1alpha1.Condition{
-				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-				Status: corev1.ConditionTrue,
-			},
-		))
+		waitForAvailableTestPolicy()
 		resetDesiredStateForNodes()
 	})
 

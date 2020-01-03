@@ -188,10 +188,7 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	updateDesiredState(ethernetNicUp(*primaryNic))
-	policyConditionsStatusEventually().Should(ContainElement(nmstatev1alpha1.Condition{
-		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-		Status: corev1.ConditionTrue,
-	}))
+	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
 
