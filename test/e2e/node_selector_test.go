@@ -18,20 +18,12 @@ var _ = Describe("NodeSelector", func() {
 		BeforeEach(func() {
 			By(fmt.Sprintf("Set policy %s with not matching node selector", bridge1))
 			setDesiredStateWithPolicyAndNodeSelector(bridge1, linuxBrUp(bridge1), nonexistentNodeSelector)
-			policyConditionsStatusForPolicyEventually(bridge1).Should(ContainElement(
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			))
+			waitForAvailablePolicy(bridge1)
 		})
 
 		AfterEach(func() {
 			setDesiredStateWithPolicy(bridge1, linuxBrAbsent(bridge1))
-			policyConditionsStatusForPolicyEventually(bridge1).Should(ContainElement(nmstatev1alpha1.Condition{
-				Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-				Status: corev1.ConditionTrue,
-			}))
+			waitForAvailablePolicy(bridge1)
 			deletePolicy(bridge1)
 			resetDesiredStateForNodes()
 		})
@@ -53,12 +45,7 @@ var _ = Describe("NodeSelector", func() {
 			BeforeEach(func() {
 				By(fmt.Sprintf("Remove node selector at policy %s", bridge1))
 				setDesiredStateWithPolicyAndNodeSelector(bridge1, linuxBrUp(bridge1), map[string]string{})
-				policyConditionsStatusForPolicyEventually(bridge1).Should(ContainElement(
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-						Status: corev1.ConditionTrue,
-					},
-				))
+				waitForAvailablePolicy(bridge1)
 			})
 
 			It("should update all nodes and have Matching enactment state", func() {

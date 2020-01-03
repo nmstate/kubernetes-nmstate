@@ -121,9 +121,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
 				updateDesiredState(linuxBrUpNoPorts(bridge1))
+				waitForAvailableTestPolicy()
 			})
 			AfterEach(func() {
 				updateDesiredState(linuxBrAbsent(bridge1))
+				waitForAvailableTestPolicy()
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
@@ -139,9 +141,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with a linux bridge up", func() {
 			BeforeEach(func() {
 				updateDesiredState(linuxBrUp(bridge1))
+				waitForAvailableTestPolicy()
 			})
 			AfterEach(func() {
 				updateDesiredState(linuxBrAbsent(bridge1))
+				waitForAvailableTestPolicy()
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 				}
@@ -161,9 +165,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
 				updateDesiredState(bondUp(bond1))
+				waitForAvailableTestPolicy()
 			})
 			AfterEach(func() {
 				updateDesiredState(bondAbsent(bond1))
+				waitForAvailableTestPolicy()
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
@@ -187,9 +193,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with the bond interface as linux bridge port", func() {
 			BeforeEach(func() {
 				updateDesiredState(brWithBondUp(bridge1, bond1))
+				waitForAvailableTestPolicy()
 			})
 			AfterEach(func() {
 				updateDesiredState(brAndBondAbsent(bridge1, bond1))
+				waitForAvailableTestPolicy()
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
@@ -229,9 +237,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with bond interface that has 2 eths as slaves", func() {
 			BeforeEach(func() {
 				updateDesiredState(bondUpWithEth1AndEth2(bond1))
+				waitForAvailableTestPolicy()
 			})
 			AfterEach(func() {
 				updateDesiredState(bondAbsent(bond1))
+				waitForAvailableTestPolicy()
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}
@@ -258,9 +268,11 @@ var _ = Describe("NodeNetworkState", func() {
 		Context("with bond interface that has 2 eths as slaves and vlan tag on the bond", func() {
 			BeforeEach(func() {
 				updateDesiredState(bondUpWithEth1Eth2AndVlan(bond1))
+				waitForAvailableTestPolicy()
 			})
 			AfterEach(func() {
 				updateDesiredState(bondAbsent(bond1))
+				waitForAvailableTestPolicy()
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
 				}

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/types"
 
 	"k8s.io/apimachinery/pkg/types"
 	yaml "sigs.k8s.io/yaml"
@@ -112,4 +113,34 @@ func policyConditionsStatusEventually() AsyncAssertion {
 
 func policyConditionsStatusConsistently() AsyncAssertion {
 	return policyConditionsStatusForPolicyConsistently(TestPolicy)
+}
+
+func containPolicyAvailable() GomegaMatcher {
+	return ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		Status: corev1.ConditionTrue,
+	})
+}
+
+func containPolicyDegraded() GomegaMatcher {
+	return ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+		Status: corev1.ConditionTrue,
+	})
+}
+
+func waitForAvailableTestPolicy() {
+	policyConditionsStatusEventually().Should(containPolicyAvailable())
+}
+
+func waitForDegradedTestPolicy() {
+	policyConditionsStatusEventually().Should(containPolicyDegraded())
+}
+
+func waitForAvailablePolicy(policy string) {
+	policyConditionsStatusForPolicyEventually(policy).Should(containPolicyAvailable())
+}
+
+func waitForDegradedPolicy(policy string) {
+	policyConditionsStatusForPolicyEventually(policy).Should(containPolicyDegraded())
 }
