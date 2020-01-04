@@ -1,24 +1,18 @@
-package enactmentconditions
+package conditions
 
 import (
-	"context"
 	"fmt"
-	"reflect"
-	"time"
-
-	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
 )
 
 type EnactmentConditions struct {
@@ -100,33 +94,10 @@ func (ec *EnactmentConditions) updateEnactmentConditions(
 	conditionsSetter func(*nmstatev1alpha1.ConditionList, string),
 	message string,
 ) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		instance := &nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
-		err := ec.client.Get(context.TODO(), ec.enactmentKey, instance)
-		if err != nil {
-			return errors.Wrap(err, "getting enactment failed")
-		}
-
-		conditionsSetter(&instance.Status.Conditions, message)
-
-		err = ec.client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			return err
-		}
-
-		// Wait until enactment has being updated at the node
-		expectedStatus := instance.Status
-		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) {
-			err = ec.client.Get(context.TODO(), ec.enactmentKey, instance)
-			if err != nil {
-				return false, err
-			}
-
-			isEqual := reflect.DeepEqual(expectedStatus, instance.Status)
-			ec.logger.Info(fmt.Sprintf("enactment updated at the node: %t", isEqual))
-			return isEqual, nil
+	return enactmentstatus.Update(ec.client, ec.enactmentKey,
+		func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
+			conditionsSetter(&status.Conditions, message)
 		})
-	})
 }
 
 func SetFailedToConfigure(conditions *nmstatev1alpha1.ConditionList, message string) {

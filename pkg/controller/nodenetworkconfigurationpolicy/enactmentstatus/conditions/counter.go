@@ -1,4 +1,4 @@
-package enactmentconditions
+package conditions
 
 import (
 	"fmt"

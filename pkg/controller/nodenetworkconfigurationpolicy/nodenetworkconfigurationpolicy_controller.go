@@ -23,7 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentconditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/selectors"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
@@ -116,25 +117,30 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nms
 	enactmentKey := nmstatev1alpha1.EnactmentKey(nodeName, policy.Name)
 	logger := log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
-	err := r.client.Get(context.TODO(), enactmentKey, &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
+	enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
+	err := r.client.Get(context.TODO(), enactmentKey, &enactment)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed getting enactment ")
 	}
-	if err == nil {
-		logger.Info("enactment already initialized")
+	if err != nil && apierrors.IsNotFound(err) {
+		logger.Info("creating enactment")
+		enactment = nmstatev1alpha1.NewEnactment(nodeName, policy)
+		err = r.client.Create(context.TODO(), &enactment)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
+		}
+		err = r.waitEnactmentCreated(enactmentKey)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error waitting for NodeNetworkConfigurationEnactment: %+v", enactment))
+		}
+	} else {
 		enactmentConditions := enactmentconditions.New(r.client, enactmentKey)
 		enactmentConditions.Reset()
-		return nil
-	}
-	enactment := nmstatev1alpha1.NewEnactment(nodeName, policy)
-
-	logger.Info("creating enactment")
-	err = r.client.Create(context.TODO(), &enactment)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
 	}
 
-	return r.waitEnactmentCreated(enactmentKey)
+	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
+		status.DesiredState = policy.Spec.DesiredState
+	})
 }
 
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read

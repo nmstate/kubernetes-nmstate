@@ -34,7 +34,12 @@ type NodeNetworkConfigurationEnactment struct {
 // NodeNetworkConfigurationEnactmentStatus defines the observed state of NodeNetworkConfigurationEnactment
 // +k8s:openapi-gen=true
 type NodeNetworkConfigurationEnactmentStatus struct {
-	Conditions ConditionList `json:"conditions"`
+
+	// The desired state rendered for the enactment's node using
+	// the policy desiredState as template
+	DesiredState State `json:"desiredState,omitempty"`
+
+	Conditions ConditionList `json:"conditions,omitempty"`
 }
 
 const (
@@ -75,6 +80,10 @@ func NewEnactment(nodeName string, policy NodeNetworkConfigurationPolicy) NodeNe
 			Labels: map[string]string{
 				EnactmentPolicyLabel: policy.Name,
 			},
+		},
+		Status: NodeNetworkConfigurationEnactmentStatus{
+			DesiredState: NewState(""),
+			Conditions:   ConditionList{},
 		},
 	}
 
