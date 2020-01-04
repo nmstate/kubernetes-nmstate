@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,7 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentconditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/selectors"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
@@ -95,10 +95,10 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 	scheme *runtime.Scheme
 }
 
-func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
+func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
 	var enactment nmstatev1alpha1.NodeNetworkConfigurationEnactment
 	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
-		err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &enactment)
+		err := r.client.Get(context.TODO(), enactmentKey, &enactment)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				// Let's retry after a while, sometimes it takes some time
@@ -114,27 +114,33 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(policy nm
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
-
+	enactmentKey := nmstatev1alpha1.EnactmentKey(nodeName, policy.Name)
+	logger := log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
-	err := r.client.Get(context.TODO(), nmstatev1alpha1.EnactmentKey(nodeName, policy.Name), &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
-	if err == nil || !apierrors.IsNotFound(err) {
-		return err
+	enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
+	err := r.client.Get(context.TODO(), enactmentKey, &enactment)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrap(err, "failed getting enactment ")
+	}
+	if err != nil && apierrors.IsNotFound(err) {
+		logger.Info("creating enactment")
+		enactment = nmstatev1alpha1.NewEnactment(nodeName, policy)
+		err = r.client.Create(context.TODO(), &enactment)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
+		}
+		err = r.waitEnactmentCreated(enactmentKey)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("error waitting for NodeNetworkConfigurationEnactment: %+v", enactment))
+		}
+	} else {
+		enactmentConditions := enactmentconditions.New(r.client, enactmentKey)
+		enactmentConditions.Reset()
 	}
 
-	node := corev1.Node{}
-	err = r.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("cannot get node %s", nodeName))
-	}
-
-	enactment := nmstatev1alpha1.NewEnactment(node, policy)
-
-	err = r.client.Create(context.TODO(), &enactment)
-	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
-	}
-
-	return r.waitEnactmentCreated(policy)
+	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
+		status.DesiredState = policy.Spec.DesiredState
+	})
 }
 
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
@@ -161,6 +167,8 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		return reconcile.Result{}, err
 	}
 
+	policyconditions.Reset(r.client, request.NamespacedName)
+
 	err = r.initializeEnactment(*instance)
 	if err != nil {
 		log.Error(err, "Error initializing enactment")
@@ -171,7 +179,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
-	defer policyconditions.Update(r.client, instance)
+	defer policyconditions.Update(r.client, request.NamespacedName)
 
 	policySelectors := selectors.NewFromPolicy(r.client, *instance)
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)

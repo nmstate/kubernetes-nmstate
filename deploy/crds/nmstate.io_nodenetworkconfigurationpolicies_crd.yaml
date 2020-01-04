@@ -51,7 +51,6 @@ spec:
             of NodeNetworkConfigurationPolicy
           properties:
             conditions:
-              description: 'TODO: Add overall condition'
               items:
                 properties:
                   lastHearbeatTime:

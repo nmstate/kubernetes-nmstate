@@ -11,12 +11,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	yaml "sigs.k8s.io/yaml"
 
@@ -33,6 +36,7 @@ var (
 const nmstateCommand = "nmstatectl"
 const vlanFilteringCommand = "vlan-filtering"
 const defaultGwProbeTimeout = 120
+const apiServerProbeTimeout = 120
 
 var (
 	interfacesFilterGlob glob.Glob
@@ -196,6 +200,28 @@ func ping(target string, timeout time.Duration) (string, error) {
 	})
 }
 
+func checkApiServerConnectivity(timeout time.Duration) error {
+	return wait.PollImmediate(1*time.Second, timeout, func() (bool, error) {
+		// Create new custom client to bypass cache [1]
+		// [1] https://github.com/operator-framework/operator-sdk/blob/master/doc/user/client.md#non-default-client
+		config, err := config.GetConfig()
+		if err != nil {
+			return false, errors.Wrap(err, "getting config")
+		}
+		// Since we are going to retrieve Nodes default schema is good
+		// enough
+		client, err := client.New(config, client.Options{})
+		if err != nil {
+			return false, errors.Wrap(err, "creating new custom client")
+		}
+		err = client.Get(context.TODO(), types.NamespacedName{Name: metav1.NamespaceDefault}, &corev1.Namespace{})
+		if err != nil {
+			return false, errors.Wrap(err, "reaching to apiserver failed")
+		}
+		return true, nil
+	})
+}
+
 func defaultGw() (string, error) {
 	observedStateRaw, err := Show()
 	if err != nil {
@@ -204,13 +230,13 @@ func defaultGw() (string, error) {
 
 	currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
 	if err != nil {
-		return "", fmt.Errorf("Impossible to convert current state to JSON")
+		return "", fmt.Errorf("Impossible to convert current state to JSON: %v", err)
 	}
 
 	defaultGw := gjson.ParseBytes([]byte(currentState)).
 		Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
 	if defaultGw == "" {
-		return "", fmt.Errorf("Impossible to retrieve default gw")
+		return "", fmt.Errorf("Impossible to retrieve default gw, state: %s", string(observedStateRaw))
 	}
 
 	return defaultGw, nil
@@ -258,6 +284,11 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout*time.Second)
 	if err != nil {
 		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+	}
+
+	err = checkApiServerConnectivity(apiServerProbeTimeout * time.Second)
+	if err != nil {
+		return "", rollback(fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
 
 	commitOutput, err := commit()

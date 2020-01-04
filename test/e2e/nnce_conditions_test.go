@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"fmt"
+	"sync"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -30,10 +31,11 @@ var _ = Describe("EnactmentCondition", func() {
 		AfterEach(func() {
 			By("Restore original vlan-filtering")
 			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
+
+			By("Remove the bridge")
 			updateDesiredState(linuxBrAbsent(bridge1))
-			for _, node := range nodes {
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-			}
+			waitForAvailableTestPolicy()
+
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
@@ -74,16 +76,25 @@ var _ = Describe("EnactmentCondition", func() {
 					Status: corev1.ConditionTrue,
 				},
 			}
-			for _, node := range nodes {
-				By("Check progressing state is reached")
-				enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
+			var wg sync.WaitGroup
+			wg.Add(len(nodes))
+			for i, _ := range nodes {
+				node := nodes[i]
+				go func() {
+					defer wg.Done()
+					By(fmt.Sprintf("Check %s progressing state is reached", node))
+					enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
 
-				By("Check available is the next condition")
-				enactmentConditionsStatusEventually(node).Should(ConsistOf(availableConditions))
+					By(fmt.Sprintf("Check %s available state is the next condition", node))
+					enactmentConditionsStatusEventually(node).Should(ConsistOf(availableConditions))
 
-				By("Check that we available is keep")
-				enactmentConditionsStatusConsistently(node).Should(ConsistOf(availableConditions))
+					By(fmt.Sprintf("Check %s available state is kept", node))
+					enactmentConditionsStatusConsistently(node).Should(ConsistOf(availableConditions))
+				}()
 			}
+			wg.Wait()
+			By("Check policy is at available state")
+			waitForAvailableTestPolicy()
 		})
 	})
 
@@ -119,6 +130,8 @@ var _ = Describe("EnactmentCondition", func() {
 					},
 				))
 			}
+			By("Check policy is at degraded state")
+			waitForDegradedTestPolicy()
 		})
 	})
 })

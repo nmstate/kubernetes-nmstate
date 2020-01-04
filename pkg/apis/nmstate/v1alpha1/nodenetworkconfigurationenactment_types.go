@@ -34,7 +34,12 @@ type NodeNetworkConfigurationEnactment struct {
 // NodeNetworkConfigurationEnactmentStatus defines the observed state of NodeNetworkConfigurationEnactment
 // +k8s:openapi-gen=true
 type NodeNetworkConfigurationEnactmentStatus struct {
-	Conditions ConditionList `json:"conditions"`
+
+	// The desired state rendered for the enactment's node using
+	// the policy desiredState as template
+	DesiredState State `json:"desiredState,omitempty"`
+
+	Conditions ConditionList `json:"conditions,omitempty"`
 }
 
 const (
@@ -64,10 +69,10 @@ func EnactmentKey(node string, policy string) types.NamespacedName {
 	return types.NamespacedName{Name: fmt.Sprintf("%s.%s", node, policy)}
 }
 
-func NewEnactment(node corev1.Node, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+func NewEnactment(nodeName string, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: EnactmentKey(node.Name, policy.Name).Name,
+			Name: EnactmentKey(nodeName, policy.Name).Name,
 			OwnerReferences: []metav1.OwnerReference{
 				{Name: policy.Name, Kind: policy.TypeMeta.Kind, APIVersion: policy.TypeMeta.APIVersion, UID: policy.UID},
 			},
@@ -75,6 +80,10 @@ func NewEnactment(node corev1.Node, policy NodeNetworkConfigurationPolicy) NodeN
 			Labels: map[string]string{
 				EnactmentPolicyLabel: policy.Name,
 			},
+		},
+		Status: NodeNetworkConfigurationEnactmentStatus{
+			DesiredState: NewState(""),
+			Conditions:   ConditionList{},
 		},
 	}
 
