@@ -15,13 +15,18 @@ type NodeNetworkStateStatus struct {
 
 const (
 	NodeNetworkStateConditionAvailable ConditionType = "Available"
-	NodeNetworkStateConditionFailing   ConditionType = "Failing"
+	NodeNetworkStateConditionDegraded  ConditionType = "Degraded"
 )
 
 const (
-	NodeNetworkStateConditionFailedToConfigure      ConditionReason = "FailedToConfigure"
-	NodeNetworkStateConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
+	NodeNetworkStateConditionFailedToObtainCurrentState        ConditionReason = "FailedToObtainCurrentState"
+	NodeNetworkStateConditionSuccessfullyObtainedCurrentStatus ConditionReason = "SuccessfullyObtainedCurrentStatus"
 )
+
+var NodeNetworkStateConditionTypes = [...]ConditionType{
+	NodeNetworkStateConditionAvailable,
+	NodeNetworkStateConditionDegraded,
+}
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 

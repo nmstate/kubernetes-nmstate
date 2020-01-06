@@ -90,28 +90,20 @@ func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *
 	return nil
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
-	observedStateRaw, err := nmstatectl.Show()
+func CurrentState() (nmstatev1alpha1.State, error) {
+	currentStateRaw, err := nmstatectl.Show()
 	if err != nil {
-		return fmt.Errorf("error running nmstatectl show: %v", err)
+		return nmstatev1alpha1.State{}, fmt.Errorf("error running nmstatectl show: %v", err)
 	}
-	observedState := nmstatev1alpha1.State{Raw: []byte(observedStateRaw)}
+	currentState := nmstatev1alpha1.State{Raw: []byte(currentStateRaw)}
 
-	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
+	stateToReport, err := filterOut(currentState, interfacesFilterGlob)
 	if err != nil {
 		fmt.Printf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
-		stateToReport = observedState
+		stateToReport = currentState
 	}
 
-	nodeNetworkState.Status.CurrentState = stateToReport
-	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
-
-	err = client.Status().Update(context.Background(), nodeNetworkState)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return stateToReport, nil
 }
 
 func ping(target string, timeout time.Duration) (string, error) {

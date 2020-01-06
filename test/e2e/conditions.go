@@ -144,3 +144,54 @@ func waitForAvailablePolicy(policy string) {
 func waitForDegradedPolicy(policy string) {
 	policyConditionsStatusForPolicyEventually(policy).Should(containPolicyDegraded())
 }
+
+func stateConditionsStatus(node string) nmstatev1alpha1.ConditionList {
+	state := nodeNetworkState(types.NamespacedName{Name: node})
+	obtainedConditions := nmstatev1alpha1.ConditionList{}
+	for _, stateConditionType := range nmstatev1alpha1.NodeNetworkStateConditionTypes {
+		obtainedCondition := state.Status.Conditions.Find(stateConditionType)
+		obtainedConditionStatus := corev1.ConditionUnknown
+		if obtainedCondition != nil {
+			obtainedConditionStatus = obtainedCondition.Status
+		}
+		obtainedConditions = append(obtainedConditions, nmstatev1alpha1.Condition{
+			Type:   stateConditionType,
+			Status: obtainedConditionStatus,
+		})
+	}
+	return obtainedConditions
+}
+
+func stateConditionsStatusEventually(node string) AsyncAssertion {
+	return Eventually(func() nmstatev1alpha1.ConditionList {
+		return stateConditionsStatus(node)
+	}, 180*time.Second, 1*time.Second)
+}
+
+func containStateAvailable() GomegaMatcher {
+	return ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		Status: corev1.ConditionTrue,
+	})
+}
+
+func containStateNotAvailable() GomegaMatcher {
+	return ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		Status: corev1.ConditionFalse,
+	})
+}
+
+func containStateDegraded() GomegaMatcher {
+	return ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkStateConditionDegraded,
+		Status: corev1.ConditionTrue,
+	})
+}
+
+func containStateNotDegraded() GomegaMatcher {
+	return ContainElement(nmstatev1alpha1.Condition{
+		Type:   nmstatev1alpha1.NodeNetworkStateConditionDegraded,
+		Status: corev1.ConditionFalse,
+	})
+}

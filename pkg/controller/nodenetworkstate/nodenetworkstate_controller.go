@@ -8,7 +8,9 @@ import (
 	"time"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -113,10 +115,20 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 			return err
 		}
 
-		err = nmstate.UpdateCurrentState(r.client, instance)
+		stateToReport, err := nmstate.CurrentState()
+		if err != nil {
+			setConditionDegraded(instance, err.Error())
+		} else {
+			instance.Status.CurrentState = stateToReport
+			instance.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
+			setConditionSuccess(instance, "successfully reconciled NodeNetworkState")
+		}
+
+		err = r.client.Status().Update(context.Background(), instance)
 		if err != nil {
 			return err
 		}
+
 		return nil
 	})
 	if err != nil {
@@ -129,4 +141,34 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		return reconcile.Result{}, err
 	}
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
+}
+
+func setConditionSuccess(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	instance.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkStateConditionSuccessfullyObtainedCurrentStatus,
+		message,
+	)
+	instance.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkStateConditionDegraded,
+		corev1.ConditionFalse,
+		nmstatev1alpha1.NodeNetworkStateConditionSuccessfullyObtainedCurrentStatus,
+		"",
+	)
+}
+
+func setConditionDegraded(instance *nmstatev1alpha1.NodeNetworkState, message string) {
+	instance.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkStateConditionAvailable,
+		corev1.ConditionFalse,
+		nmstatev1alpha1.NodeNetworkStateConditionFailedToObtainCurrentState,
+		"",
+	)
+	instance.Status.Conditions.Set(
+		nmstatev1alpha1.NodeNetworkStateConditionDegraded,
+		corev1.ConditionTrue,
+		nmstatev1alpha1.NodeNetworkStateConditionFailedToObtainCurrentState,
+		message,
+	)
 }
