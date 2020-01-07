@@ -169,6 +169,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 
 	policyconditions.Reset(r.client, request.NamespacedName)
 
+	// TODO: get previous enactment if there is any, that would mean we are updating
 	err = r.initializeEnactment(*instance)
 	if err != nil {
 		log.Error(err, "Error initializing enactment")
@@ -194,6 +195,13 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	}
 
 	enactmentConditions.NotifyMatching()
+
+	// TODO:
+	// if there was a previous enactment (we are updating),
+	// and if the desired state has changed
+	// test the dry run
+	// if fails, execute the configuration,
+	// otherwise just skip to NotifySuccess
 
 	enactmentConditions.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(instance.Spec.DesiredState)
