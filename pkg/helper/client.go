@@ -35,6 +35,7 @@ var (
 
 const nmstateCommand = "nmstatectl"
 const vlanFilteringCommand = "vlan-filtering"
+const defaultGwRetrieveTimeout = 120
 const defaultGwProbeTimeout = 120
 const apiServerProbeTimeout = 120
 
@@ -223,23 +224,26 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 }
 
 func defaultGw() (string, error) {
-	observedStateRaw, err := show()
-	if err != nil {
-		return "", fmt.Errorf("error running nmstatectl show: %v", err)
-	}
+	defaultGw := ""
+	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout, func() (bool, error) {
+		observedStateRaw, err := show()
+		if err != nil {
+			return false, fmt.Errorf("error running nmstatectl show: %v", err)
+		}
 
-	currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
-	if err != nil {
-		return "", fmt.Errorf("Impossible to convert current state to JSON: %v", err)
-	}
+		currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
+		if err != nil {
+			return false, fmt.Errorf("Impossible to convert current state to JSON: %v", err)
+		}
 
-	defaultGw := gjson.ParseBytes([]byte(currentState)).
-		Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
-	if defaultGw == "" {
-		return "", fmt.Errorf("Impossible to retrieve default gw, state: %s", string(observedStateRaw))
-	}
+		defaultGw = gjson.ParseBytes([]byte(currentState)).
+			Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
+		if defaultGw == "" {
+			return false, fmt.Errorf("Impossible to retrieve default gw, state: %s", string(observedStateRaw))
+		}
 
-	return defaultGw, nil
+		return true, nil
+	})
 }
 
 func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
