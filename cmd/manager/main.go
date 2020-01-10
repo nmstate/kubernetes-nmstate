@@ -111,13 +111,13 @@ func main() {
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "")
+		log.Error(err, "Cannot initialize controller")
 		os.Exit(1)
 	}
 
 	// Setup webhook
-	if err := mgr.Add(webhook.Server()); err != nil {
-		log.Error(err, "Cannot initialize webhook server")
+	if err := webhook.AddToManager(mgr); err != nil {
+		log.Error(err, "Cannot initialize webhook")
 		os.Exit(1)
 	}
 

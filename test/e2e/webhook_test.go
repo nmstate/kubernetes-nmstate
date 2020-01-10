@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
+	mutatingwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/mutating"
 )
 
 var _ = Describe("Mutating Admission Webhook", func() {
@@ -25,7 +25,7 @@ var _ = Describe("Mutating Admission Webhook", func() {
 
 		It("should add an annotation with mutation timestamp", func() {
 			policy := nodeNetworkConfigurationPolicy(policyName)
-			Expect(policy.ObjectMeta.Annotations).To(HaveKey(webhook.MutationTiemstampLabelKey))
+			Expect(policy.ObjectMeta.Annotations).To(HaveKey(mutatingwebhook.TimestampLabelKey))
 		})
 		Context("and we updated it", func() {
 			var (
@@ -38,12 +38,12 @@ var _ = Describe("Mutating Admission Webhook", func() {
 			})
 			It("should update annotation with newer mutation timestamp", func() {
 				newPolicy := nodeNetworkConfigurationPolicy(policyName)
-				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(webhook.MutationTiemstampLabelKey))
+				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(mutatingwebhook.TimestampLabelKey))
 
-				annotation := oldPolicy.ObjectMeta.Annotations[webhook.MutationTiemstampLabelKey]
+				annotation := oldPolicy.ObjectMeta.Annotations[mutatingwebhook.TimestampLabelKey]
 				oldConditionsMutation, err := strconv.ParseInt(annotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
-				annotation = newPolicy.ObjectMeta.Annotations[webhook.MutationTiemstampLabelKey]
+				annotation = newPolicy.ObjectMeta.Annotations[mutatingwebhook.TimestampLabelKey]
 				newConditionsMutation, err := strconv.ParseInt(annotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
 

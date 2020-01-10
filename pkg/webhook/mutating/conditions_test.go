@@ -1,4 +1,4 @@
-package webhook
+package mutating
 
 import (
 	"context"
@@ -80,8 +80,8 @@ var _ = Describe("Mutating Admission Webhook", func() {
 			Expect(patchedPolicy.ObjectMeta.Annotations).To(HaveLen(len(c.Policy.ObjectMeta.Annotations) + 1))
 		}
 
-		Expect(patchedPolicy.ObjectMeta.Annotations).To(HaveKey(MutationTiemstampLabelKey))
-		annotation := patchedPolicy.ObjectMeta.Annotations[MutationTiemstampLabelKey]
+		Expect(patchedPolicy.ObjectMeta.Annotations).To(HaveKey(TimestampLabelKey))
+		annotation := patchedPolicy.ObjectMeta.Annotations[TimestampLabelKey]
 		mutationTimestamp, err := strconv.ParseInt(annotation, 10, 64)
 		Expect(err).ToNot(HaveOccurred(), "mutation timestamp has not a int64 value")
 		Expect(mutationTimestamp).To(BeNumerically(">", testStartTime), "mutation timestamp not updated")
