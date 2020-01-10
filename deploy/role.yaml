@@ -51,6 +51,12 @@ metadata:
   namespace: nmstate
 rules:
 - apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - mutatingwebhookconfigurations
+  verbs:
+  - '*'
+- apiGroups:
   - nmstate.io
   resources:
   - '*'
@@ -65,3 +71,9 @@ rules:
   - get
   - list
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - "*"

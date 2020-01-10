@@ -3,14 +3,13 @@ package mutating
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	jsonpatchv2 "gomodules.xyz/jsonpatch/v2"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
+
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -22,30 +21,7 @@ const (
 	TimestampLabelKey = "nmstate.io/webhook-mutating-timestamp"
 )
 
-var log = logf.Log.WithName("webhook")
-
-// Add creates a new Conditions Mutating Webhook and adds it to the Manager. The Manager will set fields on the Webhook
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newServer())
-}
-
-func newServer() *webhook.Server {
-	server := &webhook.Server{
-		Port:    8443,
-		CertDir: "/etc/webhook/certs/",
-	}
-
-	log.Info(fmt.Sprintf("Registering mutating webhook at %+v", server))
-	server.Register("/mutating", resetConditionsHook())
-	return server
-}
-
-// add adds a new Webhook to mgr with r as the webhook.Server
-func add(mgr manager.Manager, s *webhook.Server) error {
-	mgr.Add(s)
-	return nil
-}
+var log = logf.Log.WithName("webhook/mutating/conditions")
 
 func resetConditionsPatch() jsonpatchv2.Operation {
 	return jsonpatchv2.Operation{

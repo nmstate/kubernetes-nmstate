@@ -102,17 +102,15 @@ apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
   name: nmstate
-  namespace: nmstate
   labels:
     app: kubernetes-nmstate
 webhooks:
   - name: mutating.nmstate.io
     clientConfig:
-      caBundle: REPLACE_CA_BUNDLE
       service:
         name: nmstate-webhook
         namespace: nmstate
-        path: "/mutating"
+        path: "/nodenetworkconfigurationpolicies-mutate"
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]

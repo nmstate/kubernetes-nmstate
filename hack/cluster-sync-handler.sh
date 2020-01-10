@@ -12,12 +12,6 @@ $script_dir/install-tls-secrets.sh \
 		--service nmstate-webhook \
 		--secret nmstate-webhook-certs
 
-# replace caBundle from webhook with real deal inspired by [1]
-#
-# [1] https://github.com/morvencao/kube-mutating-webhook-tutorial/blob/master/deployment/webhook-patch-ca-bundle.sh
-CA_BUNDLE=$(${KUBECTL} get configmap -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n')
-sed -i "s/REPLACE_CA_BUNDLE/$CA_BUNDLE/g" ${local_handler_manifest}
-
 # Set debug verbosity level for logs when using cluster-sync
 sed "s#--v=production#--v=debug#" ${local_handler_manifest} | ${KUBECTL} create -f -
 
