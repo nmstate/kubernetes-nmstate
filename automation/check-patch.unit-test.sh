@@ -8,6 +8,7 @@
 # automation/check-patch.e2e-k8s.sh
 
 main() {
+    git remote -v
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
     make all
