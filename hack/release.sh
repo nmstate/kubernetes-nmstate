@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 git tag $TAG
-git push origin --tags
+git push https://github.com/nmstate/kubernetes-nmstate $TAG
 
 $GITHUB_RELEASE release -u nmstate -r kubernetes-nmstate \
     --tag $TAG \
