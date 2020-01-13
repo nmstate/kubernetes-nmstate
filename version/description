@@ -1,8 +1,30 @@
-v0.12.0
+v0.13.0
 
-* Workaround for nmstate mainloop timeout which is too short.
-* Use nsmtate RPM released under 0.1.1 version. This should reflect the current
-  master.
+This release add a policy overall conditions that represent
+the cluster state of a policy, also operator-sdk has being bump
+to 0.12.0
+
+Features:
+* Add overall policy conditions (#300)
+* Add desired state field to enactments (#287)
+* Add Matching condition to enactments (#285)
+* Move enactments to a proper CRD (#279)
+* Add LastSuccessfulUpdate field to NodeNetworkState (#280)
+* Add Progressing state to enactment (#271)
+* Decouple configuration and reporting (#262)
+* Use go modules and operator sdk 0.12.0 (#246)
+
+Bugs:
+* Retry default gw retrieval on error (#328)
+* Re-read policy at retryOnConflict (#319)
+* Force Get enacment after update (#307)
+* Fix monitoring logs (#277)
+* Override nmstate State openapi type (#268)
+* Upgrade CRDs to operator-sdk 0.12.0 (#266)
+* Remove logs from metrics after operator-sdk upgrade (#263)
+
+Docs:
+* Use dhcp for cluster-wide policies (#308)
 
 ```
 docker pull HANDLER_IMAGE
