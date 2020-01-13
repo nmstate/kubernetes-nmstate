@@ -1,4 +1,4 @@
-package mutating
+package nodenetworkconfigurationpolicy
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package mutating
+package nodenetworkconfigurationpolicy
 
 import (
 	"context"
@@ -21,7 +21,7 @@ const (
 	TimestampLabelKey = "nmstate.io/webhook-mutating-timestamp"
 )
 
-var log = logf.Log.WithName("webhook/mutating/conditions")
+var log = logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/conditions")
 
 func resetConditionsPatch() jsonpatchv2.Operation {
 	return jsonpatchv2.Operation{

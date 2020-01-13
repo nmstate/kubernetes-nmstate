@@ -7,44 +7,48 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	mutatingwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/mutating"
+	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
 )
 
+// We just check the labe at CREATE/UPDATE events since mutated data is already
+// check at unit test.
 var _ = Describe("Mutating Admission Webhook", func() {
-	policyName := "webhook-test"
 	Context("when policy is created", func() {
 		BeforeEach(func() {
-			setDesiredStateWithPolicy(policyName, linuxBrUp(bridge1))
-			waitForAvailablePolicy(policyName)
+			// Make sure test policy is not there so
+			// we exercise CREATE event
+			resetDesiredStateForNodes()
+			updateDesiredState(linuxBrUp(bridge1))
+			waitForAvailableTestPolicy()
 		})
 		AfterEach(func() {
-			setDesiredStateWithPolicy(policyName, linuxBrAbsent(bridge1))
-			waitForAvailablePolicy(policyName)
-			deletePolicy(policyName)
+			updateDesiredState(linuxBrAbsent(bridge1))
+			waitForAvailableTestPolicy()
+			resetDesiredStateForNodes()
 		})
 
 		It("should add an annotation with mutation timestamp", func() {
-			policy := nodeNetworkConfigurationPolicy(policyName)
-			Expect(policy.ObjectMeta.Annotations).To(HaveKey(mutatingwebhook.TimestampLabelKey))
+			policy := nodeNetworkConfigurationPolicy(TestPolicy)
+			Expect(policy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
 		})
 		Context("and we updated it", func() {
 			var (
 				oldPolicy nmstatev1alpha1.NodeNetworkConfigurationPolicy
 			)
 			BeforeEach(func() {
-				oldPolicy = nodeNetworkConfigurationPolicy(policyName)
-				setDesiredStateWithPolicy(policyName, linuxBrAbsent(bridge1))
-				waitForAvailablePolicy(policyName)
+				oldPolicy = nodeNetworkConfigurationPolicy(TestPolicy)
+				updateDesiredState(linuxBrAbsent(bridge1))
+				waitForAvailableTestPolicy()
 			})
 			It("should update annotation with newer mutation timestamp", func() {
-				newPolicy := nodeNetworkConfigurationPolicy(policyName)
-				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(mutatingwebhook.TimestampLabelKey))
+				newPolicy := nodeNetworkConfigurationPolicy(TestPolicy)
+				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
 
-				annotation := oldPolicy.ObjectMeta.Annotations[mutatingwebhook.TimestampLabelKey]
-				oldConditionsMutation, err := strconv.ParseInt(annotation, 10, 64)
+				oldAnnotation := oldPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
+				oldConditionsMutation, err := strconv.ParseInt(oldAnnotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
-				annotation = newPolicy.ObjectMeta.Annotations[mutatingwebhook.TimestampLabelKey]
-				newConditionsMutation, err := strconv.ParseInt(annotation, 10, 64)
+				newAnnotation := newPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
+				newConditionsMutation, err := strconv.ParseInt(newAnnotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(newConditionsMutation).To(BeNumerically(">", oldConditionsMutation), "mutation timestamp not updated")

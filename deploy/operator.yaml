@@ -60,9 +60,6 @@ spec:
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
-          - name: webhook-certs
-            mountPath: /etc/webhook/certs
-            readOnly: true
           securityContext:
             privileged: true
       volumes:
@@ -70,9 +67,6 @@ spec:
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
-      - name: webhook-certs
-        secret:
-          secretName: nmstate-webhook-certs
 ---
 apiVersion: v1
 kind: ConfigMap
