@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 git tag $TAG
-git push upstream --tags
+git push origin --tags
 
 $GITHUB_RELEASE release -u nmstate -r kubernetes-nmstate \
     --tag $TAG \
