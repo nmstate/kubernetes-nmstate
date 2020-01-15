@@ -112,9 +112,9 @@ $(CLUSTER_DIR)/%: $(install_kubevirtci)
 
 cluster-up: $(CLUSTER_UP)
 	$(CLUSTER_UP)
+	hack/install-ovs.sh
 	hack/install-nm.sh
 	hack/flush-secondary-nics.sh
-	hack/install-ovs.sh
 
 cluster-down: $(CLUSTER_DOWN)
 	$(CLUSTER_DOWN)
