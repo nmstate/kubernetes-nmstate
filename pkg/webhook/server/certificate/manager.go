@@ -132,6 +132,11 @@ func (m manager) Start() error {
 		return errors.Wrap(err, "failed creating webhook tls key/cert")
 	}
 	m.log.Info(fmt.Sprintf("TLS cert/key ready at %s", m.certStore.CurrentPath()))
+	certificate, err := m.certStore.Current()
+	if err != nil {
+		return errors.Wrap(err, "failed retrieving webhook current certificate")
+	}
+	m.log.Info(fmt.Sprintf("Certificate expiration is %v-%v", certificate.Leaf.NotBefore, certificate.Leaf.NotAfter))
 	return nil
 }
 
