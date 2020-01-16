@@ -59,7 +59,7 @@ func NewManager(
 	}
 	m := &manager{
 		crMgr:     crMgr,
-		log:       logf.Log.WithName("webhook/certificate/manager"),
+		log:       logf.Log.WithName("webhook/server/certificate/manager"),
 		certStore: certStore,
 	}
 
