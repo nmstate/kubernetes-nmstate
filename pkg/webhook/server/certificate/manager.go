@@ -27,6 +27,13 @@ type manager struct {
 	log         logr.Logger
 }
 
+type WebhookType string
+
+const (
+	MutatingWebhook   WebhookType = "Mutating"
+	ValidatingWebhook WebhookType = "Validating"
+)
+
 // NewManager with create a certManager that generated a pair of files ${certDir}/${certFile} and ${certDir}/${keyFile} to use them
 // at the webhook TLS http server.
 // It will also starts at cert manager [1] that will update them if they expire.
@@ -47,6 +54,7 @@ type manager struct {
 func NewManager(
 	crMgr crmanager.Manager,
 	webhookName string,
+	webhookType WebhookType,
 	certDir string, certFileName string, keyFileName string) (*manager, error) {
 
 	certStore, err := NewFilePairStore(
@@ -63,13 +71,25 @@ func NewManager(
 		certStore: certStore,
 	}
 
-	mutatingWebHook, err := m.updateMutatingWebhookCABundle(webhookName)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to update CA bundle at webhook")
-	}
 	dnsNames := []string{}
-	for _, webhook := range mutatingWebHook.Webhooks {
-		dnsNames = append(dnsNames, dnsNamesForService(*webhook.ClientConfig.Service)...)
+	if webhookType == MutatingWebhook {
+		mutatingWebHookConfig, err := m.updateMutatingWebhookCABundle(webhookName)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to update CA bundle at webhook")
+		}
+
+		for _, webhook := range mutatingWebHookConfig.Webhooks {
+			dnsNames = append(dnsNames, dnsNamesForService(*webhook.ClientConfig.Service)...)
+		}
+	} else if webhookType == ValidatingWebhook {
+		validatingWebHookConfig, err := m.updateValidatingWebhookCABundle(webhookName)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to update CA bundle at webhook")
+		}
+
+		for _, webhook := range validatingWebHookConfig.Webhooks {
+			dnsNames = append(dnsNames, dnsNamesForService(*webhook.ClientConfig.Service)...)
+		}
 	}
 	certConfig := certificate.Config{
 		ClientFn: func(current *tls.Certificate) (certificatesclientv1beta1.CertificateSigningRequestInterface, error) {

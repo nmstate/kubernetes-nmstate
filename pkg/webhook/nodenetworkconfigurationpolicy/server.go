@@ -4,6 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	webhookserver "github.com/nmstate/kubernetes-nmstate/pkg/webhook/server"
+	"github.com/nmstate/kubernetes-nmstate/pkg/webhook/server/certificate"
 )
 
 const (
@@ -11,7 +12,7 @@ const (
 )
 
 func Add(mgr manager.Manager) error {
-	server := webhookserver.New(mgr, webhookName,
+	server := webhookserver.New(mgr, webhookName, certificate.MutatingWebhook,
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-mutate", resetConditionsHook()))
 	return add(mgr, server)
 }
