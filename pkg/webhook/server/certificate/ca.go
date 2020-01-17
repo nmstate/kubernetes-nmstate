@@ -20,10 +20,10 @@ import (
 func (m manager) clientCAFile() ([]byte, error) {
 	authenticationConfig := corev1.ConfigMap{}
 	err := m.crMgr.GetClient().Get(context.TODO(), types.NamespacedName{Namespace: "kube-system", Name: "extension-apiserver-authentication"}, &authenticationConfig)
-
 	if err != nil {
 		return []byte{}, errors.Wrap(err, "failed to retrieve cluster authentication config")
 	}
+
 	clientCaFile := authenticationConfig.Data["client-ca-file"]
 	return []byte(clientCaFile), nil
 }
@@ -36,6 +36,9 @@ func validatingWebhookConfig(webhook runtime.Object) *admissionregistrationv1bet
 	return webhook.(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
 }
 
+// clientConfigList returns the the list of webhooks's mutation or validationg clientConfig, clientConfig is the information at the webhook config pointing to the service and path [1].
+//
+//  [1] https://godoc.org/k8s.io/kubernetes/pkg/apis/admissionregistration#WebhookClientConfig
 func clientConfigList(webhook runtime.Object, webhookType WebhookType) []*admissionregistrationv1beta1.WebhookClientConfig {
 	clientConfigList := []*admissionregistrationv1beta1.WebhookClientConfig{}
 	if webhookType == MutatingWebhook {
@@ -84,7 +87,6 @@ func (m manager) updateWebhookCABundle(webhookName string, webhookType WebhookTy
 			}
 			return true, nil
 		})
-
 		if err != nil {
 			return errors.Wrapf(err, "failed retrieving %s webhook %s", webhookType, webhookName)
 		}

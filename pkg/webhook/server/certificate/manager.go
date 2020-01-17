@@ -65,6 +65,7 @@ func NewManager(
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to initialize new webhook cert/key file store")
 	}
+
 	m := &manager{
 		crMgr:     crMgr,
 		log:       logf.Log.WithName("webhook/server/certificate/manager"),
@@ -91,6 +92,7 @@ func NewManager(
 			dnsNames = append(dnsNames, dnsNamesForService(*webhook.ClientConfig.Service)...)
 		}
 	}
+
 	certConfig := certificate.Config{
 		ClientFn: func(current *tls.Certificate) (certificatesclientv1beta1.CertificateSigningRequestInterface, error) {
 			certClient, err := certificatesclientv1beta1.NewForConfig(crMgr.GetConfig())
@@ -101,7 +103,7 @@ func NewManager(
 		},
 		Template: &x509.CertificateRequest{
 			Subject: pkix.Name{
-				CommonName: fmt.Sprintf("%s", webhookName),
+				CommonName: webhookName,
 			},
 			DNSNames: dnsNames,
 		},
@@ -112,10 +114,12 @@ func NewManager(
 		},
 		CertificateStore: certStore,
 	}
+
 	certManager, err := certificate.NewManager(&certConfig)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed initializing webhook cert manager")
 	}
+
 	m.certManager = certManager
 	return m, nil
 }
@@ -137,7 +141,7 @@ func (m manager) Start() error {
 	m.certManager.Start()
 
 	m.log.Info("Wait for cert/key to be created")
-	err := wait.PollImmediate(1*time.Second, 120*time.Second, func() (bool, error) {
+	err := wait.PollImmediate(time.Second, 120*time.Second, func() (bool, error) {
 		keyExists, err := m.certStore.keyFileExists()
 		if err != nil {
 			return false, err
@@ -152,11 +156,13 @@ func (m manager) Start() error {
 		return errors.Wrap(err, "failed creating webhook tls key/cert")
 	}
 	m.log.Info(fmt.Sprintf("TLS cert/key ready at %s", m.certStore.CurrentPath()))
+
 	certificate, err := m.certStore.Current()
 	if err != nil {
 		return errors.Wrap(err, "failed retrieving webhook current certificate")
 	}
 	m.log.Info(fmt.Sprintf("Certificate expiration is %v-%v", certificate.Leaf.NotBefore, certificate.Leaf.NotAfter))
+
 	return nil
 }
 

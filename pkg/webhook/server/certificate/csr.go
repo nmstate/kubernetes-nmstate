@@ -42,12 +42,15 @@ func (a approver) Update(csr *v1beta1.CertificateSigningRequest) (*v1beta1.Certi
 func (a approver) UpdateStatus(csr *v1beta1.CertificateSigningRequest) (*v1beta1.CertificateSigningRequest, error) {
 	return a.client.UpdateStatus(csr)
 }
+
 func (a approver) Delete(name string, options *v1.DeleteOptions) error {
 	return a.client.Delete(name, options)
 }
+
 func (a approver) DeleteCollection(options *v1.DeleteOptions, listOptions v1.ListOptions) error {
 	return a.client.DeleteCollection(options, listOptions)
 }
+
 func (a approver) Get(name string, options v1.GetOptions) (*v1beta1.CertificateSigningRequest, error) {
 	csr, err := a.client.Get(name, options)
 	if err != nil {
@@ -55,12 +58,15 @@ func (a approver) Get(name string, options v1.GetOptions) (*v1beta1.CertificateS
 	}
 	return a.approve(csr)
 }
+
 func (a approver) List(opts v1.ListOptions) (*v1beta1.CertificateSigningRequestList, error) {
 	return a.client.List(opts)
 }
+
 func (a approver) Watch(opts v1.ListOptions) (watch.Interface, error) {
 	return a.client.Watch(opts)
 }
+
 func (a approver) Patch(name string, pt types.PatchType, data []byte, subresources ...string) (result *v1beta1.CertificateSigningRequest, err error) {
 	return a.client.Patch(name, pt, data, subresources...)
 }

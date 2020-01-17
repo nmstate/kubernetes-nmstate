@@ -99,7 +99,7 @@ metadata:
   labels:
     app: kubernetes-nmstate
 webhooks:
-  - name: mutating.nmstate.io
+  - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
     clientConfig:
       service:
         name: nmstate-webhook

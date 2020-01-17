@@ -62,7 +62,6 @@ func WithCertDir(certDir string) ServerModifier {
 func (s *server) Start(stop <-chan struct{}) error {
 	s.log.Info("Starting nodenetworkconfigurationpolicy webhook server")
 
-	// We have only one webhook so we just take the first one
 	certManager, err := certificate.NewManager(s.mgr, s.webhookName, s.webhookType, s.webhookServer.CertDir, "tls.crt", "tls.key")
 	if err != nil {
 		return errors.Wrap(err, "failed creating new webhook cert manager")

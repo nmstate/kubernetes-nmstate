@@ -9,5 +9,5 @@ import (
 
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Webhook Test Suite")
+	RunSpecs(t, "NNCP Webhook Test Suite")
 }

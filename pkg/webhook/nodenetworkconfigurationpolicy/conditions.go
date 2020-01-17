@@ -10,6 +10,7 @@ import (
 
 	jsonpatchv2 "gomodules.xyz/jsonpatch/v2"
 
+	corev1 "k8s.io/api/core/v1"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -24,10 +25,17 @@ const (
 var log = logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/conditions")
 
 func resetConditionsPatch() jsonpatchv2.Operation {
+	unknownConditions := nmstatev1alpha1.ConditionList{}
+	for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionTypes {
+		unknownConditions.Set(
+			conditionType,
+			corev1.ConditionUnknown,
+			"", "")
+	}
 	return jsonpatchv2.Operation{
 		Path:      "/status/conditions",
 		Operation: "replace",
-		Value:     nmstatev1alpha1.ConditionList{},
+		Value:     unknownConditions,
 	}
 }
 

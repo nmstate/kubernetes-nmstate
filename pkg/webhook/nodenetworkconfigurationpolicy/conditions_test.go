@@ -22,7 +22,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var _ = Describe("Mutating Admission Webhook", func() {
+var _ = Describe("NNCP Conditions Mutating Admission Webhook", func() {
 	type WebhookCase struct {
 		Policy nmstatev1alpha1.NodeNetworkConfigurationPolicy
 	}
@@ -60,21 +60,32 @@ var _ = Describe("Mutating Admission Webhook", func() {
 		err = cli.Patch(context.TODO(), policy, patch)
 		Expect(err).ToNot(HaveOccurred())
 
-		By("Retrieve the patched policy")
+		By("retrieving the patched policy")
 		err = cli.Get(context.TODO(), types.NamespacedName{Name: ""}, &patchedPolicy)
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(obtainedResponse.Allowed).To(BeTrue(), "Mutation not allowed")
-		Expect(obtainedResponse.Result.Reason).To(Equal(metav1.StatusReason("Conditions reset")))
+		Expect(obtainedResponse.Allowed).To(BeTrue(), "Mutation of the request should be allowed")
+		Expect(obtainedResponse.Result.Reason).To(Equal(metav1.StatusReason("Conditions reset")), "Status reason should match the expected")
 
-		Expect(obtainedResponse.Patches).To(HaveLen(2), "Unexpected number of patches")
+		Expect(obtainedResponse.Patches).To(HaveLen(2), "There should be exactly two patches in the response")
 
 		for _, patch := range obtainedResponse.Patches {
 			_, err := patch.MarshalJSON()
-			Expect(err).ToNot(HaveOccurred(), "Invalid patch")
+			Expect(err).ToNot(HaveOccurred(), "The patches should contain valid JSON")
 		}
 
-		Expect(patchedPolicy.Status.Conditions).To(BeEmpty(), "Condition list not resetted")
+		Expect(patchedPolicy.Status.Conditions).To(Equal(
+			nmstatev1alpha1.ConditionList{
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+					Status: corev1.ConditionUnknown,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+					Status: corev1.ConditionUnknown,
+				},
+			},
+		), "The list of conditions should be reset")
 
 		if c.Policy.ObjectMeta.Annotations != nil {
 			Expect(patchedPolicy.ObjectMeta.Annotations).To(HaveLen(len(c.Policy.ObjectMeta.Annotations) + 1))
@@ -83,8 +94,8 @@ var _ = Describe("Mutating Admission Webhook", func() {
 		Expect(patchedPolicy.ObjectMeta.Annotations).To(HaveKey(TimestampLabelKey))
 		annotation := patchedPolicy.ObjectMeta.Annotations[TimestampLabelKey]
 		mutationTimestamp, err := strconv.ParseInt(annotation, 10, 64)
-		Expect(err).ToNot(HaveOccurred(), "mutation timestamp has not a int64 value")
-		Expect(mutationTimestamp).To(BeNumerically(">", testStartTime), "mutation timestamp not updated")
+		Expect(err).ToNot(HaveOccurred(), "mutation timestamp should have int64 value")
+		Expect(mutationTimestamp).To(BeNumerically(">", testStartTime), "mutation timestamp should be updated by the webhook")
 
 	},
 		Entry("when conditions and annotations are empty should add mutation annotation", WebhookCase{
