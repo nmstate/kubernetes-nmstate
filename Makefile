@@ -8,6 +8,8 @@ HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
+WHAT ?= ./pkg
+
 unit_test_args ?=  -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
 export KUBEVIRT_PROVIDER ?= k8s-1.15.1
@@ -82,7 +84,7 @@ push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) ./pkg/
+	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
 test/e2e: $(OPERATOR_SDK)
 	# We have to unset mod=vendor here since operator-sdk is already

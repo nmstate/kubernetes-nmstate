@@ -24,14 +24,7 @@ main() {
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
-    ip a
-    ip r
-    make \
-        E2E_TEST_ARGS='-ginkgo.noColor -ginkgo.skip .*NNS.*cleanup.*' \
-        test/e2e
-    make \
-        E2E_TEST_ARGS='-ginkgo.noColor -ginkgo.focus .*NNS.*cleanup.*' \
-        test/e2e
+    make E2E_TEST_ARG="-ginkgo.noColor" test/e2e
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"
