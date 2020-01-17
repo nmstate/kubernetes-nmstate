@@ -1,5 +1,7 @@
 # kubernetes-nmstate
 
+o/
+
 Node-networking configuration driven by Kubernetes and executed by
 [nmstate](https://nmstate.github.io/).
 
