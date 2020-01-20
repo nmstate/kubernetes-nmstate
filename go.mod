@@ -5,6 +5,7 @@ go 1.12
 require (
 	github.com/aktau/github-release v0.7.2
 	github.com/dustin/go-humanize v1.0.0 // indirect
+	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.0

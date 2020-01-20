@@ -38,14 +38,14 @@ func NewCondition(conditionType ConditionType, status corev1.ConditionStatus, re
 	return condition
 }
 
-func (conditions *ConditionList) Set(conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) *ConditionList {
+func (conditions *ConditionList) Set(conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) {
 	condition := conditions.Find(conditionType)
 
 	// If there isn't condition we want to change, add new one
 	if condition == nil {
 		condition := NewCondition(conditionType, status, reason, message)
 		*conditions = append(*conditions, condition)
-		return conditions
+		return
 	}
 
 	now := metav1.Time{Time: time.Now()}
@@ -58,7 +58,6 @@ func (conditions *ConditionList) Set(conditionType ConditionType, status corev1.
 		condition.LastTransitionTime = now
 	}
 	condition.LastHeartbeatTime = now
-	return conditions
 }
 
 func (conditions ConditionList) Find(conditionType ConditionType) *Condition {

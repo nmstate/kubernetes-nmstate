@@ -110,3 +110,25 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1"]
         resources: ["nodenetworkconfigurationpolicies"]
+  - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
+    clientConfig:
+      service:
+        name: nmstate-webhook
+        namespace: nmstate
+        path: "/nodenetworkconfigurationpolicies-status-mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1"]
+        resources: ["nodenetworkconfigurationpolicies/status"]
+  - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
+    clientConfig:
+      service:
+        name: nmstate-webhook
+        namespace: nmstate
+        path: "/nodenetworkconfigurationpolicies-timestamp-mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1"]
+        resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]

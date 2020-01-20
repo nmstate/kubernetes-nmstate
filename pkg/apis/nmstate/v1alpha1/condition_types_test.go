@@ -112,27 +112,5 @@ var _ = Describe("Conditions list", func() {
 				Expect(updatedCondition.LastHeartbeatTime.Time).To(BeTemporally(">", originalConditions[0].LastHeartbeatTime.Time))
 			})
 		})
-		Context("and we reset it with unknown status and empty reason and message", func() {
-			updatedConditionStatus := corev1.ConditionUnknown
-			updatedConditionReason := ConditionReason("")
-			updatedConditionMessage := ""
-
-			BeforeEach(func() {
-				newConditions.Set(originalConditions[0].Type, updatedConditionStatus, updatedConditionReason, updatedConditionMessage)
-			})
-
-			It("should not add a new condition", func() {
-				Expect(newConditions).To(HaveLen(len(originalConditions)))
-			})
-
-			It("should change values and update LastTransitionTime and LastHearbeatTime", func() {
-				updatedCondition := newConditions.Find(originalConditions[0].Type)
-				Expect(updatedCondition.Status).To(Equal(updatedConditionStatus))
-				Expect(updatedCondition.Reason).To(Equal(updatedConditionReason))
-				Expect(updatedCondition.Message).To(Equal(updatedConditionMessage))
-				Expect(updatedCondition.LastTransitionTime.Time).To(BeTemporally(">", originalConditions[0].LastTransitionTime.Time))
-				Expect(updatedCondition.LastHeartbeatTime.Time).To(BeTemporally(">", originalConditions[0].LastHeartbeatTime.Time))
-			})
-		})
 	})
 })
