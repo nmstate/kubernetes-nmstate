@@ -71,14 +71,15 @@ $(OPERATOR_SDK): go.mod
 $(GITHUB_RELEASE): go.mod
 	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/aktau/github-release
 
-handler: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
 gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
 
 gen-openapi: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate openapi
+
+handler: gen-openapi gen-k8s $(OPERATOR_SDK)
+	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
 push-handler: handler
 	docker push $(HANDLER_IMAGE)
