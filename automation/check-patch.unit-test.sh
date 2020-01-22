@@ -1,4 +1,4 @@
-#!/bin/bash -xe
+#!/bin/bash -e
 
 # This script should be able to execute functional tests against Kubernetes
 # cluster on any environment with basic dependencies listed in
@@ -12,6 +12,7 @@ main() {
     cd ${TMP_PROJECT_PATH}
     make all
     make UNIT_TEST_ARGS="-noColor --compilers=2" test/unit
+    cp $(find . -name "*junit*.xml") $ARTIFACTS
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"

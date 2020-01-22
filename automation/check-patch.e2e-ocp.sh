@@ -25,6 +25,7 @@ main() {
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
     make E2E_TEST_ARG="-ginkgo.noColor" test/e2e
+    cp $(find . -name "*junit*.xml") $ARTIFACTS
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"
