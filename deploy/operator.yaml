@@ -76,3 +76,59 @@ metadata:
 data:
   node_network_state_refresh_interval: "5"
   interfaces_filter: "veth*"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nmstate-webhook
+  namespace: nmstate
+  labels:
+    app: kubernetes-nmstate
+spec:
+  publishNotReadyAddresses: true
+  ports:
+    - port: 443
+      targetPort: 8443
+  selector:
+    app: kubernetes-nmstate
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: nmstate
+  labels:
+    app: kubernetes-nmstate
+webhooks:
+  - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
+    clientConfig:
+      service:
+        name: nmstate-webhook
+        namespace: nmstate
+        path: "/nodenetworkconfigurationpolicies-mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1"]
+        resources: ["nodenetworkconfigurationpolicies"]
+  - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
+    clientConfig:
+      service:
+        name: nmstate-webhook
+        namespace: nmstate
+        path: "/nodenetworkconfigurationpolicies-status-mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1"]
+        resources: ["nodenetworkconfigurationpolicies/status"]
+  - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
+    clientConfig:
+      service:
+        name: nmstate-webhook
+        namespace: nmstate
+        path: "/nodenetworkconfigurationpolicies-timestamp-mutate"
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1"]
+        resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]

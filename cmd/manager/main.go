@@ -13,6 +13,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/pkg/apis"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller"
+	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 	"github.com/nmstate/kubernetes-nmstate/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -24,6 +25,7 @@ import (
 	"github.com/spf13/pflag"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -47,6 +49,10 @@ func printVersion() {
 
 func main() {
 	var logType string
+
+	// Print V(2) logs from packages using klog
+	klog.InitFlags(nil)
+	flag.Set("v", "2")
 
 	// Add the zap logger flag set to the CLI. The flag set must
 	// be added before calling pflag.Parse().
@@ -110,7 +116,13 @@ func main() {
 
 	// Setup all Controllers
 	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "")
+		log.Error(err, "Cannot initialize controller")
+		os.Exit(1)
+	}
+
+	// Setup webhook
+	if err := webhook.AddToManager(mgr); err != nil {
+		log.Error(err, "Cannot initialize webhook")
 		os.Exit(1)
 	}
 

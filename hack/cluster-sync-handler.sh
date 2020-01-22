@@ -4,6 +4,7 @@ ${KUBECTL} apply -f deploy/crds/nmstate.io_nodenetworkstates_crd.yaml
 ${KUBECTL} apply -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
 ${KUBECTL} apply -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
 ${KUBECTL} delete --ignore-not-found -f ${local_handler_manifest}
+
 # Set debug verbosity level for logs when using cluster-sync
 sed "s#--v=production#--v=debug#" ${local_handler_manifest} | ${KUBECTL} create -f -
 
