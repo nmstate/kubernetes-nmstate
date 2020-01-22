@@ -8,33 +8,80 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-type CountByConditionType map[nmstatev1alpha1.ConditionType]int
+type CountByConditionStatus map[corev1.ConditionStatus]int
 
-func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList) CountByConditionType {
-	trueConditionsCount := CountByConditionType{}
-	for _, enactment := range enactments.Items {
-		for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
+type ConditionCount map[nmstatev1alpha1.ConditionType]CountByConditionStatus
+
+func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList) ConditionCount {
+	conditionCount := ConditionCount{}
+	for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
+		conditionCount[conditionType] = CountByConditionStatus{}
+		for _, enactment := range enactments.Items {
 			condition := enactment.Status.Conditions.Find(conditionType)
 			if condition != nil {
-				if condition.Status == corev1.ConditionTrue {
-					trueConditionsCount[conditionType] += 1
-				}
+				conditionCount[conditionType][condition.Status] += 1
+			} else {
+				conditionCount[conditionType][corev1.ConditionUnknown] += 1
 			}
 		}
 	}
-	return trueConditionsCount
+	return conditionCount
 }
 
-func (c CountByConditionType) Failed() int {
+func (c ConditionCount) failed() CountByConditionStatus {
 	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing]
 }
-func (c CountByConditionType) Progressing() int {
+func (c ConditionCount) progressing() CountByConditionStatus {
 	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing]
 }
-func (c CountByConditionType) Available() int {
+func (c ConditionCount) available() CountByConditionStatus {
 	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable]
 }
+func (c ConditionCount) matching() CountByConditionStatus {
+	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching]
+}
 
-func (c CountByConditionType) String() string {
-	return fmt.Sprintf("{failed: %d, progressing: %d, available: %d}", c.Failed(), c.Progressing(), c.Available())
+func (c CountByConditionStatus) true() int {
+	return c[corev1.ConditionTrue]
+}
+
+func (c CountByConditionStatus) false() int {
+	return c[corev1.ConditionFalse]
+}
+
+func (c CountByConditionStatus) unknown() int {
+	return c[corev1.ConditionUnknown]
+}
+
+func (c ConditionCount) Failed() int {
+	return c.failed().true()
+}
+func (c ConditionCount) NotFailed() int {
+	return c.failed().false()
+}
+func (c ConditionCount) Progressing() int {
+	return c.progressing().true()
+}
+func (c ConditionCount) NotProgressing() int {
+	return c.progressing().false()
+}
+func (c ConditionCount) Available() int {
+	return c.available().true()
+}
+func (c ConditionCount) NotAvailable() int {
+	return c.available().false()
+}
+func (c ConditionCount) Matching() int {
+	return c.matching().true()
+}
+func (c ConditionCount) NotMatching() int {
+	return c.matching().false()
+}
+
+func (c ConditionCount) String() string {
+	return fmt.Sprintf("{failed: %s, progressing: %s, available: %s, matching: %s}", c.failed(), c.progressing(), c.available(), c.matching())
+}
+
+func (c CountByConditionStatus) String() string {
+	return fmt.Sprintf("{true: %d, false: %d, unknown: %d}", c.true(), c.false(), c.unknown())
 }
