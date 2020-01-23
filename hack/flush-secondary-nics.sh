@@ -10,16 +10,17 @@
 
 script_dir=$(dirname "$(readlink -f "$0")")
 ssh=$script_dir/../kubevirtci/cluster-up/ssh.sh
+kubectl=$script_dir/../kubevirtci/cluster-up/kubectl.sh
 
-# TODO: flush IPs at okd/ocp provider too.
-if [[ "$KUBEVIRT_PROVIDER" =~ k8s ]]; then
-    for node in $($KUBECTL get nodes --no-headers | awk '{print $1}'); do
-        for n in $(seq 1 $KUBEVIRT_NUM_SECONDARY_NICS); do
-            echo "$node: Flushing nic $n"
-            $ssh $node -- sudo nmcli con del "\"Wired connection $n\""
-        done
-        echo "$node: restoring resolv.conf config"
-        $ssh $node -- sudo dhclient -r eth0
-        $ssh $node -- sudo dhclient eth0
+for node in $($kubectl get nodes --no-headers | awk '{print $1}'); do
+    for nic in $FIRST_SECONDARY_NIC $SECOND_SECONDARY_NIC; do
+	uuid=$($ssh $node -- nmcli --fields=device,uuid  c show  |grep $nic|awk '{print $2}')
+	if [ ! -z "$uuid" ]; then
+        	echo "$node: Flushing nic $nic"
+        	$ssh $node -- sudo nmcli con del $uuid
+	fi
     done
-fi
+    echo "$node: restoring resolv.conf config"
+    $ssh $node -- sudo dhclient -r $PRIMARY_NIC
+    $ssh $node -- sudo dhclient $PRIMARY_NIC
+done

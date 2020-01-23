@@ -30,7 +30,9 @@ func runAtNodeWithExtras(node string, quiet bool, command ...string) (string, er
 	output, err := run("./kubevirtci/cluster-up/ssh.sh", quiet, ssh_command...)
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
-	output = strings.Join(outputLines[2:], "\n")
+	if len(outputLines) > 2 {
+		output = strings.Join(outputLines[2:], "\n")
+	}
 	return output, err
 }
 

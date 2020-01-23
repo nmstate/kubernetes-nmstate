@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -31,9 +30,9 @@ var (
 	startTime            time.Time
 	bond1                string
 	bridge1              string
-	primaryNic           = flag.String("primaryNic", "eth0", "Primary network interface name")
-	firstSecondaryNic    = flag.String("firstSecondaryNic", "eth1", "First secondary network interface name")
-	secondSecondaryNic   = flag.String("secondSecondaryNic", "eth2", "Second secondary network interface name")
+	primaryNic           string
+	firstSecondaryNic    string
+	secondSecondaryNic   string
 	nodesInterfacesState = make(map[string][]byte)
 	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
 )
@@ -48,7 +47,18 @@ var _ = BeforeSuite(func() {
 })
 
 func TestMain(m *testing.M) {
+	primaryNic = getEnv("PRIMARY_NIC", "eth0")
+	firstSecondaryNic = getEnv("FIRST_SECONDARY_NIC", "eth1")
+	secondSecondaryNic = getEnv("SECOND_SECONDARY_NIC", "eth2")
 	framework.MainEntry(m)
+}
+
+func getEnv(name string, defaultValue string) string {
+	value := os.Getenv(name)
+	if len(value) == 0 {
+		value = defaultValue
+	}
+	return value
 }
 
 func TestE2E(tapi *testing.T) {

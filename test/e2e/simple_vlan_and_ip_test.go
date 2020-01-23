@@ -13,16 +13,16 @@ var _ = Describe("NodeNetworkState", func() {
 		)
 
 		BeforeEach(func() {
-			updateDesiredState(ifaceUpWithVlanUp(*firstSecondaryNic, vlanId))
+			updateDesiredState(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			waitForAvailableTestPolicy()
 		})
 		AfterEach(func() {
-			updateDesiredState(vlanAbsent(*firstSecondaryNic, vlanId))
+			updateDesiredState(vlanAbsent(firstSecondaryNic, vlanId))
 			resetDesiredStateForNodes()
 		})
 		It("should have the vlan interface configured", func() {
 			for _, node := range nodes {
-				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, *firstSecondaryNic, vlanId)).Should(Equal(vlanId))
+				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)).Should(Equal(vlanId))
 			}
 		})
 	})
@@ -33,28 +33,28 @@ var _ = Describe("NodeNetworkState", func() {
 			vlanId            = "102"
 		)
 		BeforeEach(func() {
-			updateDesiredState(ifaceUpWithVlanUp(*firstSecondaryNic, vlanId))
+			updateDesiredState(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			waitForAvailableTestPolicy()
 			for index, node := range nodes {
 				ipAddress := fmt.Sprintf(ipAddressTemplate, index)
 				By(fmt.Sprintf("applying static IP %s on node %s", ipAddress, node))
-				updateDesiredStateAtNode(node, vlanUpWithStaticIP(fmt.Sprintf("%s.%s", *firstSecondaryNic, vlanId), ipAddress))
+				updateDesiredStateAtNode(node, vlanUpWithStaticIP(fmt.Sprintf("%s.%s", firstSecondaryNic, vlanId), ipAddress))
 				waitForAvailableTestPolicy()
 			}
 
 		})
 
 		AfterEach(func() {
-			updateDesiredState(vlanAbsent(*firstSecondaryNic, vlanId))
+			updateDesiredState(vlanAbsent(firstSecondaryNic, vlanId))
 			waitForAvailableTestPolicy()
 			resetDesiredStateForNodes()
 		})
 
 		It("should have the vlan interface configured and IP configured", func() {
 			for index, node := range nodes {
-				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, *firstSecondaryNic, vlanId)).
+				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)).
 					Should(Equal(vlanId))
-				ipAddressForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, *firstSecondaryNic, vlanId)).
+				ipAddressForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)).
 					Should(Equal(fmt.Sprintf(ipAddressTemplate, index)))
 			}
 		})
