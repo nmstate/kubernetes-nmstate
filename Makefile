@@ -10,7 +10,7 @@ HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
 WHAT ?= ./pkg
 
-unit_test_args ?=  -r --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
+unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
 export KUBEVIRT_PROVIDER ?= k8s-1.15.1
 export KUBEVIRT_NUM_NODES ?= 1
