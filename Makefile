@@ -173,6 +173,13 @@ $(description): version/description
 	sed "s#HANDLER_IMAGE#$(HANDLER_IMAGE)#" \
 		version/description > $@
 
+prepare-patch:
+	./hack/prepare-release.sh patch
+prepare-minor:
+	./hack/prepare-release.sh minor
+prepare-major:
+	./hack/prepare-release.sh major
+
 # This uses target specific variables [1] so we can use push-handler as a
 # dependency and change the SUFFIX with the correct version so no need for
 # calling make on make is needed.
