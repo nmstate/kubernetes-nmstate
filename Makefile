@@ -49,6 +49,7 @@ resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml d
 all: check handler
 
 check: format vet whitespace-check
+	hack/check-go-version.sh
 
 format: whitespace-format
 	gofmt -d cmd/ pkg/
