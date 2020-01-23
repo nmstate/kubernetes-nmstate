@@ -89,3 +89,49 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
         - name: ovs0`,
 		bridgeName, *firstSecondaryNic))
 }
+
+func ifaceUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+    - name: %s
+      type: ethernet
+      state: up
+      ipv4:
+        address:
+        - ip: %s
+          prefix-length: 24
+        dhcp: false
+        enabled: true
+`, iface, ipAddress))
+}
+
+func ifaceUpWithVlanUp(iface string, vlanId string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+    - name: %s.%s
+      type: vlan
+      state: up
+      vlan:
+        base-iface: %s
+        id: %s
+`, iface, vlanId, iface, vlanId))
+}
+
+func vlanAbsent(iface string, vlanId string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+    - name: %s.%s
+      type: vlan
+      state: absent
+      vlan:
+        base-iface: %s
+        id: %s
+`, iface, vlanId, iface, vlanId))
+}
+
+func ifaceDownIPv4Disabled(iface string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+    - name: %s
+      type: ethernet
+      state: down
+      ipv4:
+        enabled: false
+`, iface))
+}

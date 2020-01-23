@@ -265,7 +265,7 @@ func runAtNode(node string, command ...string) (string, error) {
 	return output, err
 }
 
-func restartNode(node string) error{
+func restartNode(node string) error {
 	By(fmt.Sprintf("Restarting node %s", node))
 	// Sync and reboot in background another way command can stuck
 	_, err := runAtNode(node, "/usr/bin/nohup /usr/bin/bash -c '/usr/bin/sync && sudo /usr/sbin/reboot -nf' > /dev/null 2>&1 &")
@@ -367,6 +367,18 @@ func interfacesNameForNode(node string) []string {
 func interfacesNameForNodeEventually(node string) AsyncAssertion {
 	return Eventually(func() []string {
 		return interfacesNameForNode(node)
+	}, ReadTimeout, ReadInterval)
+}
+
+func ipAddressForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+	return Eventually(func() string {
+		return ipv4Address(node, iface)
+	}, ReadTimeout, ReadInterval)
+}
+
+func vlanForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+	return Eventually(func() string {
+		return vlan(node, iface)
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -511,8 +523,8 @@ func dhcpFlag(node string, name string) bool {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
 
-func ipv4Address(node string, name string) string {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", name)
+func ipv4Address(node string, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
@@ -521,4 +533,8 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
+}
+func vlan(node string, iface string) string {
+	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
 }
