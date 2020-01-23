@@ -65,10 +65,10 @@ var _ = Describe("rollback", func() {
 			By("Configure a invalid default gw")
 			var address string
 			Eventually(func() string {
-				address = ipv4Address(nodes[0], *primaryNic)
+				address = ipv4Address(nodes[0], primaryNic)
 				return address
 			}, ReadTimeout, ReadInterval).ShouldNot(BeEmpty())
-			updateDesiredStateAtNode(nodes[0], badDefaultGw(address, *primaryNic))
+			updateDesiredStateAtNode(nodes[0], badDefaultGw(address, primaryNic))
 		})
 		AfterEach(func() {
 			By("Clean up desired state")
@@ -77,14 +77,14 @@ var _ = Describe("rollback", func() {
 		It("should rollback to a good gw configuration", func() {
 			By("Wait for reconcile to fail")
 			waitForDegradedTestPolicy()
-			By(fmt.Sprintf("Check that %s is rolled back", *primaryNic))
+			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
 			Eventually(func() bool {
-				return dhcpFlag(nodes[0], *primaryNic)
+				return dhcpFlag(nodes[0], primaryNic)
 			}, ReadTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
 
-			By(fmt.Sprintf("Check that %s continue with rolled back state", *primaryNic))
+			By(fmt.Sprintf("Check that %s continue with rolled back state", primaryNic))
 			Consistently(func() bool {
-				return dhcpFlag(nodes[0], *primaryNic)
+				return dhcpFlag(nodes[0], primaryNic)
 			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
 		})
 	})

@@ -151,7 +151,7 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
 //       to remove this
 func resetDesiredStateForNodes() {
-	updateDesiredState(ethernetNicUp(*primaryNic))
+	updateDesiredState(ethernetNicUp(primaryNic))
 	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
@@ -225,7 +225,11 @@ func runAtNode(node string, command ...string) (string, error) {
 	output, err := run("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
-	output = strings.Join(outputLines[2:], "\n")
+
+	// Let's not panic if the output is not as expected.
+	if len(outputLines) >= 2 {
+		output = strings.Join(outputLines[2:], "\n")
+	}
 	return output, err
 }
 
