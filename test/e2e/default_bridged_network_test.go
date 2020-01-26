@@ -8,8 +8,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/tidwall/gjson"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -130,13 +128,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 		})
 	})
 })
-
-func defaultRouteNextHopInterface(node string) AsyncAssertion {
-	return Eventually(func() string {
-		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
-		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
-	}, 15*time.Second, 1*time.Second)
-}
 
 func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
 	key := types.NamespacedName{Name: nodeName}
