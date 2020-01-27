@@ -16,8 +16,6 @@ export KUBEVIRT_PROVIDER ?= k8s-1.15.1
 export KUBEVIRT_NUM_NODES ?= 1
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
-export GOFLAGS=-mod=vendor
-export GO111MODULE=on
 
 e2e_test_args = -singleNamespace=true -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
@@ -26,10 +24,20 @@ else
 	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
 endif
 
-BIN_DIR = build/_output/bin/
-GINKGO ?= $(BIN_DIR)/ginkgo
-OPERATOR_SDK ?= $(BIN_DIR)/operator-sdk
-GITHUB_RELEASE ?= $(BIN_DIR)/github-release
+BIN_DIR = $(CURDIR)/build/_output/bin/
+
+export GOFLAGS=-mod=vendor
+export GO111MODULE=on
+export GOROOT=$(BIN_DIR)/go/
+export GOBIN=$(GOROOT)/bin/
+export PATH := $(GOROOT)/bin:$(PATH)
+
+GINKGO ?= $(GOBIN)/ginkgo
+OPERATOR_SDK ?= $(GOBIN)/operator-sdk
+GITHUB_RELEASE ?= $(GOBIN)/github-release
+GOFMT := $(GOBIN)/gofmt
+GO := $(GOBIN)/go
+
 LOCAL_REGISTRY ?= registry:5000
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
@@ -50,11 +58,11 @@ all: check handler
 
 check: format vet whitespace-check
 
-format: whitespace-format
-	gofmt -d cmd/ pkg/
+format: whitespace-format $(GO)
+	$(GOFMT) -d cmd/ pkg/
 
-vet:
-	go vet ./cmd/... ./pkg/...
+vet: $(GO)
+	$(GO) vet ./cmd/... ./pkg/...
 
 whitespace-format:
 	hack/whitespace.sh format
@@ -62,14 +70,17 @@ whitespace-format:
 whitespace-check:
 	hack/whitespace.sh check
 
-$(GINKGO): go.mod
-	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/onsi/ginkgo/ginkgo
+$(GO):
+	hack/install-go.sh $(BIN_DIR)
 
-$(OPERATOR_SDK): go.mod
-	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
+$(GINKGO): go.mod $(GO)
+	$(GO) install ./vendor/github.com/onsi/ginkgo/ginkgo
 
-$(GITHUB_RELEASE): go.mod
-	GOBIN=$$(pwd)/$(BIN_DIR) go install ./vendor/github.com/aktau/github-release
+$(OPERATOR_SDK): go.mod $(GO)
+	$(GO) install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
+
+$(GITHUB_RELEASE): go.mod $(GO)
+	$(GO) install ./vendor/github.com/aktau/github-release
 
 
 gen-k8s: $(OPERATOR_SDK)
@@ -171,7 +182,7 @@ release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_REL
 						$(shell find deploy/crds/ deploy/openshift -type f)
 
 tools-vendoring:
-	./hack/vendor-tools.sh $$(pwd)/$(BIN_DIR) $$(pwd)/tools.go
+	./hack/vendor-tools.sh $(BIN_DIR) $$(pwd)/tools.go
 
 .PHONY: \
 	all \
