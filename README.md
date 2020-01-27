@@ -105,4 +105,4 @@ through node state reporting and interface configuration.
 ## Development and Contributing
 
 Contributions are welcome! Find details about the project's design and
-development workflow in the [developer guide](docs/developer-guide.md).
+development workflow in the [developer guide](CONTRIBUTING.md).

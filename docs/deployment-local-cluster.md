@@ -12,7 +12,7 @@ the [deployment on arbitrary cluster guide](deployment-arbitrary-cluster.md).
 
 Start your local cluster. If you want to use OpenShift instead of Kubernetes or
 a different amount of nodes, check the
-[development guide](developer-guide.md#local-cluster).
+[development guide](../CONTRIBUTING.md#local-cluster).
 
 Start the local cluster
 
