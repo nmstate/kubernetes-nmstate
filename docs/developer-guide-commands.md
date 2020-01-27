@@ -22,6 +22,12 @@ make test/unit
 # Run e2e tests
 # you need a running k8s/openshift cluster with with kubernets-nmstate running
 make test/e2e
+
+# Run tests matching the regex "NodeSelector"
+make test/e2e E2E_TEST_ARGS='-ginkgo.focus=NodeSelector'
+
+# Conversely, exclude tests that match the regex "Simple\ OVS*"
+make test/e2e E2E_TEST_ARGS='--ginkgo.skip="Simple\ OVS*"'
 ```
 
 ## Containers
