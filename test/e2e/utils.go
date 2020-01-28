@@ -265,6 +265,24 @@ func runAtNode(node string, command ...string) (string, error) {
 	return output, err
 }
 
+func restartNode(node string) error{
+	By(fmt.Sprintf("Restarting node %s", node))
+	// Sync and reboot in background another way command can stuck
+	_, err := runAtNode(node, "/usr/bin/nohup /usr/bin/bash -c '/usr/bin/sync && sudo /usr/sbin/reboot -nf' > /dev/null 2>&1 &")
+	Expect(err).ToNot(HaveOccurred())
+	By(fmt.Sprintf("Waiting till node %s is rebooted", node))
+	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
+	Eventually(func() string {
+		output, err := runAtNode(node, "uptime", "-p")
+		if err != nil {
+			return "not yet"
+		}
+		return output
+	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
+
+	return nil
+}
+
 func kubectl(arguments ...string) (string, error) {
 	return run("./kubevirtci/cluster-up/kubectl.sh", arguments...)
 }
@@ -496,4 +514,11 @@ func dhcpFlag(node string, name string) bool {
 func ipv4Address(node string, name string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", name)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
+func defaultRouteNextHopInterface(node string) AsyncAssertion {
+	return Eventually(func() string {
+		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
+		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+	}, 15*time.Second, 1*time.Second)
 }
