@@ -13,6 +13,7 @@ exit 0
 teardown() {
     make cluster-down
     cp $(find . -name "*junit*.xml") $ARTIFACTS
+    [ -d ${E2E_LOGS} ] && cp ${E2E_LOGS}/*.log ${ARTIFACTS}
 }
 
 main() {
