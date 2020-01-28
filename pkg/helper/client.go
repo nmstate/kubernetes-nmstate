@@ -210,7 +210,8 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 			return false, errors.Wrap(err, "getting config")
 		}
 		// Since we are going to retrieve Nodes default schema is good
-		// enough
+		// enough, also align timeout with poll
+		config.Timeout = timeout
 		client, err := client.New(config, client.Options{})
 		if err != nil {
 			return false, errors.Wrap(err, "creating new custom client")

@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 organization=kubevirt
-commit="effb245dc018e7f502119c1e9f30e703ae8bbe14"
+commit="9b8707c02d59ee1a7924103b6beca9b9cd010633"
 
 script_dir=$(dirname "$(readlink -f "$0")")
 kubevirtci_dir=kubevirtci
