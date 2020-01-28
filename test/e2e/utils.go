@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -40,39 +42,70 @@ var (
 	bondConunter  = 0
 )
 
-func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) error {
+func writePodsLogs(namespace string, sinceTime time.Time, testFailed bool) error {
 	if framework.Global.LocalOperator {
 		return nil
 	}
+	OpenTestLogFile("pod", func(writer io.ReadWriteCloser){
+		podLogOpts := corev1.PodLogOptions{}
+		podLogOpts.SinceTime = &metav1.Time{sinceTime}
+		podList := &corev1.PodList{}
+		err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
+		Expect(err).ToNot(HaveOccurred())
+		podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
 
-	podLogOpts := corev1.PodLogOptions{}
-	podLogOpts.SinceTime = &metav1.Time{sinceTime}
-	podList := &corev1.PodList{}
-	err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
-	Expect(err).ToNot(HaveOccurred())
-	podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
-
-	for _, pod := range podList.Items {
-		appLabel, hasAppLabel := pod.Labels["app"]
-		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
-			continue
+		for _, pod := range podList.Items {
+			appLabel, hasAppLabel := pod.Labels["app"]
+			if !hasAppLabel || appLabel != "kubernetes-nmstate" {
+				continue
+			}
+			req := podsClientset.GetLogs(pod.Name, &podLogOpts)
+			podLogs, err := req.Stream()
+			if err != nil {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("error in opening stream: %v\n", err))
+				continue
+			}
+			defer podLogs.Close()
+			rawLogs, err := ioutil.ReadAll(podLogs)
+			if err != nil {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
+				continue
+			}
+			formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
+			io.WriteString(writer, formattedLogs)
+			// If test failed print pods logs to screen
+			if testFailed{
+				io.WriteString(GinkgoWriter, formattedLogs)
+			}
 		}
-		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
-		podLogs, err := req.Stream()
-		if err != nil {
-			io.WriteString(writer, fmt.Sprintf("error in opening stream: %v\n", err))
-			continue
-		}
-		defer podLogs.Close()
-		rawLogs, err := ioutil.ReadAll(podLogs)
-		if err != nil {
-			io.WriteString(writer, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
-			continue
-		}
-		formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
-		io.WriteString(writer, formattedLogs)
-	}
+	})
 	return nil
+}
+
+func printDeviceStatus(node string) {
+	output, err := runAtNode(node, "nmcli", "c", "s")
+	Expect(err).ToNot(HaveOccurred())
+	GinkgoWriter.Write([]byte(fmt.Sprintf("\n***** Connection status on node %s *****\n\n %s", node, output)))
+	GinkgoWriter.Write([]byte(fmt.Sprintf("\n***** Done Connection status on node %s*****\n", node)))
+
+	output, err = runAtNode(node, "nmcli", "d", "s")
+	Expect(err).ToNot(HaveOccurred())
+	GinkgoWriter.Write([]byte(fmt.Sprintf("\n***** Device status on node %s ***** \n\n %s", node, output)))
+	GinkgoWriter.Write([]byte(fmt.Sprintf("\n***** Done device status on node %s *****\n", node)))
+	output, err = runAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
+	Expect(err).ToNot(HaveOccurred())
+	GinkgoWriter.Write([]byte(fmt.Sprintf("\n***** Configured ipv4 ips on devices on node %s *****\n\n %s", node, output)))
+	GinkgoWriter.Write([]byte(fmt.Sprintf("\n***** Done ip status on node %s *****\n", node)))
+}
+
+func writeNetworkManagerLogs(node string, sinceSeconds int){
+	OpenTestLogFile("netmanger", func(writer io.ReadWriteCloser) {
+		output, err := runAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
+			"--since", fmt.Sprintf("'%ds ago'", sinceSeconds))
+		Expect(err).ToNot(HaveOccurred())
+		writer.Write([]byte(fmt.Sprintf("\n***** Journalctl for net manager on node %s *****\n\n %s", node, output)))
+		writer.Write([]byte(fmt.Sprintf("\n***** Done net manager logs on node %s *****\n", node)))
+	})
 }
 
 func interfacesName(interfaces []interface{}) []string {
@@ -534,7 +567,30 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
+
 func vlan(node string, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
+}
+
+func OpenTestLogFile(logType string, cb func(f io.ReadWriteCloser)){
+	name := fmt.Sprintf("test_logs/e2e/%s_%s.log", getTestName(), logType)
+	fi, err := os.Create(name)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+	defer func() {
+		if err := fi.Close(); err != nil {
+			fmt.Println(err)
+			return
+		}
+	}()
+	cb(fi)
+}
+
+
+func getTestName() string{
+	fileName := path.Base(CurrentGinkgoTestDescription().FileName)
+	return strings.TrimSuffix(fileName, ".go")
 }

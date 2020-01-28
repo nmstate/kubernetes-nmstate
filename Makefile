@@ -101,6 +101,7 @@ test/unit: $(GINKGO)
 test/e2e: $(OPERATOR_SDK)
 	# We have to unset mod=vendor here since operator-sdk is already
 	# building with it, and go tool fail if it's specified twice
+	mkdir -p test_logs/e2e
 	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace nmstate \

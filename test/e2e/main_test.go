@@ -65,14 +65,23 @@ func TestE2E(tapi *testing.T) {
 }
 
 var _ = BeforeEach(func() {
+
 	bond1 = nextBond()
 	bridge1 = nextBridge()
 	_, namespace = prepare(t)
 	startTime = time.Now()
+	for _, node := range nodes{
+		printDeviceStatus(node)
+	}
+
 })
 
 var _ = AfterEach(func() {
-	writePodsLogs(namespace, startTime, GinkgoWriter)
+	writePodsLogs(namespace, startTime, CurrentGinkgoTestDescription().Failed)
+	for _, node := range nodes{
+		printDeviceStatus(node)
+		writeNetworkManagerLogs(node, 10 + int(CurrentGinkgoTestDescription().Duration.Seconds()))
+	}
 })
 
 func getMaxFailsFromEnv() int {
