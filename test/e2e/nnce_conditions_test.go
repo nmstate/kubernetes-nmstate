@@ -105,6 +105,9 @@ var _ = Describe("EnactmentCondition", func() {
 		})
 
 		AfterEach(func() {
+			By("Remove the bridge")
+			updateDesiredState(linuxBrAbsent(bridge1))
+			waitForAvailableTestPolicy()
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
