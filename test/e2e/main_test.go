@@ -59,7 +59,7 @@ func TestMain(m *testing.M) {
 func TestE2E(tapi *testing.T) {
 	t = tapi
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("junit.e2e.xml")
+	junitReporter := reporters.NewJUnitReporter("junit.functest.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", []Reporter{junitReporter})
 
 }
