@@ -57,6 +57,18 @@ spec:
                 configMapKeyRef:
                   name: nmstate-config
                   key: interfaces_filter
+          ports:
+          - containerPort: 9440
+            name: healthz
+            protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthz
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
