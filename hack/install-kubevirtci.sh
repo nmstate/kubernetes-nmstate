@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-organization=kubevirtci
-commit="db3913a3a919bbc20c3b7044dffc70c009fdc3bd"
+organization=qinqon
+commit="ssh-sh-over-container"
 
 script_dir=$(dirname "$(readlink -f "$0")")
 kubevirtci_dir=kubevirtci
