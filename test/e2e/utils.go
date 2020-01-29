@@ -339,6 +339,12 @@ func deleteConnectionAtNodes(name string) []error {
 	return errs
 }
 
+func deleteDeviceAtNode(node string, name string) error {
+	By(fmt.Sprintf("Delete device %s  at node %s", name, node))
+	_, err := runAtNode(node , "sudo", "nmcli", "device", "delete", name)
+	return err
+}
+
 func interfaces(state nmstatev1alpha1.State) []interface{} {
 	var stateUnstructured map[string]interface{}
 	err := yaml.Unmarshal(state.Raw, &stateUnstructured)

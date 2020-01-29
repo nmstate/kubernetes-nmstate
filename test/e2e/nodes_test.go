@@ -31,6 +31,14 @@ var _ = Describe("Nodes", func() {
 			})
 			AfterEach(func() {
 				deleteConnectionAtNodes(expectedDummyName)
+				By("Make sure the dummy interface gets deleted")
+				for _, node := range nodes {
+					for _, iface := range interfacesNameForNode(node) {
+						if iface == expectedDummyName {
+							deleteDeviceAtNode(node, expectedDummyName)
+						}
+					}
+				}
 			})
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
