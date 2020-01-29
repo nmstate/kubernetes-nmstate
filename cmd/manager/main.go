@@ -120,10 +120,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup webhook
-	if err := webhook.AddToManager(mgr); err != nil {
-		log.Error(err, "Cannot initialize webhook")
-		os.Exit(1)
+	// Setup webhook on master only
+	if _, runWebhookServer := os.LookupEnv("RUN_WEBHOOK_SERVER"); runWebhookServer {
+		if err := webhook.AddToManager(mgr); err != nil {
+			log.Error(err, "Cannot initialize webhook")
+			os.Exit(1)
+		}
 	}
 
 	if err = serveCRMetrics(cfg); err != nil {
