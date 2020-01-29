@@ -1,54 +1,124 @@
 # Design
 
-The system is implemented as an k8s operator using the [operator-sdk](https://github.com/operator-framework/operator-sdk)
-but is deployed as a DaemonSet instead of Deployment with [filtering](https://github.com/operator-framework/operator-sdk/blob/master/doc/user/event-filtering.md) only events for the DaemonSet pod node.
+The system is implemented as an k8s operator using the
+[operator-sdk](https://github.com/operator-framework/operator-sdk) but is
+deployed as a DaemonSet instead of Deployment with
+[filtering](https://github.com/operator-framework/operator-sdk/blob/master/doc/user/event-filtering.md)
+only events for the DaemonSet pod node.
 
-There are two controllers one for [Node](https://godoc.org/k8s.io/api/core/v1#Node)
-and the other for the CRD NodeNeworkState.
-
-## Components
-
-- [Node Controller](docs/developer-guide-node.md) - developer guide and design of `Node` handler.
-- [NodeNetworkState Controller](docs/developer-guide-state.md) - developer guide and design of `NodeNetworkState` handler.
-- [NodeNetworkConfigurationPolicy Controller](docs/developer-guide-policy.md) - developer guide and design of `NodeNetworkConfigurationPolicy` handler.
 
 # Development
 
-[Development guide](docs/developer-guide-commands.md) is a go-to reference point for
-development helper commands, building, testing, container images and local
-cluster.
+## Local Kubernetes cluster
+
+See [local virtualized cluster guide](docs/deployment-local-cluster.md) to learn
+how to deploy a cluster that can be used to try kubernetes-nmstate, run e2e
+tests and perform debugging.
+
+## Building
+
+```shell
+# If pkg/apis/ has been changed, run generator to update client code
+make gen-k8s gen-openapi
+
+# Build handler operator (both its binary and docker image)
+make handler
+```
+
+## Testing
+
+```shell
+# Static checking
+make check
+
+# Run unit tests
+make test/unit
+
+# Run e2e tests, you need a running k8s/openshift cluster with with kubernets-nmstate running.
+make test/e2e
+
+# Run tests matching the regex "NodeSelector"
+make test/e2e E2E_TEST_ARGS='-ginkgo.focus=NodeSelector'
+
+# Conversely, exclude tests that match the regex "Simple\ OVS*"
+make test/e2e E2E_TEST_ARGS='--ginkgo.skip="Simple\ OVS*"'
+```
+
+## Publishing containers
+
+```shell
+# Push nmstate-handler container to remote registry
+make push-handler
+```
+
+It is possible to adjust the built container images with the following
+environment variables.
+
+```shell
+IMAGE_REGISTRY # quay.io
+IMAGE_REPO # nmstate
+
+HANDLER_IMAGE_NAME # kubernetes-nmstate-handler
+HANDLER_IMAGE_TAG # latest
+```
+
+## Manifests
+
+The operator `operator.yaml` manifest from the `deploy` folder is a template to
+be able to replace the with correct docker image to use.
+
+Everytime cluster-sync is called it will regenerate the operator yaml with
+correct kubernets-nmstate-handler image and apply it.
+
 
 # Open a Pull Request
-Kubernetes-nmstate generally follows the [standard github pull request process](https://gist.github.com/Chaser324/ce0505fbed06b947d962), but there is a layer of additional specific differences:
 
-The first difference you'll see is that a bot will begin applying structured labels to your PR.
+kubernetes-nmstate generally follows the [standard github pull request
+process](https://gist.github.com/Chaser324/ce0505fbed06b947d962), but there is a
+layer of additional specific differences:
 
-The bot may also make some helpful suggestions for commands to run in your PR to facilitate review.
-These /command options can be entered in comments to trigger auto-labeling and notifications. Refer to its command reference documentation.
+The first difference you'll see is that a bot will begin applying structured
+labels to your PR.
+
+The bot may also make some helpful suggestions for commands to run in your PR to
+facilitate review. These `/command` options can be entered in comments to
+trigger auto-labeling and notifications. Refer to its command reference
+documentation.
 
 Common new contributor PR issues are:
 
-Missing DCO sign-off:
-    Developers Certificate of Origin (DCO) Sign-off is a requirement for getting patches into the project (see [Developers Certificate of Origin](https://developercertificate.org/)).
-    You can "sign" this certificate by including a line in the git commit of "Signed-off-by: Legal Name <email-address>".
-    If you forgot to add the sign-off, you can also amend your commit with the sign-off:
-    `git commit --amend -s`.
+- Missing DCO sign-off:\
+  Developers Certificate of Origin (DCO) Sign-off is a requirement for getting
+  patches into the project (see [Developers Certificate of
+  Origin](https://developercertificate.org/)). You can "sign" this certificate
+  by including a line in the git commit of "Signed-off-by: Legal Name
+  <email-address>". If you forgot to add the sign-off, you can also amend your
+  commit with the sign-off: `git commit --amend -s`.
 
 ## Code Review
 
-To make it easier for your PR to receive reviews, consider the reviewers will need you to:
+To make it easier for your PR to receive reviews, consider the reviewers will
+need you to:
 
-- Follow the project [coding conventions](https://github.com/golang/go/wiki/CodeReviewComments).
+- Follow the project [coding
+  conventions](https://github.com/golang/go/wiki/CodeReviewComments).
 - Write [good commit messages](https://chris.beams.io/posts/git-commit/).
-- Break large changes into a logical series of smaller patches which individually make easily understandable changes, and in aggregate solve a broader issue.
+- Break large changes into a logical series of smaller patches which
+  individually make easily understandable changes, and in aggregate solve a
+  broader issue.
 
 ## Best Practices
 
 - Write clear and meaningful git commit messages.
-- If the PR will *completely* fix a specific issue, include `fixes #123` in the PR body (where 123 is the specific issue number the PR will fix. This will automatically close the issue when the PR is merged.
-- Make sure you don't include `@mentions` or `fixes` keywords in your git commit messages. These should be included in the PR body instead.
-- When you make a PR for small change (such as fixing a typo, style change, or grammar fix), please squash your commits so that we can maintain a cleaner git history.
-- Make sure you include a clear and detailed PR description explaining the reasons for the changes, and ensuring there is sufficient information for the reviewer to understand your PR.
+- If the PR will *completely* fix a specific issue, include `fixes #123` in the
+  PR body (where `123` is the specific issue number the PR will fix. This will
+  automatically close the issue when the PR is merged.
+- Make sure you don't include `@mentions` or `fixes` keywords in your git commit
+  messages. These should be included in the PR body instead.
+- Make sure you include a clear and detailed PR description explaining the
+  reasons for the changes, and ensuring there is sufficient information for the
+  reviewer to understand your PR.
+
 
 # Releasing
 
@@ -62,5 +132,5 @@ So the step would be:
  - Merge it to master
  - Call `make release` from master
 
-The environment variable GITHUB_TOKEN is needed to publish at GitHub and it must
+The environment variable `GITHUB_TOKEN` is needed to publish at GitHub and it must
 point to a token generated by github to access projects.
