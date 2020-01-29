@@ -36,6 +36,7 @@ var (
 	secondSecondaryNic   = flag.String("secondSecondaryNic", "eth2", "Second secondary network interface name")
 	nodesInterfacesState = make(map[string][]byte)
 	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
+	reporter             = NewKubernetesNMStateReporter("test_logs/e2e")
 )
 
 var _ = BeforeSuite(func() {
@@ -48,6 +49,7 @@ var _ = BeforeSuite(func() {
 	nodeList := corev1.NodeList{}
 	err = framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
+	reporter.BeforeSuiteDidRun()
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
@@ -75,6 +77,7 @@ var _ = BeforeEach(func() {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		nodesInterfacesState[node] = nodeState
 	}
+	reporter.dumpStateBeforeEach(getTestName())
 
 })
 
@@ -83,8 +86,8 @@ var _ = AfterEach(func() {
 	for _, node := range nodes {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		Expect(nodesInterfacesState[node]).Should(MatchJSON(nodeState))
-		writePodsLogs(namespace, startTime, GinkgoWriter)
 	}
+	reporter.dumpStateAfterEach(getTestName(), namespace, startTime)
 })
 
 func getMaxFailsFromEnv() int {

@@ -81,4 +81,8 @@ tags
 ### VisualStudioCode ###
 .vscode/*
 .history
+
+### Test logs ###
+test_logs
+
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode

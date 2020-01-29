@@ -9,6 +9,7 @@ rm -rf $tmp_dir
 mkdir -p $tmp_dir
 
 export TMP_PROJECT_PATH=$tmp_dir/kubernetes-nmstate
+export E2E_LOGS=${TMP_PROJECT_PATH}/test_logs/e2e
 export ARTIFACTS=${ARTIFACTS-$tmp_dir/artifacts}
 mkdir -p $ARTIFACTS
 
