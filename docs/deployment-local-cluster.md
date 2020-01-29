@@ -27,7 +27,9 @@ Stop the local cluster
 make cluster-down
 ```
 
-Build kubernetes-nmstate from local sources and install it on the cluster.
+Build kubernetes-nmstate from local sources and install it on the cluster. This
+command can be executed repeatedly in order to install changed sources to the
+cluster.
 
 ```shell
 make cluster-sync
