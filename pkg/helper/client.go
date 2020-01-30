@@ -214,11 +214,13 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 		config.Timeout = timeout
 		client, err := client.New(config, client.Options{})
 		if err != nil {
-			return false, errors.Wrap(err, "creating new custom client")
+			log.Error(err, "failed to creating new custom client")
+			return false, nil
 		}
 		err = client.Get(context.TODO(), types.NamespacedName{Name: metav1.NamespaceDefault}, &corev1.Namespace{})
 		if err != nil {
-			return false, errors.Wrap(err, "reaching to apiserver failed")
+			log.Error(err, "failed reaching the apiserver")
+			return false, nil
 		}
 		return true, nil
 	})
@@ -229,18 +231,20 @@ func defaultGw() (string, error) {
 	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout*time.Second, func() (bool, error) {
 		observedStateRaw, err := show()
 		if err != nil {
-			return false, fmt.Errorf("error running nmstatectl show: %v", err)
+			log.Error(err, fmt.Sprintf("failed retrieving current state"))
+			return false, nil
 		}
 
 		currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
 		if err != nil {
-			return false, fmt.Errorf("Impossible to convert current state to JSON: %v", err)
+			return false, errors.Wrap(err, "failed to convert current state to JSON")
 		}
 
-		defaultGw = gjson.ParseBytes([]byte(currentState)).
+		defaultGw = gjson.ParseBytes(currentState).
 			Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
 		if defaultGw == "" {
-			return false, fmt.Errorf("Impossible to retrieve default gw, state: %s", string(observedStateRaw))
+			log.Info("default gw missing", "state", currentState)
+			return false, nil
 		}
 
 		return true, nil
