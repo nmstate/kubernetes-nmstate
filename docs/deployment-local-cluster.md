@@ -53,6 +53,6 @@ If you want to use `kubectl` to access the cluster, start a proxy.
 kubevirtci/cluster-up/kubectl.sh proxy --port=8080 --disable-filter=true &
 ```
 
-You can stop here and play with the cluster on your own or continue with the other
-[user guides](user-guide.md) that will guide you through requesting of node
-interfaces and their configuration.
+You can stop here and play with the cluster on your own or continue with the
+other [user guides](../README.md#deployment-and-usage) that will guide you
+through requesting of node interfaces and their configuration.

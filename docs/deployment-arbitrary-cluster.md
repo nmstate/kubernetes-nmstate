@@ -40,5 +40,5 @@ Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
 please use [Cluster Network Addons Operator Project](https://github.com/kubevirt/cluster-network-addons-operator#nmstate).
 
 You can stop here and play with the cluster on your own or continue with one of
-the [user guides](user-guide.md) that will guide you through requesting node
-network states and configuring the nodes.
+the [user guides](../README.md#deployment-and-usage) that will guide you through
+requesting node network states and configuring the nodes.
