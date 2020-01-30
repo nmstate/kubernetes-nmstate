@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -338,6 +339,12 @@ func deleteConnectionAtNodes(name string) []error {
 	return errs
 }
 
+func deleteDeviceAtNode(node string, name string) error {
+	By(fmt.Sprintf("Delete device %s  at node %s", name, node))
+	_, err := runAtNode(node , "sudo", "nmcli", "device", "delete", name)
+	return err
+}
+
 func interfaces(state nmstatev1alpha1.State) []interface{} {
 	var stateUnstructured map[string]interface{}
 	err := yaml.Unmarshal(state.Raw, &stateUnstructured)
@@ -521,6 +528,43 @@ func currentStateJSON(node string) []byte {
 func dhcpFlag(node string, name string) bool {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.dhcp", name)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
+}
+
+func ifaceInSlice(ifaceName string, names []string) bool{
+	for _, name := range names{
+		if ifaceName == name{
+			return true
+		}
+	}
+	return false
+}
+
+// return a json with all node interfaces and their state e.g.
+//{"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
+// use exclude to filter out interfaces you don't care about
+func nodeInterfacesState(node string, exclude []string) []byte {
+	var currentStateYaml nmstatev1alpha1.State
+	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+
+	interfaces := interfaces(currentStateYaml)
+	ifacesState := make(map[string]string)
+	for _, iface := range interfaces {
+		name, hasName := iface.(map[string]interface{})["name"]
+		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
+		if ifaceInSlice(name.(string), exclude){
+			continue
+		}
+		state, hasState := iface.(map[string]interface{})["state"]
+		if !hasState{
+			state = "unknown"
+		}
+		ifacesState[name.(string)] = state.(string)
+	}
+	ret, err := json.Marshal(ifacesState)
+	if err != nil{
+		return []byte{}
+	}
+	return ret
 }
 
 func ipv4Address(node string, iface string) string {

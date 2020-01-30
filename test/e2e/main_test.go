@@ -24,16 +24,18 @@ import (
 )
 
 var (
-	f                  = framework.Global
-	t                  *testing.T
-	namespace          string
-	nodes              []string
-	startTime          time.Time
-	bond1              string
-	bridge1            string
-	primaryNic         = flag.String("primaryNic", "eth0", "Primary network interface name")
-	firstSecondaryNic  = flag.String("firstSecondaryNic", "eth1", "First secondary network interface name")
-	secondSecondaryNic = flag.String("secondSecondaryNic", "eth2", "Second secondary network interface name")
+	f                    = framework.Global
+	t                    *testing.T
+	namespace            string
+	nodes                []string
+	startTime            time.Time
+	bond1                string
+	bridge1              string
+	primaryNic           = flag.String("primaryNic", "eth0", "Primary network interface name")
+	firstSecondaryNic    = flag.String("firstSecondaryNic", "eth1", "First secondary network interface name")
+	secondSecondaryNic   = flag.String("secondSecondaryNic", "eth2", "Second secondary network interface name")
+	nodesInterfacesState = make(map[string][]byte)
+	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
 )
 
 var _ = BeforeSuite(func() {
@@ -46,7 +48,6 @@ var _ = BeforeSuite(func() {
 	nodeList := corev1.NodeList{}
 	err = framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
-
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
@@ -69,10 +70,21 @@ var _ = BeforeEach(func() {
 	bridge1 = nextBridge()
 	_, namespace = prepare(t)
 	startTime = time.Now()
+	By("Getting nodes initial state")
+	for _, node := range nodes {
+		nodeState := nodeInterfacesState(node, interfacesToIgnore)
+		nodesInterfacesState[node] = nodeState
+	}
+
 })
 
 var _ = AfterEach(func() {
-	writePodsLogs(namespace, startTime, GinkgoWriter)
+	By("Verifying initial state")
+	for _, node := range nodes {
+		nodeState := nodeInterfacesState(node, interfacesToIgnore)
+		Expect(nodesInterfacesState[node]).Should(MatchJSON(nodeState))
+		writePodsLogs(namespace, startTime, GinkgoWriter)
+	}
 })
 
 func getMaxFailsFromEnv() int {
