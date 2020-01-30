@@ -35,9 +35,9 @@ var (
 
 const nmstateCommand = "nmstatectl"
 const vlanFilteringCommand = "vlan-filtering"
-const defaultGwRetrieveTimeout = 120
-const defaultGwProbeTimeout = 120
-const apiServerProbeTimeout = 120
+const defaultGwRetrieveTimeout = 120 * time.Second
+const defaultGwProbeTimeout = 120 * time.Second
+const apiServerProbeTimeout = 120 * time.Second
 
 var (
 	interfacesFilterGlob glob.Glob
@@ -112,7 +112,7 @@ func set(desiredState nmstatev1alpha1.State) (string, error) {
 		// commit timeout doubles the default gw ping probe timeout, to
 		// ensure the Checkpoint is alive before rolling it back
 		// https://nmstate.github.io/cli_guide#manual-transaction-control
-		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(defaultGwProbeTimeout * 2)}, string(desiredState.Raw))
+		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(defaultGwProbeTimeout.Seconds()) * 2)}, string(desiredState.Raw))
 		if err == nil {
 			log.Info(fmt.Sprintf("nmstatectl set recovered, output: %s", output))
 			break
@@ -228,7 +228,7 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 
 func defaultGw() (string, error) {
 	defaultGw := ""
-	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout*time.Second, func() (bool, error) {
+	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout, func() (bool, error) {
 		observedStateRaw, err := show()
 		if err != nil {
 			log.Error(err, fmt.Sprintf("failed retrieving current state"))
@@ -290,12 +290,12 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	}
 
 	// TODO: Make ping timeout configurable with a config map
-	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout*time.Second)
+	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout)
 	if err != nil {
 		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
 
-	err = checkApiServerConnectivity(apiServerProbeTimeout * time.Second)
+	err = checkApiServerConnectivity(apiServerProbeTimeout)
 	if err != nil {
 		return "", rollback(fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
