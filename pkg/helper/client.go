@@ -226,7 +226,7 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 
 func defaultGw() (string, error) {
 	defaultGw := ""
-	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout, func() (bool, error) {
+	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout*time.Second, func() (bool, error) {
 		observedStateRaw, err := show()
 		if err != nil {
 			return false, fmt.Errorf("error running nmstatectl show: %v", err)
