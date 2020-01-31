@@ -93,16 +93,16 @@ func (r *KubernetesNMStateReporter) logDeviceStatus(testName string) {
 	r.OpenTestLogFile("deviceStatus", testName, func(writer io.ReadWriteCloser) {
 		writer.Write([]byte(fmt.Sprintf("\n***** Start printing device status *****\n\n")))
 		for _, node := range nodes {
-			output, err := runAtNode(node, "/usr/bin/nmcli", "c", "s")
+			output, err := runQuiteAtNode(node, "/usr/bin/nmcli", "c", "s")
 			Expect(err).ToNot(HaveOccurred())
 			writer.Write([]byte(fmt.Sprintf("\n***** Connection status on node %s *****\n\n %s", node, output)))
 			writer.Write([]byte(fmt.Sprintf("\n***** Done Connection status on node %s*****\n", node)))
 
-			output, err = runAtNode(node, "/usr/bin/nmcli", "d", "s")
+			output, err = runQuiteAtNode(node, "/usr/bin/nmcli", "d", "s")
 			Expect(err).ToNot(HaveOccurred())
 			writer.Write([]byte(fmt.Sprintf("\n***** Device status on node %s ***** \n\n %s", node, output)))
 			writer.Write([]byte(fmt.Sprintf("\n***** Done device status on node %s *****\n", node)))
-			output, err = runAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
+			output, err = runQuiteAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
 			Expect(err).ToNot(HaveOccurred())
 			writer.Write([]byte(fmt.Sprintf("\n***** Configured ipv4 ips on devices on node %s *****\n\n %s", node, output)))
 			writer.Write([]byte(fmt.Sprintf("\n***** Done ip status on node %s *****\n", node)))
@@ -128,7 +128,7 @@ func (r *KubernetesNMStateReporter) Cleanup() {
 func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime time.Time) {
 	r.OpenTestLogFile("NetworkManager", testName, func(writer io.ReadWriteCloser) {
 		for _, node := range nodes {
-			output, err := runAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
+			output, err := runQuiteAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
 				"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Now().Sub(sinceTime).Seconds())))
 			Expect(err).ToNot(HaveOccurred())
 			writer.Write([]byte(fmt.Sprintf("\n***** Journalctl for NetworkManager on node %s *****\n\n %s", node, output)))

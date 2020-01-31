@@ -207,25 +207,37 @@ func deletePolicy(name string) {
 
 }
 
-func run(command string, arguments ...string) (string, error) {
+func run(command string, quiet bool, arguments ...string) (string, error) {
 	cmd := exec.Command(command, arguments...)
-	GinkgoWriter.Write([]byte(command + " " + strings.Join(arguments, " ") + "\n"))
+	if !quiet {
+		GinkgoWriter.Write([]byte(command + " " + strings.Join(arguments, " ") + "\n"))
+	}
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
 	err := cmd.Run()
-	GinkgoWriter.Write([]byte(fmt.Sprintf("stdout: %.500s...\n, stderr %s\n", stdout.String(), stderr.String())))
+	if !quiet {
+		GinkgoWriter.Write([]byte(fmt.Sprintf("stdout: %.500s...\n, stderr %s\n", stdout.String(), stderr.String())))
+	}
 	return stdout.String(), err
 }
 
-func runAtNode(node string, command ...string) (string, error) {
+func runAtNodeWithExtras(node string, quiet bool, command ...string) (string, error) {
 	ssh_command := []string{node, "--"}
 	ssh_command = append(ssh_command, command...)
-	output, err := run("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
+	output, err := run("./kubevirtci/cluster-up/ssh.sh", quiet, ssh_command...)
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
 	output = strings.Join(outputLines[2:], "\n")
 	return output, err
+}
+
+func runQuiteAtNode(node string, command ...string) (string, error) {
+	return runAtNodeWithExtras(node, true, command...)
+}
+
+func runAtNode(node string, command ...string) (string, error) {
+	return runAtNodeWithExtras(node, false, command...)
 }
 
 func restartNode(node string) error {
@@ -247,7 +259,7 @@ func restartNode(node string) error {
 }
 
 func kubectl(arguments ...string) (string, error) {
-	return run("./kubevirtci/cluster-up/kubectl.sh", arguments...)
+	return run("./kubevirtci/cluster-up/kubectl.sh", false, arguments...)
 }
 
 func nmstatePods() ([]string, error) {
