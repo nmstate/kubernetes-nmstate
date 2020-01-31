@@ -55,7 +55,8 @@ func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSumma
 
 	since := time.Now().Add(-specSummary.RunTime).Add(-5 * time.Second)
 	name := strings.Join(specSummary.ComponentTexts[1:], " ")
-	r.dumpStateAfterEach(name, since)
+	passed := specSummary.Passed()
+	r.dumpStateAfterEach(name, since, passed)
 }
 func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
 }
@@ -80,9 +81,9 @@ func runAndWait(funcs ...func()) {
 	wg.Wait()
 }
 
-func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, testStartTime time.Time) {
+func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, testStartTime time.Time, passed bool) {
 	runAndWait(
-		func() { r.logPods(testName, testStartTime) },
+		func() { r.logPods(testName, testStartTime, passed) },
 		func() { r.logDeviceStatus(testName) },
 		func() { r.logNetworkManager(testName, testStartTime) },
 	)
@@ -137,11 +138,11 @@ func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime
 	})
 }
 
-func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time) error {
+func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time, passed bool) error {
 	if framework.Global.LocalOperator {
 		return nil
 	}
-	r.OpenTestLogFile("pods", testName, func(writer io.ReadWriteCloser) {
+	podsLogFile := r.OpenTestLogFile("pods", testName, func(writer io.ReadWriteCloser) {
 		podLogOpts := corev1.PodLogOptions{}
 		podLogOpts.SinceTime = &metav1.Time{sinceTime}
 		podList := &corev1.PodList{}
@@ -170,21 +171,32 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 			io.WriteString(writer, formattedLogs)
 		}
 	})
+
+	// If spec has not pass let's print the pods logs to the GinkgoWriter so
+	// we see the failure directly at prow junit output without opening files
+	if !passed && podsLogFile != "" {
+		podsLog, err := ioutil.ReadFile(podsLogFile)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		GinkgoWriter.Write(podsLog)
+	}
 	return nil
 }
 
-func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.ReadWriteCloser)) {
+func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.ReadWriteCloser)) string {
 	name := fmt.Sprintf("%s/%s_%s.log", r.artifactsDir, testName, logType)
 	fi, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return ""
 	}
 	defer func() {
 		if err := fi.Close(); err != nil {
 			fmt.Println(err)
-			return
 		}
 	}()
 	cb(fi)
+	return name
 }
