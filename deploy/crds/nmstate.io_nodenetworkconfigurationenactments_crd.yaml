@@ -3,6 +3,11 @@ kind: CustomResourceDefinition
 metadata:
   name: nodenetworkconfigurationenactments.nmstate.io
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type=="Available")].reason
+    description: Status
+    name: Status
+    type: string
   group: nmstate.io
   names:
     kind: NodeNetworkConfigurationEnactment
