@@ -1,0 +1,62 @@
+{
+  "title": "Introduction to kubernetes-nmstate",
+  "description": "This comprehensive 101 series will guide you through all the features of kubernetes-nmstate",
+  "difficulty": "Beginner",
+  "time": "60 minutes",
+  "details": {
+    "steps": [
+      {
+        "title": "Step 1",
+        "text": "step1.md"
+      },
+      {
+        "title": "Step 2",
+        "text": "step2.md"
+      },
+      {
+        "title": "Step 3",
+        "text": "step3.md"
+      },
+      {
+        "title": "Step 4",
+        "text": "step4.md"
+      },
+      {
+        "title": "Step 5",
+        "text": "step5.md"
+      },
+      {
+        "title": "Step 6",
+        "text": "step6.md"
+      },
+      {
+        "title": "Step 7",
+        "text": "step7.md"
+      },
+      {
+        "title": "Step 8",
+        "text": "step8.md"
+      },
+      {
+        "title": "Step 9",
+        "text": "step9.md"
+      },
+      {
+        "title": "Step 10",
+        "text": "step10.md"
+      }
+    ],
+    "intro": {
+      "text": "intro.md"
+    },
+    "finish": {
+      "text": "finish.md"
+    }
+  },
+  "environment": {
+    "uilayout": "terminal"
+  },
+  "backend": {
+    "imageid": "centos-vm"
+  }
+}
