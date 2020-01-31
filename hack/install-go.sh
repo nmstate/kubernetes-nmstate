@@ -7,4 +7,4 @@ url=https://dl.google.com/go/
 
 mkdir -p $destination
 curl -L $url/$tarball -o $destination/$tarball
-tar -xvf $destination/$tarball -C $destination
+tar -xf $destination/$tarball -C $destination
