@@ -28,7 +28,7 @@ BIN_DIR = $(CURDIR)/build/_output/bin/
 
 export GOFLAGS=-mod=vendor
 export GO111MODULE=on
-export GOROOT=$(BIN_DIR)/go/
+export GOROOT ?= $(BIN_DIR)/go/
 export GOBIN=$(GOROOT)/bin/
 export PATH := $(GOROOT)/bin:$(PATH)
 
