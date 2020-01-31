@@ -39,7 +39,9 @@ Following comprehensive 101 series is the best place to start learning about all
 
 1. [State](docs/user-guide-101-reporting-state.md) -
    observe the current state of network on cluster nodes.
-2. Stay tuned for more!
+2. [Policy and Enactment](docs/user-guide-102-configuring-policy-and-enactment.md) -
+   configure networks, observe the progress and troubleshoot issues.
+3. Stay tuned for more!
 
 These ready-to-go tutorials describe how to configure various interface types:
 
