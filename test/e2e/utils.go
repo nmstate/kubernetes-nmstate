@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -252,7 +251,7 @@ func kubectl(arguments ...string) (string, error) {
 }
 
 func nmstatePods() ([]string, error) {
-	output, err := kubectl("get", "pod", "-n", namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
+	output, err := kubectl("get", "pod", "-n", framework.Global.Namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	names := strings.Split(strings.TrimSpace(output), "\n")
 	return names, err
@@ -262,7 +261,7 @@ func runAtPods(arguments ...string) {
 	nmstatePods, err := nmstatePods()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	for _, nmstatePod := range nmstatePods {
-		exec := []string{"exec", "-n", namespace, nmstatePod, "--"}
+		exec := []string{"exec", "-n", framework.Global.Namespace, nmstatePod, "--"}
 		execArguments := append(exec, arguments...)
 		_, err := kubectl(execArguments...)
 		ExpectWithOffset(1, err).ToNot(HaveOccurred())
@@ -316,8 +315,8 @@ func interfaces(state nmstatev1alpha1.State) []interface{} {
 	return interfaces
 }
 
-func currentState(namespace string, node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
+func currentState(node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
+	key := types.NamespacedName{Namespace: framework.Global.Namespace, Name: node}
 	return Eventually(func() nmstatev1alpha1.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return currentStateYaml.Raw
@@ -326,7 +325,7 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 
 func interfacesNameForNode(node string) []string {
 	var currentStateYaml nmstatev1alpha1.State
-	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 	interfaces := interfaces(currentStateYaml)
 	Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
@@ -361,7 +360,7 @@ func interfacesNameForNodeConsistently(node string) AsyncAssertion {
 func interfacesForNode(node string) AsyncAssertion {
 	return Eventually(func() []interface{} {
 		var currentStateYaml nmstatev1alpha1.State
-		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+		currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 		interfaces := interfaces(currentStateYaml)
 		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
@@ -507,7 +506,7 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 // use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) []byte {
 	var currentStateYaml nmstatev1alpha1.State
-	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 	interfaces := interfaces(currentStateYaml)
 	ifacesState := make(map[string]string)
@@ -545,9 +544,4 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 func vlan(node string, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
-}
-
-func getTestName() string {
-	fileName := path.Base(CurrentGinkgoTestDescription().FileName)
-	return strings.TrimSuffix(fileName, ".go")
 }

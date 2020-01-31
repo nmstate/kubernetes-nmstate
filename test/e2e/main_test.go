@@ -26,7 +26,6 @@ import (
 var (
 	f                    = framework.Global
 	t                    *testing.T
-	namespace            string
 	nodes                []string
 	startTime            time.Time
 	bond1                string
@@ -36,7 +35,6 @@ var (
 	secondSecondaryNic   = flag.String("secondSecondaryNic", "eth2", "Second secondary network interface name")
 	nodesInterfacesState = make(map[string][]byte)
 	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
-	reporter             = NewKubernetesNMStateReporter("test_logs/e2e")
 )
 
 var _ = BeforeSuite(func() {
@@ -49,10 +47,11 @@ var _ = BeforeSuite(func() {
 	nodeList := corev1.NodeList{}
 	err = framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
-	reporter.BeforeSuiteDidRun()
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
+
+	prepare(t)
 })
 
 func TestMain(m *testing.M) {
@@ -62,23 +61,21 @@ func TestMain(m *testing.M) {
 func TestE2E(tapi *testing.T) {
 	t = tapi
 	RegisterFailHandler(Fail)
+	knmstateReporter := NewKubernetesNMStateReporter("test_logs/e2e", framework.Global.Namespace)
 	junitReporter := reporters.NewJUnitReporter("junit.functest.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", []Reporter{junitReporter, knmstateReporter})
 
 }
 
 var _ = BeforeEach(func() {
 	bond1 = nextBond()
 	bridge1 = nextBridge()
-	_, namespace = prepare(t)
 	startTime = time.Now()
 	By("Getting nodes initial state")
 	for _, node := range nodes {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		nodesInterfacesState[node] = nodeState
 	}
-	reporter.dumpStateBeforeEach(getTestName())
-
 })
 
 var _ = AfterEach(func() {
@@ -87,7 +84,6 @@ var _ = AfterEach(func() {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		Expect(nodesInterfacesState[node]).Should(MatchJSON(nodeState))
 	}
-	reporter.dumpStateAfterEach(getTestName(), namespace, startTime)
 })
 
 func getMaxFailsFromEnv() int {

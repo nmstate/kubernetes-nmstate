@@ -3,33 +3,63 @@ package e2e
 import (
 	"context"
 	"fmt"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	"io"
 	"io/ioutil"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"os"
 	"path"
-	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"sync"
 	"time"
+
+	. "github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/types"
+	. "github.com/onsi/gomega"
+
+	framework "github.com/operator-framework/operator-sdk/pkg/test"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type KubernetesNMStateReporter struct {
 	artifactsDir string
+	namespace    string
 }
 
-func NewKubernetesNMStateReporter(artifactsDir string) *KubernetesNMStateReporter {
+func NewKubernetesNMStateReporter(artifactsDir string, namespace string) *KubernetesNMStateReporter {
 	return &KubernetesNMStateReporter{
 		artifactsDir: artifactsDir,
+		namespace:    namespace,
 	}
 }
 
-func (r *KubernetesNMStateReporter) BeforeSuiteDidRun() {
+func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
+}
+
+func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
 	r.Cleanup()
+}
+
+func (r *KubernetesNMStateReporter) SpecWillRun(specSummary *types.SpecSummary) {
+	if specSummary.Skipped() || specSummary.Pending() {
+		return
+	}
+
+	r.dumpStateBeforeEach(specSummary.SuiteID)
+}
+func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSummary) {
+	if specSummary.Skipped() || specSummary.Pending() {
+		return
+	}
+
+	since := time.Now().Add(-specSummary.RunTime).Add(-5 * time.Second)
+	name := strings.Join(specSummary.ComponentTexts[1:], " ")
+	r.dumpStateAfterEach(name, since)
+}
+func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
+}
+func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 }
 
 func (r *KubernetesNMStateReporter) dumpStateBeforeEach(testName string) {
@@ -50,9 +80,9 @@ func runAndWait(funcs ...func()) {
 	wg.Wait()
 }
 
-func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, namespace string, testStartTime time.Time) {
+func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, testStartTime time.Time) {
 	runAndWait(
-		func() { r.logPods(testName, namespace, testStartTime) },
+		func() { r.logPods(testName, testStartTime) },
 		func() { r.logDeviceStatus(testName) },
 		func() { r.logNetworkManager(testName, testStartTime) },
 	)
@@ -107,7 +137,7 @@ func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime
 	})
 }
 
-func (r *KubernetesNMStateReporter) logPods(testName string, namespace string, sinceTime time.Time) error {
+func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time) error {
 	if framework.Global.LocalOperator {
 		return nil
 	}
@@ -117,7 +147,7 @@ func (r *KubernetesNMStateReporter) logPods(testName string, namespace string, s
 		podList := &corev1.PodList{}
 		err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
 		Expect(err).ToNot(HaveOccurred())
-		podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
+		podsClientset := framework.Global.KubeClient.CoreV1().Pods(r.namespace)
 
 		for _, pod := range podList.Items {
 			appLabel, hasAppLabel := pod.Labels["app"]
