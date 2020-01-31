@@ -5,9 +5,8 @@ import (
 	"context"
 	"fmt"
 	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
-	"io"
-	"io/ioutil"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -40,41 +38,6 @@ var (
 	bridgeCounter = 0
 	bondConunter  = 0
 )
-
-func writePodsLogs(namespace string, sinceTime time.Time, writer io.Writer) error {
-	if framework.Global.LocalOperator {
-		return nil
-	}
-
-	podLogOpts := corev1.PodLogOptions{}
-	podLogOpts.SinceTime = &metav1.Time{sinceTime}
-	podList := &corev1.PodList{}
-	err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
-	Expect(err).ToNot(HaveOccurred())
-	podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
-
-	for _, pod := range podList.Items {
-		appLabel, hasAppLabel := pod.Labels["app"]
-		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
-			continue
-		}
-		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
-		podLogs, err := req.Stream()
-		if err != nil {
-			io.WriteString(writer, fmt.Sprintf("error in opening stream: %v\n", err))
-			continue
-		}
-		defer podLogs.Close()
-		rawLogs, err := ioutil.ReadAll(podLogs)
-		if err != nil {
-			io.WriteString(writer, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
-			continue
-		}
-		formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
-		io.WriteString(writer, formattedLogs)
-	}
-	return nil
-}
 
 func interfacesName(interfaces []interface{}) []string {
 	var names []string
@@ -578,7 +541,13 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
+
 func vlan(node string, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
+}
+
+func getTestName() string {
+	fileName := path.Base(CurrentGinkgoTestDescription().FileName)
+	return strings.TrimSuffix(fileName, ".go")
 }
