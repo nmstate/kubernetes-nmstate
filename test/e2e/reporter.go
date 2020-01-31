@@ -14,6 +14,7 @@ import (
 	"path"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,10 +36,26 @@ func (r *KubernetesNMStateReporter) dumpStateBeforeEach(testName string) {
 	r.logDeviceStatus(testName)
 }
 
+func runAndWait(funcs ...func()) {
+	var wg sync.WaitGroup
+	wg.Add(len(funcs))
+	for _, f := range funcs {
+		// You have to pass f to the goroutine, it's going to change
+		// at the next loop iteration.
+		go func(rf func()) {
+			rf()
+			wg.Done()
+		}(f)
+	}
+	wg.Wait()
+}
+
 func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, namespace string, testStartTime time.Time) {
-	r.logPods(testName, namespace, testStartTime)
-	r.logDeviceStatus(testName)
-	r.logNetworkManager(testName, testStartTime)
+	runAndWait(
+		func() { r.logPods(testName, namespace, testStartTime) },
+		func() { r.logDeviceStatus(testName) },
+		func() { r.logNetworkManager(testName, testStartTime) },
+	)
 }
 
 func (r *KubernetesNMStateReporter) logDeviceStatus(testName string) {
