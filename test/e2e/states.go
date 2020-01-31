@@ -135,3 +135,17 @@ func ifaceDownIPv4Disabled(iface string) nmstatev1alpha1.State {
         enabled: false
 `, iface))
 }
+
+func vlanUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+    - name: %s
+      type: vlan
+      state: up
+      ipv4:
+        address:
+        - ip: %s
+          prefix-length: 24
+        dhcp: false
+        enabled: true
+`, iface, ipAddress))
+}
