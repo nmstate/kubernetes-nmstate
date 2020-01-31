@@ -243,7 +243,7 @@ func defaultGw() (string, error) {
 		defaultGw = gjson.ParseBytes(currentState).
 			Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
 		if defaultGw == "" {
-			log.Info("default gw missing", "state", currentState)
+			log.Info("default gw missing", "state", string(currentState))
 			return false, nil
 		}
 
