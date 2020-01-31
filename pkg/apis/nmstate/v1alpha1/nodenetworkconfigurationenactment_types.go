@@ -24,6 +24,7 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationenactments,shortName=nnce,scope=Cluster
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason",description="Status"
 type NodeNetworkConfigurationEnactment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
