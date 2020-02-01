@@ -90,7 +90,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", *primaryNic))
 			}
 
-
 		})
 
 		It("should successfully move default IP address on top of the bond", func() {
@@ -114,8 +113,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 	})
 })
 
-
-func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interface{}, expectedSpecs map[string]interface{}, ip string){
+func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interface{}, expectedSpecs map[string]interface{}, ip string) {
 	interfacesForNode(node).Should(ContainElement(SatisfyAll(
 		HaveKeyWithValue("name", expectedBond["name"]),
 		HaveKeyWithValue("type", expectedBond["type"]),
@@ -129,7 +127,6 @@ func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interfa
 		return ipv4Address(node, bond1)
 	}, 30*time.Second, 1*time.Second).Should(Equal(ip), fmt.Sprintf("Interface bond1 has not take over the %s address", *primaryNic))
 }
-
 
 func resetNicStateForNodes(nicName string) {
 	updateDesiredState(ethernetNicUp(nicName))
