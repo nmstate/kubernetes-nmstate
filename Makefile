@@ -56,10 +56,9 @@ description = build/_output/description
 resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 all: check handler
 
-check: format vet whitespace-check
+check: vet whitespace-check gofmt-check
 
-format: whitespace-format $(GO)
-	$(GOFMT) -d cmd/ pkg/
+format: whitespace-format gofmt
 
 vet: $(GO)
 	$(GO) vet ./cmd/... ./pkg/...
@@ -67,8 +66,14 @@ vet: $(GO)
 whitespace-format:
 	hack/whitespace.sh format
 
+gofmt: $(GO)
+	$(GOFMT) -w cmd/ pkg/ test/e2e/
+
 whitespace-check:
 	hack/whitespace.sh check
+
+gofmt-check: $(GO)
+	test -z "`$(GOFMT) -l cmd/ pkg/ test/e2e/`" || ($(GOFMT) -l cmd/ pkg/ test/e2e/ && exit 1)
 
 $(GO):
 	hack/install-go.sh $(BIN_DIR)

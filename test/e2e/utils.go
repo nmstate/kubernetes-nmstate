@@ -304,7 +304,7 @@ func deleteConnectionAtNodes(name string) []error {
 
 func deleteDeviceAtNode(node string, name string) error {
 	By(fmt.Sprintf("Delete device %s  at node %s", name, node))
-	_, err := runAtNode(node , "sudo", "nmcli", "device", "delete", name)
+	_, err := runAtNode(node, "sudo", "nmcli", "device", "delete", name)
 	return err
 }
 
@@ -493,9 +493,9 @@ func dhcpFlag(node string, name string) bool {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
 
-func ifaceInSlice(ifaceName string, names []string) bool{
-	for _, name := range names{
-		if ifaceName == name{
+func ifaceInSlice(ifaceName string, names []string) bool {
+	for _, name := range names {
+		if ifaceName == name {
 			return true
 		}
 	}
@@ -514,17 +514,17 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
 		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
-		if ifaceInSlice(name.(string), exclude){
+		if ifaceInSlice(name.(string), exclude) {
 			continue
 		}
 		state, hasState := iface.(map[string]interface{})["state"]
-		if !hasState{
+		if !hasState {
 			state = "unknown"
 		}
 		ifacesState[name.(string)] = state.(string)
 	}
 	ret, err := json.Marshal(ifacesState)
-	if err != nil{
+	if err != nil {
 		return []byte{}
 	}
 	return ret

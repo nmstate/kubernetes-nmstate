@@ -30,7 +30,7 @@ var _ = Describe("NodeNetworkState", func() {
 	Context("when static address is configured on top of vlan interface", func() {
 		var (
 			ipAddressTemplate = "62.76.47.%d"
-			vlanId      = "102"
+			vlanId            = "102"
 		)
 		BeforeEach(func() {
 			updateDesiredState(ifaceUpWithVlanUp(*firstSecondaryNic, vlanId))
