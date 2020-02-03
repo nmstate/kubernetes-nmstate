@@ -13,7 +13,8 @@ function getDesiredNumberScheduled {
 }
 
 function getNumberAvailable {
-        echo $(${KUBECTL} get daemonset -n nmstate $1 -o=jsonpath='{.status.numberAvailable}')
+        numberAvailable=$(${KUBECTL} get daemonset -n nmstate $1 -o=jsonpath='{.status.numberAvailable}')
+        echo ${numberAvailable:-0}
 }
 
 function isOk {
