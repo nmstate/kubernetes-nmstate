@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	runner "github.com/nmstate/kubernetes-nmstate/test/e2e/runner"
 )
 
 // We cannot change routes at nmstate if the interface is with dhcp true
@@ -36,11 +37,11 @@ var _ = Describe("rollback", func() {
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
-			runAtPods("mv", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
+			runner.RunAtPods("mv", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
 		})
 		AfterEach(func() {
 			By("Rename vlan-filtering.bak to vlan-filtering to leave it as it was")
-			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
+			runner.RunAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
 			updateDesiredState(linuxBrAbsent(bridge1))
 			waitForAvailableTestPolicy()
 			resetDesiredStateForNodes()

@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/onsi/ginkgo/reporters"
+	ginkgoreporters "github.com/onsi/ginkgo/reporters"
 
 	corev1 "k8s.io/api/core/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,6 +21,7 @@ import (
 
 	apis "github.com/nmstate/kubernetes-nmstate/pkg/apis"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/e2e/reporter"
 )
 
 var (
@@ -43,14 +44,6 @@ var _ = BeforeSuite(func() {
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, nodeNetworkStateList)
 	Expect(err).ToNot(HaveOccurred())
 
-	By("Getting node list from cluster")
-	nodeList := corev1.NodeList{}
-	err = framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
-	Expect(err).ToNot(HaveOccurred())
-	for _, node := range nodeList.Items {
-		nodes = append(nodes, node.Name)
-	}
-
 	prepare(t)
 })
 
@@ -61,8 +54,16 @@ func TestMain(m *testing.M) {
 func TestE2E(tapi *testing.T) {
 	t = tapi
 	RegisterFailHandler(Fail)
-	knmstateReporter := NewKubernetesNMStateReporter("test_logs/e2e", framework.Global.Namespace)
-	junitReporter := reporters.NewJUnitReporter("junit.functest.xml")
+
+	By("Getting node list from cluster")
+	nodeList := corev1.NodeList{}
+	err := framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
+	Expect(err).ToNot(HaveOccurred())
+	for _, node := range nodeList.Items {
+		nodes = append(nodes, node.Name)
+	}
+	knmstateReporter := knmstatereporter.New("test_logs/e2e", framework.Global.Namespace, nodes)
+	junitReporter := ginkgoreporters.NewJUnitReporter("junit.functest.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", []Reporter{junitReporter, knmstateReporter})
 
 }
