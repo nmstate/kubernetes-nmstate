@@ -1,30 +1,41 @@
-v0.13.0
+v0.14.0
 
-This release add a policy overall conditions that represent
-the cluster state of a policy, also operator-sdk has being bump
-to 0.12.0
+This release include a mutating admission webhook that will ensure that
+NodeNetworkConfigurationPolicy conditions are reset after being create/modified
+by clients, that prenvets a race condition between `kubectl apply` and `kubectl wait`
+
+Another interesating feature is a new column at kubectl get nncp/nnce that shows the status:
+
+```bash
+$ ./kubevirtci/cluster-up/kubectl.sh get nncp
+NAME                                     STATUS
+example-nodenetworkconfigurationpolicy   SuccessfullyConfigured
+```
+
+The project now also use a vendored golang version that get installed if is not already
+present ander ./build. Also the features are tested with k8s 1.17.
 
 Features:
-* Add overall policy conditions (#300)
-* Add desired state field to enactments (#287)
-* Add Matching condition to enactments (#285)
-* Move enactments to a proper CRD (#279)
-* Add LastSuccessfulUpdate field to NodeNetworkState (#280)
-* Add Progressing state to enactment (#271)
-* Decouple configuration and reporting (#262)
-* Use go modules and operator sdk 0.12.0 (#246)
+* Run webhook only on master nodes (#361)
+* expose Reason on NNCP and NNCE list (#374)
+* Use k8s 1.17.0 provider (#339)
+* Pin and install go from go.mod version (#352)
+* Add conditions reset mutating webhook (#324)
+* Use enactments matching state for policy conditions calculation (#306)
 
 Bugs:
-* Retry default gw retrieval on error (#328)
-* Re-read policy at retryOnConflict (#319)
-* Force Get enacment after update (#307)
-* Fix monitoring logs (#277)
-* Override nmstate State openapi type (#268)
-* Upgrade CRDs to operator-sdk 0.12.0 (#266)
-* Remove logs from metrics after operator-sdk upgrade (#263)
+* Count seconds instead of nano for default gw retrieval (#366)
+* Use enactments matching state for policy conditions calculation (#306)
+* Call generators before handler build (#344)
+* drop user guides root (#363)
+* drop outdated guides and merge developer guide (#358)
 
 Docs:
-* Use dhcp for cluster-wide policies (#308)
+* doc: 101 state (#368)
+* Add user guide for vlan and dynamic ip policy (#354)
+* make readme straight to the point (#367)
+* Add CI infrastructure to contributing page. (#364)
+* Renamed docs/developer-guide.md to docs/CONTRIBUTING.md (#353)
 
 ```
 docker pull HANDLER_IMAGE
