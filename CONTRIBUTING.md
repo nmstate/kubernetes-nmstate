@@ -127,7 +127,8 @@ the command `make release` do all this automatically, the version  is at
 `version/version.go` and the description at `version/description`.
 
 So the step would be:
- - Change version/version.go and versions/description
+ - Prepare a release calling `make prepare-(patch|minor|major)`
+ - Edit version/description to set a description and order commits
  - Create a PR to review it
  - Merge it to master
  - Call `make release` from master
