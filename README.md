@@ -35,14 +35,18 @@ You can choose to deploy this plugin on a
 [local virtualized cluster](docs/deployment-local-cluster.md) or on your
 [arbitrary cluster](docs/deployment-arbitrary-cluster.md).
 
-After that, you can follow one of the following guides that will guide you
-through node state reporting and interface configuration.
+Following comprehensive 101 series is the best place to start learning about all the features of this operator:
 
-- [Report node network state](docs/user-guide-state-reporting.md)
-- [Configure a Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
-- [Configure a Linux bonding interface with vlan interface](docs/user-guide-policy-configure-linux-bond-with-vlans.md)
-- [Connect a Linux bridge to a node interface](docs/user-guide-policy-configure-linux-bridge.md)
-- [Connect an Open vSwitch bridge to a node interface](docs/user-guide-policy-configure-ovs-bridge.md)
+1. [State](docs/user-guide-101-reporting-state.md) -
+   observe the current state of network on cluster nodes.
+2. Stay tuned for more!
+
+These ready-to-go tutorials describe how to configure various interface types:
+
+- [Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
+- [Linux bonding interface with vlan interface](docs/user-guide-policy-configure-linux-bond-with-vlans.md)
+- [Linux bridge connected to a node interface](docs/user-guide-policy-configure-linux-bridge.md)
+- [Open vSwitch bridge connected to a node interface](docs/user-guide-policy-configure-ovs-bridge.md)
 
 # The "Why"
 
