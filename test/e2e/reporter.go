@@ -22,9 +22,14 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	separator = "*****"
+)
+
 type KubernetesNMStateReporter struct {
-	artifactsDir string
-	namespace    string
+	artifactsDir         string
+	namespace            string
+	previousDeviceStatus string
 }
 
 func NewKubernetesNMStateReporter(artifactsDir string, namespace string) *KubernetesNMStateReporter {
@@ -46,7 +51,7 @@ func (r *KubernetesNMStateReporter) SpecWillRun(specSummary *types.SpecSummary) 
 		return
 	}
 
-	r.storeStateBeforeEach(specSummary.Measurements)
+	r.storeStateBeforeEach()
 }
 func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSummary) {
 	if specSummary.Skipped() || specSummary.Pending() {
@@ -56,17 +61,16 @@ func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSumma
 	since := time.Now().Add(-specSummary.RunTime).Add(-5 * time.Second)
 	name := strings.Join(specSummary.ComponentTexts[1:], " ")
 	passed := specSummary.Passed()
-	r.dumpStateAfterEach(name, since, passed, specSummary.Measurements)
+
+	r.dumpStateAfterEach(name, since, passed)
 }
 func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
 }
 func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 }
 
-func (r *KubernetesNMStateReporter) storeStateBeforeEach(measurements map[string]*types.SpecMeasurement) {
-	measurements["device-status"] = &types.SpecMeasurement{
-		Info: deviceStatus,
-	}
+func (r *KubernetesNMStateReporter) storeStateBeforeEach() {
+	r.previousDeviceStatus = deviceStatus()
 }
 
 func runAndWait(funcs ...func()) {
@@ -83,13 +87,13 @@ func runAndWait(funcs ...func()) {
 	wg.Wait()
 }
 
-func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, testStartTime time.Time, passed bool, measurements map[string]*types.SpecMeasurement) {
+func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, testStartTime time.Time, passed bool) {
 	if passed {
 		return
 	}
 	runAndWait(
 		func() { r.logPods(testName, testStartTime) },
-		func() { r.logDeviceStatus(testName, fmt.Sprintf("%v", measurements["device-status"].Info)) },
+		func() { r.logDeviceStatus(testName) },
 		func() { r.logNetworkManager(testName, testStartTime) },
 	)
 }
@@ -99,28 +103,38 @@ func deviceStatus() string {
 	return stringBuilder.String()
 }
 func printDeviceStatus(writer io.Writer) {
-	writer.Write([]byte(fmt.Sprintf("\n***** Start printing device status *****\n\n")))
+	writeMessage(writer, banner("Start printing device status")+"\n")
+
 	for _, node := range nodes {
 		output, err := runQuiteAtNode(node, "/usr/bin/nmcli", "c", "s")
 		Expect(err).ToNot(HaveOccurred())
-		writer.Write([]byte(fmt.Sprintf("\n***** Connection status on node %s *****\n\n %s", node, output)))
-		writer.Write([]byte(fmt.Sprintf("\n***** Done Connection status on node %s*****\n", node)))
+
+		writeMessage(writer, banner("Connection status on node %s"), node)
+		writeMessage(writer, "\n %s", output)
+		writeMessage(writer, banner("Done Connection status on node %s "), node)
 
 		output, err = runQuiteAtNode(node, "/usr/bin/nmcli", "d", "s")
 		Expect(err).ToNot(HaveOccurred())
-		writer.Write([]byte(fmt.Sprintf("\n***** Device status on node %s ***** \n\n %s", node, output)))
-		writer.Write([]byte(fmt.Sprintf("\n***** Done device status on node %s *****\n", node)))
+
+		writeMessage(writer, banner("Device status on node %s"), node)
+		writeMessage(writer, "\n %s", output)
+		writeMessage(writer, banner("Done device status on node %s "), node)
+
 		output, err = runQuiteAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
 		Expect(err).ToNot(HaveOccurred())
-		writer.Write([]byte(fmt.Sprintf("\n***** Configured ipv4 ips on devices on node %s *****\n\n %s", node, output)))
-		writer.Write([]byte(fmt.Sprintf("\n***** Done ip status on node %s *****\n", node)))
+
+		writeMessage(writer, banner("Configured ipv4 ips on devices on node %s"), node)
+		writeMessage(writer, "\n %s", output)
+		writeMessage(writer, banner("Done ip status on node %s"), node)
 	}
-	writer.Write([]byte(fmt.Sprintf("\n***** Finished printing device status *****\n\n")))
+	writeMessage(writer, "Finished printing device status")
 }
 
-func (r *KubernetesNMStateReporter) logDeviceStatus(testName string, previousDeviceStatus string) {
+func (r *KubernetesNMStateReporter) logDeviceStatus(testName string) {
 	r.OpenTestLogFile("deviceStatus", testName, func(w io.Writer) {
-		w.Write([]byte(previousDeviceStatus))
+		writeMessage(w, banner("DEVICE STATUS BEFORE TEST"))
+		writeMessage(w, r.previousDeviceStatus)
+		writeMessage(w, banner("DEVICE STATUS AFTER TEST"))
 		printDeviceStatus(w)
 	})
 }
@@ -145,8 +159,9 @@ func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime
 			output, err := runQuiteAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
 				"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Now().Sub(sinceTime).Seconds())))
 			Expect(err).ToNot(HaveOccurred())
-			writer.Write([]byte(fmt.Sprintf("\n***** Journalctl for NetworkManager on node %s *****\n\n %s", node, output)))
-			writer.Write([]byte(fmt.Sprintf("\n***** Done NetworkManager logs on node %s *****\n", node)))
+			writeMessage(writer, banner("Journalctl for NetworkManager on node %s"), node)
+			writeMessage(writer, banner("\n %s"), output)
+			writeMessage(writer, banner("Done NetworkManager logs on node %s"), node)
 		}
 	})
 }
@@ -212,4 +227,21 @@ func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName str
 	}()
 	cb(fi)
 	return name
+}
+
+func banner(message string) string {
+	// Not use Sprintf so we don't have to escape expansions
+	return "\n" + separator + " " + message + " " + separator + "\n"
+}
+
+func writeString(writer io.Writer, message string) {
+	writer.Write([]byte(message))
+}
+
+func writeMessage(writer io.Writer, message string, args ...string) {
+	formattedMessage := message
+	if len(args) > 0 {
+		formattedMessage = fmt.Sprintf(formattedMessage, args)
+	}
+	writeString(writer, formattedMessage)
 }
