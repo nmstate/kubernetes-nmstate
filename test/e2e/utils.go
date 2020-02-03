@@ -1,12 +1,10 @@
 package e2e
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
 	"os/exec"
-	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -28,6 +26,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	runner "github.com/nmstate/kubernetes-nmstate/test/e2e/runner"
 )
 
 const ReadTimeout = 180 * time.Second
@@ -208,36 +207,15 @@ func deletePolicy(name string) {
 
 }
 
-func run(command string, arguments ...string) (string, error) {
-	cmd := exec.Command(command, arguments...)
-	GinkgoWriter.Write([]byte(command + " " + strings.Join(arguments, " ") + "\n"))
-	var stdout, stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
-	err := cmd.Run()
-	GinkgoWriter.Write([]byte(fmt.Sprintf("stdout: %.500s...\n, stderr %s\n", stdout.String(), stderr.String())))
-	return stdout.String(), err
-}
-
-func runAtNode(node string, command ...string) (string, error) {
-	ssh_command := []string{node, "--"}
-	ssh_command = append(ssh_command, command...)
-	output, err := run("./kubevirtci/cluster-up/ssh.sh", ssh_command...)
-	// Remove first two lines from output, ssh.sh add garbage there
-	outputLines := strings.Split(output, "\n")
-	output = strings.Join(outputLines[2:], "\n")
-	return output, err
-}
-
 func restartNode(node string) error {
 	By(fmt.Sprintf("Restarting node %s", node))
 	// Sync and reboot in background another way command can stuck
-	_, err := runAtNode(node, "/usr/bin/nohup /usr/bin/bash -c '/usr/bin/sync && sudo /usr/sbin/reboot -nf' > /dev/null 2>&1 &")
+	_, err := runner.RunAtNode(node, "/usr/bin/nohup /usr/bin/bash -c '/usr/bin/sync && sudo /usr/sbin/reboot -nf' > /dev/null 2>&1 &")
 	Expect(err).ToNot(HaveOccurred())
 	By(fmt.Sprintf("Waiting till node %s is rebooted", node))
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
 	Eventually(func() string {
-		output, err := runAtNode(node, "uptime", "-p")
+		output, err := runner.RunAtNode(node, "uptime", "-p")
 		if err != nil {
 			return "not yet"
 		}
@@ -247,42 +225,11 @@ func restartNode(node string) error {
 	return nil
 }
 
-func kubectl(arguments ...string) (string, error) {
-	return run("./kubevirtci/cluster-up/kubectl.sh", arguments...)
-}
-
-func nmstatePods() ([]string, error) {
-	output, err := kubectl("get", "pod", "-n", namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
-	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	names := strings.Split(strings.TrimSpace(output), "\n")
-	return names, err
-}
-
-func runAtPods(arguments ...string) {
-	nmstatePods, err := nmstatePods()
-	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	for _, nmstatePod := range nmstatePods {
-		exec := []string{"exec", "-n", namespace, nmstatePod, "--"}
-		execArguments := append(exec, arguments...)
-		_, err := kubectl(execArguments...)
-		ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	}
-}
-
-func runAtNodes(command ...string) (outputs []string, errs []error) {
-	for _, node := range nodes {
-		output, err := runAtNode(node, command...)
-		outputs = append(outputs, output)
-		errs = append(errs, err)
-	}
-	return outputs, errs
-}
-
 func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 	By(fmt.Sprintf("Delete bridge %s", bridgeName))
-	_, errs := runAtNodes("sudo", "ip", "link", "del", bridgeName)
+	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
 	for _, portName := range ports {
-		_, slaveErrors := runAtNodes("sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
+		_, slaveErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
 		errs = append(errs, slaveErrors...)
 	}
 	return errs
@@ -290,21 +237,21 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 
 func createDummyAtNodes(dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
-	_, errs := runAtNodes("sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
-	_, upErrs := runAtNodes("sudo", "nmcli", "con", "up", dummyName)
+	_, errs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
+	_, upErrs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
 	return errs
 }
 
 func deleteConnectionAtNodes(name string) []error {
 	By(fmt.Sprintf("Delete connection %s", name))
-	_, errs := runAtNodes("sudo", "nmcli", "con", "delete", name)
+	_, errs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", name)
 	return errs
 }
 
 func deleteDeviceAtNode(node string, name string) error {
 	By(fmt.Sprintf("Delete device %s  at node %s", name, node))
-	_, err := runAtNode(node, "sudo", "nmcli", "device", "delete", name)
+	_, err := runner.RunAtNode(node, "sudo", "nmcli", "device", "delete", name)
 	return err
 }
 
@@ -316,8 +263,8 @@ func interfaces(state nmstatev1alpha1.State) []interface{} {
 	return interfaces
 }
 
-func currentState(namespace string, node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: namespace, Name: node}
+func currentState(node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
+	key := types.NamespacedName{Namespace: framework.Global.Namespace, Name: node}
 	return Eventually(func() nmstatev1alpha1.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return currentStateYaml.Raw
@@ -326,7 +273,7 @@ func currentState(namespace string, node string, currentStateYaml *nmstatev1alph
 
 func interfacesNameForNode(node string) []string {
 	var currentStateYaml nmstatev1alpha1.State
-	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 	interfaces := interfaces(currentStateYaml)
 	Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
@@ -361,7 +308,7 @@ func interfacesNameForNodeConsistently(node string) AsyncAssertion {
 func interfacesForNode(node string) AsyncAssertion {
 	return Eventually(func() []interface{} {
 		var currentStateYaml nmstatev1alpha1.State
-		currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+		currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 		interfaces := interfaces(currentStateYaml)
 		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
@@ -378,7 +325,7 @@ func toUnstructured(y string) interface{} {
 }
 
 func bridgeVlansAtNode(node string) (string, error) {
-	return runAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
+	return runner.RunAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
 	By(fmt.Sprintf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan))
@@ -466,7 +413,7 @@ func vlansCardinality(node string, connection string) AsyncAssertion {
 
 func bridgeDescription(node string, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
-		return runAtNode(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
+		return runner.RunAtNode(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -507,7 +454,7 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 // use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) []byte {
 	var currentStateYaml nmstatev1alpha1.State
-	currentState(namespace, node, &currentStateYaml).ShouldNot(BeEmpty())
+	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 	interfaces := interfaces(currentStateYaml)
 	ifacesState := make(map[string]string)
@@ -545,9 +492,4 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 func vlan(node string, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
-}
-
-func getTestName() string {
-	fileName := path.Base(CurrentGinkgoTestDescription().FileName)
-	return strings.TrimSuffix(fileName, ".go")
 }

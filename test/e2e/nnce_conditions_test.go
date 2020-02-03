@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	runner "github.com/nmstate/kubernetes-nmstate/test/e2e/runner"
 )
 
 func invalidConfig(bridgeName string) nmstatev1alpha1.State {
@@ -24,13 +25,13 @@ var _ = Describe("EnactmentCondition", func() {
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
 			By("Add some sleep time to vlan-filtering")
-			runAtPods("cp", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
-			runAtPods("sed", "-i", "$ a\\sleep 5", "/usr/local/bin/vlan-filtering")
+			runner.RunAtPods("cp", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
+			runner.RunAtPods("sed", "-i", "$ a\\sleep 5", "/usr/local/bin/vlan-filtering")
 			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
 			By("Restore original vlan-filtering")
-			runAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
+			runner.RunAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
 
 			By("Remove the bridge")
 			updateDesiredState(linuxBrAbsent(bridge1))
