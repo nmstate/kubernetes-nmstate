@@ -26,7 +26,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	runner "github.com/nmstate/kubernetes-nmstate/test/e2e/runner"
+	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 const ReadTimeout = 180 * time.Second

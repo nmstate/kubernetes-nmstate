@@ -1,4 +1,4 @@
-package e2e
+package reporter
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	runner "github.com/nmstate/kubernetes-nmstate/test/e2e/runner"
+	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 const (
@@ -70,7 +70,7 @@ func networkManagerLogsWriter(nodes []string, sinceTime time.Time) func(io.Write
 
 func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 	podLogOpts := corev1.PodLogOptions{}
-	podLogOpts.SinceTime = &metav1.Time{sinceTime}
+	podLogOpts.SinceTime = &metav1.Time{Time: sinceTime}
 	podList := &corev1.PodList{}
 	err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
