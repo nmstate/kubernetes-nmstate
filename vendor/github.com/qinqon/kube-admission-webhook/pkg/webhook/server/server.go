@@ -1,4 +1,4 @@
-package nodenetworkconfigurationpolicy
+package server
 
 import (
 	"github.com/go-logr/logr"
@@ -9,7 +9,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	certificate "github.com/nmstate/kubernetes-nmstate/pkg/webhook/server/certificate"
+	certificate "github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate"
 )
 
 type server struct {
