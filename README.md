@@ -46,6 +46,7 @@ These ready-to-go tutorials describe how to configure various interface types:
 - [Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
 - [Linux bonding interface with vlan interface](docs/user-guide-policy-configure-linux-bond-with-vlans.md)
 - [Linux bridge connected to a node interface](docs/user-guide-policy-configure-linux-bridge.md)
+- [Vlan and IP on a node interface](docs/user-guide-policy-configure-vlan-and-dynamic-ip.md)
 - [Open vSwitch bridge connected to a node interface](docs/user-guide-policy-configure-ovs-bridge.md)
 
 # The "Why"
