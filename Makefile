@@ -61,7 +61,7 @@ check: vet whitespace-check gofmt-check
 format: whitespace-format gofmt
 
 vet: $(GO)
-	$(GO) vet ./cmd/... ./pkg/...
+	$(GO) vet ./cmd/... ./pkg/... ./test/...
 
 whitespace-format:
 	hack/whitespace.sh format

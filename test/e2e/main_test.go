@@ -21,7 +21,7 @@ import (
 
 	apis "github.com/nmstate/kubernetes-nmstate/pkg/apis"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/e2e/reporter"
+	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
 var (

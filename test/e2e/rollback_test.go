@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	runner "github.com/nmstate/kubernetes-nmstate/test/e2e/runner"
+	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 // We cannot change routes at nmstate if the interface is with dhcp true
