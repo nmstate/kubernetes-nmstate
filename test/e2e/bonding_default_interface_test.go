@@ -129,7 +129,7 @@ func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interfa
 }
 
 func resetNicStateForNodes(nicName string) {
-	updateDesiredState(ethernetNicUp(nicName))
+	updateDesiredState(ethernetNicsUp(nicName))
 	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
