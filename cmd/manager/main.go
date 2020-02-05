@@ -4,8 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"runtime"
+
+	"github.com/kelseyhightower/envconfig"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -32,6 +36,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 )
 
+type ProfilerConfig struct {
+	EnableProfiler bool   `envconfig:"ENABLE_PROFILER"`
+	ProfilerPort   string `envconfig:"PROFILER_PORT" default:"6060"`
+}
+
 // Change below variables to serve metrics on different host or port.
 var (
 	metricsHost               = "0.0.0.0"
@@ -49,7 +58,6 @@ func printVersion() {
 
 func main() {
 	var logType string
-
 	// Print V(2) logs from packages using klog
 	klog.InitFlags(nil)
 	flag.Set("v", "2")
@@ -156,8 +164,9 @@ func main() {
 		}
 	}
 
-	log.Info("Starting the Cmd.")
+	setProfiler()
 
+	log.Info("Starting the Cmd.")
 	// Start the Cmd
 	if err := mgr.Start(signals.SetupSignalHandler()); err != nil {
 		log.Error(err, "Manager exited non-zero")
@@ -185,4 +194,21 @@ func serveCRMetrics(cfg *rest.Config) error {
 		return err
 	}
 	return nil
+}
+
+// Start profiler on given port if ENABLE_PROFILER is True
+func setProfiler() {
+	cfg := ProfilerConfig{}
+	envconfig.Process("", &cfg)
+	if cfg.EnableProfiler {
+		log.Info("Starting profiler")
+		go func() {
+			profilerAddress := fmt.Sprintf("0.0.0.0:%s", cfg.ProfilerPort)
+			log.Info(fmt.Sprintf("Starting Profiler Server! \t Go to http://%s/debug/pprof/\n", profilerAddress))
+			err := http.ListenAndServe(profilerAddress, nil)
+			if err != nil {
+				log.Info("Failed to start the server! Error: %v", err)
+			}
+		}()
+	}
 }
