@@ -2,16 +2,36 @@ package e2e
 
 import (
 	"fmt"
+	"strings"
+	"text/template"
+
+	. "github.com/onsi/gomega"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-func ethernetNicUp(nicName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
-  - name: %s
+func ethernetNicsState(states map[string]string) nmstatev1alpha1.State {
+	tmp, err := template.New("ethernetNicsUp").Parse(`interfaces:
+{{ range $nic, $state := . }}
+  - name: {{ $nic }}
     type: ethernet
-    state: up
-`, nicName))
+    state: {{ $state }}
+{{ end }}
+`)
+	Expect(err).ToNot(HaveOccurred())
+
+	stringBuilder := strings.Builder{}
+	err = tmp.Execute(&stringBuilder, states)
+	Expect(err).ToNot(HaveOccurred())
+
+	return nmstatev1alpha1.NewState(stringBuilder.String())
+}
+func ethernetNicsUp(nics ...string) nmstatev1alpha1.State {
+	states := map[string]string{}
+	for _, nic := range nics {
+		states[nic] = "up"
+	}
+	return ethernetNicsState(states)
 }
 
 func linuxBrUp(bridgeName string) nmstatev1alpha1.State {

@@ -127,7 +127,7 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev
 			return err
 		}
 		return framework.Global.Client.Update(context.TODO(), &policy)
-	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
 	//FIXME: until we don't have webhook we have to wait for reconcile
 	//       to start so we are sure that conditions are reset and we can
 	//       check them correctly
@@ -150,7 +150,12 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
 //       to remove this
 func resetDesiredStateForNodes() {
-	updateDesiredState(ethernetNicUp(*primaryNic))
+	states := map[string]string{
+		*primaryNic:         "up",
+		*firstSecondaryNic:  "down",
+		*secondSecondaryNic: "down",
+	}
+	updateDesiredState(ethernetNicsState(states))
 	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
