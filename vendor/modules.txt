@@ -173,6 +173,8 @@ github.com/jmoiron/sqlx/reflectx
 github.com/joho/godotenv
 # github.com/json-iterator/go v1.1.6
 github.com/json-iterator/go
+# github.com/kelseyhightower/envconfig v1.4.0
+github.com/kelseyhightower/envconfig
 # github.com/konsorten/go-windows-terminal-sequences v1.0.2
 github.com/konsorten/go-windows-terminal-sequences
 # github.com/lib/pq v1.2.0
@@ -225,6 +227,7 @@ github.com/onsi/ginkgo/ginkgo/testrunner
 github.com/onsi/ginkgo/ginkgo/testsuite
 github.com/onsi/ginkgo/ginkgo/watch
 github.com/onsi/ginkgo/reporters/stenographer/support/go-colorable
+github.com/onsi/ginkgo/types
 github.com/onsi/ginkgo/reporters
 github.com/onsi/ginkgo/extensions/table
 github.com/onsi/ginkgo/internal/codelocation
