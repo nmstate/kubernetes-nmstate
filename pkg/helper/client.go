@@ -124,13 +124,13 @@ func set(desiredState nmstatev1alpha1.State) (string, error) {
 	return output, err
 }
 
-func commit() (string, error) {
-	return nmstatectl([]string{"commit"}, "")
+func commit(commitID string) (string, error) {
+	return nmstatectl([]string{"commit", commitID}, "")
 }
 
-func rollback(cause error) error {
-	_, err := nmstatectl([]string{"rollback"}, "")
-	return fmt.Errorf("rollback cause: %v, rollback error: %v", cause, err)
+func rollback(commitID string, cause error) error {
+	_, err := nmstatectl([]string{"rollback", commitID}, "")
+	return errors.Wrapf(err, "rollback failed, cause: %s, commitID: %s", cause, commitID)
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {
@@ -251,6 +251,15 @@ func defaultGw() (string, error) {
 	})
 }
 
+// After running `nmstatectl set`, the last line contains the commit/rollback ID in format of:
+// Checkpoint: <ID>
+func readCommitID(outputFromSet string) string {
+	outputFromSetLines := strings.Split(strings.TrimSpace(outputFromSet), "\n")
+	commitIDLine := strings.TrimSpace(outputFromSetLines[len(outputFromSetLines)-1])
+	commitID := strings.Split(commitIDLine, " ")[1]
+	return commitID
+}
+
 func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
@@ -261,13 +270,15 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		return setOutput, err
 	}
 
+	commitID := readCommitID(setOutput)
+
 	// Future versions of nmstate/NM will support vlan-filtering meanwhile
 	// we have to enforce it at the desiredState bridges and outbound ports
 	// they will be configured with vlan_filtering 1 and all the vlan id range
 	// set
 	bridgesUpWithPorts, err := getBridgesUp(desiredState)
 	if err != nil {
-		return "", rollback(fmt.Errorf("error retrieving up bridges from desired state"))
+		return "", rollback(commitID, fmt.Errorf("error retrieving up bridges from desired state"))
 	}
 
 	commandOutput := ""
@@ -275,32 +286,32 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
 		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
 		if err != nil {
-			return commandOutput, rollback(err)
+			return commandOutput, rollback(commitID, err)
 		}
 	}
 
 	defaultGw, err := defaultGw()
 	if err != nil {
-		return commandOutput, rollback(err)
+		return commandOutput, rollback(commitID, err)
 	}
 
 	currentState, err := show()
 	if err != nil {
-		return "", rollback(err)
+		return "", rollback(commitID, err)
 	}
 
 	// TODO: Make ping timeout configurable with a config map
 	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout)
 	if err != nil {
-		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+		return pingOutput, rollback(commitID, fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
 
 	err = checkApiServerConnectivity(apiServerProbeTimeout)
 	if err != nil {
-		return "", rollback(fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+		return "", rollback(commitID, fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
 
-	commitOutput, err := commit()
+	commitOutput, err := commit(commitID)
 	if err != nil {
 		// We cannot rollback if commit fails, just return the error
 		return commitOutput, err
