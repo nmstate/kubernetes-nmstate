@@ -103,24 +103,10 @@ func nmstatectl(arguments []string, input string) (string, error) {
 }
 
 func set(desiredState nmstatev1alpha1.State) (string, error) {
-	output := ""
-	var err error = nil
-	// FIXME: Remove this retries after nmstate team fixes
-	//        https://nmstate.atlassian.net/browse/NMSTATE-247
-	retries := 3
-	for retries > 0 {
-		// commit timeout doubles the default gw ping probe timeout, to
-		// ensure the Checkpoint is alive before rolling it back
-		// https://nmstate.github.io/cli_guide#manual-transaction-control
-		output, err = nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(defaultGwProbeTimeout.Seconds()) * 2)}, string(desiredState.Raw))
-		if err == nil {
-			log.Info(fmt.Sprintf("nmstatectl set recovered, output: %s", output))
-			break
-		}
-		retries--
-		time.Sleep(1 * time.Second)
-		log.Info(fmt.Sprintf("%d retries left after nmstatectl set command error: %v", retries, err))
-	}
+	// commit timeout doubles the default gw ping probe timeout, to
+	// ensure the Checkpoint is alive before rolling it back
+	// https://nmstate.github.io/cli_guide#manual-transaction-control
+	output, err := nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(defaultGwProbeTimeout.Seconds()) * 2)}, string(desiredState.Raw))
 	return output, err
 }
 
