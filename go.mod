@@ -4,7 +4,6 @@ go 1.12.15
 
 require (
 	github.com/aktau/github-release v0.7.2
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-logr/logr v0.1.0
@@ -14,12 +13,10 @@ require (
 	github.com/onsi/gomega v1.5.0
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/operator-framework/operator-sdk v0.12.0
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
+	github.com/qinqon/kube-admission-webhook v0.2.0
 	github.com/spf13/pflag v1.0.3
 	github.com/tidwall/gjson v1.3.4
-	github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80 // indirect
-	github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.0.1
 	google.golang.org/genproto v0.0.0-20181016170114-94acd270e44e // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	k8s.io/api v0.0.0

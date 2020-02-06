@@ -15,8 +15,8 @@ type approver struct {
 func (a approver) approve(csr *v1beta1.CertificateSigningRequest) (*v1beta1.CertificateSigningRequest, error) {
 	csr.Status.Conditions = append(csr.Status.Conditions, v1beta1.CertificateSigningRequestCondition{
 		Type:    v1beta1.CertificateApproved,
-		Reason:  "AutoApproved by kubernetes-nmstate-handler",
-		Message: "Auto approving kubernetes-nmstate webhook server certificate",
+		Reason:  "AutoApproved by kube-admission-webhook",
+		Message: "Auto approving webhook server certificate",
 	})
 	return a.client.UpdateApproval(csr)
 }
