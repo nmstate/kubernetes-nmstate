@@ -25,7 +25,7 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstatev1alpha1.State {
       slaves:
         - %s
         - %s
-`, bondName, *primaryNic, *firstSecondaryNic))
+`, bondName, primaryNic, firstSecondaryNic))
 }
 
 func bondAbsentWithPrimaryUp(bondName string) nmstatev1alpha1.State {
@@ -39,39 +39,39 @@ func bondAbsentWithPrimaryUp(bondName string) nmstatev1alpha1.State {
     ipv4:
       dhcp: true
       enabled: true
-`, bondName, *primaryNic))
+`, bondName, primaryNic))
 }
 
 var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", func() {
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
-			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", *primaryNic))
+			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", primaryNic))
 			for _, node := range nodes {
-				defaultRouteNextHopInterface(node).Should(Equal(*primaryNic))
-				Expect(dhcpFlag(node, *primaryNic)).Should(BeTrue())
+				defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
+				Expect(dhcpFlag(node, primaryNic)).Should(BeTrue())
 			}
 
 			By("Fetching current IP address")
 			for _, node := range nodes {
 				address := ""
 				Eventually(func() string {
-					address = ipv4Address(node, *primaryNic)
+					address = ipv4Address(node, primaryNic)
 					return address
-				}, 15*time.Second, 1*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf("Interface %s has no ipv4 address", *primaryNic))
+				}, 15*time.Second, 1*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf("Interface %s has no ipv4 address", primaryNic))
 				By(fmt.Sprintf("Fetching current IP address %s", address))
 				addressByNode[node] = address
 			}
-			By(fmt.Sprintf("Reseting state of %s", *firstSecondaryNic))
-			resetNicStateForNodes(*firstSecondaryNic)
-			By(fmt.Sprintf("Creating %s on %s and %s", bond1, *primaryNic, *firstSecondaryNic))
+			By(fmt.Sprintf("Reseting state of %s", firstSecondaryNic))
+			resetNicStateForNodes(firstSecondaryNic)
+			By(fmt.Sprintf("Creating %s on %s and %s", bond1, primaryNic, firstSecondaryNic))
 			updateDesiredState(boundUpWithPrimaryAndSecondary(bond1))
 			waitForAvailableTestPolicy()
 			By("Done configuring test")
 
 		})
 		AfterEach(func() {
-			By(fmt.Sprintf("Removing bond %s and configuring %s with dhcp", bond1, *primaryNic))
+			By(fmt.Sprintf("Removing bond %s and configuring %s with dhcp", bond1, primaryNic))
 			updateDesiredState(bondAbsentWithPrimaryUp(bond1))
 			waitForAvailableTestPolicy()
 
@@ -83,11 +83,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 
 			resetDesiredStateForNodes()
 
-			By(fmt.Sprintf("Check %s has the default ip address", *primaryNic))
+			By(fmt.Sprintf("Check %s has the default ip address", primaryNic))
 			for _, node := range nodes {
 				Eventually(func() string {
-					return ipv4Address(node, *primaryNic)
-				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", *primaryNic))
+					return ipv4Address(node, primaryNic)
+				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 			}
 
 		})
@@ -120,12 +120,12 @@ func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interfa
 		HaveKeyWithValue("state", expectedBond["state"]),
 		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
 		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*primaryNic, *firstSecondaryNic}))),
+		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{primaryNic, firstSecondaryNic}))),
 	)))
 
 	Eventually(func() string {
 		return ipv4Address(node, bond1)
-	}, 30*time.Second, 1*time.Second).Should(Equal(ip), fmt.Sprintf("Interface bond1 has not take over the %s address", *primaryNic))
+	}, 30*time.Second, 1*time.Second).Should(Equal(ip), fmt.Sprintf("Interface bond1 has not take over the %s address", primaryNic))
 }
 
 func resetNicStateForNodes(nicName string) {

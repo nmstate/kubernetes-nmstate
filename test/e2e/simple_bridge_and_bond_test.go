@@ -39,7 +39,7 @@ func bondUp(bondName string) nmstatev1alpha1.State {
         - %s
       options:
         miimon: '120'
-`, bondName, *firstSecondaryNic))
+`, bondName, firstSecondaryNic))
 }
 
 func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
@@ -62,7 +62,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
           enabled: false
       port:
         - name: %s
-`, bondName, *firstSecondaryNic, bridgeName, bondName))
+`, bondName, firstSecondaryNic, bridgeName, bondName))
 }
 
 func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
@@ -82,7 +82,7 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
     slaves:
     - %s
     - %s
-`, bondName, *firstSecondaryNic, *secondSecondaryNic))
+`, bondName, firstSecondaryNic, secondSecondaryNic))
 }
 
 func bondUpWithEth1Eth2AndVlan(bondName string) nmstatev1alpha1.State {
@@ -113,7 +113,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstatev1alpha1.State {
   vlan:
     base-iface: %s
     id: 102
-`, bondName, *firstSecondaryNic, *secondSecondaryNic, bondName, bondName))
+`, bondName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
 }
 
 var _ = Describe("NodeNetworkState", func() {
@@ -155,10 +155,10 @@ var _ = Describe("NodeNetworkState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-					getVLANFlagsEventually(node, *firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-					hasVlans(node, *firstSecondaryNic, 2, 4094).Should(Succeed())
-					getVLANFlagsEventually(node, *secondSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-					hasVlans(node, *secondSecondaryNic, 2, 4094).Should(Succeed())
+					getVLANFlagsEventually(node, firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					hasVlans(node, firstSecondaryNic, 2, 4094).Should(Succeed())
+					getVLANFlagsEventually(node, secondSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					hasVlans(node, secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})
 		})
@@ -229,8 +229,8 @@ var _ = Describe("NodeNetworkState", func() {
 					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, bond1, 2, 4094).Should(Succeed())
 					getVLANFlagsEventually(node, bond1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-					vlansCardinality(node, *firstSecondaryNic).Should(Equal(0))
-					vlansCardinality(node, *secondSecondaryNic).Should(Equal(0))
+					vlansCardinality(node, firstSecondaryNic).Should(Equal(0))
+					vlansCardinality(node, secondSecondaryNic).Should(Equal(0))
 				}
 			})
 		})
@@ -260,7 +260,7 @@ var _ = Describe("NodeNetworkState", func() {
 						HaveKeyWithValue("state", expectedBond["state"]),
 						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
 						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
+						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{firstSecondaryNic, secondSecondaryNic}))),
 					)))
 				}
 			})
@@ -293,7 +293,7 @@ var _ = Describe("NodeNetworkState", func() {
 							HaveKeyWithValue("state", expectedBond["state"]),
 							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
 							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{*firstSecondaryNic, *secondSecondaryNic}))),
+							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{firstSecondaryNic, secondSecondaryNic}))),
 						)),
 						ContainElement(SatisfyAll(
 							HaveKeyWithValue("name", expectedVlanBond102["name"]),

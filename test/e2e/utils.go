@@ -151,9 +151,9 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	states := map[string]string{
-		*primaryNic:         "up",
-		*firstSecondaryNic:  "down",
-		*secondSecondaryNic: "down",
+		primaryNic:         "up",
+		firstSecondaryNic:  "down",
+		secondSecondaryNic: "down",
 	}
 	updateDesiredState(ethernetNicsState(states))
 	waitForAvailableTestPolicy()

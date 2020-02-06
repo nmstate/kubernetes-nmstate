@@ -174,7 +174,7 @@ func serveCRMetrics(cfg *rest.Config) error {
 	if err != nil {
 		return err
 	}
-	// This is a cluster scope operator so there is no namespace
+	// The operator is cluster scoped so it does not have namespace
 	operatorNs := ""
 
 	// To generate metrics in other namespaces, add the values below.

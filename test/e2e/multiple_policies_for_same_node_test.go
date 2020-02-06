@@ -17,15 +17,15 @@ var _ = Describe("NodeNetworkState", func() {
 		)
 
 		BeforeEach(func() {
-			setDesiredStateWithPolicy(staticIpPolicy, ifaceUpWithStaticIP(*firstSecondaryNic, ipAddress))
-			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(*firstSecondaryNic, vlanId))
+			setDesiredStateWithPolicy(staticIpPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress))
+			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(staticIpPolicy)
 			waitForAvailablePolicy(vlanPolicy)
 		})
 
 		AfterEach(func() {
-			setDesiredStateWithPolicy(staticIpPolicy, ifaceDownIPv4Disabled(*firstSecondaryNic))
-			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(*firstSecondaryNic, vlanId))
+			setDesiredStateWithPolicy(staticIpPolicy, ifaceDownIPv4Disabled(firstSecondaryNic))
+			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(staticIpPolicy)
 			waitForAvailablePolicy(vlanPolicy)
 			deletePolicy(staticIpPolicy)
@@ -35,9 +35,9 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should have the IP and vlan interface configured", func() {
 			for _, node := range nodes {
-				ipAddressForNodeInterfaceEventually(node, *firstSecondaryNic).Should(Equal(ipAddress))
-				interfacesNameForNodeEventually(node).Should(ContainElement(fmt.Sprintf(`%s.%s`, *firstSecondaryNic, vlanId)))
-				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, *firstSecondaryNic, vlanId)).Should(Equal(vlanId))
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
+				interfacesNameForNodeEventually(node).Should(ContainElement(fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)))
+				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)).Should(Equal(vlanId))
 			}
 		})
 	})

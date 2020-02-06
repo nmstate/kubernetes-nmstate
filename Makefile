@@ -16,12 +16,18 @@ export KUBEVIRT_PROVIDER ?= k8s-1.17.0
 export KUBEVIRT_NUM_NODES ?= 1
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
+export E2E_TEST_TIMEOUT ?= 40m
 
-e2e_test_args = -singleNamespace=true -test.v -test.timeout=40m -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
+e2e_test_args = -singleNamespace=true -test.v -test.timeout=$(E2E_TEST_TIMEOUT) -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
+
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
-	e2e_test_args += -primaryNic eth0 -firstSecondaryNic eth1 -secondSecondaryNic eth2
+export PRIMARY_NIC = eth0
+export FIRST_SECONDARY_NIC = eth1
+export SECOND_SECONDARY_NIC = eth2
 else
-	e2e_test_args += -primaryNic ens3 -firstSecondaryNic ens8 -secondSecondaryNic ens9
+export PRIMARY_NIC = ens3
+export FIRST_SECONDARY_NIC = ens8
+export SECOND_SECONDARY_NIC = ens9
 endif
 
 BIN_DIR = $(CURDIR)/build/_output/bin/
@@ -128,11 +134,15 @@ $(versioned_operator_manifest): version/version.go
 $(CLUSTER_DIR)/%: $(install_kubevirtci)
 	$(install_kubevirtci)
 
-cluster-up: $(CLUSTER_UP)
-	$(CLUSTER_UP)
+cluster-prepare:
 	hack/install-ovs.sh
 	hack/install-nm.sh
 	hack/flush-secondary-nics.sh
+
+provider-up: $(CLUSTER_UP)
+	$(CLUSTER_UP)
+
+cluster-up: provider-up cluster-prepare
 
 cluster-down: $(CLUSTER_DOWN)
 	$(CLUSTER_DOWN)

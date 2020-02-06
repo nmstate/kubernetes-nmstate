@@ -43,7 +43,7 @@ func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
       port:
         - name: %s
         - name: %s
-`, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
+`, bridgeName, firstSecondaryNic, secondSecondaryNic))
 }
 
 func linuxBrAbsent(bridgeName string) nmstatev1alpha1.State {
@@ -85,7 +85,7 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
       port:
         - name: %s
         - name: %s
-`, bridgeName, *firstSecondaryNic, *secondSecondaryNic))
+`, bridgeName, firstSecondaryNic, secondSecondaryNic))
 }
 
 func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
@@ -107,7 +107,7 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
       port:
         - name: %s
         - name: ovs0`,
-		bridgeName, *firstSecondaryNic))
+		bridgeName, firstSecondaryNic))
 }
 
 func ifaceUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
