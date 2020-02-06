@@ -23,6 +23,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	yaml "sigs.k8s.io/yaml"
 
+	networkmanager "github.com/phoracek/networkmanager-go/src"
 	"github.com/tidwall/gjson"
 
 	"github.com/gobwas/glob"
@@ -259,6 +260,14 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	setOutput, err := set(desiredState)
 	if err != nil {
 		return setOutput, err
+	}
+
+	nmClient := networkmanager.NewClient()
+	defer nmClient.Close()
+
+	devices := nmClient.GetDevices()
+	for _, device := range devices {
+		log.Info("XXX", "iface", device.Interface, "type", device.Type, "state", device.State)
 	}
 
 	// Future versions of nmstate/NM will support vlan-filtering meanwhile
