@@ -1,0 +1,3 @@
+#!/bin/bash
+set -o nounset -o errexit
+hack/go-container.sh gofmt $@

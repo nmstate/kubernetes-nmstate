@@ -30,19 +30,17 @@ export FIRST_SECONDARY_NIC = ens8
 export SECOND_SECONDARY_NIC = ens9
 endif
 
-BIN_DIR = $(CURDIR)/build/_output/bin/
+export BIN_DIR:=$(CURDIR)/build/_output/bin/
 
 export GOFLAGS=-mod=vendor
-export GO111MODULE=on
-export GOROOT=$(BIN_DIR)/go/
-export GOBIN=$(GOROOT)/bin/
-export PATH := $(GOROOT)/bin:$(PATH)
+export PATH:=$(BIN_DIR):$(PATH)
 
-GINKGO ?= $(GOBIN)/ginkgo
-OPERATOR_SDK ?= $(GOBIN)/operator-sdk
-GITHUB_RELEASE ?= $(GOBIN)/github-release
-GOFMT := $(GOBIN)/gofmt
-GO := $(GOBIN)/go
+GO := hack/go
+GOFMT := hack/gofmt
+
+GINKGO ?= $(BIN_DIR)/ginkgo
+OPERATOR_SDK ?= $(BIN_DIR)/operator-sdk
+GITHUB_RELEASE ?= $(BIN_DIR)/github-release
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -63,57 +61,55 @@ resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml d
 all: check handler
 
 check: vet whitespace-check gofmt-check
-
 format: whitespace-format gofmt
 
-vet: $(GO)
+vet:
 	$(GO) vet ./cmd/... ./pkg/... ./test/...
 
 whitespace-format:
 	hack/whitespace.sh format
 
-gofmt: $(GO)
-	$(GOFMT) -w cmd/ pkg/ test/e2e/
+gofmt:
+	$(GOFMT)-w cmd/ pkg/ test/e2e/
 
 whitespace-check:
 	hack/whitespace.sh check
 
-gofmt-check: $(GO)
+gofmt-check:
 	test -z "`$(GOFMT) -l cmd/ pkg/ test/e2e/`" || ($(GOFMT) -l cmd/ pkg/ test/e2e/ && exit 1)
 
-$(GO):
-	hack/install-go.sh $(BIN_DIR)
+$(GINKGO): go.mod
+	GOBIN=$(BIN_DIR) $(GO) install ./vendor/github.com/onsi/ginkgo/ginkgo
 
-$(GINKGO): go.mod $(GO)
-	$(GO) install ./vendor/github.com/onsi/ginkgo/ginkgo
+$(OPERATOR_SDK): go.mod
+	GOBIN=$(BIN_DIR) $(GO) install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 
-$(OPERATOR_SDK): go.mod $(GO)
-	$(GO) install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
-
-$(GITHUB_RELEASE): go.mod $(GO)
-	$(GO) install ./vendor/github.com/aktau/github-release
-
+$(GITHUB_RELEASE): go.mod
+	GOBIN=$(BIN_DIR) $(GO) install ./vendor/github.com/aktau/github-release
 
 gen-k8s: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate k8s
+	./hack/go-container.sh $(OPERATOR_SDK) generate k8s --verbose
 
 gen-openapi: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate openapi
+	./hack/go-container.sh $(OPERATOR_SDK) generate openapi
 
 handler: gen-openapi gen-k8s $(OPERATOR_SDK)
-	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
+	# call operator-sdk build out of go-container.sh so it has the
+	# docker command and sice operator-sdk is calling `gò` command only
+	# once this is safe
+	PATH=hack:${PATH} $(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
 push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
-	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
+	INTERFACES_FILTER="" NODE_NAME=node01 ./hack/go-container.sh $(GINKGO) $(unit_test_args) $(WHAT)
 
 test/e2e: $(OPERATOR_SDK)
 	# We have to unset mod=vendor here since operator-sdk is already
 	# building with it, and go tool fail if it's specified twice
 	mkdir -p test_logs/e2e
-	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
+	unset GOFLAGS && ./hack/go-container.sh $(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace nmstate \
 		--no-setup \
@@ -204,8 +200,13 @@ release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_REL
 						$(versioned_operator_manifest) \
 						$(shell find deploy/crds/ deploy/openshift -type f)
 
-tools-vendoring:
-	./hack/vendor-tools.sh $(BIN_DIR) $$(pwd)/tools.go
+
+vendor:
+	go mod tidy
+	go mod vendor
+
+tools-vendoring: vendor
+	./hack/vendor-tools.sh $$(pwd)/tools.go
 
 .PHONY: \
 	all \
@@ -224,4 +225,5 @@ tools-vendoring:
 	cluster-clean \
 	release \
 	whitespace-check \
-	whitespace-format
+	whitespace-format \
+	vendor

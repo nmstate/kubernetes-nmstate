@@ -2,8 +2,8 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
 	"os/exec"
 	"strconv"
 	"strings"
