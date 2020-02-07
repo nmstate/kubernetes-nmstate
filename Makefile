@@ -158,6 +158,9 @@ cluster-clean: $(KUBECTL)
 	fi
 
 cluster-sync-resources: $(KUBECTL)
+	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
+		while ! $(KUBECTL) get securitycontextconstraints; do sleep 1; done; \
+	fi
 	for resource in $(resources); do \
 		$(KUBECTL) apply -f $$resource || exit 1; \
 	done
