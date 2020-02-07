@@ -6,14 +6,12 @@ import (
 	. "github.com/onsi/gomega"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
+
+	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 )
 
-func kubectl(arguments ...string) (string, error) {
-	return run("./kubevirtci/cluster-up/kubectl.sh", false, arguments...)
-}
-
 func nmstatePods() ([]string, error) {
-	output, err := kubectl("get", "pod", "-n", framework.Global.Namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
+	output, err := cmd.Kubectl("get", "pod", "-n", framework.Global.Namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	names := strings.Split(strings.TrimSpace(output), "\n")
 	return names, err
@@ -25,7 +23,7 @@ func RunAtPods(arguments ...string) {
 	for _, nmstatePod := range nmstatePods {
 		exec := []string{"exec", "-n", framework.Global.Namespace, nmstatePod, "--"}
 		execArguments := append(exec, arguments...)
-		_, err := kubectl(execArguments...)
+		_, err := cmd.Kubectl(execArguments...)
 		ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	}
 }
