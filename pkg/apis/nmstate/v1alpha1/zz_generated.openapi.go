@@ -11,15 +11,15 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/nmstate/v1alpha1.Condition":                               schema_pkg_apis_nmstate_v1alpha1_Condition(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactment":       schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactment(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicy":          schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec":      schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus":    schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkState":                        schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus":                  schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref),
-		"./pkg/apis/nmstate/v1alpha1.State":                                   schema_pkg_apis_nmstate_v1alpha1_State(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition":                               schema_pkg_apis_nmstate_v1alpha1_Condition(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactment":       schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactment(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicy":          schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec":      schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus":    schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkState":                        schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus":                  schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref),
+		"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State":                                   schema_pkg_apis_nmstate_v1alpha1_State(ref),
 	}
 }
 
@@ -100,14 +100,14 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactment(ref comm
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -121,7 +121,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 					"desiredState": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The desired state rendered for the enactment's node using the policy desiredState as template",
-							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
+							Ref:         ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
 					"conditions": {
@@ -130,7 +130,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
+										Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition"),
 									},
 								},
 							},
@@ -140,7 +140,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition", "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State"},
 	}
 }
 
@@ -172,19 +172,19 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref common.
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec", "./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec", "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -213,14 +213,14 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref com
 					"desiredState": {
 						SchemaProps: spec.SchemaProps{
 							Description: "The desired configuration of the policy",
-							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
+							Ref:         ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.State"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State"},
 	}
 }
 
@@ -237,7 +237,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref c
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
+										Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition"),
 									},
 								},
 							},
@@ -247,7 +247,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref c
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition"},
 	}
 }
 
@@ -279,14 +279,14 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref common.ReferenceCallb
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -299,7 +299,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 				Properties: map[string]spec.Schema{
 					"currentState": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.State"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
 					"lastSuccessfulUpdateTime": {
@@ -313,7 +313,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 							Items: &spec.SchemaOrArray{
 								Schema: &spec.Schema{
 									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
+										Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition"),
 									},
 								},
 							},
@@ -323,7 +323,7 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.Referenc
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.Condition", "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1.State", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
 	}
 }
 

@@ -1,0 +1,11 @@
+# When updating this file, don't forget to update the tutorial.
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: eth666
+spec:
+  desiredState:
+    interfaces:
+    - name: eth666
+      type: ethernet
+      state: up

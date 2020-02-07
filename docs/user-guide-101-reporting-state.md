@@ -193,4 +193,6 @@ kubectl -n nmstate delete pods --all
 
 The `NodeNetworkState` will now list all interfaces seen on the host.
 
-<!-- TODO: Link the next introduction article once it is introduced -->
+## Continue reading
+
+Following tutorial will guide you through configuration of node networking: [Policy and Enactment](user-guide-102-configuring-policy-and-enactment.md)
