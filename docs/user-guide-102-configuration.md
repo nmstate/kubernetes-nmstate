@@ -447,7 +447,7 @@ is however possible to select only a subset of nodes using via a node selector.
 
 In the following example, we configure a VLAN interface with tag 100 over a NIC
 `eth1`. This configuration will be done only on node which has labels matching
-the `nodeSelector`:
+all the key-value pairs in the `nodeSelector`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
@@ -517,4 +517,8 @@ status:
     type: Matching
 ```
 
-<!-- TODO: Link the next introduction article once it is introduced -->
+## Continue reading
+
+The following tutorial will guide you through troubleshooting of a failed
+configuration:
+[Troubleshooting](user-guide-103-troubleshooting.md)

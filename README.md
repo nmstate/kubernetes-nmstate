@@ -31,19 +31,21 @@ The only external dependency is NetworkManager running on nodes.
 
 # Deployment and Usage
 
-You can choose to deploy this plugin on a
+You can choose to deploy this operator on a
 [local virtualized cluster](docs/deployment-local-cluster.md) or on your
 [arbitrary cluster](docs/deployment-arbitrary-cluster.md).
 
-Following comprehensive 101 series is the best place to start learning about all the features of this operator:
+Following comprehensive 101 series is the best place to start learning about all
+the features:
 
-1. [Reporting](docs/user-guide-101-reporting-state.md) -
+1. [Reporting](docs/user-guide-101-reporting.md) -
    observe the current state of network on cluster nodes.
 2. [Configuring](docs/user-guide-102-configuration.md) -
    configure networks and observe the progress.
-3. Stay tuned for more!
+3. [Troubleshooting](docs/user-guide-103-troubleshooting.md) -
+   see what's wrong if a configuration fails.
 
-These ready-to-go tutorials describe how to configure various interface types:
+These ready-to-go recipes describe how to configure various interface types:
 
 - [Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
 - [Linux bonding interface with vlan interface](docs/user-guide-policy-configure-linux-bond-with-vlans.md)
