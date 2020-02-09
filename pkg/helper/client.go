@@ -38,16 +38,22 @@ const vlanFilteringCommand = "vlan-filtering"
 const defaultGwRetrieveTimeout = 120 * time.Second
 const defaultGwProbeTimeout = 120 * time.Second
 const apiServerProbeTimeout = 120 * time.Second
+const defaultInterfacesFilter = "veth*"
 
 var (
 	interfacesFilterGlob glob.Glob
 )
 
 func init() {
-	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
-	if !isSet {
-		panic("INTERFACES_FILTER is mandatory")
+	interfacesFilter, _ := os.LookupEnv("INTERFACES_FILTER")
+	InitClient(interfacesFilter)
+}
+
+func InitClient(interfacesFilter string) {
+	if interfacesFilter == "" {
+		interfacesFilter = defaultInterfacesFilter
 	}
+	fmt.Println(fmt.Sprintf("Inittializng client with filter = %s", interfacesFilter))
 	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
 }
 

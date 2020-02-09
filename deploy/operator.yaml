@@ -53,11 +53,13 @@ spec:
             - name: NODE_NETWORK_STATE_REFRESH_INTERVAL
               valueFrom:
                 configMapKeyRef:
+                  optional: true
                   name: nmstate-config
                   key: node_network_state_refresh_interval
             - name: INTERFACES_FILTER
               valueFrom:
                 configMapKeyRef:
+                  optional: true
                   name: nmstate-config
                   key: interfaces_filter
             - name: ENABLE_PROFILER
@@ -69,6 +71,8 @@ spec:
             mountPath: /run/dbus/system_bus_socket
           securityContext:
             privileged: true
+          ports:
+            - containerPort: 6060
       volumes:
       - name: dbus-socket
         hostPath:
@@ -131,6 +135,7 @@ spec:
             - name: NODE_NETWORK_STATE_REFRESH_INTERVAL
               valueFrom:
                 configMapKeyRef:
+                  optional: true
                   name: nmstate-config
                   key: node_network_state_refresh_interval
             - name: INTERFACES_FILTER
@@ -138,6 +143,7 @@ spec:
                 configMapKeyRef:
                   name: nmstate-config
                   key: interfaces_filter
+                  optional: true
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
@@ -148,15 +154,6 @@ spec:
           hostPath:
             path: /run/dbus/system_bus_socket
             type: Socket
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nmstate-config
-  namespace: nmstate
-data:
-  node_network_state_refresh_interval: "5"
-  interfaces_filter: "veth*"
 ---
 apiVersion: v1
 kind: Service

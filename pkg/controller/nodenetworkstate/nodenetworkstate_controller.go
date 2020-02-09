@@ -29,11 +29,18 @@ var (
 	nodenetworkstateRefresh time.Duration
 )
 
+const nodenetworkstateRefreshDefault = "5"
+
 func init() {
-	refreshTime, isSet := os.LookupEnv("NODE_NETWORK_STATE_REFRESH_INTERVAL")
-	if !isSet {
-		panic("NODE_NETWORK_STATE_REFRESH_INTERVAL is mandatory")
+	refreshTime, _ := os.LookupEnv("NODE_NETWORK_STATE_REFRESH_INTERVAL")
+	InitNodeNetworkController(refreshTime)
+}
+
+func InitNodeNetworkController(refreshTime string) {
+	if refreshTime == "" {
+		refreshTime = nodenetworkstateRefreshDefault
 	}
+	fmt.Println(fmt.Sprintf("Initializng node network controller with refresh time = %s", refreshTime))
 	intRefreshTime, err := strconv.Atoi(refreshTime)
 	if err != nil {
 		panic(fmt.Sprintf("Failed while converting evnironment variable to int: %v", err))
@@ -118,6 +125,7 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 			return err
 		}
 		return nil
+
 	})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -128,5 +136,6 @@ func (r *ReconcileNodeNetworkState) Reconcile(request reconcile.Request) (reconc
 		}
 		return reconcile.Result{}, err
 	}
+	fmt.Println(fmt.Sprintf("Refreshing %d", nodenetworkstateRefresh))
 	return reconcile.Result{RequeueAfter: nodenetworkstateRefresh}, nil
 }
