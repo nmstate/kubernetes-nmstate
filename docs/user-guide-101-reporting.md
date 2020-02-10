@@ -1,4 +1,4 @@
-# Introduction: Reporting State
+# Introduction: Reporting
 
 The operator periodically reports state of node network interfaces to the API
 server. These reports are available through `NodeNetworkState` objects that are
@@ -193,4 +193,7 @@ kubectl -n nmstate delete pods --all
 
 The `NodeNetworkState` will now list all interfaces seen on the host.
 
-<!-- TODO: Link the next introduction article once it is introduced -->
+## Continue reading
+
+The following tutorial will guide you through the configuration of node
+networking: [Configuration](user-guide-102-configuration.md)

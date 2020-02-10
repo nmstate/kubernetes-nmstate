@@ -1,0 +1,19 @@
+# When updating this file, don't forget to update the tutorial.
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: bond0-eth1-eth2
+spec:
+  desiredState:
+    interfaces:
+    - name: bond0
+      type: bond
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true
+      link-aggregation:
+        mode: balance-rr
+        slaves:
+        - eth1
+        - eth2

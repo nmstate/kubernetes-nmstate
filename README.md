@@ -37,9 +37,11 @@ You can choose to deploy this plugin on a
 
 Following comprehensive 101 series is the best place to start learning about all the features of this operator:
 
-1. [State](docs/user-guide-101-reporting-state.md) -
+1. [Reporting](docs/user-guide-101-reporting-state.md) -
    observe the current state of network on cluster nodes.
-2. Stay tuned for more!
+2. [Configuring](docs/user-guide-102-configuration.md) -
+   configure networks and observe the progress.
+3. Stay tuned for more!
 
 These ready-to-go tutorials describe how to configure various interface types:
 

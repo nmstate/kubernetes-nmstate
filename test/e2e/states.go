@@ -146,6 +146,13 @@ func vlanAbsent(iface string, vlanId string) nmstatev1alpha1.State {
 `, iface, vlanId, iface, vlanId))
 }
 
+func interfaceAbsent(iface string) nmstatev1alpha1.State {
+	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+    - name: %s
+      state: absent
+`, iface))
+}
+
 func ifaceDownIPv4Disabled(iface string) nmstatev1alpha1.State {
 	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
     - name: %s
