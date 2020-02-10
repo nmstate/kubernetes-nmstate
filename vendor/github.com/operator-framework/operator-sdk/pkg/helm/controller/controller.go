@@ -23,11 +23,11 @@ import (
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
+	rpb "helm.sh/helm/v3/pkg/release"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	rpb "k8s.io/helm/pkg/proto/hapi/release"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	crthandler "sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -49,22 +49,26 @@ type WatchOptions struct {
 	ManagerFactory          release.ManagerFactory
 	ReconcilePeriod         time.Duration
 	WatchDependentResources bool
+	OverrideValues          map[string]string
 }
 
 // Add creates a new helm operator controller and adds it to the manager
 func Add(mgr manager.Manager, options WatchOptions) error {
+	controllerName := fmt.Sprintf("%v-controller", strings.ToLower(options.GVK.Kind))
+
 	r := &HelmOperatorReconciler{
 		Client:          mgr.GetClient(),
+		EventRecorder:   mgr.GetEventRecorderFor(controllerName),
 		GVK:             options.GVK,
 		ManagerFactory:  options.ManagerFactory,
 		ReconcilePeriod: options.ReconcilePeriod,
+		OverrideValues:  options.OverrideValues,
 	}
 
 	// Register the GVK with the schema
 	mgr.GetScheme().AddKnownTypeWithName(options.GVK, &unstructured.Unstructured{})
 	metav1.AddToGroupVersion(mgr.GetScheme(), options.GVK.GroupVersion())
 
-	controllerName := fmt.Sprintf("%v-controller", strings.ToLower(options.GVK.Kind))
 	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
 	if err != nil {
 		return err
@@ -96,7 +100,7 @@ func watchDependentResources(mgr manager.Manager, r *HelmOperatorReconciler, c c
 	var m sync.RWMutex
 	watches := map[schema.GroupVersionKind]struct{}{}
 	releaseHook := func(release *rpb.Release) error {
-		dec := yaml.NewDecoder(bytes.NewBufferString(release.GetManifest()))
+		dec := yaml.NewDecoder(bytes.NewBufferString(release.Manifest))
 		for {
 			var u unstructured.Unstructured
 			err := dec.Decode(&u.Object)

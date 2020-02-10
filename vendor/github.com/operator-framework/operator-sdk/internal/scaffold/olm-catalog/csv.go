@@ -15,6 +15,7 @@
 package catalog
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -27,13 +28,13 @@ import (
 	"github.com/operator-framework/operator-sdk/internal/scaffold"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
+	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 	"github.com/operator-framework/operator-sdk/internal/util/yamlutil"
 
 	"github.com/blang/semver"
 	"github.com/ghodss/yaml"
 	olmapiv1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	olmversion "github.com/operator-framework/operator-lifecycle-manager/pkg/lib/version"
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
@@ -172,7 +173,7 @@ func getCSVFromFSIfExists(fs afero.Fs, path string) (*olmapiv1alpha1.ClusterServ
 
 	csv := &olmapiv1alpha1.ClusterServiceVersion{}
 	if err := yaml.Unmarshal(csvBytes, csv); err != nil {
-		return nil, false, errors.Wrapf(err, "error unmarshalling CSV %s", path)
+		return nil, false, fmt.Errorf("error unmarshalling CSV %s: %v", path, err)
 	}
 
 	return csv, true, nil
@@ -302,7 +303,7 @@ func (s *CSV) updateCSVVersions(csv *olmapiv1alpha1.ClusterServiceVersion) error
 	oldCSVName := getCSVName(lowerOperatorName, oldVer)
 	oldRe, err := regexp.Compile(fmt.Sprintf("\\b%s\\b", regexp.QuoteMeta(oldCSVName)))
 	if err != nil {
-		return errors.Wrapf(err, "error compiling CSV name regexp %s", oldRe.String())
+		return fmt.Errorf("error compiling CSV name regexp %s: %v", oldRe.String(), err)
 	}
 	b, err := yaml.Marshal(csv)
 	if err != nil {
@@ -312,7 +313,7 @@ func (s *CSV) updateCSVVersions(csv *olmapiv1alpha1.ClusterServiceVersion) error
 	b = oldRe.ReplaceAll(b, []byte(newCSVName))
 	*csv = olmapiv1alpha1.ClusterServiceVersion{}
 	if err = yaml.Unmarshal(b, csv); err != nil {
-		return errors.Wrapf(err, "error unmarshalling CSV %s after replacing old CSV name", csv.GetName())
+		return fmt.Errorf("error unmarshalling CSV %s after replacing old CSV name: %v", csv.GetName(), err)
 	}
 
 	ver, err := semver.Parse(s.CSVVersion)
@@ -392,7 +393,11 @@ func (s *CSV) updateCSVFromManifests(cfg *CSVConfig, csv *olmapiv1alpha1.Cluster
 		case "Deployment":
 			err = deployments(manifests).apply(csv)
 		case "CustomResourceDefinition":
-			err = crds(manifests).apply(csv)
+			// TODO(estroz): customresourcedefinition should not be updated for
+			// Ansible and Helm CSV's until annotated updates are implemented.
+			if projutil.IsOperatorGo() {
+				err = crds(manifests).apply(csv)
+			}
 		default:
 			if _, ok := crGVKSet[gvk]; ok {
 				crUpdaters = append(crUpdaters, manifests...)

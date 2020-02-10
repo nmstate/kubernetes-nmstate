@@ -28,13 +28,14 @@ func init() {
 }
 
 type Bundle struct {
-	Name       string
-	Objects    []*unstructured.Unstructured
-	Package    string
-	Channel    string
-	csv        *ClusterServiceVersion
-	crds       []*v1beta1.CustomResourceDefinition
-	cacheStale bool
+	Name        string
+	Objects     []*unstructured.Unstructured
+	Package     string
+	Channel     string
+	BundleImage string
+	csv         *ClusterServiceVersion
+	crds        []*v1beta1.CustomResourceDefinition
+	cacheStale  bool
 }
 
 func NewBundle(name, pkgName, channelName string, objs ...*unstructured.Unstructured) *Bundle {
@@ -72,6 +73,20 @@ func (b *Bundle) ClusterServiceVersion() (*ClusterServiceVersion, error) {
 		return nil, err
 	}
 	return b.csv, nil
+}
+
+func (b *Bundle) Version() (string, error) {
+	if err := b.cache(); err != nil {
+		return "", err
+	}
+	return b.csv.GetVersion()
+}
+
+func (b *Bundle) SkipRange() (string, error) {
+	if err := b.cache(); err != nil {
+		return "", err
+	}
+	return b.csv.GetSkipRange(), nil
 }
 
 func (b *Bundle) CustomResourceDefinitions() ([]*v1beta1.CustomResourceDefinition, error) {
@@ -170,12 +185,12 @@ func (b *Bundle) AllProvidedAPIsInBundle() error {
 	return nil
 }
 
-func (b *Bundle) Serialize() (csvName string, csvBytes []byte, bundleBytes []byte, err error) {
+func (b *Bundle) Serialize() (csvName, bundleImage string, csvBytes []byte, bundleBytes []byte, err error) {
 	csvCount := 0
 	for _, obj := range b.Objects {
 		objBytes, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
 		if err != nil {
-			return "", nil, nil, err
+			return "", "", nil, nil, err
 		}
 		bundleBytes = append(bundleBytes, objBytes...)
 
@@ -183,16 +198,16 @@ func (b *Bundle) Serialize() (csvName string, csvBytes []byte, bundleBytes []byt
 			csvName = obj.GetName()
 			csvBytes, err = runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
 			if err != nil {
-				return "", nil, nil, err
+				return "", "", nil, nil, err
 			}
 			csvCount += 1
 			if csvCount > 1 {
-				return "", nil, nil, fmt.Errorf("two csvs found in one bundle")
+				return "", "", nil, nil, fmt.Errorf("two csvs found in one bundle")
 			}
 		}
 	}
 
-	return csvName, csvBytes, bundleBytes, nil
+	return csvName, b.BundleImage, csvBytes, bundleBytes, nil
 }
 
 func (b *Bundle) Images() (map[string]struct{}, error) {

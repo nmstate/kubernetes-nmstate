@@ -22,13 +22,15 @@ import (
 	"path/filepath"
 	"strings"
 
+	gencrd "github.com/operator-framework/operator-sdk/internal/generate/crd"
+	gen "github.com/operator-framework/operator-sdk/internal/generate/gen"
 	"github.com/operator-framework/operator-sdk/internal/scaffold"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/ansible"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/helm"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
-	"github.com/pkg/errors"
+	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/client-go/discovery"
@@ -180,7 +182,7 @@ func doGoScaffold() error {
 	if headerFile != "" {
 		err := s.Execute(cfg, &scaffold.Boilerplate{BoilerplateSrcPath: headerFile})
 		if err != nil {
-			return fmt.Errorf("boilerplate scaffold failed: (%v)", err)
+			return fmt.Errorf("boilerplate scaffold failed: %v", err)
 		}
 		s.BoilerplatePath = headerFile
 	}
@@ -206,7 +208,7 @@ func doGoScaffold() error {
 		&scaffold.Gitignore{},
 	)
 	if err != nil {
-		return fmt.Errorf("new Go scaffold failed: (%v)", err)
+		return fmt.Errorf("new Go scaffold failed: %v", err)
 	}
 	return nil
 }
@@ -219,7 +221,7 @@ func doAnsibleScaffold() error {
 
 	resource, err := scaffold.NewResource(apiVersion, kind)
 	if err != nil {
-		return fmt.Errorf("invalid apiVersion and kind: (%v)", err)
+		return fmt.Errorf("invalid apiVersion and kind: %v", err)
 	}
 
 	roleFiles := ansible.RolesFiles{Resource: *resource}
@@ -230,7 +232,6 @@ func doAnsibleScaffold() error {
 		&scaffold.ServiceAccount{},
 		&scaffold.Role{},
 		&scaffold.RoleBinding{},
-		&scaffold.CRD{Resource: resource},
 		&scaffold.CR{Resource: resource},
 		&ansible.BuildDockerfile{GeneratePlaybook: generatePlaybook},
 		&ansible.RolesReadme{Resource: *resource},
@@ -263,17 +264,21 @@ func doAnsibleScaffold() error {
 		&ansible.MoleculeTestLocalPrepare{Resource: *resource},
 	)
 	if err != nil {
-		return fmt.Errorf("new ansible scaffold failed: (%v)", err)
+		return fmt.Errorf("new ansible scaffold failed: %v", err)
+	}
+
+	if err = generateCRDNonGo(projectName, *resource); err != nil {
+		return err
 	}
 
 	// Remove placeholders from empty directories
 	err = os.Remove(filepath.Join(s.AbsProjectPath, roleFiles.Path))
 	if err != nil {
-		return fmt.Errorf("new ansible scaffold failed: (%v)", err)
+		return fmt.Errorf("new ansible scaffold failed: %v", err)
 	}
 	err = os.Remove(filepath.Join(s.AbsProjectPath, roleTemplates.Path))
 	if err != nil {
-		return fmt.Errorf("new ansible scaffold failed: (%v)", err)
+		return fmt.Errorf("new ansible scaffold failed: %v", err)
 	}
 
 	// Decide on playbook.
@@ -284,13 +289,13 @@ func doAnsibleScaffold() error {
 			&ansible.Playbook{Resource: *resource},
 		)
 		if err != nil {
-			return fmt.Errorf("new ansible playbook scaffold failed: (%v)", err)
+			return fmt.Errorf("new ansible playbook scaffold failed: %v", err)
 		}
 	}
 
 	// update deploy/role.yaml for the given resource r.
 	if err := scaffold.UpdateRoleForResource(resource, cfg.AbsProjectPath); err != nil {
-		return fmt.Errorf("failed to update the RBAC manifest for the resource (%v, %v): (%v)", resource.APIVersion, resource.Kind, err)
+		return fmt.Errorf("failed to update the RBAC manifest for the resource (%v, %v): %v", resource.APIVersion, resource.Kind, err)
 	}
 	return nil
 }
@@ -311,11 +316,16 @@ func doHelmScaffold() error {
 
 	resource, chart, err := helm.CreateChart(cfg.AbsProjectPath, createOpts)
 	if err != nil {
-		return fmt.Errorf("failed to create helm chart: %s", err)
+		return fmt.Errorf("failed to create helm chart: %v", err)
 	}
 
-	valuesPath := filepath.Join("<project_dir>", helm.HelmChartsDir, chart.GetMetadata().GetName(), "values.yaml")
-	crSpec := fmt.Sprintf("# Default values copied from %s\n\n%s", valuesPath, chart.GetValues().GetRaw())
+	valuesPath := filepath.Join("<project_dir>", helm.HelmChartsDir, chart.Name(), "values.yaml")
+
+	rawValues, err := yaml.Marshal(chart.Values)
+	if err != nil {
+		return fmt.Errorf("failed to get raw chart values: %v", err)
+	}
+	crSpec := fmt.Sprintf("# Default values copied from %s\n\n%s", valuesPath, rawValues)
 
 	roleScaffold := helm.DefaultRoleScaffold
 	if k8sCfg, err := config.GetConfig(); err != nil {
@@ -331,31 +341,48 @@ func doHelmScaffold() error {
 		&helm.Dockerfile{},
 		&helm.WatchesYAML{
 			Resource:  resource,
-			ChartName: chart.GetMetadata().GetName(),
+			ChartName: chart.Name(),
 		},
 		&scaffold.ServiceAccount{},
 		&roleScaffold,
 		&scaffold.RoleBinding{IsClusterScoped: roleScaffold.IsClusterScoped},
 		&helm.Operator{},
-		&scaffold.CRD{Resource: resource},
 		&scaffold.CR{
 			Resource: resource,
 			Spec:     crSpec,
 		},
 	)
 	if err != nil {
-		return fmt.Errorf("new helm scaffold failed: (%v)", err)
+		return fmt.Errorf("new helm scaffold failed: %v", err)
+	}
+
+	if err = generateCRDNonGo(projectName, *resource); err != nil {
+		return err
 	}
 
 	if err := scaffold.UpdateRoleForResource(resource, cfg.AbsProjectPath); err != nil {
-		return fmt.Errorf("failed to update the RBAC manifest for resource (%v, %v): (%v)", resource.APIVersion, resource.Kind, err)
+		return fmt.Errorf("failed to update the RBAC manifest for resource (%v, %v): %v", resource.APIVersion, resource.Kind, err)
 	}
+	return nil
+}
+
+func generateCRDNonGo(projectName string, resource scaffold.Resource) error {
+	crdsDir := filepath.Join(projectName, scaffold.CRDsDir)
+	gcfg := gen.Config{
+		Inputs:    map[string]string{gencrd.CRDsDirKey: crdsDir},
+		OutputDir: crdsDir,
+	}
+	crd := gencrd.NewCRDNonGo(gcfg, resource)
+	if err := crd.Generate(); err != nil {
+		return fmt.Errorf("error generating CRD for %s: %w", resource, err)
+	}
+	log.Info("Generated CustomResourceDefinition manifests.")
 	return nil
 }
 
 func verifyFlags() error {
 	if operatorType != projutil.OperatorTypeGo && operatorType != projutil.OperatorTypeAnsible && operatorType != projutil.OperatorTypeHelm {
-		return errors.Wrap(projutil.ErrUnknownOperatorType{Type: operatorType}, "value of --type can only be `go`, `ansible`, or `helm`")
+		return fmt.Errorf("value of --type can only be `go`, `ansible`, or `helm`: %v", projutil.ErrUnknownOperatorType{Type: operatorType})
 	}
 	if operatorType != projutil.OperatorTypeAnsible && generatePlaybook {
 		return fmt.Errorf("value of --generate-playbook can only be used with --type `ansible`")
@@ -433,7 +460,7 @@ func getDeps() error {
 func initGit() error {
 	log.Info("Running git init")
 	if err := execProjCmd("git", "init"); err != nil {
-		return errors.Wrapf(err, "failed to run git init")
+		return fmt.Errorf("failed to run git init: %v", err)
 	}
 	log.Info("Run git init done")
 	return nil

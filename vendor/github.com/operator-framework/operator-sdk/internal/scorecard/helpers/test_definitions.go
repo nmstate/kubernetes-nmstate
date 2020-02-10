@@ -42,6 +42,7 @@ type TestResult struct {
 	MaximumPoints int
 	Suggestions   []string
 	Errors        []error
+	Log           string
 }
 
 // TestInfo contains information about the scorecard test
@@ -162,7 +163,7 @@ func MergeSuites(suites []TestSuite) ([]TestSuite, error) {
 				newResult, err = ResultsPassFail(testSlice)
 			}
 			if err != nil {
-				return nil, fmt.Errorf("failed to combine test results: %s", err)
+				return nil, fmt.Errorf("failed to combine test results: %v", err)
 			}
 			mergedTestResults = append(mergedTestResults, newResult)
 		}

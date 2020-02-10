@@ -47,7 +47,7 @@ GO := $(GOBIN)/go
 LOCAL_REGISTRY ?= registry:5000
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
-KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
+KUBECONFIG ?= $(CURDIR)/kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
 export KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
 CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
 CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
