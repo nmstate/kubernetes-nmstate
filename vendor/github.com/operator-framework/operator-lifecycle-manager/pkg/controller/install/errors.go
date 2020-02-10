@@ -9,12 +9,17 @@ const (
 	StrategyErrReasonInvalidStrategy    = "InvalidStrategy"
 	StrategyErrReasonTimeout            = "Timeout"
 	StrategyErrReasonUnknown            = "Unknown"
+	StrategyErrBadPatch                 = "PatchUnsuccessful"
+	StrategyErrDeploymentUpdated        = "DeploymentUpdated"
+	StrategyErrInsufficientPermissions  = "InsufficentPermissions"
 )
 
 // unrecoverableErrors are the set of errors that mean we can't recover an install strategy
 var unrecoverableErrors = map[string]struct{}{
-	StrategyErrReasonInvalidStrategy: {},
-	StrategyErrReasonTimeout:         {},
+	StrategyErrReasonInvalidStrategy:   {},
+	StrategyErrReasonTimeout:           {},
+	StrategyErrBadPatch:                {},
+	StrategyErrInsufficientPermissions: {},
 }
 
 // StrategyError is used to represent error types for install strategies

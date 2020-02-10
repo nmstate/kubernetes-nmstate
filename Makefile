@@ -29,7 +29,6 @@ export PRIMARY_NIC = ens3
 export FIRST_SECONDARY_NIC = ens8
 export SECOND_SECONDARY_NIC = ens9
 endif
-
 BIN_DIR = $(CURDIR)/build/_output/bin/
 
 export GOPROXY=direct
@@ -101,7 +100,10 @@ gen-k8s: $(OPERATOR_SDK)
 gen-openapi: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate openapi
 
-handler: gen-openapi gen-k8s $(OPERATOR_SDK)
+gen-crds: $(OPERATOR_SDK)
+	$(OPERATOR_SDK) generate crds
+
+handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK)
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
 push-handler: handler
@@ -208,6 +210,10 @@ release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_REL
 						$(versioned_operator_manifest) \
 						$(shell find deploy/crds/ deploy/openshift -type f)
 
+vendor:
+	$(GO) mod tidy
+	$(GO) mod vendor
+
 tools-vendoring:
 	./hack/vendor-tools.sh $(BIN_DIR) $$(pwd)/tools.go
 
@@ -227,5 +233,6 @@ tools-vendoring:
 	cluster-sync \
 	cluster-clean \
 	release \
+	vendor \
 	whitespace-check \
 	whitespace-format

@@ -48,6 +48,7 @@ This image will be automatically set in the deployment manifests.
 After build completes, the image would be built locally in docker. Then it needs to
 be pushed to remote registry.
 For example:
+
 	$ operator-sdk build quay.io/example/operator:v0.0.1
 	$ docker push quay.io/example/operator:v0.0.1
 `,
@@ -89,12 +90,6 @@ func buildFunc(cmd *cobra.Command, args []string) error {
 
 	projutil.MustInProjectRoot()
 	goBuildEnv := append(os.Environ(), "GOOS=linux")
-
-	if value, ok := os.LookupEnv("GOARCH"); ok {
-		goBuildEnv = append(goBuildEnv, "GOARCH="+value)
-	} else {
-		goBuildEnv = append(goBuildEnv, "GOARCH=amd64")
-	}
 
 	// If CGO_ENABLED is not set, set it to '0'.
 	if _, ok := os.LookupEnv("CGO_ENABLED"); !ok {

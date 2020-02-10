@@ -1,12 +1,12 @@
 # About
 
+[![Travis-CI](https://api.travis-ci.org/martinlindhe/base36.svg)](https://travis-ci.org/martinlindhe/base36)
 [![GoDoc](https://godoc.org/github.com/martinlindhe/base36?status.svg)](https://godoc.org/github.com/martinlindhe/base36)
-
 
 Implements Base36 encoding and decoding, which is useful to represent
 large integers in a case-insensitive alphanumeric way.
 
-# Examples
+## Examples
 
 ```go
 import "github.com/martinlindhe/base36"
@@ -24,7 +24,6 @@ fmt.Println(base36.DecodeToBytes("A2F44"))
 // Output: [1 2 3 4]
 ```
 
-
-# License
+## License
 
 Under [MIT](LICENSE)

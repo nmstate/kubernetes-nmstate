@@ -23,8 +23,8 @@ const (
 
 // InstallPlanSpec defines a set of Application resources to be installed
 type InstallPlanSpec struct {
-	CatalogSource              string   `json:"source"`
-	CatalogSourceNamespace     string   `json:"sourceNamespace"`
+	CatalogSource              string   `json:"source,omitempty"`
+	CatalogSourceNamespace     string   `json:"sourceNamespace,omitempty"`
 	ClusterServiceVersionNames []string `json:"clusterServiceVersionNames"`
 	Approval                   Approval `json:"approval"`
 	Approved                   bool     `json:"approved"`
@@ -84,6 +84,10 @@ type InstallPlanStatus struct {
 	Conditions     []InstallPlanCondition `json:"conditions,omitempty"`
 	CatalogSources []string               `json:"catalogSources"`
 	Plan           []*Step                `json:"plan,omitempty"`
+
+	// AttenuatedServiceAccountRef references the service account that is used
+	// to do scoped operator install.
+	AttenuatedServiceAccountRef *corev1.ObjectReference `json:"attenuatedServiceAccountRef,omitempty"`
 }
 
 // InstallPlanCondition represents the overall status of the execution of
@@ -100,12 +104,23 @@ type InstallPlanCondition struct {
 // allow overwriting `now` function for deterministic tests
 var now = metav1.Now
 
-// SetCondition adds or updates a condition, using `Type` as merge key
-func (s *InstallPlanStatus) SetCondition(cond InstallPlanCondition) InstallPlanCondition {
-	updated := now()
-	cond.LastUpdateTime = updated
-	cond.LastTransitionTime = updated
+// GetCondition returns the InstallPlanCondition of the given type if it exists in the InstallPlanStatus' Conditions.
+// Returns a condition of the given type with a ConditionStatus of "Unknown" if not found.
+func (s InstallPlanStatus) GetCondition(conditionType InstallPlanConditionType) InstallPlanCondition {
+	for _, cond := range s.Conditions {
+		if cond.Type == conditionType {
+			return cond
+		}
+	}
 
+	return InstallPlanCondition{
+		Type:   conditionType,
+		Status: corev1.ConditionUnknown,
+	}
+}
+
+// SetCondition adds or updates a condition, using `Type` as merge key.
+func (s *InstallPlanStatus) SetCondition(cond InstallPlanCondition) InstallPlanCondition {
 	for i, existing := range s.Conditions {
 		if existing.Type != cond.Type {
 			continue
@@ -120,19 +135,23 @@ func (s *InstallPlanStatus) SetCondition(cond InstallPlanCondition) InstallPlanC
 	return cond
 }
 
-func ConditionFailed(cond InstallPlanConditionType, reason InstallPlanConditionReason, err error) InstallPlanCondition {
+func ConditionFailed(cond InstallPlanConditionType, reason InstallPlanConditionReason, message string, now *metav1.Time) InstallPlanCondition {
 	return InstallPlanCondition{
-		Type:    cond,
-		Status:  corev1.ConditionFalse,
-		Reason:  reason,
-		Message: err.Error(),
+		Type:               cond,
+		Status:             corev1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		LastUpdateTime:     *now,
+		LastTransitionTime: *now,
 	}
 }
 
-func ConditionMet(cond InstallPlanConditionType) InstallPlanCondition {
+func ConditionMet(cond InstallPlanConditionType, now *metav1.Time) InstallPlanCondition {
 	return InstallPlanCondition{
-		Type:   cond,
-		Status: corev1.ConditionTrue,
+		Type:               cond,
+		Status:             corev1.ConditionTrue,
+		LastUpdateTime:     *now,
+		LastTransitionTime: *now,
 	}
 }
 
