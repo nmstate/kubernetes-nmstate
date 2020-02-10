@@ -155,3 +155,28 @@ There is a possibility to enable golang pprof profiler.
 
 - [prow](https://prow.apps.ovirt.org/)
 - [flakefinder](https://storage.googleapis.com/kubevirt-prow/reports/flakefinder/nmstate/kubernetes-nmstate/index.html)
+
+# FAQ
+
+## The NodeNetworkState does not show the state correctly at ubuntu 18.04 nodes.
+
+In Ubuntu 18.04 they introduced netplan for the network configuration. So to enable NetworkManager you need to
+follow these steps:
+
+```yaml
+# 1.- - edit /etc/netplan with:
+network:
+  version: 2
+  renderer: NetworkManager
+```
+
+```bash
+# 2.- apply the changes
+netplan generate
+netplan apply
+```
+
+References:
+
+- https://netplan.io/
+- https://askubuntu.com/questions/1031956/network-manager-not-working-when-installing-ubuntu-desktop-on-a-ubuntu-18-04-ser
