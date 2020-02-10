@@ -1,6 +1,6 @@
 module github.com/nmstate/kubernetes-nmstate
 
-go 1.12.15
+go 1.13.7
 
 require (
 	github.com/aktau/github-release v0.7.2

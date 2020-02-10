@@ -32,8 +32,9 @@ endif
 
 BIN_DIR = $(CURDIR)/build/_output/bin/
 
+export GOPROXY=direct
+export GOSUMDB=off
 export GOFLAGS=-mod=vendor
-export GO111MODULE=on
 export GOROOT=$(BIN_DIR)/go/
 export GOBIN=$(GOROOT)/bin/
 export PATH := $(GOROOT)/bin:$(PATH)
