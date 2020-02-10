@@ -2,15 +2,12 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
 	"os/exec"
 	"strconv"
 	"strings"
-	"testing"
 	"time"
-
-	"github.com/pkg/errors"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,10 +15,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	yaml "sigs.k8s.io/yaml"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -61,42 +55,6 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	}
 	Fail(fmt.Sprintf("interface %s not found at %+v", searchedName, interfaces))
 	return dummy
-}
-
-func prepare(t *testing.T) (*framework.TestCtx, string) {
-	By("Initialize cluster resources")
-	cleanupRetryInterval := time.Second * 1
-	cleanupTimeout := time.Second * 5
-	ctx := framework.NewTestCtx(t)
-	err := ctx.InitializeClusterResources(&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
-	Expect(err).ToNot(HaveOccurred())
-
-	// get namespace
-	By("Check operator is up and running")
-	namespace, err := ctx.GetNamespace()
-	Expect(err).ToNot(HaveOccurred())
-	err = waitForDaemonSets(t, framework.Global.KubeClient, namespace, time.Second*5, time.Second*90)
-	Expect(err).ToNot(HaveOccurred())
-	return ctx, namespace
-}
-
-func waitForDaemonSets(t *testing.T, kubeclient kubernetes.Interface, namespace string, retryInterval, timeout time.Duration) error {
-	if framework.Global.LocalOperator {
-		return nil
-	}
-	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
-		daemonsets, err := kubeclient.AppsV1().DaemonSets(namespace).List(metav1.ListOptions{})
-		if err != nil {
-			return true, errors.Wrapf(err, "failed retrieving daemon sets for namespace %s", namespace)
-		}
-		for _, daemonset := range daemonsets.Items {
-			if daemonset.Status.DesiredNumberScheduled != daemonset.Status.NumberAvailable {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
-	return err
 }
 
 func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev1alpha1.State, nodeSelector map[string]string) {
