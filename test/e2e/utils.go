@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -70,46 +72,31 @@ func prepare(t *testing.T) (*framework.TestCtx, string) {
 	Expect(err).ToNot(HaveOccurred())
 
 	// get namespace
+	By("Check operator is up and running")
 	namespace, err := ctx.GetNamespace()
 	Expect(err).ToNot(HaveOccurred())
-
-	err = WaitForOperatorDaemonSet(t, framework.Global.KubeClient, namespace, "nmstate-handler", time.Second*5, time.Second*90)
+	err = waitForDaemonSets(t, framework.Global.KubeClient, namespace, time.Second*5, time.Second*90)
 	Expect(err).ToNot(HaveOccurred())
 	return ctx, namespace
 }
 
-// WaitForOperatorDeployment has the same functionality as WaitForDeployment but will no wait for the deployment if the
-// test was run with a locally run operator (--up-local flag)
-func WaitForOperatorDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
-	return waitForDaemonSet(t, kubeclient, namespace, name, retryInterval, timeout, true)
-}
-
-func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration, isOperator bool) error {
-	if isOperator && framework.Global.LocalOperator {
-		t.Log("Operator is running locally; skip waitForDeployment")
+func waitForDaemonSets(t *testing.T, kubeclient kubernetes.Interface, namespace string, retryInterval, timeout time.Duration) error {
+	if framework.Global.LocalOperator {
 		return nil
 	}
 	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
-		deployment, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
+		daemonsets, err := kubeclient.AppsV1().DaemonSets(namespace).List(metav1.ListOptions{})
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				t.Logf("Waiting for availability of %s daemonset\n", name)
+			return true, errors.Wrapf(err, "failed retrieving daemon sets for namespace %s", namespace)
+		}
+		for _, daemonset := range daemonsets.Items {
+			if daemonset.Status.DesiredNumberScheduled != daemonset.Status.NumberAvailable {
 				return false, nil
 			}
-			return false, err
 		}
-
-		if deployment.Status.DesiredNumberScheduled == deployment.Status.NumberAvailable {
-			return true, nil
-		}
-		t.Logf("Waiting for full availability of %s daemonset (%d/%d)\n", name, deployment.Status.DesiredNumberScheduled, deployment.Status.NumberAvailable)
-		return false, nil
+		return true, nil
 	})
-	if err != nil {
-		return err
-	}
-	t.Log("DaemonSet available")
-	return nil
+	return err
 }
 
 func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev1alpha1.State, nodeSelector map[string]string) {
