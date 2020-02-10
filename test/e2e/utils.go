@@ -2,12 +2,11 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
-	"github.com/nmstate/kubernetes-nmstate/build/_output/bin/go/src/encoding/json"
 	"os/exec"
 	"strconv"
 	"strings"
-	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -16,10 +15,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	yaml "sigs.k8s.io/yaml"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
@@ -59,57 +55,6 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	}
 	Fail(fmt.Sprintf("interface %s not found at %+v", searchedName, interfaces))
 	return dummy
-}
-
-func prepare(t *testing.T) (*framework.TestCtx, string) {
-	By("Initialize cluster resources")
-	cleanupRetryInterval := time.Second * 1
-	cleanupTimeout := time.Second * 5
-	ctx := framework.NewTestCtx(t)
-	err := ctx.InitializeClusterResources(&framework.CleanupOptions{TestContext: ctx, Timeout: cleanupTimeout, RetryInterval: cleanupRetryInterval})
-	Expect(err).ToNot(HaveOccurred())
-
-	// get namespace
-	namespace, err := ctx.GetNamespace()
-	Expect(err).ToNot(HaveOccurred())
-
-	err = WaitForOperatorDaemonSet(t, framework.Global.KubeClient, namespace, "nmstate-handler", time.Second*5, time.Second*90)
-	Expect(err).ToNot(HaveOccurred())
-	return ctx, namespace
-}
-
-// WaitForOperatorDeployment has the same functionality as WaitForDeployment but will no wait for the deployment if the
-// test was run with a locally run operator (--up-local flag)
-func WaitForOperatorDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration) error {
-	return waitForDaemonSet(t, kubeclient, namespace, name, retryInterval, timeout, true)
-}
-
-func waitForDaemonSet(t *testing.T, kubeclient kubernetes.Interface, namespace, name string, retryInterval, timeout time.Duration, isOperator bool) error {
-	if isOperator && framework.Global.LocalOperator {
-		t.Log("Operator is running locally; skip waitForDeployment")
-		return nil
-	}
-	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
-		deployment, err := kubeclient.AppsV1().DaemonSets(namespace).Get(name, metav1.GetOptions{})
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				t.Logf("Waiting for availability of %s daemonset\n", name)
-				return false, nil
-			}
-			return false, err
-		}
-
-		if deployment.Status.DesiredNumberScheduled == deployment.Status.NumberAvailable {
-			return true, nil
-		}
-		t.Logf("Waiting for full availability of %s daemonset (%d/%d)\n", name, deployment.Status.DesiredNumberScheduled, deployment.Status.NumberAvailable)
-		return false, nil
-	})
-	if err != nil {
-		return err
-	}
-	t.Log("DaemonSet available")
-	return nil
 }
 
 func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev1alpha1.State, nodeSelector map[string]string) {
