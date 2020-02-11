@@ -24,8 +24,11 @@ func skipIfNotKubernetes() {
 }
 
 var _ = Describe("Introduction: Configuration", func() {
-	AfterEach(func() {
+	BeforeEach(func() {
 		skipIfNotKubernetes()
+	})
+
+	AfterEach(func() {
 		updateDesiredState(interfaceAbsent("eth1.100"))
 		waitForAvailableTestPolicy()
 		resetDesiredStateForNodes()
