@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -27,13 +24,13 @@ import (
 
 	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
 var (
 	log = logf.Log.WithName("client")
 )
 
-const nmstateCommand = "nmstatectl"
 const vlanFilteringCommand = "vlan-filtering"
 const defaultGwRetrieveTimeout = 120 * time.Second
 const defaultGwProbeTimeout = 120 * time.Second
@@ -51,17 +48,6 @@ func init() {
 	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
 }
 
-func show(arguments ...string) (string, error) {
-	cmd := exec.Command(nmstateCommand, "show")
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute nmstatectl show: '%v', '%s', '%s'", err, stdout.String(), stderr.String())
-	}
-	return stdout.String(), nil
-}
-
 func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 	command := []string{bridgeName}
 	command = append(command, ports...)
@@ -74,49 +60,6 @@ func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", vlanFilteringCommand, err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
-}
-
-func nmstatectl(arguments []string, input string) (string, error) {
-	cmd := exec.Command(nmstateCommand, arguments...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
-	if input != "" {
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			return "", fmt.Errorf("failed to create pipe for writing into %s: %v", nmstateCommand, err)
-		}
-		go func() {
-			defer stdin.Close()
-			_, err = io.WriteString(stdin, input)
-			if err != nil {
-				fmt.Printf("failed to write input into stdin: %v\n", err)
-			}
-		}()
-
-	}
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s %s: '%v' '%s' '%s'", nmstateCommand, strings.Join(arguments, " "), err, stdout.String(), stderr.String())
-	}
-	return stdout.String(), nil
-
-}
-
-func set(desiredState nmstatev1alpha1.State) (string, error) {
-	// commit timeout doubles the default gw ping probe timeout, to
-	// ensure the Checkpoint is alive before rolling it back
-	// https://nmstate.github.io/cli_guide#manual-transaction-control
-	output, err := nmstatectl([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(defaultGwProbeTimeout.Seconds()) * 2)}, string(desiredState.Raw))
-	return output, err
-}
-
-func commit() (string, error) {
-	return nmstatectl([]string{"commit"}, "")
-}
-
-func rollback(cause error) error {
-	_, err := nmstatectl([]string{"rollback"}, "")
-	return fmt.Errorf("rollback cause: %v, rollback error: %v", cause, err)
 }
 
 func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {
@@ -148,7 +91,7 @@ func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
-	observedStateRaw, err := show()
+	observedStateRaw, err := nmstatectl.Show()
 	if err != nil {
 		return fmt.Errorf("error running nmstatectl show: %v", err)
 	}
@@ -215,7 +158,7 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 func defaultGw() (string, error) {
 	defaultGw := ""
 	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout, func() (bool, error) {
-		observedStateRaw, err := show()
+		observedStateRaw, err := nmstatectl.Show()
 		if err != nil {
 			log.Error(err, fmt.Sprintf("failed retrieving current state"))
 			return false, nil
@@ -242,7 +185,10 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		return "Ignoring empty desired state", nil
 	}
 
-	setOutput, err := set(desiredState)
+	// commit timeout doubles the default gw ping probe timeout, to
+	// ensure the Checkpoint is alive before rolling it back
+	// https://nmstate.github.io/cli_guide#manual-transaction-control
+	setOutput, err := nmstatectl.Set(desiredState, defaultGwProbeTimeout*2)
 	if err != nil {
 		return setOutput, err
 	}
@@ -253,7 +199,7 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	// set
 	bridgesUpWithPorts, err := getBridgesUp(desiredState)
 	if err != nil {
-		return "", rollback(fmt.Errorf("error retrieving up bridges from desired state"))
+		return "", nmstatectl.Rollback(fmt.Errorf("error retrieving up bridges from desired state"))
 	}
 
 	commandOutput := ""
@@ -261,32 +207,32 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
 		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
 		if err != nil {
-			return commandOutput, rollback(err)
+			return commandOutput, nmstatectl.Rollback(err)
 		}
 	}
 
 	defaultGw, err := defaultGw()
 	if err != nil {
-		return commandOutput, rollback(err)
+		return commandOutput, nmstatectl.Rollback(err)
 	}
 
-	currentState, err := show()
+	currentState, err := nmstatectl.Show()
 	if err != nil {
-		return "", rollback(err)
+		return "", nmstatectl.Rollback(err)
 	}
 
 	// TODO: Make ping timeout configurable with a config map
 	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout)
 	if err != nil {
-		return pingOutput, rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+		return pingOutput, nmstatectl.Rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
 
 	err = checkApiServerConnectivity(apiServerProbeTimeout)
 	if err != nil {
-		return "", rollback(fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+		return "", nmstatectl.Rollback(fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
 	}
 
-	commitOutput, err := commit()
+	commitOutput, err := nmstatectl.Commit()
 	if err != nil {
 		// We cannot rollback if commit fails, just return the error
 		return commitOutput, err
