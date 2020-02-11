@@ -39,6 +39,13 @@ var _ = Describe("Introduction", func() {
 		kubectlAndCheck("wait", "nncp", "vlan100", "--for", "condition=Available", "--timeout", "2m")
 	}
 
+	// Policies are not deleted as a part of the tutorial, so we need additional function here
+	cleanupConfiguration := func() {
+		deletePolicy("vlan100")
+		updateDesiredState(interfaceAbsent("eth1.100"))
+		waitForAvailableTestPolicy()
+	}
+
 	runTroubleshooting := func() {
 		kubectlAndCheck("apply", "-f", "docs/examples/eth666_up.yaml")
 		kubectlAndCheck("wait", "nncp", "eth666", "--for", "condition=Degraded", "--timeout", "2m")
@@ -49,13 +56,12 @@ var _ = Describe("Introduction", func() {
 		skipIfNotKubernetes()
 	})
 
-	AfterEach(func() {
-		updateDesiredState(interfaceAbsent("eth1.100"))
-		waitForAvailableTestPolicy()
-		resetDesiredStateForNodes()
-	})
-
 	Context("Configuration tutorial", func() {
+		AfterEach(func() {
+			cleanupConfiguration()
+			resetDesiredStateForNodes()
+		})
+
 		It("should succeed executing all the commands", func() {
 			runConfiguration()
 		})
@@ -68,6 +74,11 @@ var _ = Describe("Introduction", func() {
 	})
 
 	Context("All tutorials in a row", func() {
+		AfterEach(func() {
+			cleanupConfiguration()
+			resetDesiredStateForNodes()
+		})
+
 		It("should succeed executing all the commands", func() {
 			runConfiguration()
 			runTroubleshooting()
