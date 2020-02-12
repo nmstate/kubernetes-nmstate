@@ -12,13 +12,18 @@ type CountByConditionStatus map[corev1.ConditionStatus]int
 
 type ConditionCount map[nmstatev1alpha1.ConditionType]CountByConditionStatus
 
-func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList) ConditionCount {
+func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList, policyGeneration int64) ConditionCount {
 	conditionCount := ConditionCount{}
 	for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
-		conditionCount[conditionType] = CountByConditionStatus{}
+		conditionCount[conditionType] = CountByConditionStatus{
+			corev1.ConditionTrue:    0,
+			corev1.ConditionFalse:   0,
+			corev1.ConditionUnknown: 0,
+		}
 		for _, enactment := range enactments.Items {
 			condition := enactment.Status.Conditions.Find(conditionType)
-			if condition != nil {
+			// If there is a condition status and it's from the current policy update
+			if condition != nil && enactment.Status.PolicyGeneration == policyGeneration {
 				conditionCount[conditionType][condition.Status] += 1
 			} else {
 				conditionCount[conditionType][corev1.ConditionUnknown] += 1

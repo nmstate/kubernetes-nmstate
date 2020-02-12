@@ -124,6 +124,13 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(re
 							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
 						},
 					},
+					"policyGeneration": {
+						SchemaProps: spec.SchemaProps{
+							Description: "The generation from policy needed to check if an enactment condition status belongs to the same policy version",
+							Type:        []string{"integer"},
+							Format:      "int64",
+						},
+					},
 					"conditions": {
 						SchemaProps: spec.SchemaProps{
 							Type: []string{"array"},
