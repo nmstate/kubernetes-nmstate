@@ -50,7 +50,6 @@ var _ = Describe("Enactment condition counter", func() {
 	DescribeTable("the enactments statuses", func(c EnactmentCounterCase) {
 		obtainedCount := Count(c.enactmentsToCount, c.policyGeneration)
 		Expect(obtainedCount).To(Equal(c.expectedCount))
-		//TODO: Do we also check getters ? available().true(), etc...
 	},
 		Entry("e(), e()", EnactmentCounterCase{
 			policyGeneration: 1,
