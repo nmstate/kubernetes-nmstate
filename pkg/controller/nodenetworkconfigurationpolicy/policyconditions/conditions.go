@@ -119,8 +119,8 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 			}
 		}
 
-		// Let's get conditions with true status count
-		enactmentsCount := enactmentconditions.Count(enactments)
+		// Let's get conditions with true status count filtered by policy generation
+		enactmentsCount := enactmentconditions.Count(enactments, policy.Generation)
 
 		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching()
 
