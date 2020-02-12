@@ -40,7 +40,10 @@ type NodeNetworkConfigurationEnactmentStatus struct {
 	// the policy desiredState as template
 	DesiredState State `json:"desiredState,omitempty"`
 
-	Conditions ConditionList `json:"conditions,omitempty"`
+	// The generation from policy needed to check if an enactment
+	// condition status belongs to the same policy version
+	PolicyGeneration int64         `json:"policyGeneration,omitempty"`
+	Conditions       ConditionList `json:"conditions,omitempty"`
 }
 
 const (

@@ -140,6 +140,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nms
 
 	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
 		status.DesiredState = policy.Spec.DesiredState
+		status.PolicyGeneration = policy.Generation
 	})
 }
 
