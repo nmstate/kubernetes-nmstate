@@ -15,7 +15,11 @@ type ConditionCount map[nmstatev1alpha1.ConditionType]CountByConditionStatus
 func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList) ConditionCount {
 	conditionCount := ConditionCount{}
 	for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
-		conditionCount[conditionType] = CountByConditionStatus{}
+		conditionCount[conditionType] = CountByConditionStatus{
+			corev1.ConditionTrue:    0,
+			corev1.ConditionFalse:   0,
+			corev1.ConditionUnknown: 0,
+		}
 		for _, enactment := range enactments.Items {
 			condition := enactment.Status.Conditions.Find(conditionType)
 			if condition != nil {
