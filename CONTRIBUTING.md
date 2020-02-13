@@ -180,3 +180,20 @@ References:
 
 - https://netplan.io/
 - https://askubuntu.com/questions/1031956/network-manager-not-working-when-installing-ubuntu-desktop-on-a-ubuntu-18-04-ser
+
+## Bridge does not inherit MAC and IP of its NIC
+
+There is a bug in NetworkManager 1.20 that causes that. It should be solved on
+NetworkManager 1.22. To workaround this issue on earlier release, please set the
+following:
+
+```
+# /etc/systemd/network/98-bridge-inherit-mac.link
+[Match]
+Type=bridge
+
+[Link]
+MACAddressPolicy=none
+```
+
+Change log with explanation: https://github.com/systemd/systemd/blob/master/NEWS#L1004
