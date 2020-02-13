@@ -9,6 +9,12 @@
 # [1] https://stackoverflow.com/questions/8536732/can-i-hold-git-credentials-in-environment-variables
 git config credential.helper '!f() { sleep 1; echo "username=${GITHUB_USER}"; echo "password=${GITHUB_TOKEN}"; }; f'
 
+git tag foobar
+
+git push https://github.com/qinqon/kubernetes-nmstate foobar
+
+exit 1
+
 source automation/check-patch.setup.sh
 cd ${TMP_PROJECT_PATH}
 make \
