@@ -1,41 +1,31 @@
-v0.14.0
+v0.15.0
 
-This release include a mutating admission webhook that will ensure that
-NodeNetworkConfigurationPolicy conditions are reset after being create/modified
-by clients, that prenvets a race condition between `kubectl apply` and `kubectl wait`
+This release include a much much better documentation and some nasty
+bugs has being fixed, it does not implement new features, except for
+externa library integration for webhooks and the pprof integration
+into the project.
 
-Another interesating feature is a new column at kubectl get nncp/nnce that shows the status:
-
-```bash
-$ ./kubevirtci/cluster-up/kubectl.sh get nncp
-NAME                                     STATUS
-example-nodenetworkconfigurationpolicy   SuccessfullyConfigured
-```
-
-The project now also use a vendored golang version that get installed if is not already
-present ander ./build. Also the features are tested with k8s 1.17.
+NOTE: This is the last minor release for NetworkManager 1.20, next minor release
+will use NetworkManager >= 1.22
 
 Features:
-* Run webhook only on master nodes (#361)
-* expose Reason on NNCP and NNCE list (#374)
-* Use k8s 1.17.0 provider (#339)
-* Pin and install go from go.mod version (#352)
-* Add conditions reset mutating webhook (#324)
-* Use enactments matching state for policy conditions calculation (#306)
+* Adding profiler: (#386)
+* Integrate kube-admission-webhook module (#381)
 
 Bugs:
-* Count seconds instead of nano for default gw retrieval (#366)
-* Use enactments matching state for policy conditions calculation (#306)
-* Call generators before handler build (#344)
-* drop user guides root (#363)
-* drop outdated guides and merge developer guide (#358)
+* Use policy generation to calculate overall condition. (#407)
+* don't retry the configuration (#388)
+* wait for scc resource (#393)
+* Default to 0 if numberAvailable is not present (#380)
 
 Docs:
-* doc: 101 state (#368)
-* Add user guide for vlan and dynamic ip policy (#354)
-* make readme straight to the point (#367)
-* Add CI infrastructure to contributing page. (#364)
-* Renamed docs/developer-guide.md to docs/CONTRIBUTING.md (#353)
+* add supported networkmanager version to README (#403)
+* Add a link to the vlan and ip configuration user guide (#382)
+* add supported networkmanager version to README (#403)
+* docs: 103 troubleshooting (#395)
+* docs: 102 Configuration (#392)
+* doc: add ubuntu netplan configuration (#400)
+* don't retry the configuration (#388)
 
 ```
 docker pull HANDLER_IMAGE
