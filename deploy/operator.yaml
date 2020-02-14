@@ -138,6 +138,10 @@ spec:
                 configMapKeyRef:
                   name: nmstate-config
                   key: interfaces_filter
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
