@@ -27,7 +27,9 @@ spec:
         - name: eth0
 ```
 
-The only external dependency is NetworkManager `>= 1.20` running on nodes.
+The only external dependency is NetworkManager running on nodes. See more
+details in
+[Compatibility documentation](CONTRIBUTING.md#networkmanager-compatibility).
 
 # Deployment and Usage
 
