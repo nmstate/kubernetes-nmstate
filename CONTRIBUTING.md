@@ -7,6 +7,17 @@ deployed as a DaemonSet instead of Deployment with
 only events for the DaemonSet pod node.
 
 
+# NetworkManager compatibility
+
+kubernetes-nmstate is connecting to NetworkManager running on a host. That
+implies following dependency requirements:
+
+| kubernetes-nmstate version | NetworkManager version |
+| ---                        | ---                    |
+| master, `> 0.15.0`         | `>= 1.22`              |
+| `<= 0.15.0`                | `>= 1.20`              |
+
+
 # Development
 
 ## Local Kubernetes cluster
