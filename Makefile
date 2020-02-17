@@ -29,11 +29,11 @@ export PRIMARY_NIC = ens3
 export FIRST_SECONDARY_NIC = ens8
 export SECOND_SECONDARY_NIC = ens9
 endif
-
 BIN_DIR = $(CURDIR)/build/_output/bin/
 
+export GOPROXY=direct
+export GOSUMDB=off
 export GOFLAGS=-mod=vendor
-export GO111MODULE=on
 export GOROOT=$(BIN_DIR)/go/
 export GOBIN=$(GOROOT)/bin/
 export PATH := $(GOROOT)/bin:$(PATH)
@@ -47,7 +47,7 @@ GO := $(GOBIN)/go
 LOCAL_REGISTRY ?= registry:5000
 
 CLUSTER_DIR ?= kubevirtci/cluster-up/
-KUBECONFIG ?= kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
+KUBECONFIG ?= $(CURDIR)/kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
 export KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
 CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
 CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
@@ -100,7 +100,10 @@ gen-k8s: $(OPERATOR_SDK)
 gen-openapi: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate openapi
 
-handler: gen-openapi gen-k8s $(OPERATOR_SDK)
+gen-crds: $(OPERATOR_SDK)
+	$(OPERATOR_SDK) generate crds
+
+handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK)
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
 push-handler: handler
@@ -207,6 +210,10 @@ release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_REL
 						$(versioned_operator_manifest) \
 						$(shell find deploy/crds/ deploy/openshift -type f)
 
+vendor:
+	$(GO) mod tidy
+	$(GO) mod vendor
+
 tools-vendoring:
 	./hack/vendor-tools.sh $(BIN_DIR) $$(pwd)/tools.go
 
@@ -226,5 +233,6 @@ tools-vendoring:
 	cluster-sync \
 	cluster-clean \
 	release \
+	vendor \
 	whitespace-check \
 	whitespace-format

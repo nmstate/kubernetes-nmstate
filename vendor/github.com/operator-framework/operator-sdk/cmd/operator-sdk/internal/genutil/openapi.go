@@ -22,11 +22,9 @@ import (
 	"strings"
 
 	"github.com/operator-framework/operator-sdk/internal/scaffold"
-	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	generatorargs "k8s.io/kube-openapi/cmd/openapi-gen/args"
 	"k8s.io/kube-openapi/pkg/generators"
@@ -36,12 +34,11 @@ import (
 func OpenAPIGen() error {
 	projutil.MustInProjectRoot()
 
-	absProjectPath := projutil.MustGetwd()
 	repoPkg := projutil.GetGoPkg()
 
 	gvMap, err := k8sutil.ParseGroupSubpackages(scaffold.ApisDir)
 	if err != nil {
-		return fmt.Errorf("failed to parse group versions: (%v)", err)
+		return fmt.Errorf("failed to parse group versions: %v", err)
 	}
 	gvb := &strings.Builder{}
 	for g, vs := range gvMap {
@@ -57,37 +54,6 @@ func OpenAPIGen() error {
 		return err
 	}
 
-	s := &scaffold.Scaffold{}
-	cfg := &input.Config{
-		Repo:           repoPkg,
-		AbsProjectPath: absProjectPath,
-		ProjectName:    filepath.Base(absProjectPath),
-	}
-	crds, err := k8sutil.GetCRDs(scaffold.CRDsDir)
-	if err != nil {
-		return err
-	}
-	for _, crd := range crds {
-		g, v, k := crd.Spec.Group, crd.Spec.Version, crd.Spec.Names.Kind
-		if v == "" {
-			if len(crd.Spec.Versions) != 0 {
-				v = crd.Spec.Versions[0].Name
-			} else {
-				return fmt.Errorf("crd of group %s kind %s has no version", g, k)
-			}
-		}
-		r, err := scaffold.NewResource(g+"/"+v, k)
-		if err != nil {
-			return err
-		}
-		err = s.Execute(cfg,
-			&scaffold.CRD{Resource: r, IsOperatorGo: projutil.IsOperatorGo()},
-		)
-		if err != nil {
-			return err
-		}
-	}
-
 	log.Info("Code-generation complete.")
 	return nil
 }
@@ -97,7 +63,9 @@ func openAPIGen(hf string, fqApis []string) error {
 	if err != nil {
 		return err
 	}
-	flag.Set("logtostderr", "true")
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		return err
+	}
 	for _, api := range fqApis {
 		api = filepath.FromSlash(api)
 		// Use relative API path so the generator writes to the correct path.
@@ -114,7 +82,7 @@ func openAPIGen(hf string, fqApis []string) error {
 		// Print API rule violations to stdout
 		cargs.ReportFilename = "-"
 		if err := generatorargs.Validate(args); err != nil {
-			return errors.Wrap(err, "openapi-gen argument validation error")
+			return fmt.Errorf("openapi-gen argument validation error: %v", err)
 		}
 
 		err := args.Execute(
@@ -123,7 +91,7 @@ func openAPIGen(hf string, fqApis []string) error {
 			generators.Packages,
 		)
 		if err != nil {
-			return errors.Wrap(err, "openapi-gen generator error")
+			return fmt.Errorf("openapi-gen generator error: %v", err)
 		}
 	}
 	return nil

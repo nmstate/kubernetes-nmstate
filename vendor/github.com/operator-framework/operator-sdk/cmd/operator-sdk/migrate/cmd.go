@@ -101,7 +101,7 @@ func migrateAnsible() error {
 	case os.IsNotExist(err):
 		log.Info("No playbook was found, so not including it in the new Dockerfile")
 	default:
-		return fmt.Errorf("error trying to stat %s: (%v)", ansible.PlaybookYamlFile, err)
+		return fmt.Errorf("error trying to stat %s: %v", ansible.PlaybookYamlFile, err)
 	}
 	if err := renameDockerfile(); err != nil {
 		return err
@@ -111,7 +111,7 @@ func migrateAnsible() error {
 	if headerFile != "" {
 		err = s.Execute(cfg, &scaffold.Boilerplate{BoilerplateSrcPath: headerFile})
 		if err != nil {
-			return fmt.Errorf("boilerplate scaffold failed: (%v)", err)
+			return fmt.Errorf("boilerplate scaffold failed: %v", err)
 		}
 		s.BoilerplatePath = headerFile
 	}
@@ -123,11 +123,10 @@ func migrateAnsible() error {
 		&dockerfile,
 		&ansible.Entrypoint{},
 		&ansible.UserSetup{},
-		&ansible.K8sStatus{},
 		&ansible.AoLogs{},
 	)
 	if err != nil {
-		return fmt.Errorf("migrate ansible scaffold failed: (%v)", err)
+		return fmt.Errorf("migrate ansible scaffold failed: %v", err)
 	}
 	return nil
 }
@@ -150,7 +149,7 @@ func migrateHelm() error {
 	if headerFile != "" {
 		err := s.Execute(cfg, &scaffold.Boilerplate{BoilerplateSrcPath: headerFile})
 		if err != nil {
-			return fmt.Errorf("boilerplate scaffold failed: (%v)", err)
+			return fmt.Errorf("boilerplate scaffold failed: %v", err)
 		}
 		s.BoilerplatePath = headerFile
 	}
@@ -167,7 +166,7 @@ func migrateHelm() error {
 		&helm.UserSetup{},
 	)
 	if err != nil {
-		return fmt.Errorf("migrate helm scaffold failed: (%v)", err)
+		return fmt.Errorf("migrate helm scaffold failed: %v", err)
 	}
 	return nil
 }
@@ -177,7 +176,7 @@ func renameDockerfile() error {
 	newDockerfilePath := dockerfilePath + ".sdkold"
 	err := os.Rename(dockerfilePath, newDockerfilePath)
 	if err != nil {
-		return fmt.Errorf("failed to rename Dockerfile: (%v)", err)
+		return fmt.Errorf("failed to rename Dockerfile: %v", err)
 	}
 	log.Infof("Renamed Dockerfile to %s and replaced with newer version. Compare the new Dockerfile to your old one and manually migrate any customizations", newDockerfilePath)
 	return nil

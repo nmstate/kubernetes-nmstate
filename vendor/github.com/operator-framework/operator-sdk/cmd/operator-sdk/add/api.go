@@ -25,7 +25,6 @@ import (
 	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
-	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -36,25 +35,26 @@ var (
 	skipGeneration bool
 )
 
-func newAddApiCmd() *cobra.Command {
+func newAddAPICmd() *cobra.Command {
 	apiCmd := &cobra.Command{
 		Use:   "api",
 		Short: "Adds a new api definition under pkg/apis",
-		Long: `operator-sdk add api --kind=<kind> --api-version=<group/version> creates the
-api definition for a new custom resource under pkg/apis. This command must be
-run from the project root directory. If the api already exists at
-pkg/apis/<group>/<version> then the command will not overwrite and return an
-error.
+		Long: `operator-sdk add api --kind=<kind> --api-version=<group/version> creates
+the api definition for a new custom resource under pkg/apis. This command
+must be run from the project root directory. If the api already exists at
+pkg/apis/<group>/<version> then the command will not overwrite and return
+an error.
 
-By default, this command runs Kubernetes deepcopy and OpenAPI V3 generators on
+By default, this command runs Kubernetes deepcopy and CRD generators on
 tagged types in all paths under pkg/apis. Go code is generated under
-pkg/apis/<group>/<version>/zz_generated.{deepcopy,openapi}.go. CRD's are
-generated, or updated if they exist for a particular group + version + kind,
-under deploy/crds/<full group>_<resource>_crd.yaml; OpenAPI V3 validation YAML
+pkg/apis/<group>/<version>/zz_generated.deepcopy.go. CRD's are generated,
+or updated if they exist for a particular group + version + kind, under
+deploy/crds/<full group>_<resource>_crd.yaml; OpenAPI V3 validation YAML
 is generated as a 'validation' object. Generation can be disabled with the
 --skip-generation flag.
 
 Example:
+
 	$ operator-sdk add api --api-version=app.example.com/v1alpha1 --kind=AppService
 	$ tree pkg/apis
 	pkg/apis/
@@ -66,7 +66,6 @@ Example:
 			├── register.go
 			├── appservice_types.go
 			├── zz_generated.deepcopy.go
-			├── zz_generated.openapi.go
 	$ tree deploy/crds
 	├── deploy/crds/app.example.com_v1alpha1_appservice_cr.yaml
 	├── deploy/crds/app.example.com_appservices_crd.yaml
@@ -115,7 +114,7 @@ func apiRun(cmd *cobra.Command, args []string) error {
 	// scaffold a group.go to prevent erroneous gengo parse errors.
 	group := &scaffold.Group{Resource: r}
 	if err := scaffoldIfNoPkgFileExists(s, cfg, group); err != nil {
-		return errors.Wrap(err, "scaffold group file")
+		return fmt.Errorf("scaffold group file: %v", err)
 	}
 
 	err = s.Execute(cfg,
@@ -124,15 +123,14 @@ func apiRun(cmd *cobra.Command, args []string) error {
 		&scaffold.Register{Resource: r},
 		&scaffold.Doc{Resource: r},
 		&scaffold.CR{Resource: r},
-		&scaffold.CRD{Resource: r, IsOperatorGo: projutil.IsOperatorGo()},
 	)
 	if err != nil {
-		return fmt.Errorf("api scaffold failed: (%v)", err)
+		return fmt.Errorf("api scaffold failed: %v", err)
 	}
 
 	// update deploy/role.yaml for the given resource r.
 	if err := scaffold.UpdateRoleForResource(r, absProjectPath); err != nil {
-		return fmt.Errorf("failed to update the RBAC manifest for the resource (%v, %v): (%v)", r.APIVersion, r.Kind, err)
+		return fmt.Errorf("failed to update the RBAC manifest for the resource (%v, %v): %v", r.APIVersion, r.Kind, err)
 	}
 
 	if !skipGeneration {
@@ -142,7 +140,7 @@ func apiRun(cmd *cobra.Command, args []string) error {
 		}
 
 		// Generate a validation spec for the new CRD.
-		if err := genutil.OpenAPIGen(); err != nil {
+		if err := genutil.CRDGen(); err != nil {
 			return err
 		}
 	}
@@ -156,12 +154,12 @@ func apiRun(cmd *cobra.Command, args []string) error {
 func scaffoldIfNoPkgFileExists(s *scaffold.Scaffold, cfg *input.Config, f input.File) error {
 	i, err := f.GetInput()
 	if err != nil {
-		return errors.Wrapf(err, "error getting file %s input", i.Path)
+		return fmt.Errorf("error getting file %s input: %v", i.Path, err)
 	}
 	groupDir := filepath.Dir(i.Path)
 	gdInfos, err := ioutil.ReadDir(groupDir)
 	if err != nil && !os.IsNotExist(err) {
-		return errors.Wrapf(err, "error reading dir %s", groupDir)
+		return fmt.Errorf("error reading dir %s: %v", groupDir, err)
 	}
 	if err == nil {
 		for _, info := range gdInfos {

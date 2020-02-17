@@ -15,48 +15,71 @@
 package client
 
 import (
+	"io"
+
+	"helm.sh/helm/v3/pkg/kube"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/discovery"
 	cached "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/helm/pkg/kube"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// NewFromManager returns a Kubernetes client that can be used with
-// a Tiller server.
-func NewFromManager(mgr manager.Manager) (*kube.Client, error) {
-	c, err := newClientGetter(mgr)
-	if err != nil {
-		return nil, err
-	}
-	return kube.New(c), nil
-}
+var _ genericclioptions.RESTClientGetter = &restClientGetter{}
 
-type clientGetter struct {
+type restClientGetter struct {
 	restConfig      *rest.Config
 	discoveryClient discovery.CachedDiscoveryInterface
 	restMapper      meta.RESTMapper
+	namespaceConfig clientcmd.ClientConfig
 }
 
-func (c *clientGetter) ToRESTConfig() (*rest.Config, error) {
+func (c *restClientGetter) ToRESTConfig() (*rest.Config, error) {
 	return c.restConfig, nil
 }
 
-func (c *clientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+func (c *restClientGetter) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
 	return c.discoveryClient, nil
 }
 
-func (c *clientGetter) ToRESTMapper() (meta.RESTMapper, error) {
+func (c *restClientGetter) ToRESTMapper() (meta.RESTMapper, error) {
 	return c.restMapper, nil
 }
 
-func (c *clientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+func (c *restClientGetter) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	return c.namespaceConfig
+}
+
+var _ clientcmd.ClientConfig = &namespaceClientConfig{}
+
+type namespaceClientConfig struct {
+	namespace string
+}
+
+func (c namespaceClientConfig) RawConfig() (clientcmdapi.Config, error) {
+	return clientcmdapi.Config{}, nil
+}
+
+func (c namespaceClientConfig) ClientConfig() (*rest.Config, error) {
+	return nil, nil
+}
+
+func (c namespaceClientConfig) Namespace() (string, bool, error) {
+	return c.namespace, false, nil
+}
+
+func (c namespaceClientConfig) ConfigAccess() clientcmd.ConfigAccess {
 	return nil
 }
 
-func newClientGetter(mgr manager.Manager) (*clientGetter, error) {
+func NewRESTClientGetter(mgr manager.Manager, ns string) (genericclioptions.RESTClientGetter, error) {
 	cfg := mgr.GetConfig()
 	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
 	if err != nil {
@@ -65,9 +88,49 @@ func newClientGetter(mgr manager.Manager) (*clientGetter, error) {
 	cdc := cached.NewMemCacheClient(dc)
 	rm := mgr.GetRESTMapper()
 
-	return &clientGetter{
+	return &restClientGetter{
 		restConfig:      cfg,
 		discoveryClient: cdc,
 		restMapper:      rm,
+		namespaceConfig: &namespaceClientConfig{ns},
 	}, nil
+}
+
+var _ kube.Interface = &ownerRefInjectingClient{}
+
+func NewOwnerRefInjectingClient(base kube.Client, ownerRef metav1.OwnerReference) kube.Interface {
+	return &ownerRefInjectingClient{
+		refs:   []metav1.OwnerReference{ownerRef},
+		Client: base,
+	}
+}
+
+type ownerRefInjectingClient struct {
+	refs []metav1.OwnerReference
+	kube.Client
+}
+
+func (c *ownerRefInjectingClient) Build(reader io.Reader, validate bool) (kube.ResourceList, error) {
+	resourceList, err := c.Client.Build(reader, validate)
+	if err != nil {
+		return resourceList, err
+	}
+	err = resourceList.Visit(func(r *resource.Info, err error) error {
+		if err != nil {
+			return err
+		}
+		objMap, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r.Object)
+		if err != nil {
+			return err
+		}
+		u := &unstructured.Unstructured{Object: objMap}
+		if r.ResourceMapping().Scope == meta.RESTScopeNamespace {
+			u.SetOwnerReferences(c.refs)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resourceList, nil
 }

@@ -70,14 +70,15 @@ RUN yum clean all && rm -rf /var/cache/yum/* \
       ansible-runner==1.3.4 \
       ansible-runner-http==1.0.0 \
       openshift==0.8.9 \
-      ansible~=2.8 \
+      ansible~=2.9 \
+      jmespath \
  && yum remove -y gcc python36-devel \
  && yum clean all \
- && rm -rf /var/cache/yum
+ && rm -rf /var/cache/yum \
+ && ansible-galaxy collection install operator_sdk.util
 
 COPY build/_output/bin/[[.ProjectName]] ${OPERATOR}
 COPY bin /usr/local/bin
-COPY library/k8s_status.py /usr/share/ansible/openshift/
 
 RUN /usr/local/bin/user_setup
 

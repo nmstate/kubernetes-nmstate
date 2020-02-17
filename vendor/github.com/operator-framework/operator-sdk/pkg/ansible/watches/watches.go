@@ -40,6 +40,7 @@ type Watch struct {
 	GroupVersionKind            schema.GroupVersionKind `yaml:",inline"`
 	Playbook                    string                  `yaml:"playbook"`
 	Role                        string                  `yaml:"role"`
+	Vars                        map[string]interface{}  `yaml:"vars"`
 	MaxRunnerArtifacts          int                     `yaml:"maxRunnerArtifacts"`
 	ReconcilePeriod             time.Duration           `yaml:"reconcilePeriod"`
 	ManageStatus                bool                    `yaml:"manageStatus"`
@@ -76,21 +77,22 @@ var (
 // UnmarshalYAML - implements the yaml.Unmarshaler interface for Watch.
 // This makes it possible to verify, when loading, that the GroupVersionKind
 // specified for a given watch is valid as well as provide sensible defaults
-// for values that were ommitted.
+// for values that were omitted.
 func (w *Watch) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// Use an alias struct to handle complex types
 	type alias struct {
-		Group                       string     `yaml:"group"`
-		Version                     string     `yaml:"version"`
-		Kind                        string     `yaml:"kind"`
-		Playbook                    string     `yaml:"playbook"`
-		Role                        string     `yaml:"role"`
-		MaxRunnerArtifacts          int        `yaml:"maxRunnerArtifacts"`
-		ReconcilePeriod             string     `yaml:"reconcilePeriod"`
-		ManageStatus                bool       `yaml:"manageStatus"`
-		WatchDependentResources     bool       `yaml:"watchDependentResources"`
-		WatchClusterScopedResources bool       `yaml:"watchClusterScopedResources"`
-		Finalizer                   *Finalizer `yaml:"finalizer"`
+		Group                       string                 `yaml:"group"`
+		Version                     string                 `yaml:"version"`
+		Kind                        string                 `yaml:"kind"`
+		Playbook                    string                 `yaml:"playbook"`
+		Role                        string                 `yaml:"role"`
+		Vars                        map[string]interface{} `yaml:"vars"`
+		MaxRunnerArtifacts          int                    `yaml:"maxRunnerArtifacts"`
+		ReconcilePeriod             string                 `yaml:"reconcilePeriod"`
+		ManageStatus                bool                   `yaml:"manageStatus"`
+		WatchDependentResources     bool                   `yaml:"watchDependentResources"`
+		WatchClusterScopedResources bool                   `yaml:"watchClusterScopedResources"`
+		Finalizer                   *Finalizer             `yaml:"finalizer"`
 	}
 	var tmp alias
 
@@ -108,7 +110,7 @@ func (w *Watch) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 	reconcilePeriod, err := time.ParseDuration(tmp.ReconcilePeriod)
 	if err != nil {
-		return fmt.Errorf("failed to parse '%s' to time.Duration: %v", tmp.ReconcilePeriod, err)
+		return fmt.Errorf("failed to parse '%s' to time.Duration: %w", tmp.ReconcilePeriod, err)
 	}
 
 	gvk := schema.GroupVersionKind{
@@ -118,13 +120,14 @@ func (w *Watch) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 	err = verifyGVK(gvk)
 	if err != nil {
-		return fmt.Errorf("invalid GVK: %v - %s", gvk.String(), err)
+		return fmt.Errorf("invalid GVK: %s: %w", gvk, err)
 	}
 
 	// Rewrite values to struct being unmarshalled
 	w.GroupVersionKind = gvk
 	w.Playbook = tmp.Playbook
 	w.Role = tmp.Role
+	w.Vars = tmp.Vars
 	w.MaxRunnerArtifacts = tmp.MaxRunnerArtifacts
 	w.MaxWorkers = getMaxWorkers(gvk, maxWorkersDefault)
 	w.ReconcilePeriod = reconcilePeriod
@@ -166,12 +169,13 @@ func (w *Watch) Validate() error {
 }
 
 // New - returns a Watch with sensible defaults.
-func New(gvk schema.GroupVersionKind, role, playbook string, finalizer *Finalizer) *Watch {
+func New(gvk schema.GroupVersionKind, role, playbook string, vars map[string]interface{}, finalizer *Finalizer) *Watch {
 	reconcilePeriod, _ := time.ParseDuration(reconcilePeriodDefault)
 	return &Watch{
 		GroupVersionKind:            gvk,
 		Playbook:                    playbook,
 		Role:                        role,
+		Vars:                        vars,
 		MaxRunnerArtifacts:          maxRunnerArtifactsDefault,
 		MaxWorkers:                  maxWorkersDefault,
 		ReconcilePeriod:             reconcilePeriod,
@@ -268,13 +272,7 @@ func getMaxWorkers(gvk schema.GroupVersionKind, defValue int) int {
 		"_",
 		-1,
 	))
-	maxWorkers, err := strconv.Atoi(os.Getenv(envVar))
-	if err != nil {
-		// we don't care why we couldn't parse it just use default
-		log.Info("Failed to parse %v from environment. Using default %v", envVar, defValue)
-		return defValue
-	}
-
+	maxWorkers := getIntegerEnvWithDefault(envVar, defValue)
 	if maxWorkers <= 0 {
 		log.Info("Value %v not valid. Using default %v", maxWorkers, defValue)
 		return defValue
@@ -291,12 +289,7 @@ func getAnsibleVerbosity(gvk schema.GroupVersionKind, defValue int) int {
 		"_",
 		-1,
 	))
-	ansibleVerbosity, err := strconv.Atoi(os.Getenv(envVar))
-	if err != nil {
-		log.Info("Failed to parse %v from environment. Using default %v", envVar, defValue)
-		return defValue
-	}
-
+	ansibleVerbosity := getIntegerEnvWithDefault(envVar, defValue)
 	// Use default value when value doesn't make sense
 	if ansibleVerbosity < 0 {
 		log.Info("Value %v not valid. Using default %v", ansibleVerbosity, defValue)
@@ -307,4 +300,19 @@ func getAnsibleVerbosity(gvk schema.GroupVersionKind, defValue int) int {
 		return defValue
 	}
 	return ansibleVerbosity
+}
+
+// getIntegerEnvWithDefault returns value for MaxWorkers/Ansibleverbosity based on if envVar is set or a defvalue is used.
+func getIntegerEnvWithDefault(envVar string, defValue int) int {
+	val := defValue
+	if envVal, ok := os.LookupEnv(envVar); ok {
+		if i, err := strconv.Atoi(envVal); err != nil {
+			log.Info("Could not parse environment variable as an integer; using default value", "envVar", envVar, "default", defValue)
+		} else {
+			val = i
+		}
+	} else if !ok {
+		log.Info("Environment variable not set; using default value", "envVar", envVar, "default", defValue)
+	}
+	return val
 }

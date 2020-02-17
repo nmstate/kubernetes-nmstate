@@ -219,6 +219,16 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddGeneratedConversionFunc((*GRPCConnectionState)(nil), (*operators.GRPCConnectionState)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_GRPCConnectionState_To_operators_GRPCConnectionState(a.(*GRPCConnectionState), b.(*operators.GRPCConnectionState), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*operators.GRPCConnectionState)(nil), (*GRPCConnectionState)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_operators_GRPCConnectionState_To_v1alpha1_GRPCConnectionState(a.(*operators.GRPCConnectionState), b.(*GRPCConnectionState), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddGeneratedConversionFunc((*Icon)(nil), (*operators.Icon)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_Icon_To_operators_Icon(a.(*Icon), b.(*operators.Icon), scope)
 	}); err != nil {
@@ -386,6 +396,36 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*operators.Subscription)(nil), (*Subscription)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_operators_Subscription_To_v1alpha1_Subscription(a.(*operators.Subscription), b.(*Subscription), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubscriptionCatalogHealth)(nil), (*operators.SubscriptionCatalogHealth)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubscriptionCatalogHealth_To_operators_SubscriptionCatalogHealth(a.(*SubscriptionCatalogHealth), b.(*operators.SubscriptionCatalogHealth), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*operators.SubscriptionCatalogHealth)(nil), (*SubscriptionCatalogHealth)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_operators_SubscriptionCatalogHealth_To_v1alpha1_SubscriptionCatalogHealth(a.(*operators.SubscriptionCatalogHealth), b.(*SubscriptionCatalogHealth), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubscriptionCondition)(nil), (*operators.SubscriptionCondition)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubscriptionCondition_To_operators_SubscriptionCondition(a.(*SubscriptionCondition), b.(*operators.SubscriptionCondition), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*operators.SubscriptionCondition)(nil), (*SubscriptionCondition)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_operators_SubscriptionCondition_To_v1alpha1_SubscriptionCondition(a.(*operators.SubscriptionCondition), b.(*SubscriptionCondition), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*SubscriptionConfig)(nil), (*operators.SubscriptionConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_SubscriptionConfig_To_operators_SubscriptionConfig(a.(*SubscriptionConfig), b.(*operators.SubscriptionConfig), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddGeneratedConversionFunc((*operators.SubscriptionConfig)(nil), (*SubscriptionConfig)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_operators_SubscriptionConfig_To_v1alpha1_SubscriptionConfig(a.(*operators.SubscriptionConfig), b.(*SubscriptionConfig), scope)
 	}); err != nil {
 		return err
 	}
@@ -691,9 +731,11 @@ func Convert_operators_CatalogSourceSpec_To_v1alpha1_CatalogSourceSpec(in *opera
 }
 
 func autoConvert_v1alpha1_CatalogSourceStatus_To_operators_CatalogSourceStatus(in *CatalogSourceStatus, out *operators.CatalogSourceStatus, s conversion.Scope) error {
+	out.Message = in.Message
+	out.Reason = operators.ConditionReason(in.Reason)
 	out.ConfigMapResource = (*operators.ConfigMapResourceReference)(unsafe.Pointer(in.ConfigMapResource))
 	out.RegistryServiceStatus = (*operators.RegistryServiceStatus)(unsafe.Pointer(in.RegistryServiceStatus))
-	out.LastSync = in.LastSync
+	out.GRPCConnectionState = (*operators.GRPCConnectionState)(unsafe.Pointer(in.GRPCConnectionState))
 	return nil
 }
 
@@ -703,9 +745,11 @@ func Convert_v1alpha1_CatalogSourceStatus_To_operators_CatalogSourceStatus(in *C
 }
 
 func autoConvert_operators_CatalogSourceStatus_To_v1alpha1_CatalogSourceStatus(in *operators.CatalogSourceStatus, out *CatalogSourceStatus, s conversion.Scope) error {
+	out.Message = in.Message
+	out.Reason = ConditionReason(in.Reason)
 	out.ConfigMapResource = (*ConfigMapResourceReference)(unsafe.Pointer(in.ConfigMapResource))
 	out.RegistryServiceStatus = (*RegistryServiceStatus)(unsafe.Pointer(in.RegistryServiceStatus))
-	out.LastSync = in.LastSync
+	out.GRPCConnectionState = (*GRPCConnectionState)(unsafe.Pointer(in.GRPCConnectionState))
 	return nil
 }
 
@@ -909,6 +953,7 @@ func autoConvert_v1alpha1_ConfigMapResourceReference_To_operators_ConfigMapResou
 	out.Namespace = in.Namespace
 	out.UID = types.UID(in.UID)
 	out.ResourceVersion = in.ResourceVersion
+	out.LastUpdateTime = in.LastUpdateTime
 	return nil
 }
 
@@ -922,6 +967,7 @@ func autoConvert_operators_ConfigMapResourceReference_To_v1alpha1_ConfigMapResou
 	out.Namespace = in.Namespace
 	out.UID = types.UID(in.UID)
 	out.ResourceVersion = in.ResourceVersion
+	out.LastUpdateTime = in.LastUpdateTime
 	return nil
 }
 
@@ -980,6 +1026,30 @@ func autoConvert_operators_DependentStatus_To_v1alpha1_DependentStatus(in *opera
 // Convert_operators_DependentStatus_To_v1alpha1_DependentStatus is an autogenerated conversion function.
 func Convert_operators_DependentStatus_To_v1alpha1_DependentStatus(in *operators.DependentStatus, out *DependentStatus, s conversion.Scope) error {
 	return autoConvert_operators_DependentStatus_To_v1alpha1_DependentStatus(in, out, s)
+}
+
+func autoConvert_v1alpha1_GRPCConnectionState_To_operators_GRPCConnectionState(in *GRPCConnectionState, out *operators.GRPCConnectionState, s conversion.Scope) error {
+	out.Address = in.Address
+	out.LastObservedState = in.LastObservedState
+	out.LastConnectTime = in.LastConnectTime
+	return nil
+}
+
+// Convert_v1alpha1_GRPCConnectionState_To_operators_GRPCConnectionState is an autogenerated conversion function.
+func Convert_v1alpha1_GRPCConnectionState_To_operators_GRPCConnectionState(in *GRPCConnectionState, out *operators.GRPCConnectionState, s conversion.Scope) error {
+	return autoConvert_v1alpha1_GRPCConnectionState_To_operators_GRPCConnectionState(in, out, s)
+}
+
+func autoConvert_operators_GRPCConnectionState_To_v1alpha1_GRPCConnectionState(in *operators.GRPCConnectionState, out *GRPCConnectionState, s conversion.Scope) error {
+	out.Address = in.Address
+	out.LastObservedState = in.LastObservedState
+	out.LastConnectTime = in.LastConnectTime
+	return nil
+}
+
+// Convert_operators_GRPCConnectionState_To_v1alpha1_GRPCConnectionState is an autogenerated conversion function.
+func Convert_operators_GRPCConnectionState_To_v1alpha1_GRPCConnectionState(in *operators.GRPCConnectionState, out *GRPCConnectionState, s conversion.Scope) error {
+	return autoConvert_operators_GRPCConnectionState_To_v1alpha1_GRPCConnectionState(in, out, s)
 }
 
 func autoConvert_v1alpha1_Icon_To_operators_Icon(in *Icon, out *operators.Icon, s conversion.Scope) error {
@@ -1169,6 +1239,7 @@ func autoConvert_v1alpha1_InstallPlanStatus_To_operators_InstallPlanStatus(in *I
 	out.Conditions = *(*[]operators.InstallPlanCondition)(unsafe.Pointer(&in.Conditions))
 	out.CatalogSources = *(*[]string)(unsafe.Pointer(&in.CatalogSources))
 	out.Plan = *(*[]*operators.Step)(unsafe.Pointer(&in.Plan))
+	out.AttenuatedServiceAccountRef = (*corev1.ObjectReference)(unsafe.Pointer(in.AttenuatedServiceAccountRef))
 	return nil
 }
 
@@ -1182,6 +1253,7 @@ func autoConvert_operators_InstallPlanStatus_To_v1alpha1_InstallPlanStatus(in *o
 	out.Conditions = *(*[]InstallPlanCondition)(unsafe.Pointer(&in.Conditions))
 	out.CatalogSources = *(*[]string)(unsafe.Pointer(&in.CatalogSources))
 	out.Plan = *(*[]*Step)(unsafe.Pointer(&in.Plan))
+	out.AttenuatedServiceAccountRef = (*corev1.ObjectReference)(unsafe.Pointer(in.AttenuatedServiceAccountRef))
 	return nil
 }
 
@@ -1440,6 +1512,94 @@ func Convert_operators_Subscription_To_v1alpha1_Subscription(in *operators.Subsc
 	return autoConvert_operators_Subscription_To_v1alpha1_Subscription(in, out, s)
 }
 
+func autoConvert_v1alpha1_SubscriptionCatalogHealth_To_operators_SubscriptionCatalogHealth(in *SubscriptionCatalogHealth, out *operators.SubscriptionCatalogHealth, s conversion.Scope) error {
+	out.CatalogSourceRef = (*corev1.ObjectReference)(unsafe.Pointer(in.CatalogSourceRef))
+	out.LastUpdated = (*v1.Time)(unsafe.Pointer(in.LastUpdated))
+	out.Healthy = in.Healthy
+	return nil
+}
+
+// Convert_v1alpha1_SubscriptionCatalogHealth_To_operators_SubscriptionCatalogHealth is an autogenerated conversion function.
+func Convert_v1alpha1_SubscriptionCatalogHealth_To_operators_SubscriptionCatalogHealth(in *SubscriptionCatalogHealth, out *operators.SubscriptionCatalogHealth, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubscriptionCatalogHealth_To_operators_SubscriptionCatalogHealth(in, out, s)
+}
+
+func autoConvert_operators_SubscriptionCatalogHealth_To_v1alpha1_SubscriptionCatalogHealth(in *operators.SubscriptionCatalogHealth, out *SubscriptionCatalogHealth, s conversion.Scope) error {
+	out.CatalogSourceRef = (*corev1.ObjectReference)(unsafe.Pointer(in.CatalogSourceRef))
+	out.LastUpdated = (*v1.Time)(unsafe.Pointer(in.LastUpdated))
+	out.Healthy = in.Healthy
+	return nil
+}
+
+// Convert_operators_SubscriptionCatalogHealth_To_v1alpha1_SubscriptionCatalogHealth is an autogenerated conversion function.
+func Convert_operators_SubscriptionCatalogHealth_To_v1alpha1_SubscriptionCatalogHealth(in *operators.SubscriptionCatalogHealth, out *SubscriptionCatalogHealth, s conversion.Scope) error {
+	return autoConvert_operators_SubscriptionCatalogHealth_To_v1alpha1_SubscriptionCatalogHealth(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubscriptionCondition_To_operators_SubscriptionCondition(in *SubscriptionCondition, out *operators.SubscriptionCondition, s conversion.Scope) error {
+	out.Type = operators.SubscriptionConditionType(in.Type)
+	out.Status = corev1.ConditionStatus(in.Status)
+	out.Reason = in.Reason
+	out.Message = in.Message
+	out.LastHeartbeatTime = (*v1.Time)(unsafe.Pointer(in.LastHeartbeatTime))
+	out.LastTransitionTime = (*v1.Time)(unsafe.Pointer(in.LastTransitionTime))
+	return nil
+}
+
+// Convert_v1alpha1_SubscriptionCondition_To_operators_SubscriptionCondition is an autogenerated conversion function.
+func Convert_v1alpha1_SubscriptionCondition_To_operators_SubscriptionCondition(in *SubscriptionCondition, out *operators.SubscriptionCondition, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubscriptionCondition_To_operators_SubscriptionCondition(in, out, s)
+}
+
+func autoConvert_operators_SubscriptionCondition_To_v1alpha1_SubscriptionCondition(in *operators.SubscriptionCondition, out *SubscriptionCondition, s conversion.Scope) error {
+	out.Type = SubscriptionConditionType(in.Type)
+	out.Status = corev1.ConditionStatus(in.Status)
+	out.Reason = in.Reason
+	out.Message = in.Message
+	out.LastHeartbeatTime = (*v1.Time)(unsafe.Pointer(in.LastHeartbeatTime))
+	out.LastTransitionTime = (*v1.Time)(unsafe.Pointer(in.LastTransitionTime))
+	return nil
+}
+
+// Convert_operators_SubscriptionCondition_To_v1alpha1_SubscriptionCondition is an autogenerated conversion function.
+func Convert_operators_SubscriptionCondition_To_v1alpha1_SubscriptionCondition(in *operators.SubscriptionCondition, out *SubscriptionCondition, s conversion.Scope) error {
+	return autoConvert_operators_SubscriptionCondition_To_v1alpha1_SubscriptionCondition(in, out, s)
+}
+
+func autoConvert_v1alpha1_SubscriptionConfig_To_operators_SubscriptionConfig(in *SubscriptionConfig, out *operators.SubscriptionConfig, s conversion.Scope) error {
+	out.Selector = (*v1.LabelSelector)(unsafe.Pointer(in.Selector))
+	out.NodeSelector = *(*map[string]string)(unsafe.Pointer(&in.NodeSelector))
+	out.Tolerations = *(*[]corev1.Toleration)(unsafe.Pointer(&in.Tolerations))
+	out.Resources = in.Resources
+	out.EnvFrom = *(*[]corev1.EnvFromSource)(unsafe.Pointer(&in.EnvFrom))
+	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
+	out.Volumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.Volumes))
+	out.VolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.VolumeMounts))
+	return nil
+}
+
+// Convert_v1alpha1_SubscriptionConfig_To_operators_SubscriptionConfig is an autogenerated conversion function.
+func Convert_v1alpha1_SubscriptionConfig_To_operators_SubscriptionConfig(in *SubscriptionConfig, out *operators.SubscriptionConfig, s conversion.Scope) error {
+	return autoConvert_v1alpha1_SubscriptionConfig_To_operators_SubscriptionConfig(in, out, s)
+}
+
+func autoConvert_operators_SubscriptionConfig_To_v1alpha1_SubscriptionConfig(in *operators.SubscriptionConfig, out *SubscriptionConfig, s conversion.Scope) error {
+	out.Selector = (*v1.LabelSelector)(unsafe.Pointer(in.Selector))
+	out.NodeSelector = *(*map[string]string)(unsafe.Pointer(&in.NodeSelector))
+	out.Tolerations = *(*[]corev1.Toleration)(unsafe.Pointer(&in.Tolerations))
+	out.Resources = in.Resources
+	out.EnvFrom = *(*[]corev1.EnvFromSource)(unsafe.Pointer(&in.EnvFrom))
+	out.Env = *(*[]corev1.EnvVar)(unsafe.Pointer(&in.Env))
+	out.Volumes = *(*[]corev1.Volume)(unsafe.Pointer(&in.Volumes))
+	out.VolumeMounts = *(*[]corev1.VolumeMount)(unsafe.Pointer(&in.VolumeMounts))
+	return nil
+}
+
+// Convert_operators_SubscriptionConfig_To_v1alpha1_SubscriptionConfig is an autogenerated conversion function.
+func Convert_operators_SubscriptionConfig_To_v1alpha1_SubscriptionConfig(in *operators.SubscriptionConfig, out *SubscriptionConfig, s conversion.Scope) error {
+	return autoConvert_operators_SubscriptionConfig_To_v1alpha1_SubscriptionConfig(in, out, s)
+}
+
 func autoConvert_v1alpha1_SubscriptionList_To_operators_SubscriptionList(in *SubscriptionList, out *operators.SubscriptionList, s conversion.Scope) error {
 	out.ListMeta = in.ListMeta
 	out.Items = *(*[]operators.Subscription)(unsafe.Pointer(&in.Items))
@@ -1469,6 +1629,9 @@ func autoConvert_v1alpha1_SubscriptionSpec_To_operators_SubscriptionSpec(in *Sub
 	out.Channel = in.Channel
 	out.StartingCSV = in.StartingCSV
 	out.InstallPlanApproval = operators.Approval(in.InstallPlanApproval)
+	if err := Convert_v1alpha1_SubscriptionConfig_To_operators_SubscriptionConfig(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1484,6 +1647,9 @@ func autoConvert_operators_SubscriptionSpec_To_v1alpha1_SubscriptionSpec(in *ope
 	out.Channel = in.Channel
 	out.StartingCSV = in.StartingCSV
 	out.InstallPlanApproval = Approval(in.InstallPlanApproval)
+	if err := Convert_operators_SubscriptionConfig_To_v1alpha1_SubscriptionConfig(&in.Config, &out.Config, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1499,6 +1665,8 @@ func autoConvert_v1alpha1_SubscriptionStatus_To_operators_SubscriptionStatus(in 
 	out.State = operators.SubscriptionState(in.State)
 	out.Reason = operators.ConditionReason(in.Reason)
 	out.InstallPlanRef = (*corev1.ObjectReference)(unsafe.Pointer(in.InstallPlanRef))
+	out.CatalogHealth = *(*[]operators.SubscriptionCatalogHealth)(unsafe.Pointer(&in.CatalogHealth))
+	out.Conditions = *(*[]operators.SubscriptionCondition)(unsafe.Pointer(&in.Conditions))
 	out.LastUpdated = in.LastUpdated
 	return nil
 }
@@ -1515,6 +1683,8 @@ func autoConvert_operators_SubscriptionStatus_To_v1alpha1_SubscriptionStatus(in 
 	out.State = SubscriptionState(in.State)
 	out.Reason = ConditionReason(in.Reason)
 	out.InstallPlanRef = (*corev1.ObjectReference)(unsafe.Pointer(in.InstallPlanRef))
+	out.CatalogHealth = *(*[]SubscriptionCatalogHealth)(unsafe.Pointer(&in.CatalogHealth))
+	out.Conditions = *(*[]SubscriptionCondition)(unsafe.Pointer(&in.Conditions))
 	out.LastUpdated = in.LastUpdated
 	return nil
 }

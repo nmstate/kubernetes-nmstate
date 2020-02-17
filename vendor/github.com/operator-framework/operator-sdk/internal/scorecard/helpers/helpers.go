@@ -18,8 +18,6 @@ import (
 	"fmt"
 
 	scapiv1alpha1 "github.com/operator-framework/operator-sdk/pkg/apis/scorecard/v1alpha1"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // These functions should be in the public test definitions file, but they are not complete/stable,
@@ -49,6 +47,7 @@ func ResultsPassFail(results []TestResult) (TestResult, error) {
 		}
 		finalResult.Suggestions = append(finalResult.Suggestions, result.Suggestions...)
 		finalResult.Errors = append(finalResult.Errors, result.Errors...)
+		finalResult.Log = result.Log
 	}
 	return finalResult, nil
 }
@@ -75,6 +74,7 @@ func ResultsCumulative(results []TestResult) (TestResult, error) {
 		finalResult.MaximumPoints += result.MaximumPoints
 		finalResult.Suggestions = append(finalResult.Suggestions, result.Suggestions...)
 		finalResult.Errors = append(finalResult.Errors, result.Errors...)
+		finalResult.Log = result.Log
 	}
 	return finalResult, nil
 }
@@ -90,13 +90,9 @@ func CalculateResult(tests []scapiv1alpha1.ScorecardTestResult) scapiv1alpha1.Sc
 // TestSuitesToScorecardOutput takes an array of test suites and generates a v1alpha1 ScorecardOutput object with the
 // provided suites and log
 func TestSuitesToScorecardOutput(suites []TestSuite, log string) scapiv1alpha1.ScorecardOutput {
-	test := scapiv1alpha1.ScorecardOutput{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "ScorecardOutput",
-			APIVersion: "osdk.openshift.io/v1alpha1",
-		},
-		Log: log,
-	}
+	test := scapiv1alpha1.NewScorecardOutput()
+	test.Log = log
+
 	scorecardSuiteResults := []scapiv1alpha1.ScorecardSuiteResult{}
 	for _, suite := range suites {
 		results := []scapiv1alpha1.ScorecardTestResult{}
@@ -111,7 +107,7 @@ func TestSuitesToScorecardOutput(suites []TestSuite, log string) scapiv1alpha1.S
 		scorecardSuiteResults = append(scorecardSuiteResults, scorecardSuiteResult)
 	}
 	test.Results = scorecardSuiteResults
-	return test
+	return *test
 }
 
 // TestResultToScorecardTestResult is a helper function for converting from the TestResult type to the ScorecardTestResult type
@@ -122,6 +118,7 @@ func TestResultToScorecardTestResult(tr TestResult) scapiv1alpha1.ScorecardTestR
 	sctr.Description = tr.Test.GetDescription()
 	sctr.EarnedPoints = tr.EarnedPoints
 	sctr.MaximumPoints = tr.MaximumPoints
+	sctr.Log = tr.Log
 	sctr.Suggestions = tr.Suggestions
 	if sctr.Suggestions == nil {
 		sctr.Suggestions = []string{}

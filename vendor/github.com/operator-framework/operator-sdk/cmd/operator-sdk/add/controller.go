@@ -39,6 +39,7 @@ This command must be run from the project root directory.
 If the controller pkg for that Kind already exists at pkg/controller/<kind> then the command will not overwrite and return an error.
 
 Example:
+
 	$ operator-sdk add controller --api-version=app.example.com/v1alpha1 --kind=AppService
 	$ tree pkg/controller
 	pkg/controller/
@@ -91,7 +92,7 @@ func controllerRun(cmd *cobra.Command, args []string) error {
 		&scaffold.AddController{Resource: r},
 	)
 	if err != nil {
-		return fmt.Errorf("controller scaffold failed: (%v)", err)
+		return fmt.Errorf("controller scaffold failed: %v", err)
 	}
 
 	log.Info("Controller generation complete.")

@@ -6,6 +6,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	rbac "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/diff"
 
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/api/wrappers"
@@ -41,6 +44,7 @@ type StrategyDeploymentInstaller struct {
 	owner               ownerutil.Owner
 	previousStrategy    Strategy
 	templateAnnotations map[string]string
+	initializers        DeploymentInitializerFuncChain
 }
 
 func (d *StrategyDetailsDeployment) GetStrategyName() string {
@@ -50,41 +54,87 @@ func (d *StrategyDetailsDeployment) GetStrategyName() string {
 var _ Strategy = &StrategyDetailsDeployment{}
 var _ StrategyInstaller = &StrategyDeploymentInstaller{}
 
-func NewStrategyDeploymentInstaller(strategyClient wrappers.InstallStrategyDeploymentInterface, templateAnnotations map[string]string, owner ownerutil.Owner, previousStrategy Strategy) StrategyInstaller {
+// DeploymentInitializerFunc takes a deployment object and appropriately
+// initializes it for install.
+//
+// Before a deployment is created on the cluster, we can run a series of
+// overrides functions that will properly initialize the deployment object.
+type DeploymentInitializerFunc func(deployment *appsv1.Deployment) error
+
+// DeploymentInitializerFuncChain defines a chain of DeploymentInitializerFunc.
+type DeploymentInitializerFuncChain []DeploymentInitializerFunc
+
+// Apply runs series of overrides functions that will properly initialize
+// the deployment object.
+func (c DeploymentInitializerFuncChain) Apply(deployment *appsv1.Deployment) (err error) {
+	for _, initializer := range c {
+		if initializer == nil {
+			continue
+		}
+
+		if initializationErr := initializer(deployment); initializationErr != nil {
+			err = initializationErr
+			break
+		}
+	}
+
+	return
+}
+
+// DeploymentInitializerBuilderFunc returns a DeploymentInitializerFunc based on
+// the given context.
+type DeploymentInitializerBuilderFunc func(owner ownerutil.Owner) DeploymentInitializerFunc
+
+func NewStrategyDeploymentInstaller(strategyClient wrappers.InstallStrategyDeploymentInterface, templateAnnotations map[string]string, owner ownerutil.Owner, previousStrategy Strategy, initializers DeploymentInitializerFuncChain) StrategyInstaller {
 	return &StrategyDeploymentInstaller{
 		strategyClient:      strategyClient,
 		owner:               owner,
 		previousStrategy:    previousStrategy,
 		templateAnnotations: templateAnnotations,
+		initializers:        initializers,
 	}
 }
 
 func (i *StrategyDeploymentInstaller) installDeployments(deps []StrategyDeploymentSpec) error {
 	for _, d := range deps {
-		dep := &appsv1.Deployment{Spec: d.Spec}
-		dep.SetName(d.Name)
-		dep.SetNamespace(i.owner.GetNamespace())
-
-		// Merge annotations (to avoid losing info from pod template)
-		annotations := map[string]string{}
-		for k, v := range i.templateAnnotations {
-			annotations[k] = v
-		}
-		for k, v := range dep.Spec.Template.GetAnnotations() {
-			annotations[k] = v
-		}
-		dep.Spec.Template.SetAnnotations(annotations)
-
-		ownerutil.AddNonBlockingOwner(dep, i.owner)
-		if err := ownerutil.AddOwnerLabels(dep, i.owner); err != nil {
+		deployment, err := i.deploymentForSpec(d.Name, d.Spec)
+		if err != nil {
 			return err
 		}
-		if _, err := i.strategyClient.CreateOrUpdateDeployment(dep); err != nil {
+
+		if _, err := i.strategyClient.CreateOrUpdateDeployment(deployment); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (i *StrategyDeploymentInstaller) deploymentForSpec(name string, spec appsv1.DeploymentSpec) (deployment *appsv1.Deployment, err error) {
+	dep := &appsv1.Deployment{Spec: spec}
+	dep.SetName(name)
+	dep.SetNamespace(i.owner.GetNamespace())
+
+	// Merge annotations (to avoid losing info from pod template)
+	annotations := map[string]string{}
+	for k, v := range i.templateAnnotations {
+		annotations[k] = v
+	}
+	for k, v := range dep.Spec.Template.GetAnnotations() {
+		annotations[k] = v
+	}
+	dep.Spec.Template.SetAnnotations(annotations)
+
+	ownerutil.AddNonBlockingOwner(dep, i.owner)
+	ownerutil.AddOwnerLabelsForKind(dep, i.owner, v1alpha1.ClusterServiceVersionKind)
+
+	if applyErr := i.initializers.Apply(dep); applyErr != nil {
+		err = applyErr
+		return
+	}
+
+	deployment = dep
+	return
 }
 
 func (i *StrategyDeploymentInstaller) cleanupPrevious(current *StrategyDetailsDeployment, previous *StrategyDetailsDeployment) error {
@@ -111,6 +161,9 @@ func (i *StrategyDeploymentInstaller) Install(s Strategy) error {
 	}
 
 	if err := i.installDeployments(strategy.DeploymentSpecs); err != nil {
+		if k8serrors.IsForbidden(err) {
+			return StrategyError{Reason: StrategyErrInsufficientPermissions, Message: fmt.Sprintf("install strategy failed: %s", err)}
+		}
 		return err
 	}
 
@@ -179,8 +232,46 @@ func (i *StrategyDeploymentInstaller) checkForDeployments(deploymentSpecs []Stra
 				return StrategyError{Reason: StrategyErrReasonAnnotationsMissing, Message: fmt.Sprintf("annotations on deployment don't match. couldn't find %s: %s", key, value)}
 			}
 		}
+
+		// check equality
+		calculated, err := i.deploymentForSpec(spec.Name, spec.Spec)
+		if err != nil {
+			return err
+		}
+
+		if !i.equalDeployments(&calculated.Spec, &dep.Spec) {
+			return StrategyError{Reason: StrategyErrDeploymentUpdated, Message: fmt.Sprintf("deployment changed, rolling update with patch: %s\n%#v\n%#v", diff.ObjectDiff(dep.Spec.Template.Spec, calculated.Spec.Template.Spec), calculated.Spec.Template.Spec, dep.Spec.Template.Spec)}
+		}
 	}
 	return nil
+}
+
+func (i *StrategyDeploymentInstaller) equalDeployments(calculated, onCluster *appsv1.DeploymentSpec) bool {
+	// ignore template annotations, OLM injects these elsewhere
+	calculated.Template.Annotations = nil
+
+	// DeepDerivative doesn't treat `0` ints as unset. Stripping them here means we miss changes to these values,
+	// but we don't end up getting bitten by the defaulter for deployments.
+	for i, c := range onCluster.Template.Spec.Containers {
+		o := calculated.Template.Spec.Containers[i]
+		if o.ReadinessProbe != nil {
+			o.ReadinessProbe.InitialDelaySeconds = c.ReadinessProbe.InitialDelaySeconds
+			o.ReadinessProbe.TimeoutSeconds = c.ReadinessProbe.TimeoutSeconds
+			o.ReadinessProbe.PeriodSeconds = c.ReadinessProbe.PeriodSeconds
+			o.ReadinessProbe.SuccessThreshold = c.ReadinessProbe.SuccessThreshold
+			o.ReadinessProbe.FailureThreshold = c.ReadinessProbe.FailureThreshold
+		}
+		if o.LivenessProbe != nil {
+			o.LivenessProbe.InitialDelaySeconds = c.LivenessProbe.InitialDelaySeconds
+			o.LivenessProbe.TimeoutSeconds = c.LivenessProbe.TimeoutSeconds
+			o.LivenessProbe.PeriodSeconds = c.LivenessProbe.PeriodSeconds
+			o.LivenessProbe.SuccessThreshold = c.LivenessProbe.SuccessThreshold
+			o.LivenessProbe.FailureThreshold = c.LivenessProbe.FailureThreshold
+		}
+	}
+
+	// DeepDerivative ensures that, for any non-nil, non-empty value in A, the corresponding value is set in B
+	return equality.Semantic.DeepDerivative(calculated, onCluster)
 }
 
 // Clean up orphaned deployments after reinstalling deployments process
