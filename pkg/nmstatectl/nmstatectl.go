@@ -57,7 +57,12 @@ func Show(arguments ...string) (string, error) {
 }
 
 func Set(desiredState nmstatev1alpha1.State, timeout time.Duration) (string, error) {
-	return nmstatectlWithInput([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))}, string(desiredState.Raw))
+	var setDoneCh = make(chan struct{})
+	go setUnavailableUp(setDoneCh)
+	defer close(setDoneCh)
+
+	setOutput, err := nmstatectlWithInput([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))}, string(desiredState.Raw))
+	return setOutput, err
 }
 
 func Commit() (string, error) {
