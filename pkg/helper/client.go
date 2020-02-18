@@ -9,10 +9,9 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,7 +70,7 @@ func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1
 	return nodeNetworkState, err
 }
 
-func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *runtime.Scheme) error {
+func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
 	nodeNetworkState := nmstatev1alpha1.NodeNetworkState{
@@ -90,10 +89,23 @@ func InitializeNodeNeworkState(client client.Client, node *corev1.Node, scheme *
 	return nil
 }
 
+func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey) error {
+	nnsInstance := &nmstatev1alpha1.NodeNetworkState{}
+	err := client.Get(context.TODO(), namespace, nnsInstance)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return errors.Wrap(err, "Failed to get nmstate")
+		} else {
+			return InitializeNodeNetworkState(client, node)
+		}
+	}
+	return UpdateCurrentState(client, nnsInstance)
+}
+
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
 	observedStateRaw, err := nmstatectl.Show()
 	if err != nil {
-		return fmt.Errorf("error running nmstatectl show: %v", err)
+		return errors.Wrap(err, "error running nmstatectl show")
 	}
 	observedState := nmstatev1alpha1.State{Raw: []byte(observedStateRaw)}
 
@@ -108,7 +120,10 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
-		return err
+		// Request object not found, could have been deleted after reconcile request.
+		if !apierrors.IsNotFound(err) {
+			return errors.Wrap(err, "Request object not found, could have been deleted after reconcile request")
+		}
 	}
 
 	return nil

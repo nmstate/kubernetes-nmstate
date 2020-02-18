@@ -1,13 +1,10 @@
 package e2e
 
 import (
-	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
@@ -18,14 +15,8 @@ var _ = Describe("NNS LastSuccessfulUpdateTime", func() {
 				key := types.NamespacedName{Name: node}
 				originalTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
 
-				configMap, err := framework.Global.KubeClient.CoreV1().ConfigMaps("nmstate").Get("nmstate-config", metav1.GetOptions{})
-				Expect(err).ToNot(HaveOccurred())
-
-				interval, err := strconv.Atoi(configMap.Data["node_network_state_refresh_interval"])
-				Expect(err).ToNot(HaveOccurred())
-
 				// Give enough time for the NNS to be updated (3 interval times)
-				timeout := time.Duration(interval*3) * time.Second
+				timeout := time.Duration(5*3) * time.Second
 
 				Eventually(func() time.Time {
 					updatedTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime

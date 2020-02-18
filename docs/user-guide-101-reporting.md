@@ -159,16 +159,7 @@ observed state is fresh enough.
 
 ## Configure refresh interval
 
-By default, the reported state is updated every 5 seconds. This interval can be
-adjusted via `node_network_state_refresh_interval` variable in
-kubernetes-nmstate configmap:
-
-```json
-kubectl -n nmstate patch configmap nmstate-config --patch '{"data": {"node_network_state_refresh_interval": "60"}}'
-kubectl -n nmstate delete pods --all
-```
-
-The `NodeNetworkState` will be now updated every 60 seconds.
+The reported state is updated every 5 seconds.
 
 ## Filter reported interfaces
 

@@ -3,6 +3,8 @@ package node
 import (
 	"context"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -47,6 +49,7 @@ var _ = Describe("Node controller reconcile", func() {
 		cl = fake.NewFakeClientWithScheme(s, objs...)
 
 		reconciler.client = cl
+		reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 	})
 	Context("when node is not found", func() {
 		var (
@@ -69,7 +72,15 @@ var _ = Describe("Node controller reconcile", func() {
 			request.Name = existingNodeName
 		})
 		Context("and nodenetworkstate is there too", func() {
+			AfterEach(func() {
+				reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+			})
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
+				// Mocking nmstatectl.Show
+				reconciler.nmstateUpdater = func(client client.Client, node *corev1.Node,
+					namespace client.ObjectKey) error {
+					return nil
+				}
 				result, err := reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nodeRefresh}))

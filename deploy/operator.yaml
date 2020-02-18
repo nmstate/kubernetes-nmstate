@@ -50,11 +50,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: NODE_NETWORK_STATE_REFRESH_INTERVAL
-              valueFrom:
-                configMapKeyRef:
-                  name: nmstate-config
-                  key: node_network_state_refresh_interval
             - name: INTERFACES_FILTER
               valueFrom:
                 configMapKeyRef:
@@ -130,11 +125,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: NODE_NETWORK_STATE_REFRESH_INTERVAL
-              valueFrom:
-                configMapKeyRef:
-                  name: nmstate-config
-                  key: node_network_state_refresh_interval
             - name: INTERFACES_FILTER
               valueFrom:
                 configMapKeyRef:
@@ -161,7 +151,6 @@ metadata:
   name: nmstate-config
   namespace: nmstate
 data:
-  node_network_state_refresh_interval: "5"
   interfaces_filter: "veth*"
 ---
 apiVersion: v1
