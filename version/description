@@ -1,31 +1,9 @@
-v0.15.0
-
-This release include a much much better documentation and some nasty
-bugs has being fixed, it does not implement new features, except for
-externa library integration for webhooks and the pprof integration
-into the project.
-
-NOTE: This is the last minor release for NetworkManager 1.20, next minor release
-will use NetworkManager >= 1.22
-
-Features:
-* Adding profiler: (#386)
-* Integrate kube-admission-webhook module (#381)
+v0.15.1
 
 Bugs:
-* Use policy generation to calculate overall condition. (#407)
-* don't retry the configuration (#388)
-* wait for scc resource (#393)
-* Default to 0 if numberAvailable is not present (#380)
-
-Docs:
-* add supported networkmanager version to README (#403)
-* Add a link to the vlan and ip configuration user guide (#382)
-* add supported networkmanager version to README (#403)
-* docs: 103 troubleshooting (#395)
-* docs: 102 Configuration (#392)
-* doc: add ubuntu netplan configuration (#400)
-* don't retry the configuration (#388)
+* explicitly bring unavailable interfaces up (#423)
+* Change webhook port to 54874 (#424)
+* remove user_setup (#421)
 
 ```
 docker pull HANDLER_IMAGE
