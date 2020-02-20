@@ -23,6 +23,7 @@ var (
 const nmstateCommand = "nmstatectl"
 
 func nmstatectlWithInput(arguments []string, input string) (string, error) {
+	log.Info(fmt.Sprintf("cmd: %s, input: %s", strings.Join(arguments, " "), input))
 	cmd := exec.Command(nmstateCommand, arguments...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
