@@ -185,10 +185,11 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		return "Ignoring empty desired state", nil
 	}
 
-	// commit timeout doubles the default gw ping probe timeout, to
+	// commit timeout doubles the default gw ping probe and check API server
+	// connectivity timeout, to
 	// ensure the Checkpoint is alive before rolling it back
 	// https://nmstate.github.io/cli_guide#manual-transaction-control
-	setOutput, err := nmstatectl.Set(desiredState, defaultGwProbeTimeout*2)
+	setOutput, err := nmstatectl.Set(desiredState, (defaultGwProbeTimeout+apiServerProbeTimeout)*2)
 	if err != nil {
 		return setOutput, err
 	}
