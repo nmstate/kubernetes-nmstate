@@ -95,6 +95,7 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
 //       to remove this
 func resetDesiredStateForNodes() {
+	By("Resetting nics state primary up and secondaries down")
 	states := map[string]string{
 		primaryNic:         "up",
 		firstSecondaryNic:  "down",
@@ -286,6 +287,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 		}
 
 		if !gjson.Valid(bridgeVlans) {
+			By("Get VLAN flags from non json complaint output")
 			// There is a bug [1] at centos8 and output is and invalid json
 			// so it parses the non json output
 			// [1] https://bugs.centos.org/view.php?id=16533
@@ -295,6 +297,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 			Expect(err).ToNot(HaveOccurred())
 			return strings.Split(string(output), " ")
 		} else {
+			By("Get VLAN flags from json complaint output")
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 
 			vlanFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).flags", connection, vlan)

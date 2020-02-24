@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
-organization=kubevirt
-commit="8c311c6ede0400b510aee4eeb37dac5068d92fff"
+organization=qinqon
+commit="k8s-centos8"
 
 script_dir=$(dirname "$(readlink -f "$0")")
 kubevirtci_dir=kubevirtci

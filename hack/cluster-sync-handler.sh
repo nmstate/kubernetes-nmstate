@@ -17,7 +17,20 @@ function getNumberAvailable {
         echo ${numberAvailable:-0}
 }
 
+function consistently {
+    cmd=$@
+    retries=3
+    interval=1
+    cnt=1
+    while [[ $cnt -le $retries ]]; do
+        $cmd
+        sleep $interval
+        cnt=$(($cnt + 1))
+    done
+}
+
 function isOk {
+
         desiredNumberScheduled=$(getDesiredNumberScheduled $1)
         numberAvailable=$(getNumberAvailable $1)
 
@@ -32,7 +45,7 @@ function isOk {
 
 for i in {300..0}; do
     # We have to re-check desired number, sometimes takes some time to be filled in
-    if isOk nmstate-handler && isOk nmstate-handler-worker; then
+    if consistently isOk nmstate-handler && consistently isOk nmstate-handler-worker; then
        break
     fi
 
