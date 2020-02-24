@@ -38,8 +38,10 @@ spec:
           env:
             - name: WATCH_NAMESPACE
               value: ""
-            - name: RUN_WEBHOOK_SERVER
-              value: ""
+            # FIXME: Communication to etcd not working at openshift, looks like
+            # related to caBundle
+            #- name: RUN_WEBHOOK_SERVER
+            #  value: ""
             - name: POD_NAME
               valueFrom:
                 fieldRef:
