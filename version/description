@@ -1,10 +1,10 @@
-v0.15.2
+v0.15.3
 
-This patch release disable webhook since they don't work at openshift.
+Patch release to increase `nmstatectl set` timeout with the time of the
+two probes we use to check node networking is fine.
 
 Bugs:
-* Disable webhooks (#431)
-
+* Set nmstatectl 'set' timeout to (defaultGwProbe + apiServerProbe) * 2 (#434)
 
 ```
 docker pull HANDLER_IMAGE
