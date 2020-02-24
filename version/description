@@ -1,9 +1,10 @@
-v0.15.1
+v0.15.2
+
+This patch release disable webhook since they don't work at openshift.
 
 Bugs:
-* explicitly bring unavailable interfaces up (#423)
-* Change webhook port to 54874 (#424)
-* remove user_setup (#421)
+* Disable webhooks (#431)
+
 
 ```
 docker pull HANDLER_IMAGE
