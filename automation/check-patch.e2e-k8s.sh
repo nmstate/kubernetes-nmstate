@@ -15,7 +15,7 @@ teardown() {
 }
 
 main() {
-    export KUBEVIRT_PROVIDER='k8s-1.17.0'
+    export KUBEVIRT_PROVIDER='k8s-1.17'
     export KUBEVIRT_NUM_NODES=2
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
