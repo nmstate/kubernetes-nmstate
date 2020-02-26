@@ -96,12 +96,26 @@ func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
-	states := map[string]string{
-		primaryNic:         "up",
-		firstSecondaryNic:  "down",
-		secondSecondaryNic: "down",
-	}
-	updateDesiredState(ethernetNicsState(states))
+	updateDesiredState(nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+  - name: %s
+    type: ethernet
+    state: down
+    ipv4:
+      dhcp: false
+    ipv6:
+      dhcp: false
+  - name: %s
+    type: ethernet
+    state: down
+    ipv4:
+      dhcp: false
+    ipv6:
+      dhcp: false
+
+`, primaryNic, firstSecondaryNic, secondSecondaryNic)))
 	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
