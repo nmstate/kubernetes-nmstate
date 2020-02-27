@@ -3,7 +3,6 @@
 set -ex
 
 kubectl=./cluster/kubectl.sh
-manifests_dir=deploy
 
 function getDesiredNumberScheduled {
     $kubectl get daemonset -n nmstate $1 -o=jsonpath='{.status.desiredNumberScheduled}'
@@ -15,7 +14,7 @@ function getNumberAvailable {
 }
 
 function eventually {
-    timeout=30
+    timeout=15
     interval=5
     cmd=$@
     echo "Checking eventually $cmd"
@@ -29,8 +28,8 @@ function eventually {
 }
 
 function consistently {
-    timeout=10
-    interval=1
+    timeout=15
+    interval=5
     cmd=$@
     echo "Checking consistently $cmd"
     while $cmd; do
@@ -60,25 +59,31 @@ function deploy() {
         registry=localhost:$(./cluster/cli.sh ports registry | tr -d '\r')
     fi
 
+    manifests_dir=build/_output/manifests
+
     # Build new handler image from local sources and push it to the kubevirtci cluster
     IMAGE_REGISTRY=${registry} make push-handler
+
+    # Also generate the manifests pointing to the local registry
+    IMAGE_REGISTRY=registry:5000 make manifests
+
+    if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$ ]]; then
+        while ! $kubectl get securitycontextconstraints; do
+            sleep 1
+        done
+        $kubectl apply -f ${manifests_dir}/scc.yaml
+    fi
+
 
     # Deploy all needed manifests
     $kubectl apply -f $manifests_dir/namespace.yaml
     $kubectl apply -f $manifests_dir/service_account.yaml
     $kubectl apply -f $manifests_dir/role.yaml
     $kubectl apply -f $manifests_dir/role_binding.yaml
-    $kubectl apply -f $manifests_dir/crds/nmstate.io_nodenetworkstates_crd.yaml
-    $kubectl apply -f $manifests_dir/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
-    $kubectl apply -f $manifests_dir/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
-    if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$ ]]; then
-            $kubectl apply -f $manifests_dir/openshift/
-    fi
-    sed \
-        -e "s#--v=production#--v=debug#" \
-        -e "s#REPLACE_IMAGE#registry:5000/nmstate/kubernetes-nmstate-handler#" \
-        $manifests_dir/operator.yaml | $kubectl create -f -
-
+    $kubectl apply -f $manifests_dir/nmstate.io_nodenetworkstates_crd.yaml
+    $kubectl apply -f $manifests_dir/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
+    $kubectl apply -f $manifests_dir/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
+    $kubectl apply -f $manifests_dir/operator.yaml
 }
 
 function wait_ready() {

@@ -1,6 +1,6 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: nmstate
+  name: {{ .Namespace }}
   labels:
-    name: nmstate
+    name: {{ .Namespace }}
