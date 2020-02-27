@@ -46,8 +46,7 @@ GO := $(GOBIN)/go
 
 LOCAL_REGISTRY ?= registry:5000
 
-local_handler_manifest = build/_output/handler.local.yaml
-versioned_operator_manifest = build/_output/versioned/operator.yaml
+manifests = build/_output/manifests
 description = build/_output/description
 
 all: check handler
@@ -93,7 +92,10 @@ gen-openapi: $(OPERATOR_SDK)
 gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
-handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK)
+manifests:
+	$(GO) run hack/render-manifests.go nmstate $(HANDLER_IMAGE) Always deploy/ $(manifests)
+
+handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 
 push-handler: handler
@@ -110,12 +112,6 @@ test/e2e: $(OPERATOR_SDK)
 		--no-setup \
 		--go-test-flags "$(e2e_test_args)"
 
-
-$(versioned_operator_manifest): HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
-$(versioned_operator_manifest): version/version.go
-	mkdir -p $(dir $@)
-	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
-		deploy/operator.yaml > $@
 
 cluster-up:
 	./cluster/up.sh
@@ -146,14 +142,12 @@ prepare-major:
 # calling make on make is needed.
 # [1] https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
 release: HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
-release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_RELEASE)
+release: manifests push-handler $(description) $(GITHUB_RELEASE) version/version.go
 	DESCRIPTION=$(description) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(shell hack/version.sh) \
 				   hack/release.sh \
-				   		$(resources) \
-						$(versioned_operator_manifest) \
-						$(shell find deploy/crds/ deploy/openshift -type f)
+						$(shell find $(manifests) -type f)
 
 vendor:
 	$(GO) mod tidy
@@ -173,11 +167,11 @@ tools-vendoring:
 	test/e2e \
 	cluster-up \
 	cluster-down \
-	cluster-sync-resources \
 	cluster-sync-handler \
 	cluster-sync \
 	cluster-clean \
 	release \
 	vendor \
 	whitespace-check \
-	whitespace-format
+	whitespace-format \
+	manifests

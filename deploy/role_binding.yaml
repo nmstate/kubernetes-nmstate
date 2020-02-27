@@ -3,11 +3,11 @@ kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nmstate-handler
-  namespace: nmstate
+  namespace: {{ .Namespace }}
 subjects:
 - kind: ServiceAccount
   name: nmstate-handler
-  namespace: nmstate
+  namespace: {{ .Namespace }}
 roleRef:
   kind: Role
   name: nmstate-handler
@@ -17,11 +17,11 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nmstate-handler
-  namespace: nmstate
+  namespace: {{ .Namespace }}
 subjects:
 - kind: ServiceAccount
   name: nmstate-handler
-  namespace: nmstate
+  namespace: {{ .Namespace }}
 roleRef:
   kind: ClusterRole
   name: nmstate-handler
