@@ -1,7 +1,7 @@
 #!/bin/bash -e
 
 organization=qinqon
-commit="k8s-centos8"
+commit="k8s-1.17-fix-non-interactive-dnf"
 
 script_dir=$(dirname "$(readlink -f "$0")")
 kubevirtci_dir=kubevirtci
