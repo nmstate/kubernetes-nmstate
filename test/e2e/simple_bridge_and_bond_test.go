@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -116,7 +117,22 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstatev1alpha1.State {
 `, bondName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
 }
 
-var _ = Describe("NodeNetworkState", func() {
+func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
+	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]interface{})
+	expectedOptions := expectedLinkAggregation["options"].(map[string]interface{})
+	return SatisfyAll(
+		HaveKeyWithValue("name", expectedBond["name"]),
+		HaveKeyWithValue("type", expectedBond["type"]),
+		HaveKeyWithValue("state", expectedBond["state"]),
+		HaveKeyWithValue("link-aggregation", SatisfyAll(
+			HaveKeyWithValue("mode", expectedLinkAggregation["mode"]),
+			HaveKeyWithValue("slaves", expectedLinkAggregation["slaves"]),
+			HaveKeyWithValue("options", HaveKeyWithValue("miimon", expectedOptions["miimon"])),
+		)),
+	)
+}
+
+var _ = FDescribe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
@@ -181,12 +197,7 @@ var _ = Describe("NodeNetworkState", func() {
 				)
 
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", expectedBond["name"]),
-						HaveKeyWithValue("type", expectedBond["type"]),
-						HaveKeyWithValue("state", expectedBond["state"]),
-						HaveKeyWithValue("link-aggregation", expectedBond["link-aggregation"]),
-					)))
+					interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
 				}
 			})
 		})
@@ -212,12 +223,7 @@ var _ = Describe("NodeNetworkState", func() {
 				)
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
-						ContainElement(SatisfyAll(
-							HaveKeyWithValue("name", expectedBond["name"]),
-							HaveKeyWithValue("type", expectedBond["type"]),
-							HaveKeyWithValue("state", expectedBond["state"]),
-							HaveKeyWithValue("link-aggregation", expectedBond["link-aggregation"]),
-						)),
+						ContainElement(matchingBond(expectedBond)),
 						ContainElement(SatisfyAll(
 							HaveKeyWithValue("name", expectedBridge["name"]),
 							HaveKeyWithValue("type", expectedBridge["type"]),
@@ -249,19 +255,11 @@ var _ = Describe("NodeNetworkState", func() {
 			})
 			It("should have the bond interface with 2 slaves at currentState", func() {
 				var (
-					expectedBond  = interfaceByName(interfaces(bondUpWithEth1AndEth2(bond1)), bond1)
-					expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
+					expectedBond = interfaceByName(interfaces(bondUpWithEth1AndEth2(bond1)), bond1)
 				)
 
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", expectedBond["name"]),
-						HaveKeyWithValue("type", expectedBond["type"]),
-						HaveKeyWithValue("state", expectedBond["state"]),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-						HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{firstSecondaryNic, secondSecondaryNic}))),
-					)))
+					interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
 				}
 			})
 		})
@@ -282,19 +280,11 @@ var _ = Describe("NodeNetworkState", func() {
 				var (
 					expectedBond        = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), bond1)
 					expectedVlanBond102 = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), fmt.Sprintf("%s.102", bond1))
-					expectedSpecs       = expectedBond["link-aggregation"].(map[string]interface{})
 				)
 
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
-						ContainElement(SatisfyAll(
-							HaveKeyWithValue("name", expectedBond["name"]),
-							HaveKeyWithValue("type", expectedBond["type"]),
-							HaveKeyWithValue("state", expectedBond["state"]),
-							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
-							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-							HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{firstSecondaryNic, secondSecondaryNic}))),
-						)),
+						ContainElement(matchingBond(expectedBond)),
 						ContainElement(SatisfyAll(
 							HaveKeyWithValue("name", expectedVlanBond102["name"]),
 							HaveKeyWithValue("type", expectedVlanBond102["type"]),
