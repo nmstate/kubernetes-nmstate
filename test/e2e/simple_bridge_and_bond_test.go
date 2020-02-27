@@ -132,7 +132,7 @@ func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 	)
 }
 
-var _ = FDescribe("NodeNetworkState", func() {
+var _ = Describe("NodeNetworkState", func() {
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {
