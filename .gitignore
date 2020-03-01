@@ -3,7 +3,7 @@ build/_output
 build/_test
 
 # Cloned kubevirtci
-kubevirtci
+_kubevirtci
 
 # Junit
 *junit*.xml
