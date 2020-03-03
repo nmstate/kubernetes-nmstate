@@ -1,8 +1,9 @@
-FROM fedora:32
+FROM centos:8
 
-RUN dnf install -y dnf-plugins-core && \
+RUN dnf install -b -y dnf-plugins-core && \
+    dnf copr enable -y networkmanager/NetworkManager-1.22 && \
     dnf copr enable -y nmstate/nmstate-0.2 && \
-    dnf install -y nmstate iproute iputils && \
+    dnf install -b -y nmstate iproute iputils && \
     dnf remove -y dnf-plugins-core && \
     dnf clean all
 
