@@ -30,7 +30,6 @@ function consistently {
 }
 
 function isOk {
-
         desiredNumberScheduled=$(getDesiredNumberScheduled $1)
         numberAvailable=$(getNumberAvailable $1)
 
