@@ -92,7 +92,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 
 		})
 
-		FIt("should successfully move default IP address on top of the bond", func() {
+		It("should successfully move default IP address on top of the bond", func() {
 			var (
 				expectedBond = interfaceByName(interfaces(boundUpWithPrimaryAndSecondary(bond1)), bond1)
 			)
