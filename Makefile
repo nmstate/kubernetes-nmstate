@@ -138,7 +138,6 @@ $(CLUSTER_DIR)/%: $(install_kubevirtci)
 	$(install_kubevirtci)
 
 cluster-prepare:
-	hack/install-ovs.sh
 	hack/install-nm.sh
 	hack/flush-secondary-nics.sh
 
