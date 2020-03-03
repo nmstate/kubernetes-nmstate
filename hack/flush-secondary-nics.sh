@@ -20,7 +20,4 @@ for node in $($kubectl get nodes --no-headers | awk '{print $1}'); do
         	$ssh $node -- sudo nmcli con del $uuid
 	fi
     done
-    echo "$node: restoring resolv.conf config"
-    $ssh $node -- sudo dhclient -r $PRIMARY_NIC
-    $ssh $node -- sudo dhclient $PRIMARY_NIC
 done
