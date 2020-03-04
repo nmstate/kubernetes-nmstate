@@ -1,31 +1,24 @@
-v0.15.0
+v0.16.0
 
-This release include a much much better documentation and some nasty
-bugs has being fixed, it does not implement new features, except for
-externa library integration for webhooks and the pprof integration
-into the project.
-
-NOTE: This is the last minor release for NetworkManager 1.20, next minor release
-will use NetworkManager >= 1.22
+Bump the support NetworkManager version to >= 1.22.
 
 Features:
-* Adding profiler: (#386)
-* Integrate kube-admission-webhook module (#381)
+* Use centos8 nodes (#445)
+* Use centos8 base image (#443)
+* Upgrade operator sdk (#401)
+* bump NetworkManager requirements to 1.22 (#418)
 
 Bugs:
-* Use policy generation to calculate overall condition. (#407)
-* don't retry the configuration (#388)
-* wait for scc resource (#393)
-* Default to 0 if numberAvailable is not present (#380)
+* Stabilize master tests (#446)
+* Set nmstatectl 'set' timeout to (defaultGwProbe + apiServerProbe) * 2 (#444)
+* Change webhook port to 54874 (#420)
+* explicitly bring unavailable interfaces up (#422)
+* Upgrade operator sdk (#401)
+* remove user_setup (#419)
+* add missing variables configuring profiling (#414)
 
 Docs:
-* add supported networkmanager version to README (#403)
-* Add a link to the vlan and ip configuration user guide (#382)
-* add supported networkmanager version to README (#403)
-* docs: 103 troubleshooting (#395)
-* docs: 102 Configuration (#392)
-* doc: add ubuntu netplan configuration (#400)
-* don't retry the configuration (#388)
+* bump NetworkManager requirements to 1.22 (#418)
 
 ```
 docker pull HANDLER_IMAGE
