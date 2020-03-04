@@ -6,6 +6,7 @@ import (
 	"text/template"
 
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
@@ -175,4 +176,19 @@ func vlanUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
         dhcp: false
         enabled: true
 `, iface, ipAddress))
+}
+
+func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
+	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]interface{})
+	expectedOptions := expectedLinkAggregation["options"].(map[string]interface{})
+	return SatisfyAll(
+		HaveKeyWithValue("name", expectedBond["name"]),
+		HaveKeyWithValue("type", expectedBond["type"]),
+		HaveKeyWithValue("state", expectedBond["state"]),
+		HaveKeyWithValue("link-aggregation", SatisfyAll(
+			HaveKeyWithValue("mode", expectedLinkAggregation["mode"]),
+			HaveKeyWithValue("slaves", ConsistOf(expectedLinkAggregation["slaves"])),
+			HaveKeyWithValue("options", HaveKeyWithValue("miimon", expectedOptions["miimon"])),
+		)),
+	)
 }

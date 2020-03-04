@@ -94,13 +94,12 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 
 		It("should successfully move default IP address on top of the bond", func() {
 			var (
-				expectedBond  = interfaceByName(interfaces(boundUpWithPrimaryAndSecondary(bond1)), bond1)
-				expectedSpecs = expectedBond["link-aggregation"].(map[string]interface{})
+				expectedBond = interfaceByName(interfaces(boundUpWithPrimaryAndSecondary(bond1)), bond1)
 			)
 
 			By("Checking that bond was configured and obtained the same IP address")
 			for _, node := range nodes {
-				verifyBondIsUpWithPrimaryNicIp(node, expectedBond, expectedSpecs, addressByNode[node])
+				verifyBondIsUpWithPrimaryNicIp(node, expectedBond, addressByNode[node])
 			}
 			// Restart only first node that it master if other node is restarted it will stuck in NotReady state
 			nodeToReboot := nodes[0]
@@ -108,20 +107,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			err := restartNode(nodeToReboot)
 			Expect(err).ToNot(HaveOccurred())
 			By(fmt.Sprintf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1))
-			verifyBondIsUpWithPrimaryNicIp(nodeToReboot, expectedBond, expectedSpecs, addressByNode[nodeToReboot])
+			verifyBondIsUpWithPrimaryNicIp(nodeToReboot, expectedBond, addressByNode[nodeToReboot])
 		})
 	})
 })
 
-func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interface{}, expectedSpecs map[string]interface{}, ip string) {
-	interfacesForNode(node).Should(ContainElement(SatisfyAll(
-		HaveKeyWithValue("name", expectedBond["name"]),
-		HaveKeyWithValue("type", expectedBond["type"]),
-		HaveKeyWithValue("state", expectedBond["state"]),
-		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("mode", expectedSpecs["mode"])),
-		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("options", expectedSpecs["options"])),
-		HaveKeyWithValue("link-aggregation", HaveKeyWithValue("slaves", ConsistOf([]string{primaryNic, firstSecondaryNic}))),
-	)))
+func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interface{}, ip string) {
+	interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
 
 	Eventually(func() string {
 		return ipv4Address(node, bond1)
