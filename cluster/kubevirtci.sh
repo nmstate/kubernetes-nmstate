@@ -5,7 +5,7 @@ KUBEVIRTCI_REPO='https://github.com/kubevirt/kubevirtci.git'
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"
 
 function kubevirtci::_get_repo() {
-    git --git-dir ${KUBEVIRTCI_PATH} remote get-url origin
+    git --git-dir ${KUBEVIRTCI_PATH}/.git remote get-url origin
 }
 
 function kubevirtci::_get_version() {
@@ -15,7 +15,7 @@ function kubevirtci::_get_version() {
 function kubevirtci::install() {
     # Remove cloned kubevirtci repository if it does not match the requested one
     if [ -d ${KUBEVIRTCI_PATH} ]; then
-        if [ $(kubevirtci::_get_repo) != ${KUBEVIRTCI_REPO} || $(kubevirtci::_get_version) != ${KUBEVIRTCI_VERSION} ]; then
+        if [ $(kubevirtci::_get_repo) != ${KUBEVIRTCI_REPO} -o $(kubevirtci::_get_version) != ${KUBEVIRTCI_VERSION} ]; then
             rm -rf ${KUBEVIRTCI_PATH}
         fi
     fi
