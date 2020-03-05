@@ -46,15 +46,6 @@ GO := $(GOBIN)/go
 
 LOCAL_REGISTRY ?= registry:5000
 
-CLUSTER_DIR ?= kubevirtci/cluster-up/
-KUBECONFIG ?= $(CURDIR)/kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
-export KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
-CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
-CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
-CLI ?= $(CLUSTER_DIR)/cli.sh
-export SSH ?= $(CLUSTER_DIR)/ssh.sh
-
-install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
 versioned_operator_manifest = build/_output/versioned/operator.yaml
 description = build/_output/description
