@@ -16,7 +16,7 @@ All you have to do in order to create the bond and the sub vlan interface on all
 to apply the following policy:
 
 ```yaml
-cat <<EOF | ./kubevirtci/cluster-up/kubectl.sh create -f -
+cat <<EOF | ./cluster/kubectl.sh create -f -
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:
