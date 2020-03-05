@@ -7,9 +7,9 @@ import (
 )
 
 func runAtNodeWithExtras(node string, quiet bool, command ...string) (string, error) {
-	ssh_command := []string{node, "--"}
+	ssh_command := []string{"ssh", node, "--"}
 	ssh_command = append(ssh_command, command...)
-	output, err := cmd.Run("./kubevirtci/cluster-up/ssh.sh", quiet, ssh_command...)
+	output, err := cmd.Run("./cluster/cli.sh", quiet, ssh_command...)
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
 	if len(outputLines) > 2 {
