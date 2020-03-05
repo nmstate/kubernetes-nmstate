@@ -16,7 +16,7 @@ All you have to do in order to create the bond on all nodes across cluster is
 to apply the following policy:
 
 ```yaml
-cat <<EOF | ./kubevirtci/cluster-up/kubectl.sh create -f -
+cat <<EOF | ./cluster/kubectl.sh create -f -
 apiVersion: nmstate.io/v1alpha1
 kind: NodeNetworkConfigurationPolicy
 metadata:

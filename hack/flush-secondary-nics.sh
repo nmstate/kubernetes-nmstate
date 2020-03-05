@@ -9,8 +9,9 @@
 #
 
 script_dir=$(dirname "$(readlink -f "$0")")
-ssh=$script_dir/../kubevirtci/cluster-up/ssh.sh
-kubectl=$script_dir/../kubevirtci/cluster-up/kubectl.sh
+cluster_dir=$script_dir/../cluster
+ssh=$cluster_dir/cli.sh ssh
+kubectl=$cluster_dir/kubectl.sh
 
 for node in $($kubectl get nodes --no-headers | awk '{print $1}'); do
     for nic in $FIRST_SECONDARY_NIC $SECOND_SECONDARY_NIC; do

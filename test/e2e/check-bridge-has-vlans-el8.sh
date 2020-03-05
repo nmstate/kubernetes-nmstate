@@ -7,7 +7,7 @@ vlan_max=$4
 vlans_out=/tmp/vlans.out
 
 echo "Dumping bridge vlans to $vlans_out"
-./kubevirtci/cluster-up/ssh.sh $node -- sudo bridge vlan show > $vlans_out
+./cluster/cli.sh ssh $node -- sudo bridge vlan show > $vlans_out
 
 echo "Checking vlan range $vlan_min-$vlan_max at $connection"
 for vlan in $(seq $vlan_min $vlan_max); do

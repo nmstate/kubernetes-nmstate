@@ -46,20 +46,10 @@ GO := $(GOBIN)/go
 
 LOCAL_REGISTRY ?= registry:5000
 
-CLUSTER_DIR ?= kubevirtci/cluster-up/
-KUBECONFIG ?= $(CURDIR)/kubevirtci/_ci-configs/$(KUBEVIRT_PROVIDER)/.kubeconfig
-export KUBECTL ?= $(CLUSTER_DIR)/kubectl.sh
-CLUSTER_UP ?= $(CLUSTER_DIR)/up.sh
-CLUSTER_DOWN ?= $(CLUSTER_DIR)/down.sh
-CLI ?= $(CLUSTER_DIR)/cli.sh
-export SSH ?= $(CLUSTER_DIR)/ssh.sh
-
-install_kubevirtci := hack/install-kubevirtci.sh
 local_handler_manifest = build/_output/handler.local.yaml
 versioned_operator_manifest = build/_output/versioned/operator.yaml
 description = build/_output/description
 
-resources = deploy/namespace.yaml deploy/service_account.yaml deploy/role.yaml deploy/role_binding.yaml
 all: check handler
 
 check: vet whitespace-check gofmt-check
@@ -113,19 +103,12 @@ test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
 test/e2e: $(OPERATOR_SDK)
-	# We have to unset mod=vendor here since operator-sdk is already
-	# building with it, and go tool fail if it's specified twice
 	mkdir -p test_logs/e2e
 	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
-		--kubeconfig $(KUBECONFIG) \
+		--kubeconfig $(shell ./cluster/kubeconfig.sh) \
 		--namespace nmstate \
 		--no-setup \
 		--go-test-flags "$(e2e_test_args)"
-
-$(local_handler_manifest): deploy/operator.yaml
-	mkdir -p $(dir $@)
-	sed "s#REPLACE_IMAGE#$(LOCAL_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)#" \
-		deploy/operator.yaml > $@
 
 
 $(versioned_operator_manifest): HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
@@ -134,54 +117,17 @@ $(versioned_operator_manifest): version/version.go
 	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
 		deploy/operator.yaml > $@
 
-$(CLUSTER_DIR)/%: $(install_kubevirtci)
-	$(install_kubevirtci)
+cluster-up:
+	./cluster/up.sh
 
-cluster-prepare:
-	hack/install-nm.sh
-	hack/flush-secondary-nics.sh
+cluster-down:
+	./cluster/down.sh
 
-provider-up: $(CLUSTER_UP)
-	$(CLUSTER_UP)
+cluster-clean:
+	./cluster/clean.sh
 
-cluster-up: provider-up cluster-prepare
-
-cluster-down: $(CLUSTER_DOWN)
-	$(CLUSTER_DOWN)
-
-cluster-clean: $(KUBECTL)
-	$(KUBECTL) delete --ignore-not-found -f build/_output/
-	$(KUBECTL) delete --ignore-not-found -f deploy/
-	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates_crd.yaml
-	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
-	$(KUBECTL) delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
-		$(KUBECTL) delete --ignore-not-found -f deploy/openshift/; \
-	fi
-
-cluster-sync-resources: $(KUBECTL)
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
-		while ! $(KUBECTL) get securitycontextconstraints; do sleep 1; done; \
-	fi
-	for resource in $(resources); do \
-		$(KUBECTL) apply -f $$resource || exit 1; \
-	done
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
-		$(KUBECTL) apply -f deploy/openshift/; \
-	fi
-
-cluster-sync-handler: cluster-sync-resources $(local_handler_manifest)
-	if [[ "$$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
-		IMAGE_REGISTRY=localhost:$$($(CLI) ports --container-name=cluster registry | tr -d '\r') \
-				   make push-handler;  \
-	else \
-		IMAGE_REGISTRY=localhost:$$($(CLI) ports registry | tr -d '\r') \
-				   make push-handler; \
-	fi
-	local_handler_manifest=$(local_handler_manifest) ./hack/cluster-sync-handler.sh
-
-
-cluster-sync: cluster-sync-handler
+cluster-sync:
+	./cluster/sync.sh
 
 $(description): version/description
 	mkdir -p $(dir $@)

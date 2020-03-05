@@ -7,7 +7,7 @@ connection=$2
 vlan=$3
 vlans_out=/tmp/vlans.out
 
-./kubevirtci/cluster-up/ssh.sh $node -- sudo bridge vlan show > $vlans_out
+./cluster/cli.sh ssh $node -- sudo bridge vlan show > $vlans_out
 
 # Remove CR from output
 sed -i 's/\r$//' $vlans_out
