@@ -35,22 +35,22 @@ cluster.
 make cluster-sync
 ```
 
-You can ssh into the created nodes using `kubevirtci/cluster-up/ssh.sh`.
+You can ssh into the created nodes using `cluster/cli.sh ssh`.
 
 ```shell
-kubevirtci/cluster-up/ssh.sh node01
+cluster/cli.sh ssh node01
 ```
 
-Finally, you can access Kubernetes API using `kubevirtci/cluster-up/kubectl.sh`.
+Finally, you can access Kubernetes API using `cluster/kubectl.sh`.
 
 ```shell
-kubevirtci/cluster-up/kubectl.sh get nodes
+cluster/kubectl.sh get nodes
 ```
 
 If you want to use `kubectl` to access the cluster, start a proxy.
 
 ```shell
-kubevirtci/cluster-up/kubectl.sh proxy --port=8080 --disable-filter=true &
+cluster/kubectl.sh proxy --port=8080 --disable-filter=true &
 ```
 
 You can stop here and play with the cluster on your own or continue with the
