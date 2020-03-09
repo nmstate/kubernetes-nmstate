@@ -14,12 +14,28 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 )
+
+func (m manager) get(key types.NamespacedName, value runtime.Object) error {
+	return wait.PollImmediate(5*time.Second, 30*time.Second, func() (bool, error) {
+		err := m.crMgr.GetClient().Get(context.TODO(), key, value)
+		if err != nil {
+			_, cacheNotStarted := err.(*cache.ErrCacheNotStarted)
+			if cacheNotStarted {
+				return false, nil
+			} else {
+				return true, err
+			}
+		}
+		return true, nil
+	})
+}
 
 // Retrieve cluster CA bundle and encode to base 64
 func (m manager) clientCAFile() ([]byte, error) {
 	authenticationConfig := corev1.ConfigMap{}
-	err := m.crMgr.GetClient().Get(context.TODO(), types.NamespacedName{Namespace: "kube-system", Name: "extension-apiserver-authentication"}, &authenticationConfig)
+	err := m.get(types.NamespacedName{Namespace: "kube-system", Name: "extension-apiserver-authentication"}, &authenticationConfig)
 	if err != nil {
 		return []byte{}, errors.Wrap(err, "failed to retrieve cluster authentication config")
 	}
@@ -78,7 +94,7 @@ func (m manager) updateWebhookCABundle(webhookName string, webhookType WebhookTy
 		// Do some polling to wait for manifest to be deployed
 		err := wait.PollImmediate(1*time.Second, 120*time.Second, func() (bool, error) {
 			webhookKey := types.NamespacedName{Name: webhookName}
-			err := m.crMgr.GetClient().Get(context.TODO(), webhookKey, webhook)
+			err := m.get(webhookKey, webhook)
 			if err != nil {
 				if apierrors.IsNotFound(err) {
 					return false, nil
