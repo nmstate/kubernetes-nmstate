@@ -94,8 +94,13 @@ var _ = BeforeEach(func() {
 var _ = AfterEach(func() {
 	By("Verifying initial state")
 	for _, node := range nodes {
-		nodeState := nodeInterfacesState(node, interfacesToIgnore)
-		Expect(nodesInterfacesState[node]).Should(MatchJSON(nodeState))
+
+		Eventually(func() []byte {
+			By("Verifying initial state eventually")
+			nodeState := nodeInterfacesState(node, interfacesToIgnore)
+			return nodeState
+		}, 120*time.Second, 5*time.Second).Should(MatchJSON(nodesInterfacesState[node]), fmt.Sprintf("Test didn't return "+
+			"to initial state on node %s", node))
 	}
 })
 
