@@ -34,7 +34,8 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNode{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileNode{client: mgr.GetClient(), scheme: mgr.GetScheme(),
+		nmstateUpdater: nmstate.CreateOrUpdateNodeNetworkState}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -76,9 +77,13 @@ var _ reconcile.Reconciler = &ReconcileNode{}
 type ReconcileNode struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	client         client.Client
+	scheme         *runtime.Scheme
+	nmstateUpdater NmstateUpdater
 }
+
+// Added for test purposes
+type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey) error
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
 // and what is in the Node.Spec
@@ -102,17 +107,9 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 		// Error reading the object - requeue the request.
 		return reconcile.Result{}, err
 	}
-
-	_, err = nmstate.GetNodeNetworkState(r.client, request.Name)
+	err = r.nmstateUpdater(r.client, instance, request.NamespacedName)
 	if err != nil {
-		if !errors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("error at node reconcile accessing NodeNetworkState: %v", err)
-		} else {
-			err = nmstate.InitializeNodeNeworkState(r.client, instance, r.scheme)
-			if err != nil {
-				return reconcile.Result{}, fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
-			}
-		}
+		err = fmt.Errorf("error at node reconcile creating NodeNetworkState: %v", err)
 	}
-	return reconcile.Result{RequeueAfter: nodeRefresh}, nil
+	return reconcile.Result{RequeueAfter: nodeRefresh}, err
 }
