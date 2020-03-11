@@ -1,24 +1,11 @@
-v0.16.0
-
-Bump the support NetworkManager version to >= 1.22.
+v0.17.0
 
 Features:
-* Use centos8 nodes (#445)
-* Use centos8 base image (#443)
-* Upgrade operator sdk (#401)
-* bump NetworkManager requirements to 1.22 (#418)
+* Add consistently check at cluster-sync (#448)
+* use cluster scripts (#442)
 
 Bugs:
-* Stabilize master tests (#446)
-* Set nmstatectl 'set' timeout to (defaultGwProbe + apiServerProbe) * 2 (#444)
-* Change webhook port to 54874 (#420)
-* explicitly bring unavailable interfaces up (#422)
-* Upgrade operator sdk (#401)
-* remove user_setup (#419)
-* add missing variables configuring profiling (#414)
-
-Docs:
-* bump NetworkManager requirements to 1.22 (#418)
+* Upgrade kube-admission-webhook lib (#449), fixes race on startup
 
 ```
 docker pull HANDLER_IMAGE
