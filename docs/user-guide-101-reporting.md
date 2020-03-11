@@ -157,15 +157,47 @@ periodically and won't get updated while the node is not reachable (e.g. during
 reconfiguration of networking), this value can be used to evaluate whether the
 observed state is fresh enough.
 
-## Configure refresh interval
+## Reported state
 
 The reported state is updated every 5 seconds.
 
-## Filter reported interfaces
+## Configuration
+
+#### How To
+We support configuration through configmap created from file:
+
+    Create from file:
+        1. Create file `nmstate.yaml` (default name)
+            ----- content --------
+            interfaces_filter: "vnet*"
+            -------------
+        2. Create configuration map from previously created file with name `nmstate-config`:
+            `kubectl -n nmstate create configmap nmstate-config --from-file=nmstate.yaml`
+
+    Create from yaml:
+        1. Create yaml file with content:
+             ------------- content -------------
+             apiVersion: v1
+             kind: ConfigMap
+             metadata:
+               name: nmstate-config
+               namespace: nmstate
+             data:
+               nmstate.yaml: |
+                 interfaces_filter: "veth*"
+             ----------------------------
+        2. Create configuration map
+           `kubectl create -f cm.yaml`
+
+   The interface filtering will be changed to "vnet*".
+
+#### Configuration Options:
+
+##### Filter reported interfaces
 
 By default, all `veth*` interfaces are omitted from the report in order not to
 clutter the output with all Pod connections. This filtering can be adjusted via
-`interfaces_filter` variable in kubernetes-nmstate configmap.
+`interfaces_filter` variable in configuration file.
 
 | Filter            | Effect                                                             |
 | ---               | ---                                                                |
@@ -174,15 +206,7 @@ clutter the output with all Pod connections. This filtering can be adjusted via
 | `"{veth*,vnet*}"` | Omit all interfaces starting with either `veth` or `vnet`          |
 
 
-To override the default configuration, use `patch` command. Additionally, in
-order for the config to take effect, all handlers need to be restarted:
-
-```json
-kubectl -n nmstate patch configmap nmstate-config --patch '{"data": {"interfaces_filter": ""}}'
-kubectl -n nmstate delete pods --all
-```
-
-The `NodeNetworkState` will now list all interfaces seen on the host.
+To override the default values look on "How to" part
 
 ## Continue reading
 

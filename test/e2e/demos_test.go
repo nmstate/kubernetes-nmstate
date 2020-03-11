@@ -6,15 +6,7 @@ import (
 	"strings"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 )
-
-func kubectlAndCheck(command ...string) {
-	out, err := cmd.Kubectl(command...)
-	Expect(err).ShouldNot(HaveOccurred(), out)
-}
 
 func skipIfNotKubernetes() {
 	provider := getEnv("KUBEVIRT_PROVIDER", "k8s")

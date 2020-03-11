@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nmstate/kubernetes-nmstate/test/cmd"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -457,4 +459,9 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 func vlan(node string, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
+}
+
+func kubectlAndCheck(command ...string) {
+	out, err := cmd.Kubectl(command...)
+	Expect(err).ShouldNot(HaveOccurred(), out)
 }

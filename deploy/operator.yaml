@@ -50,20 +50,19 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: INTERFACES_FILTER
-              valueFrom:
-                configMapKeyRef:
-                  name: nmstate-config
-                  key: interfaces_filter
             - name: WEBHOOK_PORT
               value: "54874"
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+            - name: CONFIG_PATH
+              value: "/etc/config/nmstate.yaml"
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
+          - name: config-volume
+            mountPath: /etc/config
           securityContext:
             privileged: true
       volumes:
@@ -71,6 +70,19 @@ spec:
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
+      - name: config-volume
+        configMap:
+          # Provide the name of the ConfigMap containing the file
+          # configmap can be created from file or with this data :
+          # Example:
+          # data:
+          #   nmstate.yaml: |
+          #     interfaces_filter: "veth*"
+          # it's full path must
+          # be set in CONFIG_PATH param
+          # to add to the container
+          name: nmstate-config
+          optional: true
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -125,18 +137,17 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: INTERFACES_FILTER
-              valueFrom:
-                configMapKeyRef:
-                  name: nmstate-config
-                  key: interfaces_filter
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+            - name: CONFIG_PATH
+              value: "/etc/config/nmstate.yaml"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
+            - name: config-volume
+              mountPath: /etc/config
           securityContext:
             privileged: true
       volumes:
@@ -144,14 +155,19 @@ spec:
           hostPath:
             path: /run/dbus/system_bus_socket
             type: Socket
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nmstate-config
-  namespace: nmstate
-data:
-  interfaces_filter: "veth*"
+        - name: config-volume
+          configMap:
+            # Provide the name of the ConfigMap containing the file
+            # configmap can be created from file or with this data :
+            # Example:
+            # data:
+            #   nmstate.yaml: |
+            #     interfaces_filter: "veth*"
+            # it's full path must
+            # be set in CONFIG_PATH param
+            # to add to the container
+            name: nmstate-config
+            optional: true
 ---
 apiVersion: v1
 kind: Service

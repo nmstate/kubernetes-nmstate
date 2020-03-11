@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"time"
+
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	yaml "sigs.k8s.io/yaml"
 
@@ -23,6 +23,7 @@ import (
 
 	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/configurations"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
@@ -34,18 +35,6 @@ const vlanFilteringCommand = "vlan-filtering"
 const defaultGwRetrieveTimeout = 120 * time.Second
 const defaultGwProbeTimeout = 120 * time.Second
 const apiServerProbeTimeout = 120 * time.Second
-
-var (
-	interfacesFilterGlob glob.Glob
-)
-
-func init() {
-	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
-	if !isSet {
-		panic("INTERFACES_FILTER is mandatory")
-	}
-	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
-}
 
 func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 	command := []string{bridgeName}
@@ -108,8 +97,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 		return errors.Wrap(err, "error running nmstatectl show")
 	}
 	observedState := nmstatev1alpha1.State{Raw: []byte(observedStateRaw)}
-
-	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
+	stateToReport, err := filterOut(observedState, configurations.GetInterfacesFilterGlob())
 	if err != nil {
 		fmt.Printf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
 		stateToReport = observedState
