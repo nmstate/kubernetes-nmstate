@@ -61,6 +61,7 @@ var _ = Describe("rollback", func() {
 	})
 	// This spec is done only at first node since policy has to be different
 	// per node (ip addresses has to be different at cluster).
+	// CNV-3793
 	Context("when connectivity to default gw is lost after state configuration", func() {
 		BeforeEach(func() {
 			By("Configure a invalid default gw")

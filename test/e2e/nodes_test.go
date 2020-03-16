@@ -40,6 +40,7 @@ var _ = Describe("Nodes", func() {
 					}
 				}
 			})
+			// CNV-3794
 			It("should update node network state with it", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(expectedDummyName))

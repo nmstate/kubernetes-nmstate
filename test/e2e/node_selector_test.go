@@ -28,6 +28,7 @@ var _ = Describe("NodeSelector", func() {
 			resetDesiredStateForNodes()
 		})
 
+		// CNV-3813
 		It("should not update any nodes and have false Matching state", func() {
 			for _, node := range nodes {
 				enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
