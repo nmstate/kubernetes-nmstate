@@ -33,7 +33,7 @@ routes:
 `, nic, address, nic))
 }
 
-var _ = Describe("rollback", func() {
+var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]rollback", func() {
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
@@ -61,8 +61,7 @@ var _ = Describe("rollback", func() {
 	})
 	// This spec is done only at first node since policy has to be different
 	// per node (ip addresses has to be different at cluster).
-	// CNV-3793
-	Context("when connectivity to default gw is lost after state configuration", func() {
+	Context("[test_id:3793]when connectivity to default gw is lost after state configuration", func() {
 		BeforeEach(func() {
 			By("Configure a invalid default gw")
 			var address string
