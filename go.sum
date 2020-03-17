@@ -1152,6 +1152,8 @@ k8s.io/utils v0.0.0-20190801114015-581e00157fb1 h1:+ySTxfHnfzZb9ys375PXNlLhkJPLK
 k8s.io/utils v0.0.0-20190801114015-581e00157fb1/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
 k8s.io/utils v0.0.0-20191010214722-8d271d903fe4 h1:Gi+/O1saihwDqnlmC8Vhv1M5Sp4+rbOmK9TbsLn8ZEA=
 k8s.io/utils v0.0.0-20191010214722-8d271d903fe4/go.mod h1:sZAwmy6armz5eXlNoLmJcl4F1QuKu7sr+mFQ0byX7Ew=
+kubevirt.io/qe-tools v0.1.3 h1:ZDDolkD2IsHuPW8PNyty5fWO6wpI2BXcQpC65en/9FU=
+kubevirt.io/qe-tools v0.1.3/go.mod h1:PJyH/YXC4W0AmxfheDmXWMbLNsMSboVGXKpMAwfKzVE=
 modernc.org/cc v1.0.0/go.mod h1:1Sk4//wdnYJiUIxnW8ddKpaOJCF37yAdqYnkxUpaYxw=
 modernc.org/golex v1.0.0/go.mod h1:b/QX9oBD/LhixY6NDh+IdGv17hgB+51fET1i2kPSmvk=
 modernc.org/mathutil v1.0.0/go.mod h1:wU0vUrJsVWBZ4P6e7xtFJEhFSNsfRLJ8H458uRjg03k=
