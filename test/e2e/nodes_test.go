@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Nodes", func() {
+var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]Nodes", func() {
 	Context("when are up", func() {
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
@@ -40,8 +40,7 @@ var _ = Describe("Nodes", func() {
 					}
 				}
 			})
-			// CNV-3794
-			It("should update node network state with it", func() {
+			It("[test_id:3794]should update node network state with it", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(expectedDummyName))
 				}

@@ -11,7 +11,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
-var _ = Describe("NodeSelector", func() {
+var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]NodeSelector", func() {
 	nonexistentNodeSelector := map[string]string{"nonexistentKey": "nonexistentValue"}
 
 	Context("when policy is set with node selector not matching any nodes", func() {
@@ -28,8 +28,7 @@ var _ = Describe("NodeSelector", func() {
 			resetDesiredStateForNodes()
 		})
 
-		// CNV-3813
-		It("should not update any nodes and have false Matching state", func() {
+		It("[test_id:3813]should not update any nodes and have false Matching state", func() {
 			for _, node := range nodes {
 				enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
 					nmstatev1alpha1.Condition{

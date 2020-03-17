@@ -21,7 +21,7 @@ func invalidConfig(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName))
 }
 
-var _ = Describe("EnactmentCondition", func() {
+var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
 			By("Add some sleep time to vlan-filtering")
@@ -40,8 +40,7 @@ var _ = Describe("EnactmentCondition", func() {
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
-		// CNV-3796
-		It("should go from Progressing to Available", func() {
+		It("[test_id:3796]should go from Progressing to Available", func() {
 			progressConditions := []nmstatev1alpha1.Condition{
 				nmstatev1alpha1.Condition{
 					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
@@ -114,8 +113,7 @@ var _ = Describe("EnactmentCondition", func() {
 			resetDesiredStateForNodes()
 		})
 
-		// CNV-3795
-		It("should have Failing ConditionType set to true", func() {
+		It("[test_id:3795]should have Failing ConditionType set to true", func() {
 			failingEnactmentConditions := []interface{}{
 				nmstatev1alpha1.Condition{
 					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
