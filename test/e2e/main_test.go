@@ -11,8 +11,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	ginkgoreporters "github.com/onsi/ginkgo/reporters"
-	qereporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
+	ginkgo_reporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
 
 	corev1 "k8s.io/api/core/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,13 +77,14 @@ func TestE2E(tapi *testing.T) {
 
 	reporters := make([]Reporter, 0)
 	reporters = append(reporters, knmstatereporter.New("test_logs/e2e", framework.Global.Namespace, nodes))
-	reporters = append(reporters, ginkgoreporters.NewJUnitReporter("junit.functest.xml"))
-	if qereporters.JunitOutput != "" {
-		reporters = append(reporters, qereporters.NewJunitReporter())
+	if ginkgo_reporters.Polarion.Run {
+		reporters = append(reporters, &ginkgo_reporters.Polarion)
+	}
+	if ginkgo_reporters.JunitOutput != "" {
+		reporters = append(reporters, ginkgo_reporters.NewJunitReporter())
 	}
 
 	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", reporters)
-
 }
 
 var _ = BeforeEach(func() {
