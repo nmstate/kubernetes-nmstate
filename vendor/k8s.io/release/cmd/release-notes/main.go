@@ -227,6 +227,8 @@ func GetReleaseNotes() (notes.ReleaseNotes, notes.ReleaseNotesHistory, error) {
 func WriteReleaseNotes(releaseNotes notes.ReleaseNotes, history notes.ReleaseNotesHistory) (err error) {
 	logrus.Info("got the commits, performing rendering")
 
+	logrus.Infof("releaseNotes %+v", releaseNotes)
+
 	// Open a handle to the file which will contain the release notes output
 	var output *os.File
 	var existingNotes notes.ReleaseNotes
@@ -290,6 +292,8 @@ func WriteReleaseNotes(releaseNotes notes.ReleaseNotes, history notes.ReleaseNot
 		// them in rendering. Perhaps these should be set in CreateDocument()?
 		doc.PreviousRevision = opts.StartRev
 		doc.CurrentRevision = opts.EndRev
+		logrus.Infof("CurrentRevision %s", doc.CurrentRevision)
+		logrus.Infof("format%s", format)
 
 		markdown, err := doc.RenderMarkdownTemplate(opts.ReleaseBucket, opts.ReleaseTars, goTemplate)
 		if err != nil {
