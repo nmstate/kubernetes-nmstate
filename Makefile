@@ -40,6 +40,7 @@ export PATH := $(GOROOT)/bin:$(PATH)
 
 GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
+OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 GITHUB_RELEASE ?= $(GOBIN)/github-release
 GOFMT := $(GOBIN)/gofmt
 GO := $(GOBIN)/go
@@ -80,15 +81,17 @@ $(GINKGO): go.mod $(GO)
 $(OPERATOR_SDK): go.mod $(GO)
 	$(GO) install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
 
+$(OPENAPI_GEN): go.mod $(GO)
+	$(GO) install ./vendor/k8s.io/kube-openapi/cmd/openapi-gen
+
 $(GITHUB_RELEASE): go.mod $(GO)
 	$(GO) install ./vendor/github.com/aktau/github-release
-
 
 gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
 
-gen-openapi: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate openapi
+gen-openapi: $(OPENAPI_GEN)
+	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1alpha1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
 
 gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
