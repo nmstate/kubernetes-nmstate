@@ -52,6 +52,7 @@ GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 GITHUB_RELEASE ?= $(GOBIN)/github-release
+RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 GO := $(GOBIN)/go
 
@@ -142,11 +143,11 @@ $(description): version/description
 	sed "s#HANDLER_IMAGE#$(HANDLER_IMAGE)#" \
 		version/description > $@
 
-prepare-patch:
+prepare-patch: $(RELEASE_NOTES)
 	./hack/prepare-release.sh patch
-prepare-minor:
+prepare-minor: $(RELEASE_NOTES)
 	./hack/prepare-release.sh minor
-prepare-major:
+prepare-major: $(RELEASE_NOTES)
 	./hack/prepare-release.sh major
 
 # This uses target specific variables [1] so we can use push-handler as a
