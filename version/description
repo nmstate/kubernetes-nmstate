@@ -1,10 +1,8 @@
-v0.15.3
-
-Patch release to increase `nmstatectl set` timeout with the time of the
-two probes we use to check node networking is fine.
+v0.15.4
 
 Bugs:
-* Set nmstatectl 'set' timeout to (defaultGwProbe + apiServerProbe) * 2 (#434)
+* Run probe after rollback (#458)
+* remove the webhook manifest (#439)
 
 ```
 docker pull HANDLER_IMAGE
