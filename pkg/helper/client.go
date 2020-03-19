@@ -195,6 +195,44 @@ func defaultGw() (string, error) {
 	})
 }
 
+func runProbes() error {
+	defaultGw, err := defaultGw()
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve default gw at runProbes")
+	}
+
+	currentState, err := nmstatectl.Show()
+	if err != nil {
+		return errors.Wrap(err, "failed to retrieve currentState at runProbes")
+	}
+
+	// TODO: Make ping timeout configurable with a config map
+	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout)
+	if err != nil {
+		return errors.Wrapf(err, "error pinging external address after network reconfiguration -> output: %s, currentState: %s", pingOutput, currentState)
+	}
+
+	err = checkApiServerConnectivity(apiServerProbeTimeout)
+	if err != nil {
+		return errors.Wrapf(err, "error checking api server connectivity after network reconfiguration -> currentState: %s", currentState)
+	}
+	return nil
+}
+
+func rollback(cause error) error {
+	err := nmstatectl.Rollback(cause)
+	if err != nil {
+		return errors.Wrap(err, "failed to do rollback")
+	}
+
+	// wait for system to settle after rollback
+	probesErr := runProbes()
+	if probesErr != nil {
+		return errors.Wrap(err, "failed running probes after rollback")
+	}
+	return nil
+}
+
 func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
@@ -215,7 +253,7 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	// set
 	bridgesUpWithPorts, err := getBridgesUp(desiredState)
 	if err != nil {
-		return "", nmstatectl.Rollback(fmt.Errorf("error retrieving up bridges from desired state"))
+		return "", rollback(fmt.Errorf("error retrieving up bridges from desired state"))
 	}
 
 	commandOutput := ""
@@ -223,29 +261,13 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
 		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
 		if err != nil {
-			return commandOutput, nmstatectl.Rollback(err)
+			return commandOutput, rollback(err)
 		}
 	}
 
-	defaultGw, err := defaultGw()
+	err = runProbes()
 	if err != nil {
-		return commandOutput, nmstatectl.Rollback(err)
-	}
-
-	currentState, err := nmstatectl.Show()
-	if err != nil {
-		return "", nmstatectl.Rollback(err)
-	}
-
-	// TODO: Make ping timeout configurable with a config map
-	pingOutput, err := ping(defaultGw, defaultGwProbeTimeout)
-	if err != nil {
-		return pingOutput, nmstatectl.Rollback(fmt.Errorf("error pinging external address after network reconfiguration -> error: %v, currentState: %s", err, currentState))
-	}
-
-	err = checkApiServerConnectivity(apiServerProbeTimeout)
-	if err != nil {
-		return "", nmstatectl.Rollback(fmt.Errorf("error checking api server connectivity after network reconfiguration -> error: %v, currentState: %s", err, currentState))
+		return "", rollback(errors.Wrap(err, "failed runnig probes after network changes"))
 	}
 
 	commitOutput, err := nmstatectl.Commit()
