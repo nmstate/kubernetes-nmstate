@@ -54,6 +54,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 	)
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
+
 		BeforeEach(func() {
 			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", primaryNic))
 			for _, node := range nodes {
@@ -71,60 +72,65 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				addressByNode[node] = address
 			}
 		})
-		AfterEach(func() {
-			By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", primaryNic))
-			setDesiredStateWithPolicy(DefaultNetwork, resetDefaultInterface())
 
-			By("Waiting until the node becomes ready again")
-			waitForNodesReady()
+		Context("and linux bridge is configured on top of the default interface", func() {
+			BeforeEach(func() {
+				By("Creating the policy")
+				setDesiredStateWithPolicy(DefaultNetwork, createBridgeOnTheDefaultInterface())
 
-			By("Wait for policy to be ready")
-			waitForAvailablePolicy(DefaultNetwork)
+				By("Waiting until the node becomes ready again")
+				waitForNodesReady()
 
-			By(fmt.Sprintf("Check %s has the default ip address", primaryNic))
-			for _, node := range nodes {
-				Eventually(func() string {
-					return ipv4Address(node, primaryNic)
-				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
-			}
+				By("Waiting for policy to be ready")
+				waitForAvailablePolicy(DefaultNetwork)
+			})
 
-			By(fmt.Sprintf("Check %s is back as the default route interface", primaryNic))
-			for _, node := range nodes {
-				defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
-			}
+			AfterEach(func() {
+				By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", primaryNic))
+				setDesiredStateWithPolicy(DefaultNetwork, resetDefaultInterface())
 
-			By("Remove the policy")
-			deletePolicy(DefaultNetwork)
+				By("Waiting until the node becomes ready again")
+				waitForNodesReady()
 
-			By("Reset desired state at all nodes")
-			resetDesiredStateForNodes()
-		})
+				By("Wait for policy to be ready")
+				waitForAvailablePolicy(DefaultNetwork)
 
-		It("should successfully move default IP address on top of the bridge", func() {
-			By("Creating the policy")
-			setDesiredStateWithPolicy(DefaultNetwork, createBridgeOnTheDefaultInterface())
+				By(fmt.Sprintf("Check %s has the default ip address", primaryNic))
+				for _, node := range nodes {
+					Eventually(func() string {
+						return ipv4Address(node, primaryNic)
+					}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
+				}
 
-			By("Waiting until the node becomes ready again")
-			waitForNodesReady()
+				By(fmt.Sprintf("Check %s is back as the default route interface", primaryNic))
+				for _, node := range nodes {
+					defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
+				}
 
-			By("Waiting for policy to be ready")
-			waitForAvailablePolicy(DefaultNetwork)
+				By("Remove the policy")
+				deletePolicy(DefaultNetwork)
 
-			By("Checking that obtained the same IP address")
-			for _, node := range nodes {
-				Eventually(func() string {
-					return ipv4Address(node, "brext")
-				}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface brext has not take over the %s address", primaryNic))
-			}
+				By("Reset desired state at all nodes")
+				resetDesiredStateForNodes()
+			})
 
-			By("Verify that next-hop-interface for default route is brext")
-			for _, node := range nodes {
-				defaultRouteNextHopInterface(node).Should(Equal("brext"))
+			It("should successfully move default IP address on top of the bridge", func() {
+				By("Verifying that the bridge obtained node's default IP")
+				for _, node := range nodes {
+					Eventually(func() string {
+						return ipv4Address(node, "brext")
+					}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface brext has not take over the %s address", primaryNic))
+				}
 
-				By("Verify that VLAN configuration is done properly")
-				hasVlans(node, primaryNic, 2, 4094).Should(Succeed())
-				getVLANFlagsEventually(node, "brext", 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-			}
+				By("Verify that next-hop-interface for default route is brext")
+				for _, node := range nodes {
+					defaultRouteNextHopInterface(node).Should(Equal("brext"))
+
+					By("Verify that VLAN configuration is done properly")
+					hasVlans(node, primaryNic, 2, 4094).Should(Succeed())
+					getVLANFlagsEventually(node, "brext", 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+				}
+			})
 		})
 	})
 })
