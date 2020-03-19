@@ -1,7 +1,7 @@
 package version
 
 var (
-	Version = "0.15.3"
+	Version = "0.16.3"
 )
 
 // * Force release after fixing release.sh
