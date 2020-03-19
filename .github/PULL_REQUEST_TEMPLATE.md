@@ -1,5 +1,12 @@
 <!--  Thanks for sending a pull request! -->
 
+**Is this a BUG FIX or a FEATURE ?**:
+
+> Uncomment only one, leave it on its own line:
+>
+> /kind bug
+> /kind enhancement
+
 **What this PR does / why we need it**:
 
 **Special notes for your reviewer**:
