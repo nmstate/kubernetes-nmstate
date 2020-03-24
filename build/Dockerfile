@@ -1,8 +1,8 @@
 FROM fedora:31
 
 RUN sudo dnf install -y dnf-plugins-core && \
-    sudo dnf copr enable -y nmstate/nmstate-0.2 && \
-    sudo dnf install -y nmstate iproute iputils && \
+    sudo dnf copr enable -y nmstate/nmstate-0.1 && \
+    sudo dnf install -y -b nmstate iproute iputils && \
     sudo dnf remove -y dnf-plugins-core && \
     sudo dnf clean all
 
