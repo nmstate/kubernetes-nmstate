@@ -50,7 +50,7 @@ GO := $(GOBIN)/go
 
 LOCAL_REGISTRY ?= registry:5000
 
-manifests = build/_output/manifests
+export MANIFESTS_DIR ?= build/_output/manifests
 description = build/_output/description
 
 all: check handler
@@ -99,7 +99,7 @@ gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
 manifests:
-	$(GO) run hack/render-manifests.go $(NAMESPACE) $(HANDLER_IMAGE) $(PULL_POLICY) deploy/ $(manifests)
+	$(GO) run hack/render-manifests.go $(NAMESPACE) $(HANDLER_IMAGE) $(PULL_POLICY) deploy/ $(MANIFESTS_DIR)
 
 handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
@@ -152,7 +152,7 @@ release: manifests push-handler $(description) $(GITHUB_RELEASE) version/version
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(shell hack/version.sh) \
 				   hack/release.sh \
-						$(shell find $(manifests) -type f)
+						$(shell find $(MANIFESTS_DIR) -type f)
 
 vendor:
 	$(GO) mod tidy

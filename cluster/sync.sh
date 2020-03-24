@@ -59,8 +59,6 @@ function deploy() {
         registry=localhost:$(./cluster/cli.sh ports registry | tr -d '\r')
     fi
 
-    manifests_dir=build/_output/manifests
-
     # Build new handler image from local sources and push it to the kubevirtci cluster
     IMAGE_REGISTRY=${registry} make push-handler
 
@@ -71,19 +69,19 @@ function deploy() {
         while ! $kubectl get securitycontextconstraints; do
             sleep 1
         done
-        $kubectl apply -f ${manifests_dir}/scc.yaml
+        $kubectl apply -f ${MANIFESTS_DIR}/scc.yaml
     fi
 
 
     # Deploy all needed manifests
-    $kubectl apply -f $manifests_dir/namespace.yaml
-    $kubectl apply -f $manifests_dir/service_account.yaml
-    $kubectl apply -f $manifests_dir/role.yaml
-    $kubectl apply -f $manifests_dir/role_binding.yaml
-    $kubectl apply -f $manifests_dir/nmstate.io_nodenetworkstates_crd.yaml
-    $kubectl apply -f $manifests_dir/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
-    $kubectl apply -f $manifests_dir/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
-    $kubectl apply -f $manifests_dir/operator.yaml
+    $kubectl apply -f $MANIFESTS_DIR/namespace.yaml
+    $kubectl apply -f $MANIFESTS_DIR/service_account.yaml
+    $kubectl apply -f $MANIFESTS_DIR/role.yaml
+    $kubectl apply -f $MANIFESTS_DIR/role_binding.yaml
+    $kubectl apply -f $MANIFESTS_DIR/nmstate.io_nodenetworkstates_crd.yaml
+    $kubectl apply -f $MANIFESTS_DIR/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
+    $kubectl apply -f $MANIFESTS_DIR/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
+    $kubectl apply -f $MANIFESTS_DIR/operator.yaml
 }
 
 function wait_ready() {
