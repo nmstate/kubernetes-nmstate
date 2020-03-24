@@ -8,6 +8,9 @@ HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
+NAMESPACE ?= nmstate
+PULL_POLICY ?= Always
+
 WHAT ?= ./pkg
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
@@ -96,7 +99,7 @@ gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
 manifests:
-	$(GO) run hack/render-manifests.go nmstate $(HANDLER_IMAGE) Always deploy/ $(manifests)
+	$(GO) run hack/render-manifests.go $(NAMESPACE) $(HANDLER_IMAGE) $(PULL_POLICY) deploy/ $(manifests)
 
 handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
