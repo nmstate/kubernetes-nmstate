@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
+	"github.com/nmstate/kubernetes-nmstate/test/environment"
 )
 
 func kubectlAndCheck(command ...string) {
@@ -17,7 +18,7 @@ func kubectlAndCheck(command ...string) {
 }
 
 func skipIfNotKubernetes() {
-	provider := getEnv("KUBEVIRT_PROVIDER", "k8s")
+	provider := environment.GetVarWithDefault("KUBEVIRT_PROVIDER", "k8s")
 	if !strings.Contains(provider, "k8s") {
 		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
 	}
