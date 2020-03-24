@@ -17,25 +17,34 @@ func exitWithError(err error, cause string, args ...interface{}) {
 
 func main() {
 	type Inventory struct {
-		HandlerNamespace  string
-		HandlerImage      string
-		HandlerPullPolicy string
-		HandlerPrefix     string
+		HandlerNamespace   string
+		HandlerImage       string
+		HandlerPullPolicy  string
+		HandlerPrefix      string
+		OperatorNamespace  string
+		OperatorImage      string
+		OperatorPullPolicy string
 	}
 
 	handlerNamespace := flag.String("handler-namespace", "nmstate", "Namespace for the NMState handler")
 	handlerImage := flag.String("handler-image", "", "Image for the NMState handler")
 	handlerPullPolicy := flag.String("handler-pull-policy", "Always", "Pull policy for the NMState handler image")
 	handlerPrefix := flag.String("handler-prefix", "", "Name prefix for the NMState handler's resources")
+	operatorNamespace := flag.String("operator-namespace", "nmstate-operator", "Namespace for the NMState operator")
+	operatorImage := flag.String("operator-image", "", "Image for the NMState operator")
+	operatorPullPolicy := flag.String("operator-pull-policy", "Always", "Pull policy for the NMState operator image")
 	inputDir := flag.String("input-dir", "", "Input directory")
 	outputDir := flag.String("output-dir", "", "Output directory")
 	flag.Parse()
 
 	inventory := Inventory{
-		HandlerNamespace:  *handlerNamespace,
-		HandlerImage:      *handlerImage,
-		HandlerPullPolicy: *handlerPullPolicy,
-		HandlerPrefix:     *handlerPrefix,
+		HandlerNamespace:   *handlerNamespace,
+		HandlerImage:       *handlerImage,
+		HandlerPullPolicy:  *handlerPullPolicy,
+		HandlerPrefix:      *handlerPrefix,
+		OperatorNamespace:  *operatorNamespace,
+		OperatorImage:      *operatorImage,
+		OperatorPullPolicy: *operatorPullPolicy,
 	}
 
 	// Clean up output dir so we don't have old files.
@@ -49,14 +58,17 @@ func main() {
 		exitWithError(err, "failed to create output dir %s", *outputDir)
 	}
 
-	tmpl, err := template.ParseGlob(path.Join(*inputDir, "*.yaml"))
+	// Be explicit about which subdirs we render. Otherwise, we might inadvertently override
+	// a manifest with the same name.
+	var tmpl *template.Template
+	tmpl, err = template.ParseGlob(path.Join(*inputDir, "operator/*.yaml"))
 	if err != nil {
-		exitWithError(err, "failed parsing top dir manifests at %s", *inputDir)
+		exitWithError(err, "failed parsing top dir operator manifests at %s", *inputDir)
 	}
 
-	tmpl, err = tmpl.ParseGlob(path.Join(*inputDir, "*/*.yaml"))
+	tmpl, err = tmpl.ParseGlob(path.Join(*inputDir, "openshift/*.yaml"))
 	if err != nil {
-		exitWithError(err, "failed parsing sub dir manifests at %s", *inputDir)
+		exitWithError(err, "failed parsing sub dir openshift manifests at %s", *inputDir)
 	}
 
 	for _, t := range tmpl.Templates() {

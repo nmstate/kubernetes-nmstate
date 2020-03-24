@@ -20,6 +20,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/pkg/apis"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 	"github.com/nmstate/kubernetes-nmstate/version"
 
@@ -92,15 +93,17 @@ func main() {
 
 	printVersion()
 
-	// Take exclusive instance lock, we need that to make sure that
-	// we don't have more than one working instance of k8s-nmstate
-	handlerLock, err := lockHandler()
-	if err != nil {
-		log.Error(err, "Failed to run lockHandler")
-		os.Exit(1)
+	if !environment.IsOperator() {
+		// Take exclusive instance lock, we need that to make sure that
+		// we don't have more than one working instance of k8s-nmstate
+		handlerLock, err := lockHandler()
+		if err != nil {
+			log.Error(err, "Failed to run lockHandler")
+			os.Exit(1)
+		}
+		defer handlerLock.Unlock()
+		log.Info("Successfully took nmstate exclusive lock")
 	}
-	log.Info("Successfully took nmstate exclusive lock")
-	defer handlerLock.Unlock()
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {

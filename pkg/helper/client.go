@@ -19,6 +19,7 @@ import (
 
 	"github.com/gobwas/glob"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -37,6 +38,9 @@ var (
 )
 
 func init() {
+	if environment.IsOperator() {
+		return
+	}
 	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
 	if !isSet {
 		panic("INTERFACES_FILTER is mandatory")
