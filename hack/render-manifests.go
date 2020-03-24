@@ -21,6 +21,11 @@ func main() {
 		ImagePullPolicy     string
 	}
 
+	if len(os.Args) < 6 {
+		fmt.Fprintf(os.Stderr, "usage: go run render-manifests.go [namespace] [image] [pull-policy] [input-dir] [output-dir]\n")
+		os.Exit(1)
+	}
+
 	inventory := Inventory{
 		Namespace:           os.Args[1],
 		NMStateHandlerImage: os.Args[2],
