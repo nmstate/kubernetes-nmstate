@@ -4,12 +4,14 @@ import (
 	"strings"
 
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
+	"github.com/nmstate/kubernetes-nmstate/test/environment"
 )
 
 func runAtNodeWithExtras(node string, quiet bool, command ...string) (string, error) {
 	ssh_command := []string{node, "--"}
 	ssh_command = append(ssh_command, command...)
-	output, err := cmd.Run("./kubevirtci/cluster-up/ssh.sh", quiet, ssh_command...)
+	ssh := environment.GetVarWithDefault("SSH", "./kubevirtci/cluster-up/ssh.sh")
+	output, err := cmd.Run(ssh, quiet, ssh_command...)
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
 	if len(outputLines) > 2 {
