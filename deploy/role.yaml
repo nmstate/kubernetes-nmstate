@@ -4,7 +4,7 @@ kind: Role
 metadata:
   creationTimestamp: null
   name: nmstate-handler
-  namespace: nmstate
+  namespace: {{ .Namespace }}
 rules:
 - apiGroups:
   - ""
@@ -48,7 +48,7 @@ kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: nmstate-handler
-  namespace: nmstate
+  namespace: {{ .Namespace }}
 rules:
 - apiGroups:
   - certificates.k8s.io

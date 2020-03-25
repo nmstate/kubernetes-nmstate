@@ -8,6 +8,9 @@ HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
+NAMESPACE ?= nmstate
+PULL_POLICY ?= Always
+
 WHAT ?= ./pkg
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
@@ -47,8 +50,7 @@ GO := $(GOBIN)/go
 
 LOCAL_REGISTRY ?= registry:5000
 
-local_handler_manifest = build/_output/handler.local.yaml
-versioned_operator_manifest = build/_output/versioned/operator.yaml
+export MANIFESTS_DIR ?= build/_output/manifests
 description = build/_output/description
 
 all: check handler
@@ -96,9 +98,11 @@ gen-openapi: $(OPENAPI_GEN)
 gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
-handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK)
-	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
+manifests:
+	$(GO) run hack/render-manifests.go $(NAMESPACE) $(HANDLER_IMAGE) $(PULL_POLICY) deploy/ $(MANIFESTS_DIR)
 
+handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
+	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
 push-handler: handler
 	docker push $(HANDLER_IMAGE)
 
@@ -113,12 +117,6 @@ test/e2e: $(OPERATOR_SDK)
 		--no-setup \
 		--go-test-flags "$(e2e_test_args)"
 
-
-$(versioned_operator_manifest): HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
-$(versioned_operator_manifest): version/version.go
-	mkdir -p $(dir $@)
-	sed "s#REPLACE_IMAGE#$(HANDLER_IMAGE)#" \
-		deploy/operator.yaml > $@
 
 cluster-up:
 	./cluster/up.sh
@@ -149,14 +147,12 @@ prepare-major:
 # calling make on make is needed.
 # [1] https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
 release: HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
-release: $(versioned_operator_manifest) push-handler $(description) $(GITHUB_RELEASE)
+release: manifests push-handler $(description) $(GITHUB_RELEASE) version/version.go
 	DESCRIPTION=$(description) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(shell hack/version.sh) \
 				   hack/release.sh \
-				   		$(resources) \
-						$(versioned_operator_manifest) \
-						$(shell find deploy/crds/ deploy/openshift -type f)
+						$(shell find $(MANIFESTS_DIR) -type f)
 
 vendor:
 	$(GO) mod tidy
@@ -176,11 +172,11 @@ tools-vendoring:
 	test/e2e \
 	cluster-up \
 	cluster-down \
-	cluster-sync-resources \
 	cluster-sync-handler \
 	cluster-sync \
 	cluster-clean \
 	release \
 	vendor \
 	whitespace-check \
-	whitespace-format
+	whitespace-format \
+	manifests
