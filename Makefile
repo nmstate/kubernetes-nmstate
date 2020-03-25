@@ -10,6 +10,7 @@ HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 
 NAMESPACE ?= nmstate
 PULL_POLICY ?= Always
+IMAGE_BUILDER ?= docker
 
 WHAT ?= ./pkg
 
@@ -102,9 +103,9 @@ manifests:
 	$(GO) run hack/render-manifests.go $(NAMESPACE) $(HANDLER_IMAGE) $(PULL_POLICY) deploy/ $(MANIFESTS_DIR)
 
 handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
-	$(OPERATOR_SDK) build $(HANDLER_IMAGE)
+	$(OPERATOR_SDK) build $(HANDLER_IMAGE) --image-builder $(IMAGE_BUILDER)
 push-handler: handler
-	docker push $(HANDLER_IMAGE)
+	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
 
 test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
