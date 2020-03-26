@@ -13,6 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	"github.com/openshift/cluster-network-operator/pkg/apply"
+	"github.com/openshift/cluster-network-operator/pkg/render"
 )
 
 var (
@@ -66,6 +69,9 @@ type ReconcileNMstate struct {
 func (r *ReconcileNMstate) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling NMstate")
+
+	render.RenderDir("", nil)
+	apply.ApplyObject(context.Background(), r.client, nil)
 
 	// Fetch the NMstate instance
 	instance := &nmstatev1alpha1.NMstate{}

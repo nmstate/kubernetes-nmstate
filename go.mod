@@ -3,6 +3,7 @@ module github.com/nmstate/kubernetes-nmstate
 go 1.13.7
 
 require (
+	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/aktau/github-release v0.7.2
 	github.com/evanphx/json-patch v4.5.0+incompatible
 	github.com/go-logr/logr v0.1.0
@@ -11,6 +12,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
+	github.com/openshift/cluster-network-operator v0.0.0-20200324123637-74e803688dd9
 	github.com/operator-framework/operator-sdk v0.15.1
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1

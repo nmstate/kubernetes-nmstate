@@ -24,6 +24,8 @@ github.com/Masterminds/goutils
 github.com/Masterminds/semver
 # github.com/Masterminds/semver/v3 v3.0.1
 github.com/Masterminds/semver/v3
+# github.com/Masterminds/sprig v2.22.0+incompatible
+github.com/Masterminds/sprig
 # github.com/Masterminds/sprig/v3 v3.0.0
 github.com/Masterminds/sprig/v3
 # github.com/Microsoft/go-winio v0.4.12
@@ -395,6 +397,9 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/opencontainers/runc v1.0.0-rc2.0.20190611121236-6cc515888830
 github.com/opencontainers/runc/libcontainer/system
 github.com/opencontainers/runc/libcontainer/user
+# github.com/openshift/cluster-network-operator v0.0.0-20200324123637-74e803688dd9
+github.com/openshift/cluster-network-operator/pkg/apply
+github.com/openshift/cluster-network-operator/pkg/render
 # github.com/operator-framework/api v0.0.0-20200120235816-80fd2f1a09c9
 github.com/operator-framework/api/pkg/internal
 github.com/operator-framework/api/pkg/manifests
