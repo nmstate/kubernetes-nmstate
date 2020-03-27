@@ -25,17 +25,17 @@ func skipIfNotKubernetes() {
 
 var _ = Describe("Introduction", func() {
 	runConfiguration := func() {
-		kubectlAndCheck("apply", "-f", "docs/examples/bond0-eth1-eth2_up.yaml")
+		kubectlAndCheck("apply", "-f", "docs/user-guide/bond0-eth1-eth2_up.yaml")
 		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "2m")
-		kubectlAndCheck("apply", "-f", "docs/examples/bond0-eth1-eth2_absent.yaml")
+		kubectlAndCheck("apply", "-f", "docs/user-guide/bond0-eth1-eth2_absent.yaml")
 		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "2m")
 		kubectlAndCheck("delete", "nncp", "bond0-eth1-eth2")
 
-		kubectlAndCheck("apply", "-f", "docs/examples/eth1-eth2_up.yaml")
+		kubectlAndCheck("apply", "-f", "docs/user-guide/eth1-eth2_up.yaml")
 		kubectlAndCheck("wait", "nncp", "eth1", "eth2", "--for", "condition=Available", "--timeout", "2m")
 		kubectlAndCheck("delete", "nncp", "eth1", "eth2")
 
-		kubectlAndCheck("apply", "-f", "docs/examples/vlan100_node01_up.yaml")
+		kubectlAndCheck("apply", "-f", "docs/user-guide/vlan100_node01_up.yaml")
 		kubectlAndCheck("wait", "nncp", "vlan100", "--for", "condition=Available", "--timeout", "2m")
 	}
 
@@ -47,7 +47,7 @@ var _ = Describe("Introduction", func() {
 	}
 
 	runTroubleshooting := func() {
-		kubectlAndCheck("apply", "-f", "docs/examples/eth666_up.yaml")
+		kubectlAndCheck("apply", "-f", "docs/user-guide/eth666_up.yaml")
 		kubectlAndCheck("wait", "nncp", "eth666", "--for", "condition=Degraded", "--timeout", "2m")
 		kubectlAndCheck("delete", "nncp", "eth666")
 	}
