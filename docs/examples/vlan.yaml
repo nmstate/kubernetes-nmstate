@@ -1,0 +1,13 @@
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: vlan
+spec:
+  desiredState:
+    interfaces:
+    - name: eth1.102
+      type: vlan
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true

@@ -26,7 +26,7 @@ First of all, let's apply the manifest:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](examples/bond0-eth1-eth2_up.yaml)
+[Download example](user-guide/bond0-eth1-eth2_up.yaml)
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1
@@ -269,7 +269,7 @@ interface to `state: absent`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](examples/bond0-eth1-eth2_absent.yaml)
+[Download example](user-guide/bond0-eth1-eth2_absent.yaml)
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1
@@ -349,7 +349,7 @@ In order to configure IP on previously enslaved NICs, apply a new Policy:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](examples/eth1-eth2_up.yaml)
+[Download example](user-guide/eth1-eth2_up.yaml)
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1
@@ -451,7 +451,7 @@ all the key-value pairs in the `nodeSelector`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](examples/vlan100_node01_up.yaml)
+[Download example](user-guide/vlan100_node01_up.yaml)
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1

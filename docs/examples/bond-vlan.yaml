@@ -1,0 +1,29 @@
+apiVersion: nmstate.io/v1alpha1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: bond-vlan
+spec:
+  desiredState:
+    interfaces:
+    - name: bond0
+      type: bond
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true
+      link-aggregation:
+        mode: balance-rr
+        options:
+          miimon: '140'
+        slaves:
+        - eth1
+        - eth2
+    - name: bond0.102
+      type: vlan
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true
+      vlan:
+        base-iface: bond0
+        id: 102

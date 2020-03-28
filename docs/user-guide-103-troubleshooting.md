@@ -19,7 +19,7 @@ interface and observe the results:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](examples/eth666_up.yaml)
+[Download example](user-guide/eth666_up.yaml)
 
 ```yaml
 apiVersion: nmstate.io/v1alpha1

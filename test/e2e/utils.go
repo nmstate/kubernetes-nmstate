@@ -22,6 +22,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
@@ -457,4 +458,16 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 func vlan(node string, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
+}
+
+func kubectlAndCheck(command ...string) {
+	out, err := cmd.Kubectl(command...)
+	Expect(err).ShouldNot(HaveOccurred(), out)
+}
+
+func skipIfNotKubernetes() {
+	provider := getEnv("KUBEVIRT_PROVIDER", "k8s")
+	if !strings.Contains(provider, "k8s") {
+		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
+	}
 }

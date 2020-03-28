@@ -47,13 +47,21 @@ the features:
 3. [Troubleshooting](docs/user-guide-103-troubleshooting.md) -
    see what's wrong if a configuration fails.
 
-These ready-to-go recipes describe how to configure various interface types:
+These example manifests should serve as reference on how to configure various
+configuration options:
 
-- [Linux bonding interface](docs/user-guide-policy-configure-linux-bond.md)
-- [Linux bonding interface with vlan interface](docs/user-guide-policy-configure-linux-bond-with-vlans.md)
-- [Linux bridge connected to a node interface](docs/user-guide-policy-configure-linux-bridge.md)
-- [Vlan and IP on a node interface](docs/user-guide-policy-configure-vlan-and-dynamic-ip.md)
-- [Open vSwitch bridge connected to a node interface](docs/user-guide-policy-configure-ovs-bridge.md)
+- [Linux bonding](docs/examples/bond.yaml)
+- [Linux bonding with VLAN](docs/examples/bond-vlan.yaml)
+- [Linux bridge](docs/examples/linux-bridge.yaml)
+- [VLAN](docs/examples/vlan.yaml)
+- [Ethernet](docs/examples/ethernet.yaml)
+- [Open vSwitch bridge](docs/examples/ovs-bridge.yaml)
+- [Open vSwitch bridge interface](docs/examples/ovs-bridge-iface.yaml)
+- [Static IP](docs/examples/static-ip.yaml)
+- [DHCP](docs/examples/dhcp.yaml)
+- [Routes](docs/examples/route.yaml)
+- [DNS](docs/examples/dns.yaml)
+- [Workers selector](docs/examples/worker-selector.yaml)
 
 # The "Why"
 
