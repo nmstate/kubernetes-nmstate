@@ -61,7 +61,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 	})
 	// This spec is done only at first node since policy has to be different
 	// per node (ip addresses has to be different at cluster).
-	Context("[test_id:3793]when connectivity to default gw is lost after state configuration", func() {
+	Context("when connectivity to default gw is lost after state configuration", func() {
 		BeforeEach(func() {
 			By("Configure a invalid default gw")
 			var address string
@@ -75,7 +75,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			By("Clean up desired state")
 			resetDesiredStateForNodes()
 		})
-		It("should rollback to a good gw configuration", func() {
+		It("[test_id:3793]should rollback to a good gw configuration", func() {
 			By("Wait for reconcile to fail")
 			waitForDegradedTestPolicy()
 			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
