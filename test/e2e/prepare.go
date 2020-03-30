@@ -1,6 +1,8 @@
 package e2e
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,6 +45,12 @@ func waitForDaemonSets(t *testing.T, kubeclient kubernetes.Interface, namespace 
 			return true, errors.Wrapf(err, "failed retrieving daemon sets for namespace %s", namespace)
 		}
 		for _, daemonset := range daemonsets.Items {
+			// we don't have the app=kubernetes-nmstate labels at daemonsets so we
+			// filter by name
+			if !strings.Contains(daemonset.Name, "nmstate") {
+				continue
+			}
+			By(fmt.Sprintf("Checking daemonset %s", daemonset.Name))
 			if daemonset.Status.DesiredNumberScheduled != daemonset.Status.NumberAvailable {
 				return false, nil
 			}
