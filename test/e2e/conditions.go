@@ -98,7 +98,7 @@ func policyConditionsStatus(policyName string) nmstatev1alpha1.ConditionList {
 func policyConditionsStatusForPolicyEventually(policy string) AsyncAssertion {
 	return Eventually(func() nmstatev1alpha1.ConditionList {
 		return policyConditionsStatus(policy)
-	}, 180*time.Second, 1*time.Second)
+	}, 480*time.Second, 1*time.Second)
 }
 
 func policyConditionsStatusForPolicyConsistently(policy string) AsyncAssertion {
