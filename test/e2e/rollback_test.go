@@ -81,7 +81,7 @@ var _ = Describe("rollback", func() {
 			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
 			Eventually(func() bool {
 				return dhcpFlag(nodes[0], primaryNic)
-			}, ReadTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
+			}, 480*time.Second, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
 
 			By(fmt.Sprintf("Check that %s continue with rolled back state", primaryNic))
 			Consistently(func() bool {
