@@ -44,6 +44,8 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	prepare(t)
+
+	resetDesiredStateForNodes()
 })
 
 func TestMain(m *testing.M) {
