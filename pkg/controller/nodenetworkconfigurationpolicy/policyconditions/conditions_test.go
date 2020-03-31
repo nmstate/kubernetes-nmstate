@@ -51,8 +51,12 @@ func p(conditionsSetter func(*nmstatev1alpha1.ConditionList, string), message st
 	}
 }
 
-func newNode(idx int, conditions []corev1.NodeCondition) corev1.Node {
-	nodeName := fmt.Sprintf("node%d", idx)
+func nodeName(idx int) string {
+	return fmt.Sprintf("node%d", idx)
+}
+
+func newNode(idx int) corev1.Node {
+	nodeName := nodeName(idx)
 	node := corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: nodeName,
@@ -60,35 +64,46 @@ func newNode(idx int, conditions []corev1.NodeCondition) corev1.Node {
 				"kubernetes.io/hostname": nodeName,
 			},
 		},
-		Status: corev1.NodeStatus{
-			Conditions: conditions,
-		},
 	}
 	return node
 }
 
-func nodeReady() []corev1.NodeCondition {
-	return []corev1.NodeCondition{
-		corev1.NodeCondition{
-			Type:   corev1.NodeReady,
-			Status: corev1.ConditionTrue,
+func newPodAtNode(idx int, name string, namespace string, app string) corev1.Pod {
+	pod := corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-%d", name, idx),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app": app,
+			},
+		},
+		Spec: corev1.PodSpec{
+			NodeName: nodeName(idx),
 		},
 	}
+	return pod
 }
 
-func nodeNotReady() []corev1.NodeCondition {
-	return []corev1.NodeCondition{
-		corev1.NodeCondition{
-			Type:   corev1.NodeReady,
-			Status: corev1.ConditionFalse,
-		},
+func newNmstatePodAtNode(idx int) corev1.Pod {
+	return newPodAtNode(idx, "nmstate-handler", "nmstate", "kubernetes-nmstate")
+}
+
+func newNonNmstatePodAtNode(idx int) corev1.Pod {
+	return newPodAtNode(idx, "foo-name", "foo-namespace", "foo-app")
+}
+
+func newNmstatePods(cardinality int) []corev1.Pod {
+	pods := []corev1.Pod{}
+	for i := 1; i <= cardinality; i++ {
+		pods = append(pods, newNmstatePodAtNode(i))
 	}
+	return pods
 }
 
-func newReadyNodes(cardinality int) []corev1.Node {
+func newNodes(cardinality int) []corev1.Node {
 	nodes := []corev1.Node{}
 	for i := 1; i <= cardinality; i++ {
-		nodes = append(nodes, newNode(i, nodeReady()))
+		nodes = append(nodes, newNode(i))
 	}
 	return nodes
 }
@@ -107,6 +122,7 @@ var _ = Describe("Policy Conditions", func() {
 		Enactments []nmstatev1alpha1.NodeNetworkConfigurationEnactment
 		Nodes      []corev1.Node
 		Policy     nmstatev1alpha1.NodeNetworkConfigurationPolicy
+		Pods       []corev1.Pod
 	}
 	DescribeTable("the policy overall condition",
 		func(c ConditionsCase) {
@@ -122,11 +138,14 @@ var _ = Describe("Policy Conditions", func() {
 				// We cannot use the memory from the element
 				// returned by range, since it's has the same
 				// memory address it will be added multiple time
-				// we duplicated values
+				// with duplicated values
 				objs = append(objs, &c.Enactments[i])
 			}
 			for i, _ := range c.Nodes {
 				objs = append(objs, &c.Nodes[i])
+			}
+			for i, _ := range c.Pods {
+				objs = append(objs, &c.Pods[i])
 			}
 
 			updatedPolicy := c.Policy.DeepCopy()
@@ -148,7 +167,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicyProgressing, "Policy is progressing 0/3 nodes finished"),
 		}),
 		Entry("when all enactments are success then policy is success", ConditionsCase{
@@ -157,7 +177,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 		Entry("when not all enactments are created is progressing", ConditionsCase{
@@ -166,7 +187,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes:  newReadyNodes(4),
+			Nodes:  newNodes(4),
+			Pods:   newNmstatePods(4),
 			Policy: p(setPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
 		}),
 		Entry("when enactments are progressing/success then policy is progressing", ConditionsCase{
@@ -175,7 +197,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
 		}),
 		Entry("when enactments are failed/progressing/success then policy is progressing", ConditionsCase{
@@ -185,7 +208,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
 				e("node4", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes:  newReadyNodes(4),
+			Nodes:  newNodes(4),
+			Pods:   newNmstatePods(4),
 			Policy: p(setPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
 		}),
 		Entry("when all the enactments are at failing or success policy is degraded", ConditionsCase{
@@ -194,7 +218,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicyFailedToConfigure, "2/3 nodes failed to configure"),
 		}),
 		Entry("when all the enactments are at failing policy is degraded", ConditionsCase{
@@ -203,7 +228,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicyFailedToConfigure, "3/3 nodes failed to configure"),
 		}),
 		Entry("when no node matches policy node selector, policy state is not matching", ConditionsCase{
@@ -212,7 +238,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1", enactmentconditions.SetNodeSelectorNotMatching),
 				e("node3", "policy1", enactmentconditions.SetNodeSelectorNotMatching),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicyNotMatching, "Policy does not match any node"),
 		}),
 		Entry("when some enacments has unknown matching state policy state is progressing", ConditionsCase{
@@ -221,7 +248,8 @@ var _ = Describe("Policy Conditions", func() {
 				e("node2", "policy1"),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicyProgressing, "Policy is progressing 1/3 nodes finished"),
 		}),
 		Entry("when some enactments are from different profile it does no affect the profile status", ConditionsCase{
@@ -232,20 +260,25 @@ var _ = Describe("Policy Conditions", func() {
 				e("node1", "policy2", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
 				e("node2", "policy2", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
 			},
-			Nodes:  newReadyNodes(3),
+			Nodes:  newNodes(3),
+			Pods:   newNmstatePods(3),
 			Policy: p(setPolicySuccess, "3/3 nodes successfully configured"),
 		}),
-		Entry("when a node is not ready ignore it for policy conditions calculations", ConditionsCase{
+		Entry("when a node does not run nmstate pod ignore it for policy conditions calculations", ConditionsCase{
 			Enactments: []nmstatev1alpha1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
 			},
-			Nodes: []corev1.Node{
-				newNode(1, nodeReady()),
-				newNode(2, nodeReady()),
-				newNode(3, nodeReady()),
-				newNode(4, nodeNotReady()),
+			Nodes: newNodes(4),
+			Pods: []corev1.Pod{
+				newNmstatePodAtNode(1),
+				newNonNmstatePodAtNode(1),
+				newNmstatePodAtNode(2),
+				newNonNmstatePodAtNode(2),
+				newNmstatePodAtNode(3),
+				newNonNmstatePodAtNode(3),
+				newNonNmstatePodAtNode(4),
 			},
 			Policy: p(setPolicySuccess, "3/3 nodes successfully configured"),
 		}),
