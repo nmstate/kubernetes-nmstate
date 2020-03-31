@@ -111,21 +111,21 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	return nil
 }
 
-func rollback(cause error) error {
+func rollback(client client.Client, cause error) error {
 	err := nmstatectl.Rollback(cause)
 	if err != nil {
 		return errors.Wrap(err, "failed to do rollback")
 	}
 
 	// wait for system to settle after rollback
-	probesErr := probe.RunAll()
+	probesErr := probe.RunAll(client)
 	if probesErr != nil {
 		return errors.Wrap(err, "failed running probes after rollback")
 	}
 	return nil
 }
 
-func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
+func ApplyDesiredState(client client.Client, desiredState nmstatev1alpha1.State) (string, error) {
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
@@ -145,7 +145,7 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 	// set
 	bridgesUpWithPorts, err := getBridgesUp(desiredState)
 	if err != nil {
-		return "", rollback(fmt.Errorf("error retrieving up bridges from desired state"))
+		return "", rollback(client, fmt.Errorf("error retrieving up bridges from desired state"))
 	}
 
 	commandOutput := ""
@@ -153,13 +153,13 @@ func ApplyDesiredState(desiredState nmstatev1alpha1.State) (string, error) {
 		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
 		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
 		if err != nil {
-			return commandOutput, rollback(err)
+			return commandOutput, rollback(client, err)
 		}
 	}
 
-	err = probe.RunAll()
+	err = probe.RunAll(client)
 	if err != nil {
-		return "", rollback(errors.Wrap(err, "failed runnig probes after network changes"))
+		return "", rollback(client, errors.Wrap(err, "failed runnig probes after network changes"))
 	}
 
 	commitOutput, err := nmstatectl.Commit()

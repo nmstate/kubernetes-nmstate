@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"time"
 
@@ -27,9 +28,10 @@ var (
 )
 
 const (
-	defaultGwRetrieveTimeout = 120 * time.Second
-	defaultGwProbeTimeout    = 120 * time.Second
-	apiServerProbeTimeout    = 120 * time.Second
+	defaultGwRetrieveTimeout  = 120 * time.Second
+	defaultGwProbeTimeout     = 120 * time.Second
+	apiServerProbeTimeout     = 120 * time.Second
+	nodeReadinessProbeTimeout = 120 * time.Second
 )
 
 func ping(target string, timeout time.Duration) (string, error) {
@@ -73,6 +75,24 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 	})
 }
 
+func checkNodeReadiness(client client.Client, timeout time.Duration) error {
+	return wait.PollImmediate(1*time.Second, timeout, func() (bool, error) {
+		nodeName := os.Getenv("NODE_NAME")
+		node := corev1.Node{}
+		err := client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed retrieving pod's node %s", nodeName)
+		}
+		for _, condition := range node.Status.Conditions {
+			if condition.Type == corev1.NodeReady &&
+				condition.Status == corev1.ConditionTrue {
+				return true, nil
+			}
+		}
+		return false, nil
+	})
+}
+
 func defaultGw() (string, error) {
 	defaultGw := ""
 	return defaultGw, wait.PollImmediate(1*time.Second, defaultGwRetrieveTimeout, func() (bool, error) {
@@ -98,7 +118,7 @@ func defaultGw() (string, error) {
 	})
 }
 
-func RunAll() error {
+func RunAll(client client.Client) error {
 	defaultGw, err := defaultGw()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve default gw at runProbes")
@@ -119,5 +139,11 @@ func RunAll() error {
 	if err != nil {
 		return errors.Wrapf(err, "error checking api server connectivity after network reconfiguration -> currentState: %s", currentState)
 	}
+
+	err = checkNodeReadiness(client, nodeReadinessProbeTimeout)
+	if err != nil {
+		return errors.Wrapf(err, "error checking node readiness after network reconfiguration -> currentState: %s", currentState)
+	}
+
 	return nil
 }
