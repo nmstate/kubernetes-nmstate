@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
-	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 func invalidConfig(bridgeName string) nmstatev1alpha1.State {
@@ -24,15 +23,8 @@ func invalidConfig(bridgeName string) nmstatev1alpha1.State {
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
-			By("Add some sleep time to vlan-filtering")
-			runner.RunAtPods("cp", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
-			runner.RunAtPods("sed", "-i", "$ a\\sleep 5", "/usr/local/bin/vlan-filtering")
-			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
-			By("Restore original vlan-filtering")
-			runner.RunAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
-
 			By("Remove the bridge")
 			updateDesiredState(linuxBrAbsent(bridge1))
 			waitForAvailableTestPolicy()
@@ -93,7 +85,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 					enactmentConditionsStatusConsistently(node).Should(ConsistOf(availableConditions))
 				}()
 			}
+			// Run the policy after we set the nnce conditions assert so we
+			// make sure we catch progressing state.
+			updateDesiredState(linuxBrUp(bridge1))
+
 			wg.Wait()
+
 			By("Check policy is at available state")
 			waitForAvailableTestPolicy()
 		})
