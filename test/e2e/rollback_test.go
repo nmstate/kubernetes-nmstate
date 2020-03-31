@@ -33,7 +33,7 @@ routes:
 `, nic, address, nic))
 }
 
-var _ = Describe("rollback", func() {
+var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]rollback", func() {
 	Context("when an error happens during state configuration", func() {
 		BeforeEach(func() {
 			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
@@ -75,7 +75,7 @@ var _ = Describe("rollback", func() {
 			By("Clean up desired state")
 			resetDesiredStateForNodes()
 		})
-		It("should rollback to a good gw configuration", func() {
+		It("[test_id:3793]should rollback to a good gw configuration", func() {
 			By("Wait for reconcile to fail")
 			waitForDegradedTestPolicy()
 			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
