@@ -1,28 +1,29 @@
+{{define "handlerPrefix"}}{{with $prefix := .HandlerPrefix}}{{$prefix | printf "%s-"}}{{end -}}{{end}}
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: nmstate-handler
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-handler
+  namespace: {{ .HandlerNamespace }}
 subjects:
 - kind: ServiceAccount
-  name: nmstate-handler
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-handler
+  namespace: {{ .HandlerNamespace }}
 roleRef:
   kind: Role
-  name: nmstate-handler
+  name: {{template "handlerPrefix" .}}nmstate-handler
   apiGroup: rbac.authorization.k8s.io
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: nmstate-handler
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-handler
+  namespace: {{ .HandlerNamespace }}
 subjects:
 - kind: ServiceAccount
-  name: nmstate-handler
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-handler
+  namespace: {{ .HandlerNamespace }}
 roleRef:
   kind: ClusterRole
-  name: nmstate-handler
+  name: {{template "handlerPrefix" .}}nmstate-handler
   apiGroup: rbac.authorization.k8s.io

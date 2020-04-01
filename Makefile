@@ -7,6 +7,7 @@ HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
+HANDLER_PREFIX ?=
 
 NAMESPACE ?= nmstate
 PULL_POLICY ?= Always
@@ -100,7 +101,7 @@ gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
 manifests:
-	$(GO) run hack/render-manifests.go $(NAMESPACE) $(HANDLER_IMAGE) $(PULL_POLICY) deploy/ $(MANIFESTS_DIR)
+	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(NAMESPACE) -handler-image=$(HANDLER_IMAGE) -handler-pull-policy=$(PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE) --image-builder $(IMAGE_BUILDER)

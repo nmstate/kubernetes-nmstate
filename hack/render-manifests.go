@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 	"path"
@@ -16,47 +17,50 @@ func exitWithError(err error, cause string, args ...interface{}) {
 
 func main() {
 	type Inventory struct {
-		Namespace           string
-		NMStateHandlerImage string
-		ImagePullPolicy     string
+		HandlerNamespace  string
+		HandlerImage      string
+		HandlerPullPolicy string
+		HandlerPrefix     string
 	}
 
-	if len(os.Args) < 6 {
-		fmt.Fprintf(os.Stderr, "usage: go run render-manifests.go [namespace] [image] [pull-policy] [input-dir] [output-dir]\n")
-		os.Exit(1)
-	}
+	handlerNamespace := flag.String("handler-namespace", "nmstate", "Namespace for the NMState handler")
+	handlerImage := flag.String("handler-image", "", "Image for the NMState handler")
+	handlerPullPolicy := flag.String("handler-pull-policy", "Always", "Pull policy for the NMState handler image")
+	handlerPrefix := flag.String("handler-prefix", "", "Name prefix for the NMState handler's resources")
+	inputDir := flag.String("input-dir", "", "Input directory")
+	outputDir := flag.String("output-dir", "", "Output directory")
+	flag.Parse()
 
 	inventory := Inventory{
-		Namespace:           os.Args[1],
-		NMStateHandlerImage: os.Args[2],
-		ImagePullPolicy:     os.Args[3],
+		HandlerNamespace:  *handlerNamespace,
+		HandlerImage:      *handlerImage,
+		HandlerPullPolicy: *handlerPullPolicy,
+		HandlerPrefix:     *handlerPrefix,
 	}
-	inputDir := os.Args[4]
-	outputDir := os.Args[5]
 
 	// Clean up output dir so we don't have old files.
-	err := os.RemoveAll(outputDir)
+	err := os.RemoveAll(*outputDir)
 	if err != nil {
-		exitWithError(err, "failed cleaning up output dir %s", outputDir)
+		exitWithError(err, "failed cleaning up output dir %s", *outputDir)
 	}
 
-	err = os.MkdirAll(outputDir, 0755)
+	err = os.MkdirAll(*outputDir, 0755)
 	if err != nil {
-		exitWithError(err, "failed to create output dir %s", outputDir)
+		exitWithError(err, "failed to create output dir %s", *outputDir)
 	}
 
-	tmpl, err := template.ParseGlob(path.Join(inputDir, "*.yaml"))
+	tmpl, err := template.ParseGlob(path.Join(*inputDir, "*.yaml"))
 	if err != nil {
-		exitWithError(err, "failed parsing top dir manifests at %s", inputDir)
+		exitWithError(err, "failed parsing top dir manifests at %s", *inputDir)
 	}
 
-	tmpl, err = tmpl.ParseGlob(path.Join(inputDir, "*/*.yaml"))
+	tmpl, err = tmpl.ParseGlob(path.Join(*inputDir, "*/*.yaml"))
 	if err != nil {
-		exitWithError(err, "failed parsing sub dir manifests at %s", inputDir)
+		exitWithError(err, "failed parsing sub dir manifests at %s", *inputDir)
 	}
 
 	for _, t := range tmpl.Templates() {
-		outputFile := path.Join(outputDir, t.Name())
+		outputFile := path.Join(*outputDir, t.Name())
 		f, err := os.Create(outputFile)
 		if err != nil {
 			exitWithError(err, "failed creating expanded template %s", outputFile)
