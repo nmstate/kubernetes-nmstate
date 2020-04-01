@@ -69,11 +69,10 @@ func Commit() (string, error) {
 	return nmstatectl([]string{"commit"})
 }
 
-func Rollback(cause error) error {
-	message := "rollback cause: %v"
+func Rollback() error {
 	_, err := nmstatectl([]string{"rollback"})
 	if err != nil {
-		return errors.Wrapf(err, message, cause)
+		return errors.Wrapf(err, "failed calling nmstatectl rollback")
 	}
-	return fmt.Errorf(message, cause)
+	return nil
 }
