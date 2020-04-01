@@ -61,9 +61,13 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+            - name: NMSTATE_INSTANCE_NODE_LOCK_FILE
+              value: "/var/k8s_nmstate/handler_lock"
           volumeMounts:
           - name: dbus-socket
             mountPath: /run/dbus/system_bus_socket
+          - name: nmstate-lock
+            mountPath: /var/k8s_nmstate
           securityContext:
             privileged: true
       volumes:
@@ -71,6 +75,9 @@ spec:
         hostPath:
           path: /run/dbus/system_bus_socket
           type: Socket
+      - name: nmstate-lock
+        hostPath:
+          path: /var/k8s_nmstate
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -134,9 +141,13 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+            - name: NMSTATE_INSTANCE_NODE_LOCK_FILE
+              value: "/var/k8s_nmstate/handler_lock"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
+            - name: nmstate-lock
+              mountPath: /var/k8s_nmstate
           securityContext:
             privileged: true
       volumes:
@@ -144,6 +155,9 @@ spec:
           hostPath:
             path: /run/dbus/system_bus_socket
             type: Socket
+        - name: nmstate-lock
+          hostPath:
+            path: /var/k8s_nmstate
 ---
 apiVersion: v1
 kind: ConfigMap
