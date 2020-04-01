@@ -81,7 +81,8 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev
 }
 
 func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
-	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, map[string]string{})
+	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
+	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, runAtWorkers)
 }
 
 func updateDesiredState(desiredState nmstatev1alpha1.State) {

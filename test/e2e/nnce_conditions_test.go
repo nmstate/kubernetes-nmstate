@@ -75,6 +75,7 @@ var _ = Describe("EnactmentCondition", func() {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
+					defer GinkgoRecover()
 					By(fmt.Sprintf("Check %s progressing state is reached", node))
 					enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
 

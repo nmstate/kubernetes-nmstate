@@ -69,7 +69,8 @@ func TestE2E(tapi *testing.T) {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err := framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
+	filterWorkers := dynclient.MatchingLabels{"node-role.kubernetes.io/worker": ""}
+	err := framework.Global.Client.List(context.TODO(), &nodeList, filterWorkers)
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
