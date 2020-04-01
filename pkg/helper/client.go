@@ -127,17 +127,18 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 }
 
 func rollback(client client.Client, cause error) error {
-	err := nmstatectl.Rollback(cause)
+	message := fmt.Sprintf("rolling back desired state configuration: %s", cause)
+	err := nmstatectl.Rollback()
 	if err != nil {
-		return errors.Wrap(err, "failed to do rollback")
+		return errors.Wrap(err, message)
 	}
 
 	// wait for system to settle after rollback
 	probesErr := probe.RunAll(client)
 	if probesErr != nil {
-		return errors.Wrap(err, "failed running probes after rollback")
+		return errors.Wrap(errors.Wrap(err, "failed running probes after rollback"), message)
 	}
-	return nil
+	return errors.New(message)
 }
 
 func ApplyDesiredState(client client.Client, desiredState nmstatev1alpha1.State) (string, error) {
