@@ -20,6 +20,7 @@ import (
 
 	apis "github.com/nmstate/kubernetes-nmstate/pkg/apis"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
@@ -49,18 +50,10 @@ var _ = BeforeSuite(func() {
 })
 
 func TestMain(m *testing.M) {
-	primaryNic = getEnv("PRIMARY_NIC", "eth0")
-	firstSecondaryNic = getEnv("FIRST_SECONDARY_NIC", "eth1")
-	secondSecondaryNic = getEnv("SECOND_SECONDARY_NIC", "eth2")
+	primaryNic = environment.GetVarWithDefault("PRIMARY_NIC", "eth0")
+	firstSecondaryNic = environment.GetVarWithDefault("FIRST_SECONDARY_NIC", "eth1")
+	secondSecondaryNic = environment.GetVarWithDefault("SECOND_SECONDARY_NIC", "eth2")
 	framework.MainEntry(m)
-}
-
-func getEnv(name string, defaultValue string) string {
-	value := os.Getenv(name)
-	if len(value) == 0 {
-		value = defaultValue
-	}
-	return value
 }
 
 func TestE2E(tapi *testing.T) {
@@ -69,7 +62,8 @@ func TestE2E(tapi *testing.T) {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err := framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
+	filterWorkers := dynclient.MatchingLabels{"node-role.kubernetes.io/worker": ""}
+	err := framework.Global.Client.List(context.TODO(), &nodeList, filterWorkers)
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)

@@ -2,6 +2,7 @@ SHELL := /bin/bash
 
 IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
+NAMESPACE ?= nmstate
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_SUFFIX ?=
@@ -21,13 +22,13 @@ export E2E_TEST_TIMEOUT ?= 40m
 e2e_test_args = -singleNamespace=true -test.v -test.timeout=$(E2E_TEST_TIMEOUT) -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
-export PRIMARY_NIC = eth0
-export FIRST_SECONDARY_NIC = eth1
-export SECOND_SECONDARY_NIC = eth2
+export PRIMARY_NIC ?= eth0
+export FIRST_SECONDARY_NIC ?= eth1
+export SECOND_SECONDARY_NIC ?= eth2
 else
-export PRIMARY_NIC = ens3
-export FIRST_SECONDARY_NIC = ens8
-export SECOND_SECONDARY_NIC = ens9
+export PRIMARY_NIC ?= ens3
+export FIRST_SECONDARY_NIC ?= ens8
+export SECOND_SECONDARY_NIC ?= ens9
 endif
 
 BIN_DIR = $(CURDIR)/build/_output/bin/
@@ -115,7 +116,7 @@ test/e2e: $(OPERATOR_SDK)
 	mkdir -p test_logs/e2e
 	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
-		--namespace nmstate \
+		--namespace $(NAMESPACE) \
 		--no-setup \
 		--go-test-flags "$(e2e_test_args)"
 
@@ -135,6 +136,7 @@ $(CLUSTER_DIR)/%: $(install_kubevirtci)
 	$(install_kubevirtci)
 
 cluster-prepare:
+	hack/label-workers.sh
 	hack/install-ovs.sh
 	hack/install-nm.sh
 	hack/flush-secondary-nics.sh

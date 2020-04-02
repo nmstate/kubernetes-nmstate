@@ -75,6 +75,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
+					defer GinkgoRecover()
 					By(fmt.Sprintf("Check %s progressing state is reached", node))
 					enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
 

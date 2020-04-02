@@ -11,7 +11,7 @@ import (
 )
 
 func nmstatePods() ([]string, error) {
-	output, err := cmd.Kubectl("get", "pod", "-n", framework.Global.Namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name")
+	output, err := cmd.Kubectl("get", "pod", "-n", framework.Global.Namespace, "--no-headers=true", "-o", "custom-columns=:metadata.name", "-l", "app=kubernetes-nmstate")
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	names := strings.Split(strings.TrimSpace(output), "\n")
 	return names, err
@@ -21,6 +21,9 @@ func RunAtPods(arguments ...string) {
 	nmstatePods, err := nmstatePods()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	for _, nmstatePod := range nmstatePods {
+		if ! strings.Contains(nmstatePod, "worker") {
+			continue
+		}
 		exec := []string{"exec", "-n", framework.Global.Namespace, nmstatePod, "--"}
 		execArguments := append(exec, arguments...)
 		_, err := cmd.Kubectl(execArguments...)
