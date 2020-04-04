@@ -1,24 +1,25 @@
+{{define "handlerPrefix"}}{{with $prefix := .HandlerPrefix}}{{$prefix | printf "%s-"}}{{end -}}{{end}}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nmstate-handler
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-handler
+  namespace: {{ .HandlerNamespace }}
 spec:
   selector:
     matchLabels:
-      name: nmstate-handler
+      name: {{template "handlerPrefix" .}}nmstate-handler
   template:
     metadata:
       labels:
         app: kubernetes-nmstate
-        name: nmstate-handler
+        name: {{template "handlerPrefix" .}}nmstate-handler
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # future nmstate/NM is in place.
       # https://github.com/nmstate/nmstate/pull/440
       hostNetwork: true
-      serviceAccountName: nmstate-handler
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector:
         beta.kubernetes.io/arch: amd64
         node-role.kubernetes.io/master: ""
@@ -31,8 +32,8 @@ spec:
           args:
           - --v=production
           # Replace this with the built image name
-          image: {{ .NMStateHandlerImage }}
-          imagePullPolicy: {{ .ImagePullPolicy }}
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
           - kubernetes-nmstate
           env:
@@ -45,7 +46,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "nmstate-handler"
+              value: "{{template "handlerPrefix" .}}nmstate-handler"
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -53,7 +54,7 @@ spec:
             - name: INTERFACES_FILTER
               valueFrom:
                 configMapKeyRef:
-                  name: nmstate-config
+                  name: {{template "handlerPrefix" .}}nmstate-config
                   key: interfaces_filter
             - name: WEBHOOK_PORT
               value: "54874"
@@ -75,23 +76,23 @@ spec:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nmstate-handler-worker
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-handler-worker
+  namespace: {{ .HandlerNamespace }}
 spec:
   selector:
     matchLabels:
-      name: nmstate-handler-worker
+      name: {{template "handlerPrefix" .}}nmstate-handler-worker
   template:
     metadata:
       labels:
         app: kubernetes-nmstate
-        name: nmstate-handler-worker
+        name: {{template "handlerPrefix" .}}nmstate-handler-worker
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # future nmstate/NM is in place.
       # https://github.com/nmstate/nmstate/pull/440
       hostNetwork: true
-      serviceAccountName: nmstate-handler
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -108,8 +109,8 @@ spec:
           args:
             - --v=production
           # Replace this with the built image name
-          image: {{ .NMStateHandlerImage }}
-          imagePullPolicy: {{ .ImagePullPolicy }}
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
             - kubernetes-nmstate
           env:
@@ -120,7 +121,7 @@ spec:
                 fieldRef:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
-              value: "nmstate-handler"
+              value: "{{template "handlerPrefix" .}}nmstate-handler"
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -128,7 +129,7 @@ spec:
             - name: INTERFACES_FILTER
               valueFrom:
                 configMapKeyRef:
-                  name: nmstate-config
+                  name: {{template "handlerPrefix" .}}nmstate-config
                   key: interfaces_filter
             - name: ENABLE_PROFILER
               value: "False"
@@ -148,16 +149,16 @@ spec:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nmstate-config
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-config
+  namespace: {{ .HandlerNamespace }}
 data:
   interfaces_filter: "veth*"
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: nmstate-webhook
-  namespace: {{ .Namespace }}
+  name: {{template "handlerPrefix" .}}nmstate-webhook
+  namespace: {{ .HandlerNamespace }}
   labels:
     app: kubernetes-nmstate
 spec:
@@ -166,20 +167,20 @@ spec:
     - port: 443
       targetPort: 54874
   selector:
-    name: nmstate-handler
+    name: {{template "handlerPrefix" .}}nmstate-handler
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
 kind: MutatingWebhookConfiguration
 metadata:
-  name: nmstate
+  name: {{template "handlerPrefix" .}}nmstate
   labels:
     app: kubernetes-nmstate
 webhooks:
   - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
     clientConfig:
       service:
-        name: nmstate-webhook
-        namespace: {{ .Namespace }}
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
         path: "/nodenetworkconfigurationpolicies-mutate"
     rules:
       - operations: ["CREATE", "UPDATE"]
@@ -189,8 +190,8 @@ webhooks:
   - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
     clientConfig:
       service:
-        name: nmstate-webhook
-        namespace: {{ .Namespace }}
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
         path: "/nodenetworkconfigurationpolicies-status-mutate"
     rules:
       - operations: ["CREATE", "UPDATE"]
@@ -200,8 +201,8 @@ webhooks:
   - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
     clientConfig:
       service:
-        name: nmstate-webhook
-        namespace: {{ .Namespace }}
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
         path: "/nodenetworkconfigurationpolicies-timestamp-mutate"
     rules:
       - operations: ["CREATE", "UPDATE"]
