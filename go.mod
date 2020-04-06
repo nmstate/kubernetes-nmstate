@@ -9,6 +9,7 @@ require (
 	github.com/go-openapi/spec v0.19.0
 	github.com/gobwas/glob v0.2.3
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/nightlyone/lockfile v1.0.0
 	github.com/onsi/ginkgo v1.8.0
 	github.com/onsi/gomega v1.5.0
 	github.com/operator-framework/operator-sdk v0.12.0
