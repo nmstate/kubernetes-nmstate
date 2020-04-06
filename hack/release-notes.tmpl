@@ -8,10 +8,13 @@
 {{range .}} {{println "-" .}} {{end}}
 {{end}}
 
-{{- with .NotesByKind -}}
+{{- with .Notes -}}
 ## Changes by Kind
-{{ range $kind, $notes = .}}
-### {{$kind | prettyKind}}
-{{range $note = $notes}} {{println "-" $note}} {{end -}}
-{{end -}}
-{{end -}}
+{{ range .}}
+### {{.Kind | prettyKind}}
+{{range $note := .NoteEntries}}
+ - {{$note}}
+{{- end}}
+{{end}}
+{{- end}}
+{{- /* This removes any extra line at the end. */ -}}
