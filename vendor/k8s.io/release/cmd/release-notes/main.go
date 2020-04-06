@@ -38,9 +38,15 @@ import (
 	"k8s.io/release/pkg/util"
 )
 
+type releaseNotesOptions struct {
+	outputFile      string
+	tableOfContents bool
+}
+
 var (
-	opts = options.New()
-	cmd  = &cobra.Command{
+	releaseNotesOpts = &releaseNotesOptions{}
+	opts             = options.New()
+	cmd              = &cobra.Command{
 		Short:         "release-notes - The Kubernetes Release Notes Generator",
 		Use:           "release-notes",
 		SilenceUsage:  true,
@@ -72,7 +78,7 @@ func init() {
 	// output contains the path on the filesystem to where the resultant
 	// release notes should be printed.
 	cmd.PersistentFlags().StringVar(
-		&opts.Output,
+		&releaseNotesOpts.outputFile,
 		"output",
 		util.EnvDefault("OUTPUT", ""),
 		"The path to the where the release notes will be printed",
@@ -142,9 +148,14 @@ func init() {
 	cmd.PersistentFlags().StringVar(
 		&opts.Format,
 		"format",
-		util.EnvDefault("FORMAT", "go-template:default"),
+		util.EnvDefault("FORMAT", options.FormatSpecDefaultGoTemplate),
 		fmt.Sprintf("The format for notes output (options: %s)",
-			strings.Join([]string{"markdown", "json", "go-template:default"}, ", "),
+			strings.Join([]string{
+				options.FormatSpecNone,
+				options.FormatSpecMarkdown, //nolint:golint,deprecated // This option internally corresponds to options.FormatSpecGoTemplateDefault
+				options.FormatSpecJSON,
+				options.FormatSpecDefaultGoTemplate,
+			}, ", "),
 		),
 	)
 
@@ -191,7 +202,7 @@ func init() {
 	)
 
 	cmd.PersistentFlags().BoolVar(
-		&opts.TableOfContents,
+		&releaseNotesOpts.tableOfContents,
 		"toc",
 		util.IsEnvSet("TOC"),
 		"Enable the rendering of the table of contents",
@@ -215,7 +226,10 @@ func init() {
 func GetReleaseNotes() (notes.ReleaseNotes, notes.ReleaseNotesHistory, error) {
 	logrus.Info("fetching all commits. This might take a while...")
 
-	gatherer := notes.NewGatherer(context.Background(), opts)
+	gatherer, err := notes.NewGatherer(context.Background(), opts)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "retrieving notes gatherer")
+	}
 	releaseNotes, history, err := gatherer.ListReleaseNotes()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "listing release notes")
@@ -227,14 +241,12 @@ func GetReleaseNotes() (notes.ReleaseNotes, notes.ReleaseNotesHistory, error) {
 func WriteReleaseNotes(releaseNotes notes.ReleaseNotes, history notes.ReleaseNotesHistory) (err error) {
 	logrus.Info("got the commits, performing rendering")
 
-	logrus.Infof("releaseNotes %+v", releaseNotes)
-
 	// Open a handle to the file which will contain the release notes output
 	var output *os.File
 	var existingNotes notes.ReleaseNotes
 
-	if opts.Output != "" {
-		output, err = os.OpenFile(opts.Output, os.O_RDWR|os.O_CREATE, os.FileMode(0644))
+	if releaseNotesOpts.outputFile != "" {
+		output, err = os.OpenFile(releaseNotesOpts.outputFile, os.O_RDWR|os.O_CREATE, os.FileMode(0644))
 		if err != nil {
 			return errors.Wrapf(err, "opening the supplied output file")
 		}
@@ -280,9 +292,7 @@ func WriteReleaseNotes(releaseNotes notes.ReleaseNotes, history notes.ReleaseNot
 		if err := enc.Encode(releaseNotes); err != nil {
 			return errors.Wrapf(err, "encoding JSON output")
 		}
-	case strings.Contains(format, "go-template"):
-		goTemplate := strings.Split(format, ":")[1]
-
+	case strings.HasPrefix(format, "go-template:"):
 		doc, err := document.CreateDocument(releaseNotes, history)
 		if err != nil {
 			return errors.Wrapf(err, "creating release note document")
@@ -292,15 +302,13 @@ func WriteReleaseNotes(releaseNotes notes.ReleaseNotes, history notes.ReleaseNot
 		// them in rendering. Perhaps these should be set in CreateDocument()?
 		doc.PreviousRevision = opts.StartRev
 		doc.CurrentRevision = opts.EndRev
-		logrus.Infof("CurrentRevision %s", doc.CurrentRevision)
-		logrus.Infof("format%s", format)
 
-		markdown, err := doc.RenderMarkdownTemplate(opts.ReleaseBucket, opts.ReleaseTars, goTemplate)
+		markdown, err := doc.RenderMarkdownTemplate(opts.ReleaseBucket, opts.ReleaseTars, opts.Format)
 		if err != nil {
-			return errors.Wrapf(err, "rendering release note document to markdown")
+			return errors.Wrapf(err, "rendering release note document with template")
 		}
 
-		if opts.TableOfContents {
+		if releaseNotesOpts.tableOfContents {
 			toc, err := notes.GenerateTOC(markdown)
 			if err != nil {
 				return errors.Wrap(err, "generating table of contents")

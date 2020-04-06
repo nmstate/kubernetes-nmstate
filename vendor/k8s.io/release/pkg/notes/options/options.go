@@ -17,47 +17,97 @@ limitations under the License.
 package options
 
 import (
-	"context"
 	"os"
-	"strings"
-
-	"io/ioutil"
-
-	gogithub "github.com/google/go-github/v29/github"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/oauth2"
 
 	"k8s.io/release/pkg/git"
 	"k8s.io/release/pkg/github"
-	"k8s.io/release/pkg/notes/client"
-	"k8s.io/release/pkg/notes/internal"
 )
 
+// Options is the global options structure which can be used to build release
+// notes generator options
 type Options struct {
-	GithubOrg       string
-	GithubRepo      string
-	Output          string
-	Branch          string
-	StartSHA        string
-	EndSHA          string
-	StartRev        string
-	EndRev          string
-	RepoPath        string
-	ReleaseVersion  string
-	Format          string
-	RequiredAuthor  string
-	DiscoverMode    string
-	ReleaseBucket   string
-	ReleaseTars     string
-	TableOfContents bool
-	Debug           bool
-	Pull            bool
-	RecordDir       string
-	ReplayDir       string
-	githubToken     string
-	gitCloneFn      func(string, string, string, bool) (*git.Repo, error)
+	// GithubOrg specifies the GitHub organization from which will be
+	// cloned/pulled if Pull is true.
+	GithubOrg string
+
+	// GithubRepo specifies the GitHub repository from which will be
+	// cloned/pulled if Pull is true.
+	GithubRepo string
+
+	// RepoPath specifies the git repository location for doing an update if
+	// Pull is true.
+	RepoPath string
+
+	// Branch will be used for discovering the latest patch version if
+	// DiscoverMode is RevisionDiscoveryModePatchToPatch.
+	Branch string
+
+	// StartSHA can be used to set the release notes start revision to an
+	// exact git SHA. Should not be used together with StartRev.
+	StartSHA string
+
+	// EndSHA can be used to set the release notes end revision to an
+	// exact git SHA. Should not be used together with EndRev.
+	EndSHA string
+
+	// StartRev can be used to set the release notes start revision to any
+	// valid git revision. Should not be used together with StartSHA.
+	StartRev string
+
+	// EndRev can be used to set the release notes end revision to any
+	// valid git revision. Should not be used together with EndSHA.
+	EndRev string
+
+	// ReleaseVersion is the version of the release. This option is just passed
+	// through into the resulting ReleaseNote struct for identifying releases
+	// on JSON output.
+	ReleaseVersion string
+
+	// Format specifies the format of the release notes. Can be either
+	// FormatSpecNone, FormatSpecJSON, or FormatSpecDefaultGoTemplate
+	Format string
+
+	// RequiredAuthor can be used to filter the release notes by the commit
+	// author
+	RequiredAuthor string
+
+	// DiscoverMode can be used to automatically discover StartSHA and EndSHA.
+	// Can be either RevisionDiscoveryModeNONE (default),
+	// RevisionDiscoveryModeMergeBaseToLatest,
+	// RevisionDiscoveryModePatchToPatch, or RevisionDiscoveryModeMinorToMinor.
+	// Should not be used together with StartRev, EndRev, StartSHA or EndSHA.
+	DiscoverMode string
+
+	// ReleaseTars specifies the directory where the release tarballs are
+	// located.
+	ReleaseTars string
+
+	// ReleaseBucket specifies the Google Cloud bucket where the ReleaseTars
+	// are linked to. This option is used for generating the links inside the
+	// release downloads table.
+	ReleaseBucket string
+
+	// If true, then the release notes generator will pull in latest changes
+	// from the default git remote
+	Pull bool
+
+	// If true, then the release notes generator will print messages in debug
+	// log level
+	Debug bool
+
+	// RecordDir specifies the directory for API call recordings. Cannot be
+	// used together with ReplayDir.
+	RecordDir string
+
+	// ReplayDir specifies the directory for replaying a previously recorded
+	// API. Cannot be used together with RecordDir.
+	ReplayDir string
+
+	githubToken string
+	gitCloneFn  func(string, string, string, bool) (*git.Repo, error)
 }
 
 type RevisionDiscoveryMode string
@@ -67,6 +117,15 @@ const (
 	RevisionDiscoveryModeMergeBaseToLatest = "mergebase-to-latest"
 	RevisionDiscoveryModePatchToPatch      = "patch-to-patch"
 	RevisionDiscoveryModeMinorToMinor      = "minor-to-minor"
+)
+
+const (
+	FormatSpecNone              = ""
+	FormatSpecJSON              = "json"
+	FormatSpecDefaultGoTemplate = "go-template:default"
+
+	// Deprecated: This option is internally translated to `FormatSpecDefaultGoTemplate`
+	FormatSpecMarkdown = "markdown"
 )
 
 // New creates a new Options instance with the default values
@@ -160,11 +219,10 @@ func (o *Options) ValidateAndFinish() (err error) {
 	}
 
 	// Set the format
-	format, err := o.template()
-	if err != nil {
-		return err
+	// TODO: Remove "markdown" after some time as it is deprecated in PR#1008
+	if o.Format == FormatSpecMarkdown || o.Format == FormatSpecNone {
+		o.Format = FormatSpecDefaultGoTemplate
 	}
-	o.Format = format
 
 	return nil
 }
@@ -201,35 +259,6 @@ func (o *Options) resolveDiscoverMode() error {
 	return nil
 }
 
-func (o *Options) template() (string, error) {
-	if format := o.Format; format == "markdown" || format == "go-template:default" || format == "" {
-		return "go-template:" + internal.DefaultReleaseNotesTemplate, nil
-	}
-
-	// Assume a user-supplied template of the form
-	// "go-template:/path/to/file.txt". Try to read the template file in order
-	// to fail early before calls to GitHub.
-
-	f := strings.Split(o.Format, ":")
-	if len(f) != 2 {
-		return "", errors.Errorf("bad format option given: %q", o.Format)
-	}
-	templatePath := f[1]
-
-	b, err := ioutil.ReadFile(templatePath)
-	if err != nil {
-		return "", errors.Wrap(err, "reading template")
-	}
-	if len(b) == 0 {
-		return "", errors.Errorf("template %q must be non-empty", templatePath)
-	}
-
-	// TODO: We have no idea whether the template is valid. The user should
-	// know that the template will not work before we start doing not
-	// generation.
-	return "go-template:" + string(b), nil
-}
-
 func (o *Options) repo() (repo *git.Repo, err error) {
 	if o.Pull {
 		logrus.Infof("cloning/updating repository %s/%s", o.GithubOrg, o.GithubRepo)
@@ -254,22 +283,20 @@ func (o *Options) repo() (repo *git.Repo, err error) {
 // a Client which in addition records the responses from Github and stores them
 // on disk, or a Client that replays those pre-recorded responses and does not
 // talk to the GitHub API at all.
-func (o *Options) Client() client.Client {
+func (o *Options) Client() (github.Client, error) {
 	if o.ReplayDir != "" {
-		return client.NewReplayer(o.ReplayDir)
+		return github.NewReplayer(o.ReplayDir), nil
 	}
 
 	// Create a real GitHub API client
-	// TODO: refactor on top of our internal github package
-	ctx := context.Background()
-	httpClient := oauth2.NewClient(ctx, oauth2.StaticTokenSource(
-		&oauth2.Token{AccessToken: o.githubToken},
-	))
-	c := client.New(gogithub.NewClient(httpClient))
-
-	if o.RecordDir != "" {
-		return client.NewRecorder(c, o.RecordDir)
+	gh, err := github.NewWithToken(o.githubToken)
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create GitHub client")
 	}
 
-	return c
+	if o.RecordDir != "" {
+		return github.NewRecorder(gh.Client(), o.RecordDir), nil
+	}
+
+	return gh.Client(), nil
 }

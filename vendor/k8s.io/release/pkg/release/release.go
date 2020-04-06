@@ -19,7 +19,6 @@ package release
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -37,9 +36,11 @@ const (
 	DefaultToolRepo   = "release"
 	DefaultToolBranch = git.Master
 	DefaultToolOrg    = git.DefaultGithubOrg
-	DefaultProject    = "kubernetes-release-test"
-	DefaultDiskSize   = "300"
-	BucketPrefix      = "kubernetes-release-"
+	// TODO(vdf): Need to reference K8s Infra project here
+	DefaultKubernetesStagingProject = "kubernetes-release-test"
+	DefaultRelengStagingProject     = "k8s-staging-releng"
+	DefaultDiskSize                 = "300"
+	BucketPrefix                    = "kubernetes-release-"
 
 	versionReleaseRE  = `v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[a-zA-Z0-9]+)*\.*(0|[1-9][0-9]*)?`
 	versionBuildRE    = `([0-9]{1,})\+([0-9a-f]{5,40})`
@@ -105,34 +106,19 @@ func GetToolRepoURL(org, repo string, useSSH bool) (string, error) {
 // GetToolOrg checks if the 'TOOL_ORG' environment variable is set.
 // If 'TOOL_ORG' is non-empty, it returns the value. Otherwise, it returns DefaultToolOrg.
 func GetToolOrg() string {
-	toolOrg := os.Getenv("TOOL_ORG")
-	if toolOrg == "" {
-		toolOrg = DefaultToolOrg
-	}
-
-	return toolOrg
+	return util.EnvDefault("TOOL_ORG", DefaultToolOrg)
 }
 
 // GetToolRepo checks if the 'TOOL_REPO' environment variable is set.
 // If 'TOOL_REPO' is non-empty, it returns the value. Otherwise, it returns DefaultToolRepo.
 func GetToolRepo() string {
-	toolRepo := os.Getenv("TOOL_REPO")
-	if toolRepo == "" {
-		toolRepo = DefaultToolRepo
-	}
-
-	return toolRepo
+	return util.EnvDefault("TOOL_REPO", DefaultToolRepo)
 }
 
 // GetToolBranch checks if the 'TOOL_BRANCH' environment variable is set.
 // If 'TOOL_BRANCH' is non-empty, it returns the value. Otherwise, it returns DefaultToolBranch.
 func GetToolBranch() string {
-	toolBranch := os.Getenv("TOOL_BRANCH")
-	if toolBranch == "" {
-		toolBranch = DefaultToolBranch
-	}
-
-	return toolBranch
+	return util.EnvDefault("TOOL_BRANCH", DefaultToolBranch)
 }
 
 // BuiltWithBazel determines whether the most recent Kubernetes release was built with Bazel.
