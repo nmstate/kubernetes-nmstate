@@ -8,9 +8,12 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"github.com/pkg/errors"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/client-go/rest"
@@ -20,6 +23,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 	"github.com/nmstate/kubernetes-nmstate/version"
 
+	"github.com/nightlyone/lockfile"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	kubemetrics "github.com/operator-framework/operator-sdk/pkg/kube-metrics"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
@@ -87,6 +91,16 @@ func main() {
 	}
 
 	printVersion()
+
+	// Take exclusive instance lock, we need that to make sure that
+	// we don't have more than one working instance of k8s-nmstate
+	handlerLock, err := lockHandler()
+	if err != nil {
+		log.Error(err, "Failed to run lockHandler")
+		os.Exit(1)
+	}
+	log.Info("Successfully took nmstate exclusive lock")
+	defer handlerLock.Unlock()
 
 	namespace, err := k8sutil.GetWatchNamespace()
 	if err != nil {
@@ -211,4 +225,25 @@ func setProfiler() {
 			}
 		}()
 	}
+}
+
+func lockHandler() (lockfile.Lockfile, error) {
+	lockFilePath, ok := os.LookupEnv("NMSTATE_INSTANCE_NODE_LOCK_FILE")
+	if !ok {
+		return "", errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
+	}
+	log.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
+	handlerLock, err := lockfile.New(lockFilePath)
+	if err != nil {
+		return handlerLock, errors.Wrapf(err, "failed to create lockFile for %s", lockFilePath)
+	}
+	err = wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
+		err = handlerLock.TryLock()
+		if err != nil {
+			log.Error(err, "retrying to lock handler")
+			return false, nil // Don't return the error here, it will not re-poll if we do
+		}
+		return true, nil
+	})
+	return handlerLock, err
 }

@@ -217,6 +217,8 @@ github.com/modern-go/concurrent
 github.com/modern-go/reflect2
 # github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
 github.com/mxk/go-flowrate/flowrate
+# github.com/nightlyone/lockfile v1.0.0
+github.com/nightlyone/lockfile
 # github.com/onsi/ginkgo v1.8.0
 github.com/onsi/ginkgo
 github.com/onsi/ginkgo/config
