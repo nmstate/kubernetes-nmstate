@@ -1,8 +1,16 @@
-v0.15.4
+v0.15.5
+
+Features:
+* Add an exclusive lock for nmstate  handler instances (#487) (#490)
+* Adapt to external k8s (#465)
+* [release-0.15] Add node ready state probe (#481)
+* [release-0.15] Annotate tests with polarion IDs (#453)
 
 Bugs:
-* Run probe after rollback (#458)
-* remove the webhook manifest (#439)
+* Ensure probes are run after success nmstatectl rollback (#485)
+* test: Don't use 'sleep 5' at vlan-filtering script (#479)
+* Stabilize 0.15 tests (#472)
+* Pin nmstate to 0.1 (#463)
 
 ```
 docker pull HANDLER_IMAGE
