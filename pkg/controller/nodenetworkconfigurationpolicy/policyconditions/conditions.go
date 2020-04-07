@@ -85,6 +85,32 @@ func setPolicyFailedToConfigure(conditions *nmstatev1alpha1.ConditionList, messa
 	)
 }
 
+func nodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
+	nodes := corev1.NodeList{}
+	err := cli.List(context.TODO(), &nodes)
+	if err != nil {
+		return []corev1.Node{}, errors.Wrap(err, "getting nodes failed")
+	}
+
+	pods := corev1.PodList{}
+	byApp := client.MatchingLabels{"app": "kubernetes-nmstate"}
+	err = cli.List(context.TODO(), &pods, byApp)
+	if err != nil {
+		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
+	}
+
+	filteredNodes := []corev1.Node{}
+	for _, node := range nodes.Items {
+		for _, pod := range pods.Items {
+			if node.Name == pod.Spec.NodeName {
+				filteredNodes = append(filteredNodes, node)
+				break
+			}
+		}
+	}
+	return filteredNodes, nil
+}
+
 func Update(cli client.Client, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
@@ -104,20 +130,14 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 			return errors.Wrap(err, "getting enactments failed")
 		}
 
-		nodes := corev1.NodeList{}
-		err = cli.List(context.TODO(), &nodes)
+		// Count only nodes that runs nmstate handler, could be that
+		// users don't want to run knmstate at master for example so
+		// they don't want to change net config there.
+		nmstateNodes, err := nodesRunningNmstate(cli)
 		if err != nil {
-			return errors.Wrap(err, "getting nodes failed")
+			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
-		numberOfReadyNodes := 0
-		for _, node := range nodes.Items {
-			for _, condition := range node.Status.Conditions {
-				if condition.Type == corev1.NodeReady &&
-					condition.Status == corev1.ConditionTrue {
-					numberOfReadyNodes += 1
-				}
-			}
-		}
+		numberOfNmstateNodes := len(nmstateNodes)
 
 		// Let's get conditions with true status count filtered by policy generation
 		enactmentsCount := enactmentconditions.Count(enactments, policy.Generation)
@@ -125,8 +145,8 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching()
 
 		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
-		if numberOfFinishedEnactments < numberOfReadyNodes {
-			setPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfReadyNodes))
+		if numberOfFinishedEnactments < numberOfNmstateNodes {
+			setPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
 		} else {
 			if enactmentsCount.Matching() == 0 {
 				message := "Policy does not match any node"
