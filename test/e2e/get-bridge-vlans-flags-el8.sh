@@ -1,13 +1,13 @@
 #!/bin/bash
 
-set -xe
+set -e
 
 node=$1
 connection=$2
 vlan=$3
 vlans_out=/tmp/vlans.out
 
-$(SSH) $node -- sudo bridge vlan show > $vlans_out
+${SSH} $node -- sudo bridge vlan show > $vlans_out
 
 # Remove CR from output
 sed -i 's/\r$//' $vlans_out

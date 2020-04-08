@@ -1,4 +1,6 @@
-#!/bin/bash -e
+#!/bin/bash
+
+set -e
 
 node=$1
 connection=$2
@@ -7,7 +9,7 @@ vlan_max=$4
 vlans_out=/tmp/vlans.out
 
 echo "Dumping bridge vlans to $vlans_out"
-$(SSH) $node -- sudo bridge vlan show > $vlans_out
+${SSH} $node -- sudo bridge vlan show > $vlans_out
 
 echo "Checking vlan range $vlan_min-$vlan_max at $connection"
 for vlan in $(seq $vlan_min $vlan_max); do

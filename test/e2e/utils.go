@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -307,9 +306,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 			// There is a bug [1] at centos8 and output is and invalid json
 			// so it parses the non json output
 			// [1] https://bugs.centos.org/view.php?id=16533
-			cmd := exec.Command("test/e2e/get-bridge-vlans-flags-el8.sh", node, connection, strconv.Itoa(vlan))
-			output, err := cmd.Output()
-			GinkgoWriter.Write([]byte(fmt.Sprintf("%s -> output: %s\n", cmd.Path, output)))
+			output, err := cmd.Run("test/e2e/get-bridge-vlans-flags-el8.sh", false, node, connection, strconv.Itoa(vlan))
 			Expect(err).ToNot(HaveOccurred())
 			return strings.Split(string(output), " ")
 		} else {
@@ -347,9 +344,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 			// There is a bug [1] at centos8 and output is and invalid json
 			// so it parses the non json output
 			// [1] https://bugs.centos.org/view.php?id=16533
-			cmd := exec.Command("test/e2e/check-bridge-has-vlans-el8.sh", node, connection, strconv.Itoa(minVlan), strconv.Itoa(maxVlan))
-			output, err := cmd.Output()
-			GinkgoWriter.Write([]byte(fmt.Sprintf("%s -> output: %s\n", cmd.Path, output)))
+			_, err := cmd.Run("test/e2e/check-bridge-has-vlans-el8.sh", false, node, connection, strconv.Itoa(minVlan), strconv.Itoa(maxVlan))
 			if err != nil {
 				return err
 			}
