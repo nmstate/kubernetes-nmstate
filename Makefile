@@ -109,7 +109,7 @@ gen-openapi: $(OPENAPI_GEN)
 gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
-manifests:
+manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(NAMESPACE) -handler-image=$(HANDLER_IMAGE) -handler-pull-policy=$(PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
@@ -165,7 +165,7 @@ release: manifests push-handler $(description) $(GITHUB_RELEASE) version/version
 				   hack/release.sh \
 						$(shell find $(MANIFESTS_DIR) -type f)
 
-vendor:
+vendor: $(GO)
 	$(GO) mod tidy
 	$(GO) mod vendor
 
