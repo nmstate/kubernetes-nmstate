@@ -1,0 +1,16 @@
+{{with .NotesWithActionRequired -}}
+# Urgent Upgrade Notes
+
+{{range .}} {{println "-" .}} {{end}}
+{{end}}
+
+{{- with .Notes -}}
+# Changes
+{{ range .}}
+## {{.Kind | prettyKind}}
+{{range $note := .NoteEntries}}
+ - {{$note}}
+{{- end}}
+{{end}}
+{{- end}}
+{{- /* This removes any extra line at the end. */ -}}

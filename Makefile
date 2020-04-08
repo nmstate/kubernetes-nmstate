@@ -52,6 +52,7 @@ GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 GITHUB_RELEASE ?= $(GOBIN)/github-release
+RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 GO := $(GOBIN)/go
 
@@ -95,6 +96,9 @@ $(OPENAPI_GEN): go.mod $(GO)
 
 $(GITHUB_RELEASE): go.mod $(GO)
 	$(GO) install ./vendor/github.com/aktau/github-release
+
+$(RELEASE_NOTES): go.mod $(GO)
+	$(GO) install ./vendor/k8s.io/release/cmd/release-notes
 
 gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
@@ -142,12 +146,12 @@ $(description): version/description
 	sed "s#HANDLER_IMAGE#$(HANDLER_IMAGE)#" \
 		version/description > $@
 
-prepare-patch:
-	./hack/prepare-release.sh patch
-prepare-minor:
-	./hack/prepare-release.sh minor
-prepare-major:
-	./hack/prepare-release.sh major
+prepare-patch: $(RELEASE_NOTES)
+	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh patch
+prepare-minor: $(RELEASE_NOTES)
+	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh minor
+prepare-major: $(RELEASE_NOTES)
+	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh major
 
 # This uses target specific variables [1] so we can use push-handler as a
 # dependency and change the SUFFIX with the correct version so no need for
