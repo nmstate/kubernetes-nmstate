@@ -1,17 +1,13 @@
-# Changelog since {{ .PreviousRevision }}
-
 {{with .NotesWithActionRequired -}}
-## Urgent Upgrade Notes
-
-### (No, really, you MUST read this before you upgrade)
+# Urgent Upgrade Notes
 
 {{range .}} {{println "-" .}} {{end}}
 {{end}}
 
 {{- with .Notes -}}
-## Changes by Kind
+# Changes
 {{ range .}}
-### {{.Kind | prettyKind}}
+## {{.Kind | prettyKind}}
 {{range $note := .NoteEntries}}
  - {{$note}}
 {{- end}}
