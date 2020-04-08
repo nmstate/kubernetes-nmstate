@@ -1,6 +1,6 @@
 v0.18.0
 
-This minor release include some bugfixes and some ports from release-0.15 like handler locking, also the 
+This minor release include some bugfixes and some ports from release-0.15 like handler locking, also the
 e2e tests run at workers only now.
 
 # Changes
