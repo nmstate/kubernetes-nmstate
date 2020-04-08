@@ -1,11 +1,26 @@
-v0.17.0
+v0.18.0
 
-Features:
-* Add consistently check at cluster-sync (#448)
-* use cluster scripts (#442)
+This minor release include some bugfixes and some ports from release-0.15 like handler locking, also the 
+e2e tests run at workers only now.
 
-Bugs:
-* Upgrade kube-admission-webhook lib (#449), fixes race on startup
+# Changes
+
+## Test
+
+ - Test: verify that bridge IP is persisted after reboot ([#456](https://github.com/nmstate/kubernetes-nmstate/pull/456), [@phoracek](https://github.com/phoracek))
+ - The e2e tests now run at workers and skipping master. ([#483](https://github.com/nmstate/kubernetes-nmstate/pull/483), [@qinqon](https://github.com/qinqon))
+ - Workflow script to run at external systems ([#489](https://github.com/nmstate/kubernetes-nmstate/pull/489), [@qinqon](https://github.com/qinqon))
+
+## Feature
+
+ - Add an exclusive lock for nmstate-handler instances ([#487](https://github.com/nmstate/kubernetes-nmstate/pull/487), [@yboaron](https://github.com/yboaron))
+ - New operator for kubernetes-nmstate deployment. ([#461](https://github.com/nmstate/kubernetes-nmstate/pull/461), [@bcrochet](https://github.com/bcrochet))
+
+## Other (Bug, Cleanup or Flake)
+
+ - After desiredState is apply handler will wait for node to be ready in case the config change that. ([#480](https://github.com/nmstate/kubernetes-nmstate/pull/480), [@qinqon](https://github.com/qinqon))
+ - Bug: post rollback probes were not being executed. ([#484](https://github.com/nmstate/kubernetes-nmstate/pull/484), [@qinqon](https://github.com/qinqon))
+ - The nncp conditions calculations take now into account the nodes running nmstate pod instead of readiness ([#477](https://github.com/nmstate/kubernetes-nmstate/pull/477), [@qinqon](https://github.com/qinqon))
 
 ```
 docker pull HANDLER_IMAGE
