@@ -364,7 +364,6 @@ github.com/morikuni/aec
 github.com/mxk/go-flowrate/flowrate
 # github.com/nightlyone/lockfile v1.0.0
 github.com/nightlyone/lockfile
-# github.com/onsi/ginkgo v1.10.1
 # github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 github.com/nozzle/throttler
 # github.com/onsi/ginkgo v1.11.0
