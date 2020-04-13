@@ -35,12 +35,12 @@ func (m manager) get(key types.NamespacedName, value runtime.Object) error {
 // Retrieve cluster CA bundle and encode to base 64
 func (m manager) clientCAFile() ([]byte, error) {
 	authenticationConfig := corev1.ConfigMap{}
-	err := m.get(types.NamespacedName{Namespace: "kube-system", Name: "extension-apiserver-authentication"}, &authenticationConfig)
+	err := m.get(types.NamespacedName{Namespace: "openshift-config", Name: "initial-kube-apiserver-server-ca"}, &authenticationConfig)
 	if err != nil {
 		return []byte{}, errors.Wrap(err, "failed to retrieve cluster authentication config")
 	}
 
-	clientCaFile := authenticationConfig.Data["client-ca-file"]
+	clientCaFile := authenticationConfig.Data["ca-bundle.crt"]
 	return []byte(clientCaFile), nil
 }
 

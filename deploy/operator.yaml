@@ -57,7 +57,7 @@ spec:
                   name: {{template "handlerPrefix" .}}nmstate-config
                   key: interfaces_filter
             - name: WEBHOOK_PORT
-              value: "54874"
+              value: "54875"
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
@@ -179,7 +179,7 @@ spec:
   publishNotReadyAddresses: true
   ports:
     - port: 443
-      targetPort: 54874
+      targetPort: 54875
   selector:
     name: {{template "handlerPrefix" .}}nmstate-handler
 ---
