@@ -30,7 +30,7 @@ spec:
           operator: Exists
           effect: NoSchedule
       containers:
-        - name: nmstate-handler
+        - name: nmstate-webhook
           args:
           - --v=production
           # Replace this with the built image name
@@ -39,20 +39,10 @@ spec:
           command:
           - kubernetes-nmstate
           env:
-            - name: WATCH_NAMESPACE
-              value: ""
             - name: RUN_WEBHOOK_SERVER
               value: ""
-            - name: POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "{{template "handlerPrefix" .}}nmstate"
-            - name: NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
