@@ -15,6 +15,6 @@ echo "Checking vlan range $vlan_min-$vlan_max at $connection"
 for vlan in $(seq $vlan_min $vlan_max); do
     if ! cat $vlans_out|grep $connection -A 1 |grep " *$vlan *" > /dev/null; then
         echo "Vlan $vlan not found at $connection in node $node"
-        return 1
+        exit 1
     fi
 done

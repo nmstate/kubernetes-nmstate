@@ -176,9 +176,10 @@ func deletePolicy(name string) {
 
 func restartNode(node string) error {
 	By(fmt.Sprintf("Restarting node %s", node))
-	// Sync and reboot in background another way command can stuck
-	_, err := runner.RunAtNode(node, "/usr/bin/nohup /usr/bin/bash -c '/usr/bin/sync && sudo /usr/sbin/reboot -nf' > /dev/null 2>&1 &")
-	Expect(err).ToNot(HaveOccurred())
+	// Use halt so reboot command does not get stuck also
+	// this command always fail since connection is closed
+	// so let's not check err
+	runner.RunAtNode(node, "sudo", "halt", "--reboot")
 	By(fmt.Sprintf("Waiting till node %s is rebooted", node))
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
 	Eventually(func() string {
