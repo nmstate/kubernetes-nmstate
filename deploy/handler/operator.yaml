@@ -6,6 +6,7 @@ metadata:
   name: {{template "handlerPrefix" .}}nmstate-webhook
   namespace: {{ .HandlerNamespace }}
 spec:
+  replicas: 2
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -192,3 +193,14 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
+---
+apiVersion: policy/v1beta1
+kind: PodDisruptionBudget
+metadata:
+  namespace: {{ .HandlerNamespace }}
+  name: {{template "handlerPrefix" .}}nmstate-webhook
+spec:
+  minAvailable: "90%"
+  selector:
+    matchLabels:
+      name: {{template "handlerPrefix" .}}nmstate-webhook
