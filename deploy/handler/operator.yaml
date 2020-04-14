@@ -5,6 +5,8 @@ kind: Deployment
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-webhook
   namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
 spec:
   replicas: 2
   selector:
@@ -61,6 +63,8 @@ kind: DaemonSet
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-handler
   namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
 spec:
   selector:
     matchLabels:
