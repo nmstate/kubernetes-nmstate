@@ -204,7 +204,7 @@ metadata:
   namespace: {{ .HandlerNamespace }}
   name: {{template "handlerPrefix" .}}nmstate-webhook
 spec:
-  minAvailable: "90%"
+  minAvailable: 1
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
