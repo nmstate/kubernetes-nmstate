@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nmstate-operator
+  namespace: {{ .OperatorNamespace }}
+  labels:
+    app: kubernetes-nmstate-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kubernetes-nmstate-operator
+  template:
+    metadata:
+      labels:
+        app: kubernetes-nmstate-operator
+        name: kubernetes-nmstate-operator
+    spec:
+      serviceAccountName: nmstate-operator
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: nmstate-operator
+          args:
+          - --v=production
+          # Replace this with the built image name
+          image: {{ .OperatorImage }}
+          imagePullPolicy: {{ .OperatorPullPolicy }}
+          command:
+          - kubernetes-nmstate
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: OPERATOR_NAME
+              value: "kubernetes-nmstate-operator"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
+            - name: RUN_OPERATOR
+              value: ""
+            - name: HANDLER_IMAGE
+              value: {{ .HandlerImage }}
+            - name: HANDLER_IMAGE_PULL_POLICY
+              value: {{ .HandlerPullPolicy }}
+            - name: HANDLER_NAMESPACE
+              value: {{ .HandlerNamespace }}

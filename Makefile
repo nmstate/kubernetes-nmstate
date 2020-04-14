@@ -9,9 +9,15 @@ HANDLER_IMAGE_SUFFIX ?=
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 HANDLER_PREFIX ?=
+OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
+OPERATOR_IMAGE_SUFFIX ?=
+OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME)$(OPERATOR_IMAGE_SUFFIX)
+OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_FULL_NAME)
 
-NAMESPACE ?= nmstate
-PULL_POLICY ?= Always
+export HANDLER_NAMESPACE ?= nmstate
+export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
+HANDLER_PULL_POLICY ?= Always
+OPERATOR_PULL_POLICY ?= Always
 IMAGE_BUILDER ?= docker
 
 WHAT ?= ./pkg
@@ -110,12 +116,17 @@ gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
 manifests: $(GO)
-	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(NAMESPACE) -handler-image=$(HANDLER_IMAGE) -handler-pull-policy=$(PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK) manifests
+handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK)
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE) --image-builder $(IMAGE_BUILDER)
 push-handler: handler
 	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
+operator: handler
+	$(IMAGE_BUILDER) build --build-arg=BASE_IMAGE=$(HANDLER_IMAGE) -t $(OPERATOR_IMAGE) -f build/Dockerfile.operator .
+push-operator: operator
+	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
+push: push-handler push-operator
 
 test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
@@ -124,7 +135,7 @@ test/e2e: $(OPERATOR_SDK)
 	mkdir -p test_logs/e2e
 	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
 		--kubeconfig $(KUBECONFIG) \
-		--namespace $(NAMESPACE) \
+		--namespace $(HANDLER_NAMESPACE) \
 		--no-setup \
 		--go-test-flags "$(e2e_test_args)"
 

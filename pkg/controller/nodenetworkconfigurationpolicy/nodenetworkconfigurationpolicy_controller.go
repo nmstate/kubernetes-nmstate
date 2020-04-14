@@ -27,6 +27,7 @@ import (
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/selectors"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 )
 
@@ -49,6 +50,10 @@ var (
 )
 
 func init() {
+	if environment.IsOperator() {
+		return
+	}
+
 	var isSet = false
 	nodeName, isSet = os.LookupEnv("NODE_NAME")
 	if !isSet || len(nodeName) == 0 {

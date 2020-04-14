@@ -4,12 +4,12 @@ set -ex
 
 kubectl=./cluster/kubectl.sh
 
-function getDesiredNumberScheduled {
-    $kubectl get daemonset -n nmstate $1 -o=jsonpath='{.status.desiredNumberScheduled}'
+function getDesiredScheduledHandlers {
+    $kubectl get daemonset -n ${HANDLER_NAMESPACE} $1 -o=jsonpath='{.status.desiredNumberScheduled}'
 }
 
-function getNumberAvailable {
-    numberAvailable=$($kubectl get daemonset -n nmstate $1 -o=jsonpath='{.status.numberAvailable}')
+function getAvailableHandlers {
+    numberAvailable=$($kubectl get daemonset -n ${HANDLER_NAMESPACE} $1 -o=jsonpath='{.status.numberAvailable}')
     echo ${numberAvailable:-0}
 }
 
@@ -41,13 +41,13 @@ function consistently {
     done
 }
 
-function isOk {
-    desiredNumberScheduled=$(getDesiredNumberScheduled $1)
-    numberAvailable=$(getNumberAvailable $1)
+function isHandlerOk {
+    desiredNumberScheduled=$(getDesiredScheduledHandlers $1)
+    numberAvailable=$(getAvailableHandlers $1)
     [ "$desiredNumberScheduled" == "$numberAvailable" ]
 }
 
-function deploy() {
+function deploy_operator() {
     # Cleanup previous deployment, if there is any
     make cluster-clean
 
@@ -59,8 +59,8 @@ function deploy() {
         registry=localhost:$(./cluster/cli.sh ports registry | tr -d '\r')
     fi
 
-    # Build new handler image from local sources and push it to the kubevirtci cluster
-    IMAGE_REGISTRY=${registry} make push-handler
+    # Build new handler and operator image from local sources and push it to the kubevirtci cluster
+    IMAGE_REGISTRY=${registry} make push
 
     # Also generate the manifests pointing to the local registry
     IMAGE_REGISTRY=registry:5000 make manifests
@@ -78,28 +78,36 @@ function deploy() {
     $kubectl apply -f $MANIFESTS_DIR/service_account.yaml
     $kubectl apply -f $MANIFESTS_DIR/role.yaml
     $kubectl apply -f $MANIFESTS_DIR/role_binding.yaml
-    $kubectl apply -f $MANIFESTS_DIR/nmstate.io_nodenetworkstates_crd.yaml
-    $kubectl apply -f $MANIFESTS_DIR/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
-    $kubectl apply -f $MANIFESTS_DIR/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
+    $kubectl apply -f deploy/crds/nmstate.io_nmstates_crd.yaml
     $kubectl apply -f $MANIFESTS_DIR/operator.yaml
 }
 
-function wait_ready() {
-    # Wait until the handler becomes consistently ready on all nodes
+function deploy_handler() {
+    $kubectl apply -f deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
+}
+
+function wait_ready_handler() {
+    # Wait until the operator becomes consistently ready on all nodes
     for ds in nmstate-handler nmstate-handler-worker; do
         # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! eventually isOk $ds; then
+        if ! eventually isHandlerOk $ds; then
             echo "Daemon set $ds haven't turned ready within the given timeout"
             exit 1
         fi
 
         # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! consistently isOk $ds; then
+        if ! consistently isHandlerOk $ds; then
             echo "Daemon set $ds is not consistently ready within the given timeout"
             exit 1
         fi
     done
 }
 
-deploy
-wait_ready
+function wait_ready_operator() {
+    $kubectl wait deployment -n ${OPERATOR_NAMESPACE} -l app=kubernetes-nmstate-operator --for condition=Available --timeout=200s
+}
+
+deploy_operator
+wait_ready_operator
+deploy_handler
+wait_ready_handler
