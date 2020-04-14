@@ -41,15 +41,20 @@ function consistently {
     done
 }
 
-function isHandlerOk {
-    desiredNumberScheduled=$(getDesiredScheduledHandlers $1)
-    numberAvailable=$(getAvailableHandlers $1)
+function isDaemonSetOk {
+    desiredNumberScheduled=$(getDesiredNumberScheduled $1)
+    numberAvailable=$(getNumberAvailable $1)
     [ "$desiredNumberScheduled" == "$numberAvailable" ]
 }
 
 function isExternal {
     [[ "${KUBEVIRT_PROVIDER}" == external ]]
 }
+
+function isDeploymentOk {
+    $kubectl wait deployment -n ${HANDLER_NAMESPACE} $1 --for condition=Available --timeout=200s
+}
+
 
 function isOpenshift {
     $kubectl get co openshift-apiserver
@@ -107,20 +112,31 @@ function deploy_handler() {
 }
 
 function wait_ready_handler() {
-    # Wait until the operator becomes consistently ready on all nodes
-    for ds in nmstate-handler nmstate-handler-worker; do
-        # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! eventually isHandlerOk $ds; then
-            echo "Daemon set $ds haven't turned ready within the given timeout"
-            exit 1
-        fi
+    handler=nmstate-handler
+    webhook=nmstate-webhook
+    # We have to re-check desired number, sometimes takes some time to be filled in
+    if ! eventually isDaemonSetOk $handler; then
+        echo "DaemonSet $handler haven't turned ready within the given timeout"
+        return 1
+    fi
 
-        # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! consistently isHandlerOk $ds; then
-            echo "Daemon set $ds is not consistently ready within the given timeout"
-            exit 1
-        fi
-    done
+    # Make sure good state is keep for some time
+    if ! consistently isDaemonSetOk $handler ; then
+        echo "DaemonSet $handler is not consistently ready within the given timeout"
+        return 1
+    fi
+
+    # We have to re-check desired number, sometimes takes some time to be filled in
+    if ! eventually isDeploymentOk $webhook; then
+        echo "Deployment $webhook haven't turned ready within the given timeout"
+        return 1
+    fi
+
+    # Make sure good state is keep for some time
+    if ! consistently isDeploymentOk $webhook; then
+        echo "Deployment $webhook is not consistently ready within the given timeout"
+        return 1
+    fi
 }
 
 function wait_ready_operator() {

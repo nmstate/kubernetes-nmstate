@@ -81,9 +81,11 @@ func main() {
 
 	printVersion()
 
-	if !environment.IsOperator() {
-		// Take exclusive instance lock, we need that to make sure that
-		// we don't have more than one working instance of k8s-nmstate
+	// Lock only for handler we can run old and new version of
+	// webhook without problems, policy status will be updated
+	// by multiple instances.
+	if environment.IsHandler() {
+
 		handlerLock, err := lockHandler()
 		if err != nil {
 			log.Error(err, "Failed to run lockHandler")
@@ -124,16 +126,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
-		log.Error(err, "Cannot initialize controller")
-		os.Exit(1)
-	}
-
-	// Setup webhook on master only
-	if _, runWebhookServer := os.LookupEnv("RUN_WEBHOOK_SERVER"); runWebhookServer {
+	// Runs only webhook controllers if it's specified
+	if environment.IsWebhook {
 		if err := webhook.AddToManager(mgr); err != nil {
 			log.Error(err, "Cannot initialize webhook")
+			os.Exit(1)
+		}
+	} else {
+		// Setup all Controllers
+		if err := controller.AddToManager(mgr); err != nil {
+			log.Error(err, "Cannot initialize controller")
 			os.Exit(1)
 		}
 	}

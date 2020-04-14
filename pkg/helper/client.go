@@ -38,7 +38,7 @@ var (
 )
 
 func init() {
-	if environment.IsOperator() {
+	if !environment.IsHandler() {
 		return
 	}
 	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
