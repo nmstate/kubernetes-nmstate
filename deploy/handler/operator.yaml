@@ -22,9 +22,6 @@ spec:
       nodeSelector:
         beta.kubernetes.io/arch: amd64
         node-role.kubernetes.io/master: ""
-      {{- range $key, $value := .HandlerNodeSelector }}
-      {{"  "}}{{- $key }}: {{  $value }}
-      {{- end}}
       tolerations:
         - key: node-role.kubernetes.io/master
           operator: Exists
@@ -75,6 +72,10 @@ spec:
       {{- range $key, $value := .HandlerNodeSelector }}
       {{"  "}}{{- $key }}: {{  $value }}
       {{- end}}
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       containers:
         - name: nmstate-handler
           args:
