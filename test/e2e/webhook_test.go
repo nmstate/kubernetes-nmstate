@@ -2,33 +2,13 @@ package e2e
 
 import (
 	"strconv"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	corev1 "k8s.io/api/core/v1"
-
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
 )
-
-func expectConditionsUnknownEventually(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) {
-	Eventually(func() bool {
-		numberOfConditionTypes := len(nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionTypes)
-		ExpectWithOffset(1, policy.Status.Conditions).To(HaveLen(numberOfConditionTypes))
-		for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionTypes {
-			condition := policy.Status.Conditions.Find(conditionType)
-			ExpectWithOffset(1, condition).ToNot(BeNil())
-			ExpectWithOffset(1, condition.Status).To(Equal(corev1.ConditionUnknown))
-			ExpectWithOffset(1, condition.Reason).To(Equal(nmstatev1alpha1.ConditionReason("")))
-			ExpectWithOffset(1, condition.Message).To(Equal(""))
-			ExpectWithOffset(1, condition.LastTransitionTime.Time).To(BeTemporally(">", time.Unix(0, 0)))
-			ExpectWithOffset(1, condition.LastHeartbeatTime.Time).To(BeTemporally(">", time.Unix(0, 0)))
-		}
-		return true
-	}, 180*time.Second, 1*time.Second).Should(BeTrue())
-}
 
 // We just check the labe at CREATE/UPDATE events since mutated data is already
 // check at unit test.
@@ -47,9 +27,8 @@ var _ = Describe("Mutating Admission Webhook", func() {
 			resetDesiredStateForNodes()
 		})
 
-		It("should have unknown state and an annotation with mutation timestamp", func() {
+		It("should have an annotation with mutation timestamp", func() {
 			policy := nodeNetworkConfigurationPolicy(TestPolicy)
-			expectConditionsUnknownEventually(policy)
 			Expect(policy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
 		})
 		Context("and we updated it", func() {
@@ -60,9 +39,8 @@ var _ = Describe("Mutating Admission Webhook", func() {
 				oldPolicy = nodeNetworkConfigurationPolicy(TestPolicy)
 				updateDesiredState(linuxBrAbsent(bridge1))
 			})
-			It("should have unknown state and update annotation with newer mutation timestamp", func() {
+			It("should have an annotation with newer mutation timestamp", func() {
 				newPolicy := nodeNetworkConfigurationPolicy(TestPolicy)
-				expectConditionsUnknownEventually(newPolicy)
 				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
 
 				oldAnnotation := oldPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
