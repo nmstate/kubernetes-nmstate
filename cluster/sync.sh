@@ -47,10 +47,19 @@ function isHandlerOk {
     [ "$desiredNumberScheduled" == "$numberAvailable" ]
 }
 
-function deploy_operator() {
-    # Cleanup previous deployment, if there is any
-    make cluster-clean
+function isExternal {
+    [[ "${KUBEVIRT_PROVIDER}" == external ]]
+}
 
+function isOpenshift {
+    $kubectl get co openshift-apiserver
+}
+
+function push() {
+    if isExternal; then
+        make manifests push
+        return 0
+    fi
     # Fetch registry port that can be used to upload images to the local kubevirtci cluster
     registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
     if [[ "${KUBEVIRT_PROVIDER}" =~ ^(okd|ocp)-.*$ ]]; then \
@@ -64,8 +73,15 @@ function deploy_operator() {
 
     # Also generate the manifests pointing to the local registry
     IMAGE_REGISTRY=registry:5000 make manifests
+}
 
-    if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$ ]]; then
+function deploy_operator() {
+    # Cleanup previous deployment, if there is any
+    make cluster-clean
+
+    push
+
+    if isOpenshift; then
         while ! $kubectl get securitycontextconstraints; do
             sleep 1
         done
