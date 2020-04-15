@@ -36,6 +36,8 @@ spec:
           command:
           - kubernetes-nmstate
           env:
+            - name: WATCH_NAMESPACE
+              value: ""
             - name: RUN_WEBHOOK_SERVER
               value: ""
             - name: OPERATOR_NAME

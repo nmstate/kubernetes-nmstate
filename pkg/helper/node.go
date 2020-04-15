@@ -1,8 +1,7 @@
 package helper
 
 import (
-	"os"
-
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -10,7 +9,7 @@ import (
 // the pods's node (reading the env var NODE_NAME)
 func EventIsForThisNode(meta v1.Object) bool {
 	createdNodeName := meta.GetName()
-	podNodeName := os.Getenv("NODE_NAME")
+	podNodeName := environment.NodeName()
 	// Only reconcile is it's for this pod
 	return createdNodeName == podNodeName
 }

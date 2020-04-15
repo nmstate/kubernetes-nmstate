@@ -85,7 +85,6 @@ func main() {
 	// webhook without problems, policy status will be updated
 	// by multiple instances.
 	if environment.IsHandler() {
-
 		handlerLock, err := lockHandler()
 		if err != nil {
 			log.Error(err, "Failed to run lockHandler")
@@ -127,7 +126,7 @@ func main() {
 	}
 
 	// Runs only webhook controllers if it's specified
-	if environment.IsWebhook {
+	if environment.IsWebhook() {
 		if err := webhook.AddToManager(mgr); err != nil {
 			log.Error(err, "Cannot initialize webhook")
 			os.Exit(1)
