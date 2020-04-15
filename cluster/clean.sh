@@ -26,7 +26,10 @@ function clean() {
         exit 0
     fi
 
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
+    # Delete the CR only if the CRD is installed otherwise it will fail
+    if $kubectl get crds nmstate.io.nmstate; then
+        $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
+    fi
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/operator.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
@@ -42,13 +45,19 @@ function clean() {
     fi
 }
 
+# Use labels so we don't care about prefixes
+function isRemoved {
+    output=$($kubectl get $1 -n $2 -l $3 2>&1)
+    [[ ! $output =~ ".*No resources found.*" ]]
+}
+
 function isHandlerRemoved {
-    $kubectl get daemonset -n ${HANDLER_NAMESPACE} nmstate-handler | grep "NotFound"
+    isRemoved daemonset ${HANDLER_NAMESPACE} app=kubernetes-nmstate
 }
 
 function wait_removed() {
     if ! eventually isHandlerRemoved; then
-        echo "Daemon set nmstate-handler hasn't been removed within the given timeout"
+        echo "Handler hasn't been removed within the given timeout"
         exit 1
     fi
 }
