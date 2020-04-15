@@ -7,6 +7,7 @@ metadata:
   namespace: {{ .HandlerNamespace }}
   labels:
     app: kubernetes-nmstate
+    component: kubernetes-nmstate-webhook
 spec:
   replicas: 2
   selector:
@@ -16,6 +17,7 @@ spec:
     metadata:
       labels:
         app: kubernetes-nmstate
+        component: kubernetes-nmstate-webhook
         name: {{template "handlerPrefix" .}}nmstate-webhook
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
@@ -54,6 +56,7 @@ metadata:
   namespace: {{ .HandlerNamespace }}
   labels:
     app: kubernetes-nmstate
+    component: kubernetes-nmstate-handler
 spec:
   selector:
     matchLabels:
@@ -62,6 +65,7 @@ spec:
     metadata:
       labels:
         app: kubernetes-nmstate
+        component: kubernetes-nmstate-handler
         name: {{template "handlerPrefix" .}}nmstate-handler
     spec:
       # Needed to force vlan filtering config with iproute commands until
