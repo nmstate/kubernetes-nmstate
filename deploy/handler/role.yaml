@@ -76,10 +76,9 @@ rules:
   - pods
   - nodes
   - namespaces
+  - secrets
   verbs:
-  - get
-  - list
-  - watch
+  - '*'
 - apiGroups:
   - ""
   resources:

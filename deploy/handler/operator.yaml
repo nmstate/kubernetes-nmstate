@@ -40,6 +40,10 @@ spec:
           env:
             - name: WATCH_NAMESPACE
               value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
             - name: RUN_WEBHOOK_SERVER
               value: ""
             - name: OPERATOR_NAME
@@ -48,6 +52,28 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+          ports:
+          - containerPort: 8443
+            name: webhook-server
+            protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: webhook-server
+              scheme: HTTPS
+              httpHeaders:
+              - name: Content-Type
+                value: application/json
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          volumeMounts:
+          - name: tls-key-pair
+            readOnly: true
+            mountPath: /etc/webhook/certs
+      volumes:
+        - name: tls-key-pair
+          secret:
+            secretName: {{template "handlerPrefix" .}}nmstate-webhook
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -205,3 +231,13 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-webhook
+  namespace: {{ .HandlerNamespace }}
+type: kubernetes.io/tls
+data:
+  tls.crt: YmFkIGNlcnRpZmljYXRlCg==
+  tls.key: YmFkIGtleQo=

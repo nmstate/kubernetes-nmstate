@@ -107,11 +107,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
+	mgrOptions := manager.Options{
 		Namespace:      namespace,
 		MapperProvider: restmapper.NewDynamicRESTMapper,
-	})
+	}
+
+	// We need to add LeaerElection for the webhook
+	// cert-manager
+	if environment.IsWebhook() {
+		mgrOptions.LeaderElection = true
+		mgrOptions.LeaderElectionID = "nmstate-webhook-lock"
+		mgrOptions.LeaderElectionNamespace = namespace
+	}
+
+	// Create a new Cmd to provide shared dependencies and start components
+	mgr, err := manager.New(cfg, mgrOptions)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
