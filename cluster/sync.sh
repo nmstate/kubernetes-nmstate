@@ -57,7 +57,11 @@ function isOpenshift {
 
 function push() {
     if isExternal; then
-        make manifests push
+        if [[ ! -v DEV_IMAGE_REGISTRY ]]; then
+            echo "Missing DEV_IMAGE_REGISTRY variable"
+            return 1
+        fi
+        make IMAGE_REGISTRY=$DEV_IMAGE_REGISTRY manifests push
         return 0
     fi
     # Fetch registry port that can be used to upload images to the local kubevirtci cluster
