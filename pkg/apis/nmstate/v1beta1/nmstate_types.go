@@ -23,12 +23,15 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // NMState is the Schema for the nmstates API
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nmstates,scope=Cluster
 // +kubebuilder:storageversion
 type NMState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NMStateSpec `json:"spec,omitempty"`
+
+	Status NMStateStatus `json:"status,omitempty"`
+	Spec   NMStateSpec   `json:"spec,omitempty"`
 }
 
 // NMStateSpec defines the desired state of NMstate
@@ -39,6 +42,14 @@ type NMStateSpec struct {
 	// as labels applied to the node.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+}
+
+// NMStateStatus is the status of the NMState CR
+// +k8s:openapi-gen=true
+type NMStateStatus struct {
+	// LastUpdated identifies when this status was last observed.
+	// +optional
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

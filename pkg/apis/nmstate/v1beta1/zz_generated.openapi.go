@@ -23,9 +23,33 @@ limitations under the License.
 package v1beta1
 
 import (
+	spec "github.com/go-openapi/spec"
 	common "k8s.io/kube-openapi/pkg/common"
 )
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
-	return map[string]common.OpenAPIDefinition{}
+	return map[string]common.OpenAPIDefinition{
+		"./pkg/apis/nmstate/v1beta1.NMStateStatus": schema_pkg_apis_nmstate_v1beta1_NMStateStatus(ref),
+	}
+}
+
+func schema_pkg_apis_nmstate_v1beta1_NMStateStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
+	return common.OpenAPIDefinition{
+		Schema: spec.Schema{
+			SchemaProps: spec.SchemaProps{
+				Description: "NMStateStatus is the status of the NMState CR",
+				Type:        []string{"object"},
+				Properties: map[string]spec.Schema{
+					"lastUpdated": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LastUpdated identifies when this status was last observed.",
+							Ref:         ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
+						},
+					},
+				},
+			},
+		},
+		Dependencies: []string{
+			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+	}
 }

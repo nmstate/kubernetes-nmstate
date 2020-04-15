@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"time"
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
@@ -11,6 +12,7 @@ import (
 	"github.com/openshift/cluster-network-operator/pkg/render"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,6 +118,12 @@ func (r *ReconcileNMState) Reconcile(request reconcile.Request) (reconcile.Resul
 	if err != nil {
 		errors.Wrap(err, "failed applying Handler")
 		return reconcile.Result{}, err
+	}
+
+	instance.Status.LastUpdated = &metav1.Time{Time: time.Now()}
+	err = r.client.Status().Update(context.Background(), instance)
+	if err != nil {
+		errors.Wrap(err, "Could not update status on request object")
 	}
 
 	reqLogger.Info("Reconcile complete.")

@@ -10,6 +10,8 @@ spec:
     plural: nmstates
     singular: nmstate
   scope: Cluster
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: NMState is the Schema for the nmstates API
@@ -38,6 +40,13 @@ spec:
                 have each of the indicated key-value pairs as labels applied to the
                 node.
               type: object
+        status:
+          description: NMStateStatus is the status of the NMState CR
+          properties:
+            lastUpdated:
+              description: LastUpdated identifies when this status was last observed.
+              format: date-time
+              type: string
           type: object
       type: object
   version: v1beta1
