@@ -51,13 +51,19 @@ metadata:
   name: {{template "handlerPrefix" .}}nmstate-handler
   namespace: {{ .HandlerNamespace }}
 rules:
-- apiGroups:
-  - certificates.k8s.io
+  # Istiod and bootstrap.
+- apiGroups: ["certificates.k8s.io"]
   resources:
-  - certificatesigningrequests
-  - certificatesigningrequests/approval
-  verbs:
-  - "*"
+    - "certificatesigningrequests"
+    - "certificatesigningrequests/approval"
+    - "certificatesigningrequests/status"
+  verbs: ["list", "update", "create", "get", "delete", "watch"]
+- apiGroups: ["certificates.k8s.io"]
+  resources:
+    - "signers"
+  resourceNames:
+  - "kubernetes.io/legacy-unknown"
+  verbs: ["approve"]
 - apiGroups:
   - admissionregistration.k8s.io
   resources:

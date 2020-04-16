@@ -553,7 +553,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/qinqon/kube-admission-webhook v0.5.0
+# github.com/qinqon/kube-admission-webhook v0.5.1-0.20200416101700-7d73b6923a91
 github.com/qinqon/kube-admission-webhook/pkg/webhook/server
 github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate
 # github.com/rogpeppe/go-internal v1.5.0
@@ -665,7 +665,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20191028164358-195ce5e7f934
+# golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
