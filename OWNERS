@@ -8,3 +8,7 @@ reviewers:
   - AlonaKaplan
   - eranco74
   - tsorya
+
+# Bugzilla info; 
+component: Installer
+subcomponent: OpenShift on Bare Metal IPI
