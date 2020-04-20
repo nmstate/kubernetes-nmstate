@@ -120,12 +120,22 @@ func main() {
 
 	ctx := context.TODO()
 
-	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
+	mgrOptions := manager.Options{
 		Namespace:          namespace,
 		MapperProvider:     restmapper.NewDynamicRESTMapper,
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
-	})
+	}
+
+	// If webhooksever is running here add a leader election to make
+	// cert-manager run only at one pod
+	if environment.IsWebhookServer() {
+		mgrOptions.LeaderElection = true
+		mgrOptions.LeaderElectionNamespace = namespace
+		mgrOptions.LeaderElectionID = environment.OperatorName() + "-lock"
+	}
+
+	// Create a new Cmd to provide shared dependencies and start components
+	mgr, err := manager.New(cfg, mgrOptions)
 	if err != nil {
 		log.Error(err, "")
 		os.Exit(1)
@@ -146,7 +156,7 @@ func main() {
 	}
 
 	// Setup webhook on master only
-	if _, runWebhookServer := os.LookupEnv("RUN_WEBHOOK_SERVER"); runWebhookServer {
+	if environment.IsWebhookServer() {
 		if err := webhook.AddToManager(mgr); err != nil {
 			log.Error(err, "Cannot initialize webhook")
 			os.Exit(1)

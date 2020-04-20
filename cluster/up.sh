@@ -5,10 +5,15 @@ set -ex
 source ./cluster/kubevirtci.sh
 kubevirtci::install
 
+kubectl=./cluster/kubectl.sh
+
 $(kubevirtci::path)/cluster-up/up.sh
 
+# Convert node02 into master
+$kubectl label node node02 node-role.kubernetes.io/master="" node-role.kubernetes.io/worker-
+
 if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
-		while ! $(KUBECTL) get securitycontextconstraints; do sleep 1; done; \
+    while ! $(KUBECTL) get securitycontextconstraints; do sleep 1; done; \
 fi
 
 if [[ "$KUBEVIRT_PROVIDER" =~ k8s- ]]; then

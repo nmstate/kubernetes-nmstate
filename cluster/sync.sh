@@ -27,22 +27,12 @@ function eventually {
     done
 }
 
-function consistently {
-    timeout=15
-    interval=5
-    cmd=$@
-    echo "Checking consistently $cmd"
-    while $cmd; do
-        sleep $interval
-        timeout=$(( $timeout - $interval ))
-        if [ $timeout -le 0 ]; then
-            return 0
-        fi
-    done
-}
-
 function isHandlerOk {
     desiredNumberScheduled=$(getDesiredScheduledHandlers $1)
+    if [ "$desiredNumberScheduled" == 0 ]; then
+        echo "There is no desired number of scheduled for $1"
+        return 1
+    fi
     numberAvailable=$(getAvailableHandlers $1)
     [ "$desiredNumberScheduled" == "$numberAvailable" ]
 }
@@ -107,17 +97,10 @@ function deploy_handler() {
 }
 
 function wait_ready_handler() {
-    # Wait until the operator becomes consistently ready on all nodes
     for ds in nmstate-handler nmstate-handler-worker; do
         # We have to re-check desired number, sometimes takes some time to be filled in
         if ! eventually isHandlerOk $ds; then
             echo "Daemon set $ds haven't turned ready within the given timeout"
-            exit 1
-        fi
-
-        # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! consistently isHandlerOk $ds; then
-            echo "Daemon set $ds is not consistently ready within the given timeout"
             exit 1
         fi
     done
@@ -126,8 +109,20 @@ function wait_ready_handler() {
 function wait_ready_operator() {
     $kubectl wait deployment -n ${OPERATOR_NAMESPACE} -l app=kubernetes-nmstate-operator --for condition=Available --timeout=200s
 }
+function check_namespace_events() {
+    local namespace=$1
+    if $(echo $kubectl get events -n $namespace  |grep -i "warning\|error"); then
+        echo "Something is not ok at events for namespace $namespace"
+        $kubectl get events -n $namespace
+        return 1
+    fi
+    return 0
+}
+
 
 deploy_operator
 wait_ready_operator
 deploy_handler
 wait_ready_handler
+check_namespace_events $OPERATOR_NAMESPACE
+check_namespace_events $HANDLER_NAMESPACE

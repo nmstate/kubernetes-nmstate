@@ -69,6 +69,9 @@ spec:
             mountPath: /run/dbus/system_bus_socket
           - name: nmstate-lock
             mountPath: /var/k8s_nmstate
+          - name: tls
+            readOnly: true
+            mountPath: /etc/webhook/certs
           securityContext:
             privileged: true
       volumes:
@@ -79,6 +82,9 @@ spec:
       - name: nmstate-lock
         hostPath:
           path: /var/k8s_nmstate
+      - name: tls
+        secret:
+          secretName: {{template "handlerPrefix" .}}nmstate-webhook
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -223,3 +229,15 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-webhook
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
+type: kubernetes.io/tls
+data:
+  tls.crt: YmFkIGNlcnRpZmljYXRlCg==
+  tls.key: YmFkIGtleQo=
