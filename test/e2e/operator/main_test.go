@@ -16,7 +16,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
 	apis "github.com/nmstate/kubernetes-nmstate/pkg/apis"
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
@@ -29,7 +29,7 @@ var (
 
 var _ = BeforeSuite(func() {
 	By("Adding custom resource scheme to framework")
-	nmstateList := &nmstatev1alpha1.NMStateList{}
+	nmstateList := &nmstatev1beta1.NMStateList{}
 
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, nmstateList)
 	Expect(err).ToNot(HaveOccurred())
@@ -54,7 +54,6 @@ func TestE2E(tapi *testing.T) {
 	knmstateReporter := knmstatereporter.New("test_logs/e2e/operator", framework.Global.Namespace, nodes)
 	junitReporter := ginkgoreporters.NewJUnitReporter("junit.functest.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Operator E2E Test Suite", []Reporter{junitReporter, knmstateReporter})
-
 }
 
 var _ = BeforeEach(func() {

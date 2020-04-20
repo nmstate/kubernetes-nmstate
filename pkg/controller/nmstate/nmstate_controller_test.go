@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
@@ -27,7 +27,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler          ReconcileNMState
 		existingNMStateName = "nmstate"
 		dsNodeSelector      = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
-		nmstate             = nmstatev1alpha1.NMState{
+		nmstate             = nmstatev1beta1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNMStateName,
 				UID:  "12345",
@@ -40,8 +40,8 @@ var _ = Describe("NMState controller reconcile", func() {
 	)
 	BeforeEach(func() {
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion,
-			&nmstatev1alpha1.NMState{},
+		s.AddKnownTypes(nmstatev1beta1.SchemeGroupVersion,
+			&nmstatev1beta1.NMState{},
 		)
 		objs := []runtime.Object{&nmstate}
 		// Create a fake client to mock API calls.
@@ -105,8 +105,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion,
-				&nmstatev1alpha1.NMState{},
+			s.AddKnownTypes(nmstatev1beta1.SchemeGroupVersion,
+				&nmstatev1beta1.NMState{},
 			)
 			// set NodeSelector field in operator Spec
 			nmstate.Spec.NodeSelector = dsNodeSelector

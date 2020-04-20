@@ -28,7 +28,7 @@ function clean() {
 
     # Delete the CR only if the CRD is installed otherwise it will fail
     if $kubectl get crds nmstates.nmstate.io; then
-        $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
+        $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_v1beta1_nmstate_cr.yaml
     fi
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/operator.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml

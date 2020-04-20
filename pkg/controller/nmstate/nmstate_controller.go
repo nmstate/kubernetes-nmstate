@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
@@ -47,7 +47,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource NMState
-	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NMState{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(&source.Kind{Type: &nmstatev1beta1.NMState{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func (r *ReconcileNMState) Reconcile(request reconcile.Request) (reconcile.Resul
 	}
 
 	// Fetch the NMState instance
-	instance := &nmstatev1alpha1.NMState{}
+	instance := &nmstatev1beta1.NMState{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -122,19 +122,19 @@ func (r *ReconcileNMState) Reconcile(request reconcile.Request) (reconcile.Resul
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNMState) applyCRDs(instance *nmstatev1alpha1.NMState) error {
+func (r *ReconcileNMState) applyCRDs(instance *nmstatev1beta1.NMState) error {
 	data := render.MakeRenderData()
 	return r.renderAndApply(instance, data, "crds", false)
 }
 
-func (r *ReconcileNMState) applyNamespace(instance *nmstatev1alpha1.NMState) error {
+func (r *ReconcileNMState) applyNamespace(instance *nmstatev1beta1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "namespace", false)
 }
 
-func (r *ReconcileNMState) applyRBAC(instance *nmstatev1alpha1.NMState) error {
+func (r *ReconcileNMState) applyRBAC(instance *nmstatev1beta1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
@@ -143,7 +143,7 @@ func (r *ReconcileNMState) applyRBAC(instance *nmstatev1alpha1.NMState) error {
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
-func (r *ReconcileNMState) applyHandler(instance *nmstatev1alpha1.NMState) error {
+func (r *ReconcileNMState) applyHandler(instance *nmstatev1beta1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
@@ -153,7 +153,7 @@ func (r *ReconcileNMState) applyHandler(instance *nmstatev1alpha1.NMState) error
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
-func (r *ReconcileNMState) renderAndApply(instance *nmstatev1alpha1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
+func (r *ReconcileNMState) renderAndApply(instance *nmstatev1beta1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
 	var err error
 	objs := []*uns.Unstructured{}
 

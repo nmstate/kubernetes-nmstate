@@ -103,7 +103,7 @@ function deploy_operator() {
 }
 
 function deploy_handler() {
-    $kubectl apply -f deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
+    $kubectl apply -f deploy/crds/nmstate.io_v1beta1_nmstate_cr.yaml
 }
 
 function wait_ready_handler() {
