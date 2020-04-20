@@ -26,6 +26,24 @@ See [local virtualized cluster guide](docs/deployment-local-cluster.md) to learn
 how to deploy a cluster that can be used to try kubernetes-nmstate, run e2e
 tests and perform debugging.
 
+## External ocp cluster using custom container registry and repo
+
+Set the current env vars `KUBEVIRT_PROVIDER=external` and `KUBECONFIG` pointing
+to the k8s cluster config.
+
+After that you can follow "Local Kubernetes cluster" but using
+`DEV_IMAGE_REGISTRY` and `IMAGE_REPO` to specify where the dev
+containers are being pushed
+
+For example quay.io/foo/ is being used as the dev place for containers and
+want to deploy some changes at external cluster, following steps would be
+enough:
+
+```bash
+doker login -u foo quay.io
+make DEV_IMAGE_REGISTRY=quay.io IMAGE_REPO=foo cluster-sync
+```
+
 ## Building
 
 ```shell
