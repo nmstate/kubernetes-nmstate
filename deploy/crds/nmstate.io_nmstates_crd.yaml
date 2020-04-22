@@ -26,6 +26,19 @@ spec:
           type: string
         metadata:
           type: object
+        spec:
+          description: NMStateSpec defines the desired state of NMstate
+          properties:
+            nodeSelector:
+              additionalProperties:
+                type: string
+              description: NodeSelector is an optional selector that will be added
+                to handler DaemonSet manifest for both workers and masters (https://github.com/nmstate/kubernetes-nmstate/blob/master/deploy/handler/operator.yaml).
+                If NodeSelector is specified, the handler will run only on nodes that
+                have each of the indicated key-value pairs as labels applied to the
+                node.
+              type: object
+          type: object
       type: object
   version: v1alpha1
   versions:

@@ -149,6 +149,7 @@ func (r *ReconcileNMState) applyHandler(instance *nmstatev1alpha1.NMState) error
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+	data.Data["HandlerNodeSelector"] = instance.Spec.NodeSelector
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
@@ -159,6 +160,11 @@ func (r *ReconcileNMState) renderAndApply(instance *nmstatev1alpha1.NMState, dat
 	objs, err = render.RenderDir(filepath.Join(names.ManifestDir, "kubernetes-nmstate", sourceDirectory), &data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to render kubernetes-nmstate %s", sourceDirectory)
+	}
+
+	// If no file found in directory - return error
+	if len(objs) == 0 {
+		return errors.New("No manifests rendered")
 	}
 
 	for _, obj := range objs {
