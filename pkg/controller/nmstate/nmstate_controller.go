@@ -74,13 +74,19 @@ func (r *ReconcileNMstate) Reconcile(request reconcile.Request) (reconcile.Resul
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
 	reqLogger.Info("Reconciling NMstate")
 
+	// We won't create more than one kubernetes-nmstate handler
+	if request.Name != names.NMstateResourceName {
+		reqLogger.Info("Ignoring NMstate.nmstate.io without default name")
+		return reconcile.Result{}, nil
+	}
+
 	// Fetch the NMstate instance
 	instance := &nmstatev1alpha1.NMstate{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cle  anup logic use finalizers.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
