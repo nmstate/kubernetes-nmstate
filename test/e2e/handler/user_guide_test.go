@@ -1,6 +1,6 @@
 // This module is meant to cover all the demos as we show them. To make it as close
 // to the reality as possible, we use only kubectl direcly
-package e2e
+package handler
 
 import (
 	. "github.com/onsi/ginkgo"
