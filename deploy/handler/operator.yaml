@@ -69,7 +69,7 @@ spec:
             mountPath: /run/dbus/system_bus_socket
           - name: nmstate-lock
             mountPath: /var/k8s_nmstate
-          - name: tls
+          - name: tls-key-pair
             readOnly: true
             mountPath: /etc/webhook/certs
           securityContext:
@@ -82,7 +82,7 @@ spec:
       - name: nmstate-lock
         hostPath:
           path: /var/k8s_nmstate
-      - name: tls
+      - name: tls-key-pair
         secret:
           secretName: {{template "handlerPrefix" .}}nmstate-webhook
 ---

@@ -109,6 +109,7 @@ function wait_ready_handler() {
 function wait_ready_operator() {
     $kubectl wait deployment -n ${OPERATOR_NAMESPACE} -l app=kubernetes-nmstate-operator --for condition=Available --timeout=200s
 }
+
 function check_namespace_events() {
     local namespace=$1
     if $(echo $kubectl get events -n $namespace  |grep -i "warning\|error"); then

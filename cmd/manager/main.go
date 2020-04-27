@@ -126,7 +126,7 @@ func main() {
 		MetricsBindAddress: fmt.Sprintf("%s:%d", metricsHost, metricsPort),
 	}
 
-	// If webhooksever is running here add a leader election to make
+	// If webhooksever is running, add a leader election to make
 	// cert-manager run only at one pod
 	if environment.IsWebhookServer() {
 		mgrOptions.LeaderElection = true
