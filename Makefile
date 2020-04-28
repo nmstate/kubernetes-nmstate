@@ -131,14 +131,15 @@ push: push-handler push-operator
 test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
-test/e2e: $(OPERATOR_SDK)
-	mkdir -p test_logs/e2e
-	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e \
+test-e2e-handler: $(OPERATOR_SDK)
+	mkdir -p test_logs/e2e/handler
+	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e/handler \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace $(HANDLER_NAMESPACE) \
 		--no-setup \
 		--go-test-flags "$(e2e_test_args)"
 
+test/e2e: test-e2e-handler
 
 cluster-up:
 	./cluster/up.sh
