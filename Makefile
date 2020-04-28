@@ -132,14 +132,12 @@ test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
 test-e2e-handler: $(OPERATOR_SDK)
-	mkdir -p test_logs/e2e/handler
-	unset GOFLAGS && $(OPERATOR_SDK) test local ./test/e2e/handler \
-		--kubeconfig $(KUBECONFIG) \
-		--namespace $(HANDLER_NAMESPACE) \
-		--no-setup \
-		--go-test-flags "$(e2e_test_args)"
+	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" ./hack/run-e2e-test.sh handler
 
-test/e2e: test-e2e-handler
+test-e2e-operator: $(OPERATOR_SDK)
+	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" ./hack/run-e2e-test.sh operator
+
+test-e2e: test-e2e-operator test-e2e-handler
 
 cluster-up:
 	./cluster/up.sh
