@@ -27,7 +27,7 @@ func tlsSecret(service types.NamespacedName, keyPair *triple.KeyPair) corev1.Sec
 	return secret
 }
 
-func (m *Manager) createOrUpdateTLSSecret(service types.NamespacedName, keyPair *triple.KeyPair) error {
+func (m *Manager) applyTLSSecret(service types.NamespacedName, keyPair *triple.KeyPair) error {
 	tlsSecret := tlsSecret(service, keyPair)
 
 	err := m.get(service, &corev1.Secret{})

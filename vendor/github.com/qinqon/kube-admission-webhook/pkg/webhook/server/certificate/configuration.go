@@ -25,9 +25,12 @@ func validatingWebhookConfig(webhook runtime.Object) *admissionregistrationv1bet
 	return webhook.(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
 }
 
-// clientConfigList returns the the list of webhooks's mutation or validationg clientConfig, clientConfig is the information at the webhook config pointing to the service and path [1].
+// clientConfigList returns the the list of webhooks's mutation or validating WebhookClientConfig
 //
-//  [1] https://godoc.org/k8s.io/kubernetes/pkg/apis/admissionregistration#WebhookClientConfig
+// The WebhookClientConfig type is share between mutating or validating so we can have a common function
+// that uses the interface runtime.Object and do some type checking to access it [1].
+//
+// [1] https://godoc.org/k8s.io/kubernetes/pkg/apis/admissionregistration#WebhookClientConfig
 func (m *Manager) clientConfigList(webhook runtime.Object) []*admissionregistrationv1beta1.WebhookClientConfig {
 	clientConfigList := []*admissionregistrationv1beta1.WebhookClientConfig{}
 	if m.webhookType == MutatingWebhook {
@@ -46,7 +49,7 @@ func (m *Manager) clientConfigList(webhook runtime.Object) []*admissionregistrat
 	return clientConfigList
 }
 
-func (m *Manager) webhookConfiguration() (runtime.Object, error) {
+func (m *Manager) readyWebhookConfiguration() (runtime.Object, error) {
 	var webhook runtime.Object
 	if m.webhookType == MutatingWebhook {
 		webhook = &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
@@ -76,10 +79,10 @@ func (m *Manager) webhookConfiguration() (runtime.Object, error) {
 
 func (m *Manager) updateWebhookCABundle() error {
 	m.log.Info("Updating CA bundle for webhook")
-	ca := triple.EncodeCertPEM(m.caKeyPair.Cert)
+	ca := triple.EncodeCertPEM(m.caCert)
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 
-		webhook, err := m.webhookConfiguration()
+		webhook, err := m.readyWebhookConfiguration()
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s webhook configuration %s", m.webhookType, m.webhookName)
 		}
@@ -99,4 +102,12 @@ func (m *Manager) updateWebhookCABundle() error {
 		return errors.Wrap(err, "failed to update validating webhook CABundle")
 	}
 	return nil
+}
+
+func (m *Manager) CABundle() ([]byte, error) {
+	webhook, err := m.readyWebhookConfiguration()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get %s webhook configuration %s", m.webhookType, m.webhookName)
+	}
+	return m.clientConfigList(webhook)[0].CABundle, nil
 }

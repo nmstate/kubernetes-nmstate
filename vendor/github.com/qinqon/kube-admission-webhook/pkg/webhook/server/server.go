@@ -1,6 +1,7 @@
 package server
 
 import (
+	"crypto/x509"
 	"io/ioutil"
 	"os"
 	"path"
@@ -13,6 +14,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
@@ -42,6 +44,7 @@ func New(client client.Client, webhookName string, webhookType certificate.Webho
 		log:         logf.Log.WithName("webhook/server"),
 	}
 	s.UpdateOpts(serverOpts...)
+	s.webhookServer.Register("/readyz", healthz.CheckHandler{Checker: healthz.Ping})
 	return s
 }
 
@@ -104,14 +107,34 @@ func (s *Server) checkTLS() error {
 		return errors.Wrap(err, "failed parsing TLS key")
 	}
 
-	cert, err := ioutil.ReadFile(path.Join(s.webhookServer.CertDir, corev1.TLSCertKey))
+	certPEM, err := ioutil.ReadFile(path.Join(s.webhookServer.CertDir, corev1.TLSCertKey))
 	if err != nil {
 		return errors.Wrap(err, "failed reading for TLS cert")
 	}
 
-	_, err = triple.ParseCertsPEM(cert)
+	certs, err := triple.ParseCertsPEM(certPEM)
 	if err != nil {
 		return errors.Wrap(err, "failed parsing TLS cert")
+	}
+
+	caPEM, err := s.certManager.CABundle()
+	if err != nil {
+		return errors.Wrap(err, "failed trieve CA cert")
+	}
+
+	cas := x509.NewCertPool()
+	ok := cas.AppendCertsFromPEM([]byte(caPEM))
+	if !ok {
+		return errors.New("failed to parse CA certificate")
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:   cas,
+		DNSName: certs[0].DNSNames[0],
+	}
+
+	if _, err := certs[0].Verify(opts); err != nil {
+		return errors.Wrap(err, "failed to verify certificate")
 	}
 
 	return nil

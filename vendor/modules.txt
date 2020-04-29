@@ -553,7 +553,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/qinqon/kube-admission-webhook v0.5.1-0.20200424092234-b7714b914628
+# github.com/qinqon/kube-admission-webhook v0.5.1-0.20200429125006-4139a1d02789
 github.com/qinqon/kube-admission-webhook/pkg/controller
 github.com/qinqon/kube-admission-webhook/pkg/webhook/server
 github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate

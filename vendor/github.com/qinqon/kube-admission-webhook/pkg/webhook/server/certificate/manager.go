@@ -1,6 +1,7 @@
 package certificate
 
 import (
+	"crypto/x509"
 	"fmt"
 	"time"
 
@@ -17,14 +18,36 @@ import (
 	"github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate/triple"
 )
 
+// Manager do the CA and service certificate/key generation and expiration
+// handling.
+// It will generate one CA for the webhook configuration and a
+// secret per Service referenced on it. One unique instance has to run at
+// at cluster to monitor expiration time and do rotations.
 type Manager struct {
-	client        client.Client
-	webhookName   string
-	webhookType   WebhookType
-	caKeyPair     *triple.KeyPair
-	now           func() time.Time
+	// client contains the controller-runtime client from the manager.
+	client client.Client
+
+	// webhookName The Mutating or Validating Webhook configuration name
+	webhookName string
+
+	// webhookType The Mutating or Validating Webhook configuration type
+	webhookType WebhookType
+
+	// caKeyPair contains the generated CA certificate and key
+	caCert *x509.Certificate
+
+	// now is an artifact to do some unit testing without waiting for
+	// expiration time.
+	now func() time.Time
+
+	// certsDuration configurated duration for CA and service certificates
+	// there is no distintion between the two to simplify manager logic
+	// and monitor only CA certificate.
 	certsDuration time.Duration
-	log           logr.Logger
+
+	// log initialized log that containes the webhook configuration name and
+	// namespace so it's easy to debug.
+	log logr.Logger
 }
 
 type WebhookType string
@@ -71,8 +94,8 @@ func NewManager(
 	return m
 }
 
-// Start the cert manager until stopCh is close, the cert manager is in charge
-// of rotate certificate if needed.
+// Start the cert manager until stopCh is closed, the cert manager is in charge
+// rotation of certificates if needed.
 //
 // It  implemenets Runnable [1] so manager can add this to a
 // controller runtime manager
@@ -81,11 +104,28 @@ func NewManager(
 func (m *Manager) Start(stopCh <-chan struct{}) error {
 	m.log.Info("Starting cert manager")
 
+	m.loadCACertFromCABundle()
+
 	wait.Until(func() {
 		m.waitForDeadlineAndRotate()
 	}, time.Second, stopCh)
 
 	return nil
+}
+
+// In case the manager is restarted we have to load the current CA instead
+// of generating new one
+func (m *Manager) loadCACertFromCABundle() {
+	caBundle, err := m.CABundle()
+	if err != nil || len(caBundle) == 0 {
+		return
+	}
+
+	cas, err := triple.ParseCertsPEM(caBundle)
+	if err != nil || len(cas) == 0 {
+		return
+	}
+	m.caCert = cas[0]
 }
 
 func (m *Manager) waitForDeadlineAndRotate() {
@@ -106,7 +146,7 @@ func (m *Manager) waitForDeadlineAndRotate() {
 	// Retry rotate if it fails no timeout is added here since this is
 	// the only thing that cert manager has to do, server will be function
 	// until it reached expiricy in case of error somewhere.
-	err := wait.PollImmediateInfinite(32*time.Second, m.rotateCondition)
+	err := wait.PollImmediateInfinite(32*time.Second, m.rotateWaitCondition)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("Unable to rotate certs: %v", err))
 	}
@@ -120,7 +160,10 @@ func (m *Manager) NeedLeaderElection() bool {
 	return true
 }
 
-func (m *Manager) rotateCondition() (bool, error) {
+// rotateWaitCondition wraps the rotate function into a `wait` Condition
+// it will transform the error into a `not ready` flag and log and
+// store error with `utilruntime.HandleError`.
+func (m *Manager) rotateWaitCondition() (bool, error) {
 	err := m.rotate()
 	if err != nil {
 		utilruntime.HandleError(err)
@@ -138,14 +181,14 @@ func (m *Manager) rotate() error {
 		return errors.Wrap(err, "failed generating CA cert/key")
 	}
 
-	m.caKeyPair = caKeyPair
+	m.caCert = caKeyPair.Cert
 
 	err = m.updateWebhookCABundle()
 	if err != nil {
 		return errors.Wrap(err, "failed to update CA bundle at webhook")
 	}
 
-	webhookConf, err := m.webhookConfiguration()
+	webhookConf, err := m.readyWebhookConfiguration()
 	if err != nil {
 		return errors.Wrap(err, "failed to reading configuration")
 	}
@@ -165,7 +208,7 @@ func (m *Manager) rotate() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed creating server key/cert for service %+v", service)
 		}
-		m.createOrUpdateTLSSecret(service, keyPair)
+		m.applyTLSSecret(service, keyPair)
 	}
 
 	return nil
@@ -175,13 +218,13 @@ func (m *Manager) rotate() error {
 // current certificate should be rotated, 80%+/-10% of the expiration of the
 // certificate.
 func (m *Manager) nextRotationDeadline() time.Time {
-	if m.caKeyPair == nil {
+	if m.caCert == nil {
 		m.log.Info("Certificates not created, forcing roration")
 		return m.now()
 	}
-	notAfter := m.caKeyPair.Cert.NotAfter
-	totalDuration := float64(notAfter.Sub(m.caKeyPair.Cert.NotBefore))
-	deadline := m.caKeyPair.Cert.NotBefore.Add(jitteryDuration(totalDuration))
+	notAfter := m.caCert.NotAfter
+	totalDuration := float64(notAfter.Sub(m.caCert.NotBefore))
+	deadline := m.caCert.NotBefore.Add(jitteryDuration(totalDuration))
 
 	m.log.Info(fmt.Sprintf("Certificate expiration is %v, rotation deadline is %v", notAfter, deadline))
 	return deadline
