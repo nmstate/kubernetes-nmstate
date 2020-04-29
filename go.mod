@@ -20,11 +20,8 @@ require (
 	github.com/qinqon/kube-admission-webhook v0.5.0
 	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.4.0
-	golang.org/x/net v0.0.0-20191112182307-2180aed22343 // indirect
 	golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea // indirect
-	gopkg.in/yaml.v2 v2.2.5 // indirect
 	k8s.io/api v0.0.0
-	k8s.io/apiextensions-apiserver v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/klog v1.0.0
