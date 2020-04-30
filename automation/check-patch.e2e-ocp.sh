@@ -27,7 +27,7 @@ main() {
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
-    make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="-ginkgo.noColor " test-e2e
+    make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="-ginkgo.noColor " test-e2e-handler
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"
