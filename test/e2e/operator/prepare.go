@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
-	"github.com/operator-framework/operator-sdk/pkg/test/e2eutil"
 )
 
 func prepare(t *testing.T) (*framework.TestCtx, string) {
@@ -20,10 +19,8 @@ func prepare(t *testing.T) (*framework.TestCtx, string) {
 	Expect(err).ToNot(HaveOccurred(), "cluster resources not initialized")
 
 	// get namespace
-	By("Check operator is up and running")
+	By("Get namespace")
 	namespace, err := ctx.GetNamespace()
 	Expect(err).ToNot(HaveOccurred())
-	err = e2eutil.WaitForDeployment(t, framework.Global.KubeClient, namespace, "nmstate-operator", 1, time.Second*5, time.Second*90)
-	Expect(err).ToNot(HaveOccurred(), "operator is not ready")
 	return ctx, namespace
 }
