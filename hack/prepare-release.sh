@@ -34,7 +34,7 @@ cat $release_notes >> version/description
 cat << EOF >> version/description
 
 \`\`\`
-docker pull HANDLER_IMAGE
+docker pull OPERATOR_IMAGE
 \`\`\`
 EOF
 

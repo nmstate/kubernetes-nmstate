@@ -4,12 +4,15 @@ go 1.13.7
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/aktau/github-release v0.7.2
+	github.com/aktau/github-release v0.8.1
 	github.com/evanphx/json-patch v4.5.0+incompatible
+	github.com/github-release/github-release v0.8.1 // indirect
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/gobwas/glob v0.2.3
+	github.com/inconshreveable/log15 v0.0.0-20200109203555-b30bc20e4fd1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/kevinburke/rest v0.0.0-20200429221318-0d2892b400f8 // indirect
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
