@@ -153,7 +153,7 @@ cluster-sync:
 
 $(description): version/description
 	mkdir -p $(dir $@)
-	sed "s#HANDLER_IMAGE#$(HANDLER_IMAGE)#" \
+	sed "s#OPERATOR_IMAGE#$(OPERATOR_IMAGE)#" \
 		version/description > $@
 
 prepare-patch: $(RELEASE_NOTES)
@@ -167,13 +167,16 @@ prepare-major: $(RELEASE_NOTES)
 # dependency and change the SUFFIX with the correct version so no need for
 # calling make on make is needed.
 # [1] https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
-release: HANDLER_IMAGE_SUFFIX = :$(shell hack/version.sh)
-release: manifests push-handler $(description) $(GITHUB_RELEASE) version/version.go
+release: OPERATOR_IMAGE_SUFFIX =: $(shell hack/version.sh)
+release: HANDLER_IMAGE_SUFFIX =: $(shell hack/version.sh)
+release: manifests push-handler push-operator $(description) $(GITHUB_RELEASE) version/version.go
 	DESCRIPTION=$(description) \
 	GITHUB_RELEASE=$(GITHUB_RELEASE) \
 	TAG=$(shell hack/version.sh) \
 				   hack/release.sh \
-						$(shell find $(MANIFESTS_DIR) -type f)
+						$(shell find $(MANIFESTS_DIR) -type f) \
+						deploy/crds/nmstate.io_nmstates_crd.yaml \
+						deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
 
 vendor: $(GO)
 	$(GO) mod tidy
