@@ -5,14 +5,14 @@ metadata:
 spec:
   group: nmstate.io
   names:
-    kind: NMstate
-    listKind: NMstateList
+    kind: NMState
+    listKind: NMStateList
     plural: nmstates
     singular: nmstate
   scope: Cluster
   validation:
     openAPIV3Schema:
-      description: NMstate is the Schema for the nmstates API
+      description: NMState is the Schema for the nmstates API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation

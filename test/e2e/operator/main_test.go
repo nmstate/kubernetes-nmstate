@@ -29,7 +29,7 @@ var (
 
 var _ = BeforeSuite(func() {
 	By("Adding custom resource scheme to framework")
-	nmstateList := &nmstatev1alpha1.NMstateList{}
+	nmstateList := &nmstatev1alpha1.NMStateList{}
 
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, nmstateList)
 	Expect(err).ToNot(HaveOccurred())

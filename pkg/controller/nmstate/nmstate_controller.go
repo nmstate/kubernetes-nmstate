@@ -27,7 +27,7 @@ var (
 	log = logf.Log.WithName("controller_nmstate")
 )
 
-// Add creates a new NMstate Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new NMState Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -35,7 +35,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileNMstate{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileNMState{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -46,8 +46,8 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource NMstate
-	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NMstate{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource NMState
+	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NMState{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
@@ -55,33 +55,33 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-// blank assignment to verify that ReconcileNMstate implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcileNMstate{}
+// blank assignment to verify that ReconcileNMState implements reconcile.Reconciler
+var _ reconcile.Reconciler = &ReconcileNMState{}
 
-// ReconcileNMstate reconciles a NMstate object
-type ReconcileNMstate struct {
+// ReconcileNMState reconciles a NMState object
+type ReconcileNMState struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
 }
 
-// Reconcile reads that state of the cluster for a NMstate object and makes changes based on the state read
+// Reconcile reads that state of the cluster for a NMState object and makes changes based on the state read
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileNMstate) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileNMState) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling NMstate")
+	reqLogger.Info("Reconciling NMState")
 
 	// We won't create more than one kubernetes-nmstate handler
-	if request.Name != names.NMstateResourceName {
-		reqLogger.Info("Ignoring NMstate.nmstate.io without default name")
+	if request.Name != names.NMStateResourceName {
+		reqLogger.Info("Ignoring NMState.nmstate.io without default name")
 		return reconcile.Result{}, nil
 	}
 
-	// Fetch the NMstate instance
-	instance := &nmstatev1alpha1.NMstate{}
+	// Fetch the NMState instance
+	instance := &nmstatev1alpha1.NMState{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -122,19 +122,19 @@ func (r *ReconcileNMstate) Reconcile(request reconcile.Request) (reconcile.Resul
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileNMstate) applyCRDs(instance *nmstatev1alpha1.NMstate) error {
+func (r *ReconcileNMState) applyCRDs(instance *nmstatev1alpha1.NMState) error {
 	data := render.MakeRenderData()
 	return r.renderAndApply(instance, data, "crds", false)
 }
 
-func (r *ReconcileNMstate) applyNamespace(instance *nmstatev1alpha1.NMstate) error {
+func (r *ReconcileNMState) applyNamespace(instance *nmstatev1alpha1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "namespace", false)
 }
 
-func (r *ReconcileNMstate) applyRBAC(instance *nmstatev1alpha1.NMstate) error {
+func (r *ReconcileNMState) applyRBAC(instance *nmstatev1alpha1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
@@ -143,7 +143,7 @@ func (r *ReconcileNMstate) applyRBAC(instance *nmstatev1alpha1.NMstate) error {
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
-func (r *ReconcileNMstate) applyHandler(instance *nmstatev1alpha1.NMstate) error {
+func (r *ReconcileNMState) applyHandler(instance *nmstatev1alpha1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
@@ -152,7 +152,7 @@ func (r *ReconcileNMstate) applyHandler(instance *nmstatev1alpha1.NMstate) error
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
-func (r *ReconcileNMstate) renderAndApply(instance *nmstatev1alpha1.NMstate, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
+func (r *ReconcileNMState) renderAndApply(instance *nmstatev1alpha1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
 	var err error
 	objs := []*uns.Unstructured{}
 

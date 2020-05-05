@@ -12,5 +12,5 @@ import (
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
 	junitReporter := reporters.NewJUnitReporter("junit.controller-nmstate-nmstate_suite_test.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "NMstate Controller Test Suite", []Reporter{junitReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "NMState Controller Test Suite", []Reporter{junitReporter})
 }
