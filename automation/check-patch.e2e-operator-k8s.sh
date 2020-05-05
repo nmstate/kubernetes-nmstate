@@ -21,13 +21,12 @@ main() {
     cd ${TMP_PROJECT_PATH}
 
     # Let's fail fast if it's not compiling
-    make handler
+    make operator
 
     make cluster-down
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
-    make cluster-sync
-    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-ginkgo.noColor " test-e2e-handler
+    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-ginkgo.noColor " test-e2e-operator
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"

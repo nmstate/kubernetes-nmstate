@@ -68,9 +68,9 @@ func TestE2E(tapi *testing.T) {
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
-	knmstateReporter := knmstatereporter.New("test_logs/e2e", framework.Global.Namespace, nodes)
+	knmstateReporter := knmstatereporter.New("test_logs/e2e/handler", framework.Global.Namespace, nodes)
 	junitReporter := ginkgoreporters.NewJUnitReporter("junit.functest.xml")
-	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", []Reporter{junitReporter, knmstateReporter})
+	RunSpecsWithDefaultAndCustomReporters(t, "Handler E2E Test Suite", []Reporter{junitReporter, knmstateReporter})
 
 }
 
