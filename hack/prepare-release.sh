@@ -33,8 +33,29 @@ cat $release_notes >> version/description
 
 cat << EOF >> version/description
 
+# Installation
+
+First, install kubernetes-nmstate operator:
+
 \`\`\`
-docker pull OPERATOR_IMAGE
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/$new_version/nmstate.io_nmstates_crd.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/$new_version/namespace.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/$new_version/service_account.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/$new_version/role.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/$new_version/role_binding.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/$new_version/operator.yaml
+\`\`\`
+
+Once that's done, create an \`NMState\` CR, triggering deployment of
+kubernetes-nmstate handler:
+
+\`\`\`
+cat <<EOF | kubectl create -f -
+apiVersion: nmstate.io/v1alpha1
+kind: NMState
+metadata:
+  name: nmstate
+EOF
 \`\`\`
 EOF
 

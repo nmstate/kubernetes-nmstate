@@ -153,8 +153,7 @@ cluster-sync:
 
 $(description): version/description
 	mkdir -p $(dir $@)
-	sed "s#OPERATOR_IMAGE#$(OPERATOR_IMAGE)#" \
-		version/description > $@
+	cp version/description > $@
 
 prepare-patch: $(RELEASE_NOTES)
 	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh patch
