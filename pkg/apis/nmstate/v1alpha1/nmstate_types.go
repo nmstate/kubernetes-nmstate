@@ -6,22 +6,22 @@ import (
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// NMstate is the Schema for the nmstates API
+// NMState is the Schema for the nmstates API
 // +kubebuilder:resource:path=nmstates,scope=Cluster
-type NMstate struct {
+type NMState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// NMstateList contains a list of NMstate
-type NMstateList struct {
+// NMStateList contains a list of NMState
+type NMStateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NMstate `json:"items"`
+	Items           []NMState `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NMstate{}, &NMstateList{})
+	SchemeBuilder.Register(&NMState{}, &NMStateList{})
 }

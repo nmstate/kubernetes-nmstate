@@ -16,14 +16,14 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
-var _ = Describe("NMstate controller reconcile", func() {
+var _ = Describe("NMState controller reconcile", func() {
 	var (
 		cl                  client.Client
-		reconciler          ReconcileNMstate
-		existingNMstateName = "nmstate"
-		nmstate             = nmstatev1alpha1.NMstate{
+		reconciler          ReconcileNMState
+		existingNMStateName = "nmstate"
+		nmstate             = nmstatev1alpha1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: existingNMstateName,
+				Name: existingNMStateName,
 				UID:  "12345",
 			},
 		}
@@ -31,7 +31,7 @@ var _ = Describe("NMstate controller reconcile", func() {
 	BeforeEach(func() {
 		s := scheme.Scheme
 		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion,
-			&nmstatev1alpha1.NMstate{},
+			&nmstatev1alpha1.NMState{},
 		)
 
 		objs := []runtime.Object{&nmstate}
@@ -61,7 +61,7 @@ var _ = Describe("NMstate controller reconcile", func() {
 			request reconcile.Request
 		)
 		BeforeEach(func() {
-			request.Name = existingNMstateName
+			request.Name = existingNMStateName
 		})
 		It("should return a Result", func() {
 			result, err := reconciler.Reconcile(request)
