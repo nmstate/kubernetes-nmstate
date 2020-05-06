@@ -19,6 +19,7 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 		AfterEach(func() {
 			updateDesiredState(vlanAbsent(firstSecondaryNic, vlanId))
+			waitForAvailableTestPolicy()
 			resetDesiredStateForNodes()
 		})
 		It("should have the vlan interface configured", func() {
