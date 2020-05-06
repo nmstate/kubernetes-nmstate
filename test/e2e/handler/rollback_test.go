@@ -42,8 +42,7 @@ var _ = Describe("rollback", func() {
 		AfterEach(func() {
 			By("Rename vlan-filtering.bak to vlan-filtering to leave it as it was")
 			runner.RunAtPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
-			updateDesiredState(linuxBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			resetDesiredStateForNodes()
 		})
 		It("should rollback failed state configuration", func() {

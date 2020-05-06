@@ -15,24 +15,24 @@ import (
 
 var _ = Describe("NNCP cleanup", func() {
 
-	BeforeEach(func() {
-		By("Create a policy")
-		setDesiredStateWithPolicy(bridge1, linuxBrUp(bridge1))
-
-		By("Wait for policy to be ready")
-		waitForAvailablePolicy(bridge1)
-	})
-
-	AfterEach(func() {
-		updateDesiredState(linuxBrAbsent(bridge1))
-		waitForAvailableTestPolicy()
-		resetDesiredStateForNodes()
-	})
-
 	Context("when a policy is deleted", func() {
 		BeforeEach(func() {
+			By("Create a policy")
+			setDesiredStateWithPolicy(bridge1, linuxBrUp(bridge1))
+
+			By("Wait for policy to be ready")
+			waitForAvailablePolicy(bridge1)
+
+			By("Delete the policy")
 			deletePolicy(bridge1)
 		})
+
+		AfterEach(func() {
+			deletePolicy(bridge1)
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
+			resetDesiredStateForNodes()
+		})
+
 		It("should also delete nodes enactments", func() {
 			for _, node := range nodes {
 				Eventually(func() bool {

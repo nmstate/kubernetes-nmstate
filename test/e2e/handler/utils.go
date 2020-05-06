@@ -89,9 +89,19 @@ func updateDesiredState(desiredState nmstatev1alpha1.State) {
 	setDesiredStateWithPolicy(TestPolicy, desiredState)
 }
 
+func updateDesiredStateAndWait(desiredState nmstatev1alpha1.State) {
+	updateDesiredState(desiredState)
+	waitForAvailableTestPolicy()
+}
+
 func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
 	nodeSelector := map[string]string{"kubernetes.io/hostname": node}
 	setDesiredStateWithPolicyAndNodeSelector(TestPolicy, desiredState, nodeSelector)
+}
+
+func updateDesiredStateAtNodeAndWait(node string, desiredState nmstatev1alpha1.State) {
+	updateDesiredStateAtNode(node, desiredState)
+	waitForAvailableTestPolicy()
 }
 
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
