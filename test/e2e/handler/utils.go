@@ -165,6 +165,9 @@ func deletePolicy(name string) {
 	policy := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	err := framework.Global.Client.Delete(context.TODO(), policy)
+	if apierrors.IsNotFound(err) {
+		return
+	}
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 
 	// Wait for policy to be removed
