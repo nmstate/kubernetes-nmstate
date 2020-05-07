@@ -30,8 +30,7 @@ var _ = Describe("Examples", func() {
 		deletePolicy(policyName)
 
 		for _, ifaceName := range ifaceNames {
-			updateDesiredState(interfaceAbsent(ifaceName))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(interfaceAbsent(ifaceName))
 		}
 
 		resetDesiredStateForNodes()

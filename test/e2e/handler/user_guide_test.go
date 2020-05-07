@@ -25,8 +25,7 @@ var _ = Describe("Introduction", func() {
 	// Policies are not deleted as a part of the tutorial, so we need additional function here
 	cleanupConfiguration := func() {
 		deletePolicy("vlan100")
-		updateDesiredState(interfaceAbsent("eth1.100"))
-		waitForAvailableTestPolicy()
+		updateDesiredStateAndWait(interfaceAbsent("eth1.100"))
 	}
 
 	runTroubleshooting := func() {

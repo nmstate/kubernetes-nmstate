@@ -18,12 +18,10 @@ var _ = Describe("Mutating Admission Webhook", func() {
 			// Make sure test policy is not there so
 			// we exercise CREATE event
 			resetDesiredStateForNodes()
-			updateDesiredState(linuxBrUp(bridge1))
+			updateDesiredStateAndWait(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
-			waitForAvailableTestPolicy()
-			updateDesiredState(linuxBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			resetDesiredStateForNodes()
 		})
 
@@ -37,7 +35,7 @@ var _ = Describe("Mutating Admission Webhook", func() {
 			)
 			BeforeEach(func() {
 				oldPolicy = nodeNetworkConfigurationPolicy(TestPolicy)
-				updateDesiredState(linuxBrAbsent(bridge1))
+				updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			})
 			It("should have an annotation with newer mutation timestamp", func() {
 				newPolicy := nodeNetworkConfigurationPolicy(TestPolicy)

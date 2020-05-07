@@ -14,11 +14,10 @@ var _ = Describe("NodeNetworkState", func() {
 		)
 
 		BeforeEach(func() {
-			updateDesiredState(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 		})
 		AfterEach(func() {
-			updateDesiredState(vlanAbsent(firstSecondaryNic, vlanId))
+			updateDesiredStateAndWait(vlanAbsent(firstSecondaryNic, vlanId))
 			resetDesiredStateForNodes()
 		})
 		It("should have the vlan interface configured", func() {
@@ -34,20 +33,17 @@ var _ = Describe("NodeNetworkState", func() {
 			vlanId            = "102"
 		)
 		BeforeEach(func() {
-			updateDesiredState(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			for index, node := range nodes {
 				ipAddress := fmt.Sprintf(ipAddressTemplate, index)
 				By(fmt.Sprintf("applying static IP %s on node %s", ipAddress, node))
-				updateDesiredStateAtNode(node, vlanUpWithStaticIP(fmt.Sprintf("%s.%s", firstSecondaryNic, vlanId), ipAddress))
-				waitForAvailableTestPolicy()
+				updateDesiredStateAtNodeAndWait(node, vlanUpWithStaticIP(fmt.Sprintf("%s.%s", firstSecondaryNic, vlanId), ipAddress))
 			}
 
 		})
 
 		AfterEach(func() {
-			updateDesiredState(vlanAbsent(firstSecondaryNic, vlanId))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(vlanAbsent(firstSecondaryNic, vlanId))
 			resetDesiredStateForNodes()
 		})
 

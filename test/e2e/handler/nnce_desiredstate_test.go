@@ -6,8 +6,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	corev1 "k8s.io/api/core/v1"
-
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
@@ -15,18 +13,11 @@ var _ = Describe("Enactment DesiredState", func() {
 	Context("when applying a policy to matching nodes", func() {
 		BeforeEach(func() {
 			By("Create a policy")
-			updateDesiredState(linuxBrUp(bridge1))
-			policyConditionsStatusEventually().Should(ContainElement(
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
-					Status: corev1.ConditionTrue,
-				},
-			))
+			updateDesiredStateAndWait(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
 			By("Remove the bridge")
-			updateDesiredState(linuxBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})

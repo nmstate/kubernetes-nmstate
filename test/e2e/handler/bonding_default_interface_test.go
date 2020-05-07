@@ -65,15 +65,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			By(fmt.Sprintf("Reseting state of %s", firstSecondaryNic))
 			resetNicStateForNodes(firstSecondaryNic)
 			By(fmt.Sprintf("Creating %s on %s and %s", bond1, primaryNic, firstSecondaryNic))
-			updateDesiredState(boundUpWithPrimaryAndSecondary(bond1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(boundUpWithPrimaryAndSecondary(bond1))
 			By("Done configuring test")
 
 		})
 		AfterEach(func() {
 			By(fmt.Sprintf("Removing bond %s and configuring %s with dhcp", bond1, primaryNic))
-			updateDesiredState(bondAbsentWithPrimaryUp(bond1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(bondAbsentWithPrimaryUp(bond1))
 
 			By("Waiting until the node becomes ready again")
 			for _, node := range nodes {
@@ -121,7 +119,6 @@ func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interfa
 }
 
 func resetNicStateForNodes(nicName string) {
-	updateDesiredState(ethernetNicsUp(nicName))
-	waitForAvailableTestPolicy()
+	updateDesiredStateAndWait(ethernetNicsUp(nicName))
 	deletePolicy(TestPolicy)
 }

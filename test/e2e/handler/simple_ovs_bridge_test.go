@@ -10,12 +10,10 @@ import (
 var _ = PDescribe("Simple OVS bridge [pending cause nmstate bug -> https://bugzilla.redhat.com/show_bug.cgi?id=1724901]", func() {
 	Context("when desiredState is configured with an ovs bridge up", func() {
 		BeforeEach(func() {
-			updateDesiredState(ovsBrUp(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(ovsBrUp(bridge1))
 		})
 		AfterEach(func() {
-			updateDesiredState(ovsBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(ovsBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
@@ -33,12 +31,10 @@ var _ = PDescribe("Simple OVS bridge [pending cause nmstate bug -> https://bugzi
 	})
 	Context("when desiredState is configured with an ovs bridge with internal port up", func() {
 		BeforeEach(func() {
-			updateDesiredState(ovsbBrWithInternalInterface(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(ovsbBrWithInternalInterface(bridge1))
 		})
 		AfterEach(func() {
-			updateDesiredState(ovsBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
+			updateDesiredStateAndWait(ovsBrAbsent(bridge1))
 			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
