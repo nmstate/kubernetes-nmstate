@@ -51,7 +51,7 @@ kubernetes-nmstate handler:
 
 \`\`\`
 cat <<EOF | kubectl create -f -
-apiVersion: nmstate.io/v1alpha1
+apiVersion: nmstate.io/v1beta1
 kind: NMState
 metadata:
   name: nmstate
