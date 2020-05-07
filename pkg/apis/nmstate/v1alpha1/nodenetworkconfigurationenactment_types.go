@@ -74,11 +74,12 @@ func EnactmentKey(node string, policy string) types.NamespacedName {
 }
 
 func NewEnactment(nodeName string, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+	BlockOwnerAtDelete := true
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: EnactmentKey(nodeName, policy.Name).Name,
 			OwnerReferences: []metav1.OwnerReference{
-				{Name: policy.Name, Kind: policy.TypeMeta.Kind, APIVersion: policy.TypeMeta.APIVersion, UID: policy.UID},
+				{Name: policy.Name, Kind: policy.TypeMeta.Kind, APIVersion: policy.TypeMeta.APIVersion, UID: policy.UID, BlockOwnerDeletion: &BlockOwnerAtDelete},
 			},
 			// Associate policy with the enactment using labels
 			Labels: map[string]string{
