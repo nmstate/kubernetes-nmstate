@@ -11,7 +11,7 @@ teardown() {
     make cluster-down
     cp $(find . -name "*junit*.xml") $ARTIFACTS
     # Don't fail if there is no logs
-    cp ${E2E_LOGS}/*.log ${ARTIFACTS} || true
+    cp ${E2E_LOGS}/operator/*.log ${ARTIFACTS} || true
 }
 
 main() {
