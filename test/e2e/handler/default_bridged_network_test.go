@@ -142,6 +142,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				err := restartNode(nodeToReboot)
 				Expect(err).ToNot(HaveOccurred())
 
+				By(fmt.Sprintf("Wait for nns to be refreshed at %s", nodeToReboot))
+				waitForNodeNetworkStateUpdate(nodeToReboot)
+
+				By(fmt.Sprintf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot))
 				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot})
 			})
 		})

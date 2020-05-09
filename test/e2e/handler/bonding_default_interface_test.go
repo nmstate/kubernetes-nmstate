@@ -104,6 +104,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			By(fmt.Sprintf("Reboot node %s and verify that bond still has ip of primary nic", nodeToReboot))
 			err := restartNode(nodeToReboot)
 			Expect(err).ToNot(HaveOccurred())
+
+			By(fmt.Sprintf("Wait for nns to be refreshed at %s", nodeToReboot))
+			waitForNodeNetworkStateUpdate(nodeToReboot)
+
 			By(fmt.Sprintf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1))
 			verifyBondIsUpWithPrimaryNicIp(nodeToReboot, expectedBond, addressByNode[nodeToReboot])
 		})

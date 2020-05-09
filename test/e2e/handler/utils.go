@@ -298,6 +298,16 @@ func interfacesForNode(node string) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
+func waitForNodeNetworkStateUpdate(node string) {
+	now := time.Now()
+	EventuallyWithOffset(1, func() time.Time {
+		key := types.NamespacedName{Namespace: framework.Global.Namespace, Name: node}
+		nnsUpdateTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
+		return nnsUpdateTime.Time
+	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Node %s should have a fresh nns)", node))
+
+}
+
 func toUnstructured(y string) interface{} {
 	var u interface{}
 	err := yaml.Unmarshal([]byte(y), &u)
