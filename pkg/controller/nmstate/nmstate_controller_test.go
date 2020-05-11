@@ -26,7 +26,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		cl                  client.Client
 		reconciler          ReconcileNMState
 		existingNMStateName = "nmstate"
-		dsNodeSelector      = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
+		handlerNodeSelector = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
 		nmstate             = nmstatev1beta1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNMStateName,
@@ -99,7 +99,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(err).To(HaveOccurred())
 		})
 	})
-	Context("with NodeSelector defined in Operator spec", func() {
+	Context("when operator spec has a NodeSelector", func() {
 		var (
 			request reconcile.Request
 		)
@@ -109,24 +109,32 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1beta1.NMState{},
 			)
 			// set NodeSelector field in operator Spec
-			nmstate.Spec.NodeSelector = dsNodeSelector
+			nmstate.Spec.NodeSelector = handlerNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewFakeClientWithScheme(s, objs...)
 			reconciler.client = cl
 			request.Name = existingNMStateName
-		})
-		It("should add NodeSelector labels to Daemonsets spec", func() {
 			result, err := reconciler.Reconcile(request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
-			// verify NodeSelector value for both worker and master DS
+		})
+		It("should add NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
-			for _, c := range []string{"worker", "master"} {
-				cl.Get(context.TODO(), types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler-" + c}, ds)
-				for k, v := range dsNodeSelector {
-					Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
-				}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range handlerNodeSelector {
+				Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+			}
+		})
+		It("should NOT add NodeSelector to webhook deployment", func() {
+			deployment := &appsv1.Deployment{}
+			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+			err := cl.Get(context.TODO(), webhookKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range handlerNodeSelector {
+				Expect(deployment.Spec.Template.Spec.NodeSelector).ToNot(HaveKeyWithValue(k, v))
 			}
 		})
 	})

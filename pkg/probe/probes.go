@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"time"
 
@@ -20,6 +19,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
@@ -77,7 +77,7 @@ func checkApiServerConnectivity(timeout time.Duration) error {
 
 func checkNodeReadiness(client client.Client, timeout time.Duration) error {
 	return wait.PollImmediate(1*time.Second, timeout, func() (bool, error) {
-		nodeName := os.Getenv("NODE_NAME")
+		nodeName := environment.NodeName()
 		node := corev1.Node{}
 		err := client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
 		if err != nil {

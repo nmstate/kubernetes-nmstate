@@ -4,17 +4,8 @@ set -ex
 
 kubectl=./cluster/kubectl.sh
 
-function getDesiredScheduledHandlers {
-    $kubectl get daemonset -n ${HANDLER_NAMESPACE} $1 -o=jsonpath='{.status.desiredNumberScheduled}'
-}
-
-function getAvailableHandlers {
-    numberAvailable=$($kubectl get daemonset -n ${HANDLER_NAMESPACE} $1 -o=jsonpath='{.status.numberAvailable}')
-    echo ${numberAvailable:-0}
-}
-
 function eventually {
-    timeout=15
+    timeout=$(( $KUBEVIRT_NUM_NODES * 10 ))
     interval=5
     cmd=$@
     echo "Checking eventually $cmd"
@@ -41,15 +32,23 @@ function consistently {
     done
 }
 
-function isHandlerOk {
-    desiredNumberScheduled=$(getDesiredScheduledHandlers $1)
-    numberAvailable=$(getAvailableHandlers $1)
+function isDaemonSetOk {
+    desiredNumberScheduled=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.desiredNumberScheduled}')
+
+    numberAvailable=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.numberAvailable}')
+    numberAvailable=${numberAvailable:-0}
+
     [ "$desiredNumberScheduled" == "$numberAvailable" ]
 }
 
 function isExternal {
     [[ "${KUBEVIRT_PROVIDER}" == external ]]
 }
+
+function isDeploymentOk {
+    $kubectl wait deployment -n $1 -l $2 --for condition=Available --timeout=200s
+}
+
 
 function isOpenshift {
     $kubectl get co openshift-apiserver
@@ -107,24 +106,43 @@ function deploy_handler() {
 }
 
 function wait_ready_handler() {
-    # Wait until the operator becomes consistently ready on all nodes
-    for ds in nmstate-handler nmstate-handler-worker; do
-        # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! eventually isHandlerOk $ds; then
-            echo "Daemon set $ds haven't turned ready within the given timeout"
-            exit 1
-        fi
+    # We have to re-check desired number, sometimes takes some time to be filled in
+    if ! eventually isDaemonSetOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate ; then
+        echo "Handler haven't turned ready within the given timeout"
+        return 1
+    fi
 
-        # We have to re-check desired number, sometimes takes some time to be filled in
-        if ! consistently isHandlerOk $ds; then
-            echo "Daemon set $ds is not consistently ready within the given timeout"
-            exit 1
-        fi
-    done
+    # Make sure good state is keep for some time
+    if ! consistently isDaemonSetOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate ; then
+        echo "Handler is not consistently ready within the given timeout"
+        return 1
+    fi
+
+    # We have to re-check desired number, sometimes takes some time to be filled in
+    if ! eventually isDeploymentOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate; then
+        echo "Webhook haven't turned ready within the given timeout"
+        return 1
+    fi
+
+    # Make sure good state is keep for some time
+    if ! consistently isDeploymentOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate; then
+        echo "Webhook is not consistently ready within the given timeout"
+        return 1
+    fi
 }
 
 function wait_ready_operator() {
-    $kubectl wait deployment -n ${OPERATOR_NAMESPACE} -l app=kubernetes-nmstate-operator --for condition=Available --timeout=200s
+    # We have to re-check desired number, sometimes takes some time to be filled in
+    if ! eventually isDeploymentOk ${OPERATOR_NAMESPACE} app=kubernetes-nmstate-operator; then
+        echo "Operator haven't turned ready within the given timeout"
+        return 1
+    fi
+
+    # Make sure good state is keep for some time
+    if ! consistently isDeploymentOk ${OPERATOR_NAMESPACE} app=kubernetes-nmstate-operator; then
+        echo "Operator is not consistently ready within the given timeout"
+        return 1
+    fi
 }
 
 deploy_operator

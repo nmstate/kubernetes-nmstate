@@ -3,7 +3,6 @@ package nodenetworkconfigurationpolicy
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/pkg/errors"
@@ -50,13 +49,12 @@ var (
 )
 
 func init() {
-	if environment.IsOperator() {
+	if !environment.IsHandler() {
 		return
 	}
 
-	var isSet = false
-	nodeName, isSet = os.LookupEnv("NODE_NAME")
-	if !isSet || len(nodeName) == 0 {
+	nodeName = environment.NodeName()
+	if len(nodeName) == 0 {
 		panic("NODE_NAME is mandatory")
 	}
 }

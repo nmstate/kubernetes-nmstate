@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	if environment.IsOperator() {
+	if !environment.IsHandler() {
 		return
 	}
 

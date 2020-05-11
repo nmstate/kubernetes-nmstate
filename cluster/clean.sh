@@ -55,11 +55,21 @@ function isHandlerRemoved {
     isRemoved daemonset ${HANDLER_NAMESPACE} app=kubernetes-nmstate
 }
 
+function isWebhookRemoved {
+    isRemoved deployment ${HANDLER_NAMESPACE} app=kubernetes-nmstate
+}
+
 function wait_removed() {
     if ! eventually isHandlerRemoved; then
         echo "Handler hasn't been removed within the given timeout"
         exit 1
     fi
+
+    if ! eventually isWebhookRemoved; then
+        echo "Webhook hasn't been removed within the given timeout"
+        exit 1
+    fi
+
 }
 
 clean

@@ -15,10 +15,20 @@ rules:
   - persistentvolumeclaims
   - events
   - configmaps
-  - secrets
   - pods
   verbs:
-  - '*'
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - list
+  - get
+  - create
+  - update
 - apiGroups:
   - apps
   resources:
@@ -77,9 +87,16 @@ rules:
   - nodes
   - namespaces
   verbs:
-  - get
+  - '*'
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
   - list
-  - watch
+  - get
+  - create
+  - update
 - apiGroups:
   - ""
   resources:
