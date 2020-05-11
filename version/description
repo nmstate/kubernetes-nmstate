@@ -1,15 +1,46 @@
-v0.19.0
+v0.20.0
 
 # Changes
 
-## Feature
+## Enhancement
 
- - Add an operator that will manage the lifecycle of the existing handler. It syncs the CRDs, the namespace (if different than the operator), the RBAC, and the handler itself. ([#466](https://github.com/nmstate/kubernetes-nmstate/pull/466), [@bcrochet](https://github.com/bcrochet))
+ - Add OpenShift-compatible Dockerfiles. ([#509](https://github.com/nmstate/kubernetes-nmstate/pull/509), [@bcrochet](https://github.com/bcrochet))
+ - Allow `make cluster-sync` on external systems. ([#500](https://github.com/nmstate/kubernetes-nmstate/pull/500), [@qinqon](https://github.com/qinqon))
+ - Add NodeSelector optional field to operator spec, to control on which nodes the handler should run on. ([#514](https://github.com/nmstate/kubernetes-nmstate/pull/514), [@yboaron](https://github.com/yboaron))
 
 ## Other (Bug, Cleanup or Flake)
 
- - Adapt scc.yaml to ocp-4.5 ([#502](https://github.com/nmstate/kubernetes-nmstate/pull/502), [@qinqon](https://github.com/qinqon))
+ - Fix the name from NMstate to NMState. ([#521](https://github.com/nmstate/kubernetes-nmstate/pull/521), [@phoracek](https://github.com/phoracek))
+ - Metrics were disabled to avoid conflicts of TCP ports and reduce resource requirements. ([#518](https://github.com/nmstate/kubernetes-nmstate/pull/518), [@phoracek](https://github.com/phoracek))
+ - Only one NMstate.nmstate.io CR should be allowed. This change will ignore any CR that is not named `nmstate`. ([#512](https://github.com/nmstate/kubernetes-nmstate/pull/512), [@bcrochet](https://github.com/bcrochet))
+ - Webhook runs now as unprivileged `Deployment`
+  action requiered: Wait for webhook Deployment Ready status too after deploy/upgrade. ([#497](https://github.com/nmstate/kubernetes-nmstate/pull/497), [@qinqon](https://github.com/qinqon))
+
+## Uncategorized
+
+ - Make the operator's API beta. ([#523](https://github.com/nmstate/kubernetes-nmstate/pull/523), [@bcrochet](https://github.com/bcrochet))
+
+# Installation
+
+First, install kubernetes-nmstate operator:
 
 ```
-docker pull HANDLER_IMAGE
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.20.0/nmstate.io_nmstates_crd.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.20.0/namespace.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.20.0/service_account.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.20.0/role.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.20.0/role_binding.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v0.20.0/operator.yaml
+```
+
+Once that's done, create an `NMState` CR, triggering deployment of
+kubernetes-nmstate handler:
+
+```
+cat <<EOF | kubectl create -f -
+apiVersion: nmstate.io/v1beta1
+kind: NMState
+metadata:
+  name: nmstate
+EOF
 ```
