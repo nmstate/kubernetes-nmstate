@@ -31,7 +31,7 @@ EOF
 
 cat $release_notes >> version/description
 
-cat << EOF >> version/description
+cat << EOFF >> version/description
 
 # Installation
 
@@ -57,7 +57,7 @@ metadata:
   name: nmstate
 EOF
 \`\`\`
-EOF
+EOFF
 
 ${EDITOR:-vi} version/description
 
