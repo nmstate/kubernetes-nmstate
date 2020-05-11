@@ -81,7 +81,7 @@ func main() {
 
 	printVersion()
 
-	// Lock only for handler we can run old and new version of
+	// Lock only for handler, we can run old and new version of
 	// webhook without problems, policy status will be updated
 	// by multiple instances.
 	if environment.IsHandler() {
