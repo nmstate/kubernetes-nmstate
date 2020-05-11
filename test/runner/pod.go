@@ -25,6 +25,7 @@ func runAtPods(pods []string, arguments ...string) {
 		ExpectWithOffset(2, err).ToNot(HaveOccurred())
 	}
 }
+
 func RunAtHandlerPods(arguments ...string) {
 	handlerPods, err := nmstateHandlerPods()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())

@@ -33,7 +33,6 @@ function consistently {
 }
 
 function isDaemonSetOk {
-
     desiredNumberScheduled=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.desiredNumberScheduled}')
 
     numberAvailable=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.numberAvailable}')

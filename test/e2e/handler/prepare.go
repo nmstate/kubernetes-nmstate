@@ -61,19 +61,23 @@ func waitForDeployments(t *testing.T, kubeclient kubernetes.Interface, namespace
 	if framework.Global.LocalOperator {
 		return nil
 	}
+
 	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
 		filterByApp := metav1.ListOptions{LabelSelector: "app=kubernetes-nmstate"}
 		deployments, err := kubeclient.AppsV1().Deployments(namespace).List(filterByApp)
 		if err != nil {
 			return true, errors.Wrapf(err, "failed retrieving daemon sets for namespace %s", namespace)
 		}
+
 		for _, deployment := range deployments.Items {
 			By(fmt.Sprintf("Checking deployment %s", deployment.Name))
 			if int(deployment.Status.AvailableReplicas) >= 2 {
 				return true, nil
 			}
 		}
+
 		return true, nil
 	})
+
 	return err
 }
