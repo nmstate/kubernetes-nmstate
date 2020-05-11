@@ -5,7 +5,7 @@ set -ex
 kubectl=./cluster/kubectl.sh
 
 function eventually {
-    timeout=15
+    timeout=$(( $KUBEVIRT_NUM_NODES * 10 ))
     interval=5
     cmd=$@
     echo "Checking eventually $cmd"
