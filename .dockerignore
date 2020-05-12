@@ -1,0 +1,32 @@
+# We cannot call `docker build` out of top dir since this is controlled by
+# operator-sdk and it does not has the option to change that, but future
+# versin of operator-sdk is going to split the build process into small
+# makefile targets and we will be able to tune that, so this file will
+# be smaller
+
+# git stuff
+.git
+.github
+
+# The path for kubevirtci installation
+_kubevirtci
+
+# The old path for kubevirtci installation, in case checkout is done from and
+# old branch this can exists
+kubevirtci
+
+# No need for source code is already compiled
+pkg
+cmd
+vendor
+docs
+
+# Test and infra
+test
+test_logs
+automation
+
+
+# go tools
+build/**/go*
+build/**/go
