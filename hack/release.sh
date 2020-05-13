@@ -1,16 +1,50 @@
-#!/bin/bash -e
+#!/bin/bash
 
-git tag $TAG
-git push https://github.com/nmstate/kubernetes-nmstate $TAG
+set -xe
 
-$GITHUB_RELEASE release -u nmstate -r kubernetes-nmstate \
-    --tag $TAG \
-	--name $TAG \
-    --description "$(cat $DESCRIPTION)"
+tag=$(hack/version.sh)
+gh_organization=nmstate
+gh_repo=kubernetes-nmstate
 
-for resource in "$@" ;do
-    $GITHUB_RELEASE upload -u nmstate -r kubernetes-nmstate \
+function upload() {
+    resource=$1
+    $GITHUB_RELEASE upload \
+        -u $gh_user \
+        -r $gh_repo \
         --name $(basename $resource) \
-	    --tag $TAG \
+	    --tag $tag \
 		--file $resource
-done
+}
+
+function create_github_release() {
+    # Create the release
+    $GITHUB_RELEASE release \
+        -u $gh_user \
+        -r $gh_repo \
+        --tag $tag \
+        --name $tag \
+        --description "$(cat version/description)"
+
+
+    # Upload operator CRDs
+    for manifest in $(ls deploy/crds/nmstate.io_*nmstate*); do
+        upload $manifest
+    done
+
+    # Upload operator manifests
+    for manifest in $(find $MANIFESTS_DIR -type f); do
+        upload $manifest
+    done
+}
+
+make OPERATOR_IMAGE_TAG=$tag HANDLER_IMAGE_TAG=$tag \
+    manifests \
+    push-handler \
+    push-operator
+
+# Tag master
+git tag $tag
+git push https://github.com/nmstate/kubernetes-nmstate $tag
+
+
+create_github_release
