@@ -5,12 +5,14 @@ IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
-HANDLER_IMAGE_SUFFIX ?=
+HANDLER_IMAGE_TAG ?= latest
+HANDLER_IMAGE_SUFFIX ?= :$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME)$(HANDLER_IMAGE_SUFFIX)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 HANDLER_PREFIX ?=
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
-OPERATOR_IMAGE_SUFFIX ?=
+OPERATOR_IMAGE_TAG ?= latest
+OPERATOR_IMAGE_SUFFIX ?= :$(OPERATOR_IMAGE_TAG)
 OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME)$(OPERATOR_IMAGE_SUFFIX)
 OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_FULL_NAME)
 
@@ -57,7 +59,7 @@ export KUBECTL ?= ./cluster/kubectl.sh
 GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 OPENAPI_GEN ?= $(GOBIN)/openapi-gen
-GITHUB_RELEASE ?= $(GOBIN)/github-release
+export GITHUB_RELEASE ?= $(GOBIN)/github-release
 RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
@@ -65,7 +67,6 @@ export GO := $(GOBIN)/go
 LOCAL_REGISTRY ?= registry:5000
 
 export MANIFESTS_DIR ?= build/_output/manifests
-description = build/_output/description
 
 all: check handler
 
@@ -153,10 +154,6 @@ cluster-clean:
 cluster-sync:
 	./cluster/sync.sh
 
-$(description): version/description
-	mkdir -p $(dir $@)
-	cp version/description > $@
-
 prepare-patch: $(RELEASE_NOTES)
 	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh patch
 prepare-minor: $(RELEASE_NOTES)
@@ -164,20 +161,8 @@ prepare-minor: $(RELEASE_NOTES)
 prepare-major: $(RELEASE_NOTES)
 	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh major
 
-# This uses target specific variables [1] so we can use push-handler as a
-# dependency and change the SUFFIX with the correct version so no need for
-# calling make on make is needed.
-# [1] https://www.gnu.org/software/make/manual/html_node/Target_002dspecific.html
-release: OPERATOR_IMAGE_SUFFIX =: $(shell hack/version.sh)
-release: HANDLER_IMAGE_SUFFIX =: $(shell hack/version.sh)
-release: manifests push-handler push-operator $(description) $(GITHUB_RELEASE) version/version.go
-	DESCRIPTION=$(description) \
-	GITHUB_RELEASE=$(GITHUB_RELEASE) \
-	TAG=$(shell hack/version.sh) \
-				   hack/release.sh \
-						$(shell find $(MANIFESTS_DIR) -type f) \
-						deploy/crds/nmstate.io_nmstates_crd.yaml \
-						deploy/crds/nmstate.io_v1alpha1_nmstate_cr.yaml
+release: $(GITHUB_RELEASE)
+	hack/release.sh
 
 vendor: $(GO)
 	$(GO) mod tidy
