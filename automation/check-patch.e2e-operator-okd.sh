@@ -23,6 +23,9 @@ main() {
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
 
+    # Let's fail fast if generated files differ
+    make check-gen
+
     # Let's fail fast if it's not compiling
     make operator
 
