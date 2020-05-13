@@ -39,6 +39,7 @@ type NMStateSpec struct {
 	// as labels applied to the node.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	BrokenJob    string            `json:"brokenJob,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
