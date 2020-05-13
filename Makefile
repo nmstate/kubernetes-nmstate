@@ -60,7 +60,7 @@ OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 GITHUB_RELEASE ?= $(GOBIN)/github-release
 RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
-GO := $(GOBIN)/go
+export GO := $(GOBIN)/go
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -91,20 +91,16 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(GINKGO): go.mod $(GO)
-	$(GO) install ./vendor/github.com/onsi/ginkgo/ginkgo
-
-$(OPERATOR_SDK): go.mod $(GO)
-	$(GO) install ./vendor/github.com/operator-framework/operator-sdk/cmd/operator-sdk
-
-$(OPENAPI_GEN): go.mod $(GO)
-	$(GO) install ./vendor/k8s.io/kube-openapi/cmd/openapi-gen
-
-$(GITHUB_RELEASE): go.mod $(GO)
-	$(GO) install ./vendor/github.com/aktau/github-release
-
-$(RELEASE_NOTES): go.mod $(GO)
-	$(GO) install ./vendor/k8s.io/release/cmd/release-notes
+$(GINKGO): go.mod
+	$(MAKE) tools
+$(OPERATOR_SDK): go.mod
+	$(MAKE) tools
+$(OPENAPI_GEN): go.mod
+	$(MAKE) tools
+$(GITHUB_RELEASE): go.mod
+	$(MAKE) tools
+$(RELEASE_NOTES): go.mod
+	$(MAKE) tools
 
 gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
@@ -182,8 +178,8 @@ vendor: $(GO)
 	$(GO) mod tidy
 	$(GO) mod vendor
 
-tools-vendoring:
-	./hack/vendor-tools.sh $(BIN_DIR) $$(pwd)/tools.go
+tools: $(GO)
+	./hack/install-tools.sh
 
 .PHONY: \
 	all \
@@ -203,4 +199,5 @@ tools-vendoring:
 	vendor \
 	whitespace-check \
 	whitespace-format \
-	manifests
+	manifests \
+	tools
