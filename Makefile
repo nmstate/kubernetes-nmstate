@@ -116,10 +116,15 @@ gen-openapi: $(OPENAPI_GEN)
 gen-crds: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate crds
 
+check-gen: generate
+	./hack/check-gen.sh
+
+generate: gen-openapi gen-k8s gen-crds
+
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-handler: gen-openapi gen-k8s gen-crds $(OPERATOR_SDK)
+handler: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) build $(HANDLER_IMAGE) --image-builder $(IMAGE_BUILDER)
 push-handler: handler
 	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
@@ -194,6 +199,8 @@ tools-vendoring:
 	push-handler \
 	test/unit \
 	test/e2e \
+	generate \
+	check-gen \
 	cluster-up \
 	cluster-down \
 	cluster-sync-handler \
