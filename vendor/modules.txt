@@ -51,8 +51,6 @@ github.com/Microsoft/hcsshim/osversion
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/aktau/github-release v0.8.1
-github.com/aktau/github-release
 # github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a
 github.com/asaskevich/govalidator
 # github.com/beorn7/perks v1.0.1
@@ -179,6 +177,7 @@ github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 github.com/ghodss/yaml
 # github.com/github-release/github-release v0.8.1
+github.com/github-release/github-release
 github.com/github-release/github-release/github
 # github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 github.com/globalsign/mgo/bson

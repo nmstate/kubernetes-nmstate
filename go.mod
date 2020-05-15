@@ -4,9 +4,8 @@ go 1.13.7
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
-	github.com/aktau/github-release v0.8.1
 	github.com/evanphx/json-patch v4.5.0+incompatible
-	github.com/github-release/github-release v0.8.1 // indirect
+	github.com/github-release/github-release v0.8.1
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/gobwas/glob v0.2.3
