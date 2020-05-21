@@ -27,21 +27,21 @@ func writeDeviceStatus(writer io.Writer, nodes []string) {
 	writeMessage(writer, banner("Start printing device status")+"\n")
 
 	for _, node := range nodes {
-		output, err := runner.RunQuietAtNode(node, "/usr/bin/nmcli", "c", "s")
+		output, err := runner.RunAtNode(node, "/usr/bin/nmcli", "c", "s")
 		Expect(err).ToNot(HaveOccurred())
 
 		writeMessage(writer, banner("Connection status on node %s"), node)
 		writeMessage(writer, "\n %s", output)
 		writeMessage(writer, banner("Done Connection status on node %s "), node)
 
-		output, err = runner.RunQuietAtNode(node, "/usr/bin/nmcli", "d", "s")
+		output, err = runner.RunAtNode(node, "/usr/bin/nmcli", "d", "s")
 		Expect(err).ToNot(HaveOccurred())
 
 		writeMessage(writer, banner("Device status on node %s"), node)
 		writeMessage(writer, "\n %s", output)
 		writeMessage(writer, banner("Done device status on node %s "), node)
 
-		output, err = runner.RunQuietAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
+		output, err = runner.RunAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
 		Expect(err).ToNot(HaveOccurred())
 
 		writeMessage(writer, banner("Configured ipv4 ips on devices on node %s"), node)
@@ -53,7 +53,7 @@ func writeDeviceStatus(writer io.Writer, nodes []string) {
 
 func writeNetworkManagerLogs(writer io.Writer, nodes []string, sinceTime time.Time) {
 	for _, node := range nodes {
-		output, err := runner.RunQuietAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
+		output, err := runner.RunAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
 			"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Now().Sub(sinceTime).Seconds())))
 		Expect(err).ToNot(HaveOccurred())
 		writeMessage(writer, banner("Journalctl for NetworkManager on node %s"), node)
