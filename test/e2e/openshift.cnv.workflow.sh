@@ -12,15 +12,13 @@ export FIRST_SECONDARY_NIC=${FIRST_SECONDARY_NIC:-ens7}
 export SECOND_SECONDARY_NIC=${SECOND_SECONDARY_NIC:-ens8}
 export TIMEOUT=${TIMEOUT:-60m}
 
-if [ ! -f  $SSH ]; then
-    cat << EOF > ${SSH}
+cat << EOF > ${SSH}
 #!/bin/bash
 node_name=\${1}
 node_ip=\$($KUBECTL get node \${node_name} --no-headers -o wide | awk '{print \$6}')
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null core@\${node_ip} -- \${@:3}
 EOF
-    chmod +x ${SSH}
-fi
+chmod +x ${SSH}
 
 # Run workflow tests
 focus='test_id:3796|test_id:3795|test_id:3813|test_id:3794|test_id:3793'
