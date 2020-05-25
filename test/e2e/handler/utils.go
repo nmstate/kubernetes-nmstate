@@ -176,13 +176,21 @@ func deletePolicy(name string) {
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
 
-	// Wait for enactments to be removed
+	// Wait for enactments to be removed calculate timeout taking into account
+	// the number of nodes, looks like it affect the time it takes to
+	// delete enactments
+	enactmentsDeleteTimeout := time.Duration(60+20*len(nodes)) * time.Second
 	for _, node := range nodes {
 		enactmentKey := nmstatev1alpha1.EnactmentKey(node, name)
 		Eventually(func() bool {
 			err := framework.Global.Client.Get(context.TODO(), enactmentKey, &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
+			// if we face an unexpected error do a failure since
+			// we don't know if enactment was deleted
+			if err != nil && !apierrors.IsNotFound(err) {
+				Fail(fmt.Sprintf("Unexpected error waitting for enactment deletion: %v", err))
+			}
 			return apierrors.IsNotFound(err)
-		}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Enactment %s not deleted", enactmentKey.Name))
+		}, enactmentsDeleteTimeout, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Enactment %s not deleted", enactmentKey.Name))
 	}
 
 }
