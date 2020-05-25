@@ -24,4 +24,4 @@ fi
 
 # Run workflow tests
 focus='test_id:3796|test_id:3795|test_id:3813|test_id:3794|test_id:3793'
-make test/e2e E2E_TEST_TIMEOUT=${TIMEOUT} E2E_TEST_ARGS="-ginkgo.noColor -ginkgo.focus $focus" NAMESPACE=$NAMESPACE KUBECONFIG=$KUBECONFIG
+make test-e2e-handler E2E_TEST_TIMEOUT=${TIMEOUT} E2E_TEST_ARGS="-ginkgo.noColor -ginkgo.focus $focus" NAMESPACE=$NAMESPACE KUBECONFIG=$KUBECONFIG
