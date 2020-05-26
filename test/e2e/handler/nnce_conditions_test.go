@@ -110,28 +110,43 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		})
 
 		It("[test_id:3795]should have Failing ConditionType set to true", func() {
+			failingEnactmentConditions := []interface{}{
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+					Status: corev1.ConditionTrue,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+					Status: corev1.ConditionFalse,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+					Status: corev1.ConditionFalse,
+				},
+				nmstatev1alpha1.Condition{
+					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+					Status: corev1.ConditionTrue,
+				},
+			}
 			for _, node := range nodes {
-				enactmentConditionsStatusEventually(node).Should(ConsistOf(
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
-						Status: corev1.ConditionTrue,
-					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
-						Status: corev1.ConditionFalse,
-					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
-						Status: corev1.ConditionFalse,
-					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
-						Status: corev1.ConditionTrue,
-					},
-				))
+				By(fmt.Sprintf("Check %s failing state is reached", node))
+				enactmentConditionsStatusEventually(node).Should(ConsistOf(failingEnactmentConditions...), "should eventually reach failing conditions at enactments")
 			}
 			By("Check policy is at degraded state")
 			waitForDegradedTestPolicy()
+
+			By("Check that the enactment stays in failing state")
+			var wg sync.WaitGroup
+			wg.Add(len(nodes))
+			for i, _ := range nodes {
+				node := nodes[i]
+				go func() {
+					defer wg.Done()
+					By(fmt.Sprintf("Check %s failing state is kept", node))
+					enactmentConditionsStatusConsistently(node).Should(ConsistOf(failingEnactmentConditions...), "should consistently keep failing conditions at enactments")
+				}()
+			}
+			wg.Wait()
 		})
 	})
 })
