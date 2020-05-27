@@ -9,9 +9,7 @@ require (
 	github.com/go-logr/logr v0.1.0
 	github.com/go-openapi/spec v0.19.4
 	github.com/gobwas/glob v0.2.3
-	github.com/inconshreveable/log15 v0.0.0-20200109203555-b30bc20e4fd1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kevinburke/rest v0.0.0-20200429221318-0d2892b400f8 // indirect
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.8.1
@@ -19,10 +17,9 @@ require (
 	github.com/operator-framework/operator-sdk v0.15.1
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/qinqon/kube-admission-webhook v0.6.0
+	github.com/qinqon/kube-admission-webhook v0.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.4.0
-	golang.org/x/sys v0.0.0-20191112214154-59a1497f0cea // indirect
 	k8s.io/api v0.0.0
 	k8s.io/apimachinery v0.0.0
 	k8s.io/client-go v12.0.0+incompatible
