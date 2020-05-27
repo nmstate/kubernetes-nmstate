@@ -24,14 +24,6 @@ chmod +x ${SSH}
 focus='test_id:3796|test_id:3795|test_id:3813|test_id:3794|test_id:3793'
 make test-e2e-handler \
     E2E_TEST_TIMEOUT=${TIMEOUT} \
-    E2E_TEST_ARGS=" \
---junit-output=junit.functest.xml \
--ginkgo.noColor \
--ginkgo.focus $focus \
---polarion-custom-plannedin=2_4 \
---polarion-execution=true \
---polarion-project-id=CNV \
---polarion-report-file=polarion_results.xml \
-    " \
+    E2E_TEST_ARGS="$* --junit-output=junit.functest.xml -ginkgo.noColor -ginkgo.focus $focus" \
     NAMESPACE=$NAMESPACE \
     KUBECONFIG=$KUBECONFIG
