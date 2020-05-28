@@ -9,7 +9,6 @@
 
 teardown() {
     make cluster-down
-    cp $(find . -name "*junit*.xml") $ARTIFACTS
     # Don't fail if there is no logs
     cp ${E2E_LOGS}/handler/*.log ${ARTIFACTS} || true
 }
@@ -30,7 +29,7 @@ main() {
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
-    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-ginkgo.noColor " test-e2e-handler
+    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-ginkgo.noColor --junit-output=$ARTIFACTS/junit.functest.xml" test-e2e-handler
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"
