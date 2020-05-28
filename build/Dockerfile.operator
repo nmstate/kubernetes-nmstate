@@ -1,6 +1,5 @@
-ARG BASE_IMAGE=quay.io/nmstate/kubernetes-nmstate
-ARG BASE_TAG=latest
-FROM ${BASE_IMAGE}:${BASE_TAG} AS handler
+ARG BASE_IMAGE=quay.io/nmstate/kubernetes-nmstate-handler:latest
+FROM ${BASE_IMAGE} AS handler
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
