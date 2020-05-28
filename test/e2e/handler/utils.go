@@ -335,6 +335,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 		}
 
 		if !gjson.Valid(bridgeVlans) {
+			By("Getting vlan filtering from non-json output")
 			// There is a bug [1] at centos8 and output is and invalid json
 			// so it parses the non json output
 			// [1] https://bugs.centos.org/view.php?id=16533
@@ -342,9 +343,10 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 			Expect(err).ToNot(HaveOccurred())
 			return strings.Split(string(output), " ")
 		} else {
+			By("Getting vlan filtering from json output")
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 
-			vlanFlagsFilter := fmt.Sprintf("%s.#(vlan==%d).flags", connection, vlan)
+			vlanFlagsFilter := fmt.Sprintf("#(ifname==%s).vlans.#(vlan==%d).flags", connection, vlan)
 
 			vlanFlags := parsedBridgeVlans.Get(vlanFlagsFilter)
 			if !vlanFlags.Exists() {
@@ -383,7 +385,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 		} else {
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 			for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
-				vlanByIdAndConection := fmt.Sprintf("%s.#(vlan==%d)", connection, expectedVlan)
+				vlanByIdAndConection := fmt.Sprintf("#(ifname==%s).vlans.#(vlan==%d)", connection, expectedVlan)
 				if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
 					return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
 				}
