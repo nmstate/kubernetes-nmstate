@@ -10,7 +10,7 @@ import (
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 var _ = Describe("NNCP cleanup", func() {
@@ -36,8 +36,8 @@ var _ = Describe("NNCP cleanup", func() {
 		It("should also delete nodes enactments", func() {
 			for _, node := range nodes {
 				Eventually(func() bool {
-					key := nmstatev1alpha1.EnactmentKey(node, bridge1)
-					enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
+					key := nmstatev1beta1.EnactmentKey(node, bridge1)
+					enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
 					err := framework.Global.Client.Get(context.TODO(), key, &enactment)
 					return errors.IsNotFound(err)
 				}, 10*time.Second, 1*time.Second).Should(BeTrue(), "Enactment has not being deleted")

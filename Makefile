@@ -105,7 +105,7 @@ gen-k8s: $(OPERATOR_SDK)
 	$(OPERATOR_SDK) generate k8s
 
 gen-openapi: $(OPENAPI_GEN)
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1alpha1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
+	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1beta1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
 	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1beta1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
 
 gen-crds: $(OPERATOR_SDK)

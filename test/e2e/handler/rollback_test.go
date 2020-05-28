@@ -7,14 +7,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 // We cannot change routes at nmstate if the interface is with dhcp true
 // that's why we need to set it static with the same ip it has previously.
-func badDefaultGw(address string, nic string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func badDefaultGw(address string, nic string) nmstatev1beta1.State {
+	return nmstatev1beta1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up

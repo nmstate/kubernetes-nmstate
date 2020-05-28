@@ -10,10 +10,10 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
-func expectTimestampAnnotationAtPolicy(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy, testStartTime time.Time) {
+func expectTimestampAnnotationAtPolicy(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, testStartTime time.Time) {
 	ExpectWithOffset(1, policy.ObjectMeta.Annotations).To(HaveKey(TimestampLabelKey))
 	annotation := policy.ObjectMeta.Annotations[TimestampLabelKey]
 	mutationTimestamp, err := strconv.ParseInt(annotation, 10, 64)
@@ -25,7 +25,7 @@ var _ = Describe("NNCP Conditions Mutating Admission Webhook", func() {
 	var (
 		testStartTime    time.Time
 		obtainedResponse webhook.AdmissionResponse
-		policy           = nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+		policy           = nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	)
 	BeforeEach(func() {
 		testStartTime = time.Now()

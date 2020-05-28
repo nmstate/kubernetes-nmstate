@@ -13,11 +13,11 @@ import (
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
-func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func createBridgeOnTheDefaultInterface() nmstatev1beta1.State {
+	return nmstatev1beta1.NewState(fmt.Sprintf(`interfaces:
   - name: brext
     type: linux-bridge
     state: up
@@ -33,8 +33,8 @@ func createBridgeOnTheDefaultInterface() nmstatev1alpha1.State {
 `, primaryNic))
 }
 
-func resetDefaultInterface() nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func resetDefaultInterface() nmstatev1beta1.State {
+	return nmstatev1beta1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up

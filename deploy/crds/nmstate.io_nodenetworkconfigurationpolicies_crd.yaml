@@ -79,8 +79,8 @@ spec:
               type: array
           type: object
       type: object
-  version: v1alpha1
+  version: v1beta1
   versions:
-  - name: v1alpha1
+  - name: v1beta1
     served: true
     storage: true

@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 var _ = Describe("Enactment DesiredState", func() {
@@ -23,7 +23,7 @@ var _ = Describe("Enactment DesiredState", func() {
 		})
 		It("should have desiredState for node", func() {
 			for _, node := range nodes {
-				enactmentKey := nmstatev1alpha1.EnactmentKey(node, TestPolicy)
+				enactmentKey := nmstatev1beta1.EnactmentKey(node, TestPolicy)
 				By(fmt.Sprintf("Check enactment %s has expected desired state", enactmentKey.Name))
 				nnce := nodeNetworkConfigurationEnactment(enactmentKey)
 				Expect(nnce.Status.DesiredState).To(MatchYAML(linuxBrUp(bridge1)))

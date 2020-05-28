@@ -7,32 +7,32 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 const (
-	failing     = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing
-	available   = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable
-	progressing = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing
-	matching    = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching
+	failing     = nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionFailing
+	available   = nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionAvailable
+	progressing = nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionProgressing
+	matching    = nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionMatching
 	t           = corev1.ConditionTrue
 	f           = corev1.ConditionFalse
 	u           = corev1.ConditionUnknown
 )
 
-type setter = func(*nmstatev1alpha1.ConditionList, string)
+type setter = func(*nmstatev1beta1.ConditionList, string)
 
-func enactments(enactments ...nmstatev1alpha1.NodeNetworkConfigurationEnactment) nmstatev1alpha1.NodeNetworkConfigurationEnactmentList {
-	return nmstatev1alpha1.NodeNetworkConfigurationEnactmentList{
-		Items: append([]nmstatev1alpha1.NodeNetworkConfigurationEnactment{}, enactments...),
+func enactments(enactments ...nmstatev1beta1.NodeNetworkConfigurationEnactment) nmstatev1beta1.NodeNetworkConfigurationEnactmentList {
+	return nmstatev1beta1.NodeNetworkConfigurationEnactmentList{
+		Items: append([]nmstatev1beta1.NodeNetworkConfigurationEnactment{}, enactments...),
 	}
 }
 
-func enactment(policyGeneration int64, setters ...setter) nmstatev1alpha1.NodeNetworkConfigurationEnactment {
-	enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{
-		Status: nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus{
+func enactment(policyGeneration int64, setters ...setter) nmstatev1beta1.NodeNetworkConfigurationEnactment {
+	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+		Status: nmstatev1beta1.NodeNetworkConfigurationEnactmentStatus{
 			PolicyGeneration: policyGeneration,
-			Conditions:       nmstatev1alpha1.ConditionList{},
+			Conditions:       nmstatev1beta1.ConditionList{},
 		},
 	}
 	for _, setter := range setters {
@@ -43,7 +43,7 @@ func enactment(policyGeneration int64, setters ...setter) nmstatev1alpha1.NodeNe
 
 var _ = Describe("Enactment condition counter", func() {
 	type EnactmentCounterCase struct {
-		enactmentsToCount nmstatev1alpha1.NodeNetworkConfigurationEnactmentList
+		enactmentsToCount nmstatev1beta1.NodeNetworkConfigurationEnactmentList
 		policyGeneration  int64
 		expectedCount     ConditionCount
 	}

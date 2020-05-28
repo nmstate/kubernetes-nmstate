@@ -1,4 +1,4 @@
-package v1alpha1
+package v1beta1
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 

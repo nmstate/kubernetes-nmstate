@@ -9,11 +9,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
-func invalidConfig(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func invalidConfig(bridgeName string) nmstatev1beta1.State {
+	return nmstatev1beta1.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: invalid_state
@@ -32,39 +32,39 @@ var _ = Describe("EnactmentCondition", func() {
 			resetDesiredStateForNodes()
 		})
 		It("should go from Progressing to Available", func() {
-			progressConditions := []nmstatev1alpha1.Condition{
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+			progressConditions := []nmstatev1beta1.Condition{
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionProgressing,
 					Status: corev1.ConditionTrue,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionAvailable,
 					Status: corev1.ConditionUnknown,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionUnknown,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionMatching,
 					Status: corev1.ConditionTrue,
 				},
 			}
-			availableConditions := []nmstatev1alpha1.Condition{
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+			availableConditions := []nmstatev1beta1.Condition{
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionProgressing,
 					Status: corev1.ConditionFalse,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionAvailable,
 					Status: corev1.ConditionTrue,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionFalse,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+				nmstatev1beta1.Condition{
+					Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionMatching,
 					Status: corev1.ConditionTrue,
 				},
 			}
@@ -112,20 +112,20 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				enactmentConditionsStatusEventually(node).Should(ConsistOf(
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+					nmstatev1beta1.Condition{
+						Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionFailing,
 						Status: corev1.ConditionTrue,
 					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+					nmstatev1beta1.Condition{
+						Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionAvailable,
 						Status: corev1.ConditionFalse,
 					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+					nmstatev1beta1.Condition{
+						Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionProgressing,
 						Status: corev1.ConditionFalse,
 					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+					nmstatev1beta1.Condition{
+						Type:   nmstatev1beta1.NodeNetworkConfigurationEnactmentConditionMatching,
 						Status: corev1.ConditionTrue,
 					},
 				))

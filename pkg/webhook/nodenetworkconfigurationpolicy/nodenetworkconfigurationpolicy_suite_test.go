@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 func TestUnit(t *testing.T) {
@@ -20,7 +20,7 @@ func TestUnit(t *testing.T) {
 	RunSpecs(t, "NNCP Webhook Test Suite")
 }
 
-func requestForPolicy(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) webhook.AdmissionRequest {
+func requestForPolicy(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) webhook.AdmissionRequest {
 	data, err := json.Marshal(policy)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	request := webhook.AdmissionRequest{}
@@ -29,7 +29,7 @@ func requestForPolicy(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) web
 	}
 	return request
 }
-func patchPolicy(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy, response webhook.AdmissionResponse) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
+func patchPolicy(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, response webhook.AdmissionResponse) nmstatev1beta1.NodeNetworkConfigurationPolicy {
 
 	patch, err := jsonpatch.DecodePatch(response.Patch)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
@@ -40,7 +40,7 @@ func patchPolicy(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy, response
 	modified, err := patch.Apply(old)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 
-	policy = nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	policy = nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	err = json.Unmarshal(modified, &policy)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	return policy

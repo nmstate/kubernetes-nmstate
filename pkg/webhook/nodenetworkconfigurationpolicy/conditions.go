@@ -6,19 +6,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 var log = logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/conditions")
 
-func deleteConditions(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
-	policy.Status.Conditions = nmstatev1alpha1.ConditionList{}
+func deleteConditions(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+	policy.Status.Conditions = nmstatev1beta1.ConditionList{}
 	return policy
 }
 
-func setConditionsUnknown(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
-	unknownConditions := nmstatev1alpha1.ConditionList{}
-	for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionTypes {
+func setConditionsUnknown(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+	unknownConditions := nmstatev1beta1.ConditionList{}
+	for _, conditionType := range nmstatev1beta1.NodeNetworkConfigurationPolicyConditionTypes {
 		unknownConditions.Set(
 			conditionType,
 			corev1.ConditionUnknown,
@@ -28,7 +28,7 @@ func setConditionsUnknown(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy)
 	return policy
 }
 
-func atEmptyConditions(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) bool {
+func atEmptyConditions(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
 	return policy.Status.Conditions == nil || len(policy.Status.Conditions) == 0
 }
 

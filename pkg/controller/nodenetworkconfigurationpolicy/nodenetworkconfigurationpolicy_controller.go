@@ -21,7 +21,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/policyconditions"
@@ -79,7 +79,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource NodeNetworkConfigurationPolicy
-	err = c.Watch(&source.Kind{Type: &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}}, &handler.EnqueueRequestForObject{}, watchPredicate)
+	err = c.Watch(&source.Kind{Type: &nmstatev1beta1.NodeNetworkConfigurationPolicy{}}, &handler.EnqueueRequestForObject{}, watchPredicate)
 	if err != nil {
 		return err
 	}
@@ -99,7 +99,7 @@ type ReconcileNodeNetworkConfigurationPolicy struct {
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
-	var enactment nmstatev1alpha1.NodeNetworkConfigurationEnactment
+	var enactment nmstatev1beta1.NodeNetworkConfigurationEnactment
 	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
 		err := r.client.Get(context.TODO(), enactmentKey, &enactment)
 		if err != nil {
@@ -116,18 +116,18 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(enactment
 	return pollErr
 }
 
-func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
-	enactmentKey := nmstatev1alpha1.EnactmentKey(nodeName, policy.Name)
+func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
+	enactmentKey := nmstatev1beta1.EnactmentKey(nodeName, policy.Name)
 	logger := log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
-	enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
+	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
 	err := r.client.Get(context.TODO(), enactmentKey, &enactment)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed getting enactment ")
 	}
 	if err != nil && apierrors.IsNotFound(err) {
 		logger.Info("creating enactment")
-		enactment = nmstatev1alpha1.NewEnactment(nodeName, policy)
+		enactment = nmstatev1beta1.NewEnactment(nodeName, policy)
 		err = r.client.Create(context.TODO(), &enactment)
 		if err != nil {
 			return errors.Wrap(err, fmt.Sprintf("error creating NodeNetworkConfigurationEnactment: %+v", enactment))
@@ -141,7 +141,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nms
 		enactmentConditions.Reset()
 	}
 
-	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
+	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstatev1beta1.NodeNetworkConfigurationEnactmentStatus) {
 		status.DesiredState = policy.Spec.DesiredState
 		status.PolicyGeneration = policy.Generation
 	})
@@ -157,7 +157,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	reqLogger.Info("Reconciling NodeNetworkConfigurationPolicy")
 
 	// Fetch the NodeNetworkConfigurationPolicy instance
-	instance := &nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+	instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -178,7 +178,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		log.Error(err, "Error initializing enactment")
 	}
 
-	enactmentConditions := enactmentconditions.New(r.client, nmstatev1alpha1.EnactmentKey(nodeName, instance.Name))
+	enactmentConditions := enactmentconditions.New(r.client, nmstatev1beta1.EnactmentKey(nodeName, instance.Name))
 
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
@@ -215,12 +215,12 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	return reconcile.Result{}, nil
 }
 
-func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {
-	var state nmstatev1alpha1.State
+func desiredState(object runtime.Object) (nmstatev1beta1.State, error) {
+	var state nmstatev1beta1.State
 	switch v := object.(type) {
 	default:
-		return nmstatev1alpha1.State{}, fmt.Errorf("unexpected type %T", v)
-	case *nmstatev1alpha1.NodeNetworkConfigurationPolicy:
+		return nmstatev1beta1.State{}, fmt.Errorf("unexpected type %T", v)
+	case *nmstatev1beta1.NodeNetworkConfigurationPolicy:
 		state = v.Spec.DesiredState
 	}
 	return state, nil
