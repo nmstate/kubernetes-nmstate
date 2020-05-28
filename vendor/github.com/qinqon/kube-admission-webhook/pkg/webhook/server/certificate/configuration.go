@@ -109,5 +109,11 @@ func (m *Manager) CABundle() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get %s webhook configuration %s", m.webhookType, m.webhookName)
 	}
-	return m.clientConfigList(webhook)[0].CABundle, nil
+
+	clientConfigList := m.clientConfigList(webhook)
+	if clientConfigList == nil || len(clientConfigList) == 0 {
+		return nil, errors.Wrapf(err, "failed to access CABundle clientConfigList is empty in %s webhook configuration %s", m.webhookType, m.webhookName)
+	}
+
+	return clientConfigList[0].CABundle, nil
 }
