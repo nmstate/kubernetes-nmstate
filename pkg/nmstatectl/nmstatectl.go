@@ -13,7 +13,7 @@ import (
 
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
 var (
@@ -56,7 +56,7 @@ func Show(arguments ...string) (string, error) {
 	return nmstatectl([]string{"show"})
 }
 
-func Set(desiredState nmstatev1alpha1.State, timeout time.Duration) (string, error) {
+func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	var setDoneCh = make(chan struct{})
 	go setUnavailableUp(setDoneCh)
 	defer close(setDoneCh)

@@ -12,16 +12,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
-type mutator func(nmstatev1alpha1.NodeNetworkConfigurationPolicy) nmstatev1alpha1.NodeNetworkConfigurationPolicy
+type mutator func(nmstatev1beta1.NodeNetworkConfigurationPolicy) nmstatev1beta1.NodeNetworkConfigurationPolicy
 
-func mutatePolicyHandler(neededMutationFor func(nmstatev1alpha1.NodeNetworkConfigurationPolicy) bool, mutate mutator) admission.HandlerFunc {
+func mutatePolicyHandler(neededMutationFor func(nmstatev1beta1.NodeNetworkConfigurationPolicy) bool, mutate mutator) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/mutator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw
-		policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+		policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 		err := json.Unmarshal(original, &policy)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, "failed decoding policy: %s", string(original)))
@@ -43,6 +43,6 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1alpha1.NodeNetworkConfi
 	}
 }
 
-func always(nmstatev1alpha1.NodeNetworkConfigurationPolicy) bool {
+func always(nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
 	return true
 }

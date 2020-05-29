@@ -18,7 +18,8 @@ import (
 	yaml "sigs.k8s.io/yaml"
 
 	"github.com/gobwas/glob"
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
@@ -62,8 +63,8 @@ func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 	return stdout.String(), nil
 }
 
-func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1.NodeNetworkState, error) {
-	var nodeNetworkState nmstatev1alpha1.NodeNetworkState
+func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1beta1.NodeNetworkState, error) {
+	var nodeNetworkState nmstatev1beta1.NodeNetworkState
 	nodeNetworkStateKey := types.NamespacedName{
 		Name: nodeName,
 	}
@@ -74,7 +75,7 @@ func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1alpha1
 func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
-	nodeNetworkState := nmstatev1alpha1.NodeNetworkState{
+	nodeNetworkState := nmstatev1beta1.NodeNetworkState{
 		// Create NodeNetworkState for this node
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            node.ObjectMeta.Name,
@@ -91,7 +92,7 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
 }
 
 func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey) error {
-	nnsInstance := &nmstatev1alpha1.NodeNetworkState{}
+	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
 	err := client.Get(context.TODO(), namespace, nnsInstance)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -103,12 +104,12 @@ func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, nam
 	return UpdateCurrentState(client, nnsInstance)
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.NodeNetworkState) error {
+func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState) error {
 	observedStateRaw, err := nmstatectl.Show()
 	if err != nil {
 		return errors.Wrap(err, "error running nmstatectl show")
 	}
-	observedState := nmstatev1alpha1.State{Raw: []byte(observedStateRaw)}
+	observedState := nmstate.State{Raw: []byte(observedStateRaw)}
 
 	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
 	if err != nil {
@@ -145,7 +146,7 @@ func rollback(client client.Client, cause error) error {
 	return errors.New(message)
 }
 
-func ApplyDesiredState(client client.Client, desiredState nmstatev1alpha1.State) (string, error) {
+func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string, error) {
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
@@ -192,7 +193,7 @@ func ApplyDesiredState(client client.Client, desiredState nmstatev1alpha1.State)
 	return commandOutput, nil
 }
 
-func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glob) (nmstatev1alpha1.State, error) {
+func filterOut(currentState nmstate.State, interfacesFilterGlob glob.Glob) (nmstate.State, error) {
 	if interfacesFilterGlob.Match("") {
 		return currentState, nil
 	}
@@ -219,5 +220,5 @@ func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glo
 		return currentState, err
 	}
 
-	return nmstatev1alpha1.State{Raw: filteredState}, nil
+	return nmstate.State{Raw: filteredState}, nil
 }

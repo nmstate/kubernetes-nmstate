@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
@@ -28,7 +28,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Generation: c.GenerationNew,
 			}
 
-			nodeNetworkConfigurationPolicy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
+			nodeNetworkConfigurationPolicy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 
 			predicate := watchPredicate
 

@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
 )
 
@@ -31,7 +31,7 @@ var _ = Describe("Mutating Admission Webhook", func() {
 		})
 		Context("and we updated it", func() {
 			var (
-				oldPolicy nmstatev1alpha1.NodeNetworkConfigurationPolicy
+				oldPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy
 			)
 			BeforeEach(func() {
 				oldPolicy = nodeNetworkConfigurationPolicy(TestPolicy)

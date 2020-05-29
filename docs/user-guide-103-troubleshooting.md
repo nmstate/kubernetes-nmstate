@@ -22,7 +22,7 @@ interface and observe the results:
 [Download example](user-guide/eth666_up.yaml)
 
 ```yaml
-apiVersion: nmstate.io/v1alpha1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   name: eth666

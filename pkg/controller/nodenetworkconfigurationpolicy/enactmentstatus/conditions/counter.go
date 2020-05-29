@@ -5,16 +5,17 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 type CountByConditionStatus map[corev1.ConditionStatus]int
 
-type ConditionCount map[nmstatev1alpha1.ConditionType]CountByConditionStatus
+type ConditionCount map[nmstate.ConditionType]CountByConditionStatus
 
-func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList, policyGeneration int64) ConditionCount {
+func Count(enactments nmstatev1beta1.NodeNetworkConfigurationEnactmentList, policyGeneration int64) ConditionCount {
 	conditionCount := ConditionCount{}
-	for _, conditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
+	for _, conditionType := range nmstate.NodeNetworkConfigurationEnactmentConditionTypes {
 		conditionCount[conditionType] = CountByConditionStatus{
 			corev1.ConditionTrue:    0,
 			corev1.ConditionFalse:   0,
@@ -34,16 +35,16 @@ func Count(enactments nmstatev1alpha1.NodeNetworkConfigurationEnactmentList, pol
 }
 
 func (c ConditionCount) failed() CountByConditionStatus {
-	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing]
+	return c[nmstate.NodeNetworkConfigurationEnactmentConditionFailing]
 }
 func (c ConditionCount) progressing() CountByConditionStatus {
-	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing]
+	return c[nmstate.NodeNetworkConfigurationEnactmentConditionProgressing]
 }
 func (c ConditionCount) available() CountByConditionStatus {
-	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable]
+	return c[nmstate.NodeNetworkConfigurationEnactmentConditionAvailable]
 }
 func (c ConditionCount) matching() CountByConditionStatus {
-	return c[nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching]
+	return c[nmstate.NodeNetworkConfigurationEnactmentConditionMatching]
 }
 
 func (c CountByConditionStatus) true() int {

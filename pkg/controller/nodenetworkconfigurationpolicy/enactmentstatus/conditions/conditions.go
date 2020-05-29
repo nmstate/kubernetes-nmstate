@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
 )
 
@@ -82,8 +82,8 @@ func (ec *EnactmentConditions) NotifySuccess() {
 
 func (ec *EnactmentConditions) Reset() {
 	ec.logger.Info("Reset")
-	err := ec.updateEnactmentConditions(func(conditionList *nmstatev1alpha1.ConditionList, message string) {
-		conditionList = &nmstatev1alpha1.ConditionList{}
+	err := ec.updateEnactmentConditions(func(conditionList *nmstate.ConditionList, message string) {
+		conditionList = &nmstate.ConditionList{}
 	}, "")
 	if err != nil {
 		ec.logger.Error(err, "Error resetting conditions")
@@ -91,136 +91,136 @@ func (ec *EnactmentConditions) Reset() {
 }
 
 func (ec *EnactmentConditions) updateEnactmentConditions(
-	conditionsSetter func(*nmstatev1alpha1.ConditionList, string),
+	conditionsSetter func(*nmstate.ConditionList, string),
 	message string,
 ) error {
 	return enactmentstatus.Update(ec.client, ec.enactmentKey,
-		func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
+		func(status *nmstate.NodeNetworkConfigurationEnactmentStatus) {
 			conditionsSetter(&status.Conditions, message)
 		})
 }
 
-func SetFailedToConfigure(conditions *nmstatev1alpha1.ConditionList, message string) {
-	SetFailed(conditions, nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, message)
+func SetFailedToConfigure(conditions *nmstate.ConditionList, message string) {
+	SetFailed(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, message)
 }
 
-func SetFailed(conditions *nmstatev1alpha1.ConditionList, reason nmstatev1alpha1.ConditionReason, message string) {
+func SetFailed(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionTrue,
 		reason,
 		message,
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionFalse,
 		reason,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionFalse,
 		reason,
 		"",
 	)
 }
 
-func SetSuccess(conditions *nmstatev1alpha1.ConditionList, message string) {
+func SetSuccess(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
 		message,
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
 		"",
 	)
 }
 
-func SetProgressing(conditions *nmstatev1alpha1.ConditionList, message string) {
+func SetProgressing(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
 		message,
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
 		"",
 	)
 }
 
-func SetNodeSelectorNotMatching(conditions *nmstatev1alpha1.ConditionList, message string) {
-	SetNotMatching(conditions, nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching, message)
+func SetNodeSelectorNotMatching(conditions *nmstate.ConditionList, message string) {
+	SetNotMatching(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching, message)
 }
 
-func SetNotMatching(conditions *nmstatev1alpha1.ConditionList, reason nmstatev1alpha1.ConditionReason, message string) {
+func SetNotMatching(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionFalse,
 		reason,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionFalse,
 		reason,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionFalse,
 		reason,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 		corev1.ConditionFalse,
 		reason,
 		message,
 	)
 }
 
-func SetMatching(conditions *nmstatev1alpha1.ConditionList, message string) {
+func SetMatching(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
 		message,
 	)
 }

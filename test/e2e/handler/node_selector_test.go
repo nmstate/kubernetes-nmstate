@@ -8,7 +8,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]NodeSelector", func() {
@@ -31,8 +31,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		It("[test_id:3813]should not update any nodes and have false Matching state", func() {
 			for _, node := range nodes {
 				enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+					nmstate.Condition{
+						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 						Status: corev1.ConditionFalse,
 					}))
 			}
@@ -51,8 +51,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			It("should update all nodes and have Matching enactment state", func() {
 				for _, node := range nodes {
 					enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
-						nmstatev1alpha1.Condition{
-							Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+						nmstate.Condition{
+							Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 							Status: corev1.ConditionTrue,
 						}))
 				}
