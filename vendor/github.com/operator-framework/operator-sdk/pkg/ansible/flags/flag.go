@@ -25,10 +25,15 @@ import (
 // AnsibleOperatorFlags - Options to be used by an ansible operator
 type AnsibleOperatorFlags struct {
 	watch.WatchFlags
-	InjectOwnerRef   bool
-	MaxWorkers       int
-	AnsibleVerbosity int
+	InjectOwnerRef         bool
+	MaxWorkers             int
+	AnsibleVerbosity       int
+	AnsibleRolesPath       string
+	AnsibleCollectionsPath string
 }
+
+const AnsibleRolesPathEnvVar = "ANSIBLE_ROLES_PATH"
+const AnsibleCollectionsPathEnvVar = "ANSIBLE_COLLECTIONS_PATH"
 
 // AddTo - Add the ansible operator flags to the the flagset
 // helpTextPrefix will allow you add a prefix to default help text. Joined by a space.
@@ -39,7 +44,8 @@ func AddTo(flagSet *pflag.FlagSet, helpTextPrefix ...string) *AnsibleOperatorFla
 	flagSet.BoolVar(&aof.InjectOwnerRef,
 		"inject-owner-ref",
 		true,
-		strings.Join(append(helpTextPrefix, "The ansible operator will inject owner references unless this flag is false"), " "),
+		strings.Join(append(helpTextPrefix,
+			"The ansible operator will inject owner references unless this flag is false"), " "),
 	)
 	flagSet.IntVar(&aof.MaxWorkers,
 		"max-workers",
@@ -54,6 +60,22 @@ func AddTo(flagSet *pflag.FlagSet, helpTextPrefix ...string) *AnsibleOperatorFla
 		strings.Join(append(helpTextPrefix,
 			"Ansible verbosity. Overridden by environment variable."),
 			" "),
+	)
+	flagSet.StringVar(&aof.AnsibleRolesPath,
+		"ansible-roles-path",
+		"",
+		strings.Join(append(helpTextPrefix,
+			"Ansible Roles Path. If unset, roles are assumed to be in {{CWD}}/roles."),
+			" "),
+	)
+	flagSet.StringVar(&aof.AnsibleCollectionsPath,
+		"ansible-collections-path",
+		"",
+		strings.Join(append(helpTextPrefix,
+			`Path to installed Ansible Collections. If set, collections should be
+			located in {{value}}/ansible_collections/. If unset, collections are
+			assumed to be in ~/.ansible/collections or
+			/usr/share/ansible/collections.`), " "),
 	)
 	return aof
 }

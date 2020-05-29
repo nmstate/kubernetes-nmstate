@@ -15,9 +15,9 @@
 package genutil
 
 import (
-	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -34,6 +34,16 @@ import (
 // pkg/apis.
 func K8sCodegen() error {
 	projutil.MustInProjectRoot()
+
+	goEnv, err := exec.Command("go", "env", "GOROOT").CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("failed to get GOROOT from go env: %w", err)
+	}
+	goRoot := strings.TrimSuffix(string(goEnv), "\n")
+	log.Debugf("Setting GOROOT=%s", goRoot)
+	if err := os.Setenv("GOROOT", goRoot); err != nil {
+		return fmt.Errorf("failed to set env GOROOT=%s: %w", goRoot, err)
+	}
 
 	repoPkg := projutil.GetGoPkg()
 
@@ -62,9 +72,6 @@ func K8sCodegen() error {
 func deepcopyGen(hf string, fqApis []string) error {
 	wd, err := os.Getwd()
 	if err != nil {
-		return err
-	}
-	if err := flag.Set("logtostderr", "true"); err != nil {
 		return err
 	}
 	for _, api := range fqApis {

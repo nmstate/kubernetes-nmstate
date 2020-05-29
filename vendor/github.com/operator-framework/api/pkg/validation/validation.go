@@ -27,15 +27,10 @@ var CustomResourceDefinitionValidator = internal.CRDValidator
 // BundleValidator implements Validator to validate Bundles.
 var BundleValidator = internal.BundleValidator
 
-// PackageUpdateGraphValidator implements Validator to validate the
-// package update graph between a package manifest and Bundles.
-var PackageUpdateGraphValidator = internal.PackageUpdateGraphValidator
-
 // AllValidators implements Validator to validate all Operator manifest types.
 var AllValidators = interfaces.Validators{
 	PackageManifestValidator,
 	ClusterServiceVersionValidator,
 	CustomResourceDefinitionValidator,
 	BundleValidator,
-	PackageUpdateGraphValidator,
 }

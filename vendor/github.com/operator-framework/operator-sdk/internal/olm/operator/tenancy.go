@@ -15,12 +15,10 @@
 package olm
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
-	olmapiv1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
-	"github.com/operator-framework/operator-registry/pkg/registry"
+	olmapiv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 )
 
 // Mapping of installMode string values to types, for validation.
@@ -33,28 +31,18 @@ var installModeStrings = map[string]olmapiv1alpha1.InstallModeType{
 
 // installModeCompatible ensures installMode is compatible with the namespaces
 // and CSV's installModes being used.
-func (m operatorManager) installModeCompatible(installMode olmapiv1alpha1.InstallModeType) error {
-	err := validateInstallModeForNamespaces(installMode, m.installModeNamespaces)
+func installModeCompatible(csv *olmapiv1alpha1.ClusterServiceVersion, installMode olmapiv1alpha1.InstallModeType,
+	operatorNamespace string, targetNamespaces []string) error {
+
+	err := validateInstallModeForNamespaces(installMode, targetNamespaces)
 	if err != nil {
 		return err
 	}
 	if installMode == olmapiv1alpha1.InstallModeTypeOwnNamespace {
-		if ns := m.installModeNamespaces[0]; ns != m.namespace {
-			return fmt.Errorf("installMode %s namespace %q must match namespace %q", installMode, ns, m.namespace)
+		if ns := targetNamespaces[0]; ns != operatorNamespace {
+			return fmt.Errorf("installMode %s namespace %q must match namespace %q",
+				installMode, ns, operatorNamespace)
 		}
-	}
-	// Ensure CSV supports installMode.
-	bundle, err := getBundleForVersion(m.bundles, m.version)
-	if err != nil {
-		return err
-	}
-	bcsv, err := bundle.ClusterServiceVersion()
-	if err != nil {
-		return err
-	}
-	csv, err := bundleCSVToCSV(bcsv)
-	if err != nil {
-		return err
 	}
 	for _, mode := range csv.Spec.InstallModes {
 		if mode.Type == installMode && !mode.Supported {
@@ -68,6 +56,9 @@ func (m operatorManager) installModeCompatible(installMode olmapiv1alpha1.Instal
 // installModeFormat.
 func parseInstallModeKV(raw string) (olmapiv1alpha1.InstallModeType, []string, error) {
 	modeSplit := strings.Split(raw, "=")
+	if allNs := string(olmapiv1alpha1.InstallModeTypeAllNamespaces); raw == allNs || modeSplit[0] == allNs {
+		return olmapiv1alpha1.InstallModeTypeAllNamespaces, nil, nil
+	}
 	if len(modeSplit) != 2 {
 		return "", nil, fmt.Errorf("installMode string %q is malformatted, must be: %s", raw, installModeFormat)
 	}
@@ -77,9 +68,7 @@ func parseInstallModeKV(raw string) (olmapiv1alpha1.InstallModeType, []string, e
 		return "", nil, fmt.Errorf("installMode type string %q is not a valid installMode type", modeStr)
 	}
 	namespaces := []string{}
-	for _, namespace := range strings.Split(strings.Trim(namespaceList, ","), ",") {
-		namespaces = append(namespaces, namespace)
-	}
+	namespaces = append(namespaces, strings.Split(strings.Trim(namespaceList, ","), ",")...)
 	return mode, namespaces, nil
 }
 
@@ -88,32 +77,21 @@ func validateInstallModeForNamespaces(mode olmapiv1alpha1.InstallModeType, names
 	switch mode {
 	case olmapiv1alpha1.InstallModeTypeOwnNamespace, olmapiv1alpha1.InstallModeTypeSingleNamespace:
 		if len(namespaces) != 1 || namespaces[0] == "" {
-			return fmt.Errorf("installMode %s must be passed with exactly one non-empty namespace, have: %+q", mode, namespaces)
+			return fmt.Errorf("installMode %s must be passed with exactly one non-empty namespace, have: %+q",
+				mode, namespaces)
 		}
 	case olmapiv1alpha1.InstallModeTypeMultiNamespace:
 		if len(namespaces) < 2 {
-			return fmt.Errorf("installMode %s must be passed with more than one non-empty namespaces, have: %+q", mode, namespaces)
+			return fmt.Errorf("installMode %s must be passed with more than one non-empty namespaces, have: %+q",
+				mode, namespaces)
 		}
 	case olmapiv1alpha1.InstallModeTypeAllNamespaces:
-		if len(namespaces) != 1 || namespaces[0] != "" {
-			return fmt.Errorf("installMode %s must be passed with exactly one empty namespace, have: %+q", mode, namespaces)
+		if len(namespaces) != 0 && namespaces[0] != "" {
+			return fmt.Errorf("installMode %s must be passed with no namespaces, have: %+q",
+				mode, namespaces)
 		}
 	default:
 		return fmt.Errorf("installMode %q is not a valid installMode type", mode)
 	}
 	return nil
-}
-
-// bundleCSVToCSV converts a registry.ClusterServiceVersion bcsv to a
-// v1alpha1.ClusterServiceVersion. The returned type will not have a status.
-func bundleCSVToCSV(bcsv *registry.ClusterServiceVersion) (*olmapiv1alpha1.ClusterServiceVersion, error) {
-	spec := olmapiv1alpha1.ClusterServiceVersionSpec{}
-	if err := json.Unmarshal(bcsv.Spec, &spec); err != nil {
-		return nil, fmt.Errorf("error converting bundle CSV %q type: %w", bcsv.GetName(), err)
-	}
-	return &olmapiv1alpha1.ClusterServiceVersion{
-		TypeMeta:   bcsv.TypeMeta,
-		ObjectMeta: bcsv.ObjectMeta,
-		Spec:       spec,
-	}, nil
 }

@@ -15,6 +15,7 @@
 package v1alpha2
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strings"
@@ -57,6 +58,8 @@ func (s ScorecardOutput) MarshalText() (string, error) {
 			sb.WriteString(fmt.Sprintf("\n"))
 		}
 
+		sb.WriteString(fmt.Sprintf("\tCR: %s\n", result.CRName))
+
 		sb.WriteString("\tLabels: \n")
 		for labelKey, labelValue := range result.Labels {
 			sb.WriteString(fmt.Sprintf("\t\t%q:%q\n", labelKey, labelValue))
@@ -80,7 +83,10 @@ func (s ScorecardOutput) MarshalText() (string, error) {
 
 		if result.Log != "" {
 			sb.WriteString(fmt.Sprintf("\tLog:\n"))
-			sb.WriteString(fmt.Sprintf("\t\t%s\n", result.Log))
+			scanner := bufio.NewScanner(strings.NewReader(result.Log))
+			for scanner.Scan() {
+				sb.WriteString(fmt.Sprintf("\t\t%s\n", scanner.Text()))
+			}
 		}
 
 		sb.WriteString(fmt.Sprintf("\n"))

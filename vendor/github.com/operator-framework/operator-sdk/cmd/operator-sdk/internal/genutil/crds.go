@@ -16,9 +16,9 @@ package genutil
 
 import (
 	"fmt"
+	"path/filepath"
 
 	gencrd "github.com/operator-framework/operator-sdk/internal/generate/crd"
-	gen "github.com/operator-framework/operator-sdk/internal/generate/gen"
 	"github.com/operator-framework/operator-sdk/internal/scaffold"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 
@@ -26,17 +26,36 @@ import (
 )
 
 // CRDGen generates CRDs for all APIs in pkg/apis.
-func CRDGen() error {
+func CRDGen(crdVersion string) error {
 	projutil.MustInProjectRoot()
 
 	log.Info("Running CRD generator.")
 
-	cfg := gen.Config{}
-	crd := gencrd.NewCRDGo(cfg)
+	crd := gencrd.Generator{
+		IsOperatorGo: true,
+		CRDVersion:   crdVersion,
+	}
 	if err := crd.Generate(); err != nil {
 		return fmt.Errorf("error generating CRDs from APIs in %s: %w", scaffold.ApisDir, err)
 	}
 
 	log.Info("CRD generation complete.")
+	return nil
+}
+
+// GenerateCRDNonGo generates CRDs for Non-Go APIs(Eg., Ansible,Helm)
+func GenerateCRDNonGo(projectName string, resource scaffold.Resource, crdVersion string) error {
+	crdsDir := filepath.Join(projectName, scaffold.CRDsDir)
+	crd := gencrd.Generator{
+		CRDsDir:      crdsDir,
+		OutputDir:    crdsDir,
+		CRDVersion:   crdVersion,
+		Resource:     resource,
+		IsOperatorGo: false,
+	}
+	if err := crd.Generate(); err != nil {
+		return fmt.Errorf("error generating CRD for %s: %w", resource, err)
+	}
+	log.Info("Generated CustomResourceDefinition manifests.")
 	return nil
 }

@@ -15,12 +15,16 @@
 package execentrypoint
 
 import (
+	"fmt"
+	"os"
+
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	"github.com/operator-framework/operator-sdk/pkg/ansible"
 	aoflags "github.com/operator-framework/operator-sdk/pkg/ansible/flags"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
-
-	"github.com/spf13/cobra"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // newRunAnsibleCmd returns a command that will run an ansible operator.
@@ -31,14 +35,40 @@ func newRunAnsibleCmd() *cobra.Command {
 		Short: "Runs as an ansible operator",
 		Long: `Runs as an ansible operator. This is intended to be used when running
 in a Pod inside a cluster. Developers wanting to run their operator locally
-should use "run --local" instead.`,
+should use 'run local' instead.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logf.SetLogger(zap.Logger())
-
-			return ansible.Run(flags)
+			if err := setAnsibleEnvVars(flags); err != nil {
+				log.Fatal(err)
+			}
+			if err := ansible.Run(flags); err != nil {
+				log.Fatal(err)
+			}
+			return nil
 		},
 	}
 	flags = aoflags.AddTo(runAnsibleCmd.Flags())
 
 	return runAnsibleCmd
+}
+
+// setAnsibleEnvVars will set Ansible-defined environment variables from CLI flags.
+func setAnsibleEnvVars(flags *aoflags.AnsibleOperatorFlags) error {
+	if flags != nil {
+		if len(flags.AnsibleRolesPath) > 0 {
+			if err := os.Setenv(aoflags.AnsibleRolesPathEnvVar, flags.AnsibleRolesPath); err != nil {
+				return fmt.Errorf("failed to set %s environment variable: (%v)", aoflags.AnsibleRolesPathEnvVar, err)
+			}
+			log.Infof("Set the value %v for environment variable %v.",
+				flags.AnsibleRolesPath, aoflags.AnsibleRolesPathEnvVar)
+		}
+		if len(flags.AnsibleCollectionsPath) > 0 {
+			if err := os.Setenv(aoflags.AnsibleCollectionsPathEnvVar, flags.AnsibleCollectionsPath); err != nil {
+				return fmt.Errorf("failed to set %s environment variable: (%v)", aoflags.AnsibleCollectionsPathEnvVar, err)
+			}
+			log.Infof("Set the value %v for environment variable %v.",
+				flags.AnsibleCollectionsPath, aoflags.AnsibleCollectionsPathEnvVar)
+		}
+	}
+	return nil
 }

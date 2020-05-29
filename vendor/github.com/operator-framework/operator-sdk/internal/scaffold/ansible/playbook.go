@@ -37,9 +37,14 @@ func (p *Playbook) GetInput() (input.Input, error) {
 	return p.Input, nil
 }
 
-const playbookTmpl = `- hosts: localhost
+const playbookTmpl = `---
+- hosts: localhost
   gather_facts: no
+  collections:
+    - community.kubernetes
+    - operator_sdk.util
+
   tasks:
-  - import_role:
-      name: "[[.Resource.LowerKind]]"
+    - import_role:
+        name: "[[.Resource.LowerKind]]"
 `

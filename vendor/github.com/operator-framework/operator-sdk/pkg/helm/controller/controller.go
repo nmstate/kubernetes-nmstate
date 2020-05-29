@@ -15,16 +15,13 @@
 package controller
 
 import (
-	"bytes"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
 	rpb "helm.sh/helm/v3/pkg/release"
-	"k8s.io/apimachinery/pkg/api/meta"
+	"helm.sh/helm/v3/pkg/releaseutil"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,10 +30,12 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+	"sigs.k8s.io/yaml"
 
+	"github.com/operator-framework/operator-sdk/pkg/handler"
 	"github.com/operator-framework/operator-sdk/pkg/helm/release"
 	"github.com/operator-framework/operator-sdk/pkg/internal/predicates"
-	"github.com/operator-framework/operator-sdk/pkg/predicate"
+	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 )
 
 var log = logf.Log.WithName("helm.controller")
@@ -50,6 +49,7 @@ type WatchOptions struct {
 	ReconcilePeriod         time.Duration
 	WatchDependentResources bool
 	OverrideValues          map[string]string
+	MaxWorkers              int
 }
 
 // Add creates a new helm operator controller and adds it to the manager
@@ -69,14 +69,17 @@ func Add(mgr manager.Manager, options WatchOptions) error {
 	mgr.GetScheme().AddKnownTypeWithName(options.GVK, &unstructured.Unstructured{})
 	metav1.AddToGroupVersion(mgr.GetScheme(), options.GVK.GroupVersion())
 
-	c, err := controller.New(controllerName, mgr, controller.Options{Reconciler: r})
+	c, err := controller.New(controllerName, mgr, controller.Options{
+		Reconciler:              r,
+		MaxConcurrentReconciles: options.MaxWorkers,
+	})
 	if err != nil {
 		return err
 	}
 
 	o := &unstructured.Unstructured{}
 	o.SetGroupVersionKind(options.GVK)
-	if err := c.Watch(&source.Kind{Type: o}, &crthandler.EnqueueRequestForObject{}, predicate.GenerationChangedPredicate{}); err != nil {
+	if err := c.Watch(&source.Kind{Type: o}, &crthandler.EnqueueRequestForObject{}); err != nil {
 		return err
 	}
 
@@ -84,7 +87,8 @@ func Add(mgr manager.Manager, options WatchOptions) error {
 		watchDependentResources(mgr, r, c)
 	}
 
-	log.Info("Watching resource", "apiVersion", options.GVK.GroupVersion(), "kind", options.GVK.Kind, "namespace", options.Namespace, "reconcilePeriod", options.ReconcilePeriod.String())
+	log.Info("Watching resource", "apiVersion", options.GVK.GroupVersion(), "kind",
+		options.GVK.Kind, "namespace", options.Namespace, "reconcilePeriod", options.ReconcilePeriod.String())
 	return nil
 }
 
@@ -100,18 +104,17 @@ func watchDependentResources(mgr manager.Manager, r *HelmOperatorReconciler, c c
 	var m sync.RWMutex
 	watches := map[schema.GroupVersionKind]struct{}{}
 	releaseHook := func(release *rpb.Release) error {
-		dec := yaml.NewDecoder(bytes.NewBufferString(release.Manifest))
-		for {
+		resources := releaseutil.SplitManifests(release.Manifest)
+		for _, resource := range resources {
 			var u unstructured.Unstructured
-			err := dec.Decode(&u.Object)
-			if err == io.EOF {
-				return nil
-			}
-			if err != nil {
+			if err := yaml.Unmarshal([]byte(resource), &u); err != nil {
 				return err
 			}
 
 			gvk := u.GroupVersionKind()
+			if gvk.Empty() {
+				continue
+			}
 			m.RLock()
 			_, ok := watches[gvk]
 			m.RUnlock()
@@ -120,37 +123,31 @@ func watchDependentResources(mgr manager.Manager, r *HelmOperatorReconciler, c c
 			}
 
 			restMapper := mgr.GetRESTMapper()
-			depMapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
-			if err != nil {
-				return err
-			}
-			ownerMapping, err := restMapper.RESTMapping(owner.GroupVersionKind().GroupKind(), owner.GroupVersionKind().Version)
+			useOwnerRef, err := k8sutil.SupportsOwnerReference(restMapper, owner, &u)
 			if err != nil {
 				return err
 			}
 
-			depClusterScoped := depMapping.Scope.Name() == meta.RESTScopeNameRoot
-			ownerClusterScoped := ownerMapping.Scope.Name() == meta.RESTScopeNameRoot
-
-			if !ownerClusterScoped && depClusterScoped {
-				m.Lock()
-				watches[gvk] = struct{}{}
-				m.Unlock()
-				log.Info("Cannot watch cluster-scoped dependent resource for namespace-scoped owner. Changes to this dependent resource type will not be reconciled",
-					"ownerApiVersion", r.GVK.GroupVersion(), "ownerKind", r.GVK.Kind, "apiVersion", gvk.GroupVersion(), "kind", gvk.Kind)
-				continue
+			if useOwnerRef { // Setup watch using owner references.
+				err = c.Watch(&source.Kind{Type: &u}, &crthandler.EnqueueRequestForOwner{OwnerType: owner},
+					dependentPredicate)
+				if err != nil {
+					return err
+				}
+			} else { // Setup watch using annotations.
+				err = c.Watch(&source.Kind{Type: &u}, &handler.EnqueueRequestForAnnotation{Type: gvk.GroupKind().String()},
+					dependentPredicate)
+				if err != nil {
+					return err
+				}
 			}
-
-			err = c.Watch(&source.Kind{Type: &u}, &crthandler.EnqueueRequestForOwner{OwnerType: owner}, dependentPredicate)
-			if err != nil {
-				return err
-			}
-
 			m.Lock()
 			watches[gvk] = struct{}{}
 			m.Unlock()
-			log.Info("Watching dependent resource", "ownerApiVersion", r.GVK.GroupVersion(), "ownerKind", r.GVK.Kind, "apiVersion", gvk.GroupVersion(), "kind", gvk.Kind)
+			log.Info("Watching dependent resource", "ownerApiVersion", r.GVK.GroupVersion(),
+				"ownerKind", r.GVK.Kind, "apiVersion", gvk.GroupVersion(), "kind", gvk.Kind)
 		}
+		return nil
 	}
 	r.releaseHook = releaseHook
 }
