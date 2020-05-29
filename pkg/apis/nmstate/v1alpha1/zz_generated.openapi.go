@@ -29,64 +29,9 @@ import (
 
 func GetOpenAPIDefinitions(ref common.ReferenceCallback) map[string]common.OpenAPIDefinition {
 	return map[string]common.OpenAPIDefinition{
-		"./pkg/apis/nmstate/v1alpha1.Condition":                               schema_pkg_apis_nmstate_v1alpha1_Condition(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactment":       schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactment(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicy":          schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec":      schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus":    schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkState":                        schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
-		"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus":                  schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref),
-		"./pkg/apis/nmstate/v1alpha1.State":                                   schema_pkg_apis_nmstate_v1alpha1_State(ref),
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_Condition(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Type: []string{"object"},
-				Properties: map[string]spec.Schema{
-					"type": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"status": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"reason": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"message": {
-						SchemaProps: spec.SchemaProps{
-							Type:   []string{"string"},
-							Format: "",
-						},
-					},
-					"lastHearbeatTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"lastTransitionTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-				},
-				Required: []string{"type", "status"},
-			},
-		},
-		Dependencies: []string{
-			"k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
+		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactment": schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactment(ref),
+		"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicy":    schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref),
+		"./pkg/apis/nmstate/v1alpha1.NodeNetworkState":                  schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref),
 	}
 }
 
@@ -118,54 +63,14 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactment(ref comm
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkConfigurationEnactmentStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationEnactmentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationEnactmentStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkConfigurationEnactmentStatus defines the observed state of NodeNetworkConfigurationEnactment",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"desiredState": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The desired state rendered for the enactment's node using the policy desiredState as template",
-							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
-						},
-					},
-					"policyGeneration": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The generation from policy needed to check if an enactment condition status belongs to the same policy version",
-							Type:        []string{"integer"},
-							Format:      "int64",
-						},
-					},
-					"conditions": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkConfigurationEnactmentStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -197,82 +102,19 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicy(ref common.
 					},
 					"spec": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkConfigurationPolicySpec"),
 						},
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkConfigurationPolicyStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicySpec", "./pkg/apis/nmstate/v1alpha1.NodeNetworkConfigurationPolicyStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicySpec(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"nodeSelector": {
-						SchemaProps: spec.SchemaProps{
-							Description: "NodeSelector is a selector which must be true for the policy to be applied to the node. Selector which must match a node's labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/",
-							Type:        []string{"object"},
-							AdditionalProperties: &spec.SchemaOrBool{
-								Allows: true,
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Type:   []string{"string"},
-										Format: "",
-									},
-								},
-							},
-						},
-					},
-					"desiredState": {
-						SchemaProps: spec.SchemaProps{
-							Description: "The desired configuration of the policy",
-							Ref:         ref("./pkg/apis/nmstate/v1alpha1.State"),
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.State"},
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkConfigurationPolicyStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"conditions": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition"},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkConfigurationPolicySpec", "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkConfigurationPolicyStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }
 
@@ -304,61 +146,13 @@ func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkState(ref common.ReferenceCallb
 					},
 					"status": {
 						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus"),
+							Ref: ref("github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkStateStatus"),
 						},
 					},
 				},
 			},
 		},
 		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.NodeNetworkStateStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_NodeNetworkStateStatus(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node",
-				Type:        []string{"object"},
-				Properties: map[string]spec.Schema{
-					"currentState": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("./pkg/apis/nmstate/v1alpha1.State"),
-						},
-					},
-					"lastSuccessfulUpdateTime": {
-						SchemaProps: spec.SchemaProps{
-							Ref: ref("k8s.io/apimachinery/pkg/apis/meta/v1.Time"),
-						},
-					},
-					"conditions": {
-						SchemaProps: spec.SchemaProps{
-							Type: []string{"array"},
-							Items: &spec.SchemaOrArray{
-								Schema: &spec.Schema{
-									SchemaProps: spec.SchemaProps{
-										Ref: ref("./pkg/apis/nmstate/v1alpha1.Condition"),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		Dependencies: []string{
-			"./pkg/apis/nmstate/v1alpha1.Condition", "./pkg/apis/nmstate/v1alpha1.State", "k8s.io/apimachinery/pkg/apis/meta/v1.Time"},
-	}
-}
-
-func schema_pkg_apis_nmstate_v1alpha1_State(ref common.ReferenceCallback) common.OpenAPIDefinition {
-	return common.OpenAPIDefinition{
-		Schema: spec.Schema{
-			SchemaProps: spec.SchemaProps{
-				Description: "State contains the namestatectl yaml [1] as string instead of golang struct so we don't need to be in sync with the schema.\n\n[1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml",
-				Type:        []string{"object"},
-			},
-		},
+			"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared.NodeNetworkStateStatus", "k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta"},
 	}
 }

@@ -21,6 +21,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	nmstateapi "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
@@ -117,7 +118,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) waitEnactmentCreated(enactment
 }
 
 func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nmstatev1alpha1.NodeNetworkConfigurationPolicy) error {
-	enactmentKey := nmstatev1alpha1.EnactmentKey(nodeName, policy.Name)
+	enactmentKey := nmstateapi.EnactmentKey(nodeName, policy.Name)
 	logger := log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
 	enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
@@ -141,7 +142,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) initializeEnactment(policy nms
 		enactmentConditions.Reset()
 	}
 
-	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus) {
+	return enactmentstatus.Update(r.client, enactmentKey, func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
 		status.DesiredState = policy.Spec.DesiredState
 		status.PolicyGeneration = policy.Generation
 	})
@@ -178,7 +179,7 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 		log.Error(err, "Error initializing enactment")
 	}
 
-	enactmentConditions := enactmentconditions.New(r.client, nmstatev1alpha1.EnactmentKey(nodeName, instance.Name))
+	enactmentConditions := enactmentconditions.New(r.client, nmstateapi.EnactmentKey(nodeName, instance.Name))
 
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
@@ -215,11 +216,11 @@ func (r *ReconcileNodeNetworkConfigurationPolicy) Reconcile(request reconcile.Re
 	return reconcile.Result{}, nil
 }
 
-func desiredState(object runtime.Object) (nmstatev1alpha1.State, error) {
-	var state nmstatev1alpha1.State
+func desiredState(object runtime.Object) (nmstateapi.State, error) {
+	var state nmstateapi.State
 	switch v := object.(type) {
 	default:
-		return nmstatev1alpha1.State{}, fmt.Errorf("unexpected type %T", v)
+		return nmstateapi.State{}, fmt.Errorf("unexpected type %T", v)
 	case *nmstatev1alpha1.NodeNetworkConfigurationPolicy:
 		state = v.Spec.DesiredState
 	}

@@ -14,15 +14,16 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 type expectedConditionsStatus struct {
 	Node       string
-	conditions nmstatev1alpha1.ConditionList
+	conditions nmstate.ConditionList
 }
 
-func conditionsToYaml(conditions nmstatev1alpha1.ConditionList) string {
+func conditionsToYaml(conditions nmstate.ConditionList) string {
 	manifest, err := yaml.Marshal(conditions)
 	if err != nil {
 		panic(err)
@@ -38,16 +39,16 @@ func nodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1alpha1
 	return enactment
 }
 
-func enactmentConditionsStatus(node string, policy string) nmstatev1alpha1.ConditionList {
-	enactment := nodeNetworkConfigurationEnactment(nmstatev1alpha1.EnactmentKey(node, policy))
-	obtainedConditions := nmstatev1alpha1.ConditionList{}
-	for _, enactmentsConditionType := range nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionTypes {
+func enactmentConditionsStatus(node string, policy string) nmstate.ConditionList {
+	enactment := nodeNetworkConfigurationEnactment(nmstate.EnactmentKey(node, policy))
+	obtainedConditions := nmstate.ConditionList{}
+	for _, enactmentsConditionType := range nmstate.NodeNetworkConfigurationEnactmentConditionTypes {
 		obtainedCondition := enactment.Status.Conditions.Find(enactmentsConditionType)
 		obtainedConditionStatus := corev1.ConditionUnknown
 		if obtainedCondition != nil {
 			obtainedConditionStatus = obtainedCondition.Status
 		}
-		obtainedConditions = append(obtainedConditions, nmstatev1alpha1.Condition{
+		obtainedConditions = append(obtainedConditions, nmstate.Condition{
 			Type:   enactmentsConditionType,
 			Status: obtainedConditionStatus,
 		})
@@ -56,13 +57,13 @@ func enactmentConditionsStatus(node string, policy string) nmstatev1alpha1.Condi
 }
 
 func enactmentConditionsStatusForPolicyEventually(node string, policy string) AsyncAssertion {
-	return Eventually(func() nmstatev1alpha1.ConditionList {
+	return Eventually(func() nmstate.ConditionList {
 		return enactmentConditionsStatus(node, policy)
 	}, 180*time.Second, 1*time.Second)
 }
 
 func enactmentConditionsStatusForPolicyConsistently(node string, policy string) AsyncAssertion {
-	return Consistently(func() nmstatev1alpha1.ConditionList {
+	return Consistently(func() nmstate.ConditionList {
 		return enactmentConditionsStatus(node, policy)
 	}, 5*time.Second, 1*time.Second)
 }
@@ -78,16 +79,16 @@ func enactmentConditionsStatusConsistently(node string) AsyncAssertion {
 // In case a condition does not exist create with Unknonw type, this way
 // is easier to just use gomega matchers to check in a homogenous way that
 // condition is not present or unknown.
-func policyConditionsStatus(policyName string) nmstatev1alpha1.ConditionList {
+func policyConditionsStatus(policyName string) nmstate.ConditionList {
 	policy := nodeNetworkConfigurationPolicy(policyName)
-	obtainedConditions := nmstatev1alpha1.ConditionList{}
-	for _, policyConditionType := range nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionTypes {
+	obtainedConditions := nmstate.ConditionList{}
+	for _, policyConditionType := range nmstate.NodeNetworkConfigurationPolicyConditionTypes {
 		obtainedCondition := policy.Status.Conditions.Find(policyConditionType)
 		obtainedConditionStatus := corev1.ConditionUnknown
 		if obtainedCondition != nil {
 			obtainedConditionStatus = obtainedCondition.Status
 		}
-		obtainedConditions = append(obtainedConditions, nmstatev1alpha1.Condition{
+		obtainedConditions = append(obtainedConditions, nmstate.Condition{
 			Type:   policyConditionType,
 			Status: obtainedConditionStatus,
 		})
@@ -96,13 +97,13 @@ func policyConditionsStatus(policyName string) nmstatev1alpha1.ConditionList {
 }
 
 func policyConditionsStatusForPolicyEventually(policy string) AsyncAssertion {
-	return Eventually(func() nmstatev1alpha1.ConditionList {
+	return Eventually(func() nmstate.ConditionList {
 		return policyConditionsStatus(policy)
 	}, 480*time.Second, 1*time.Second)
 }
 
 func policyConditionsStatusForPolicyConsistently(policy string) AsyncAssertion {
-	return Consistently(func() nmstatev1alpha1.ConditionList {
+	return Consistently(func() nmstate.ConditionList {
 		return policyConditionsStatus(policy)
 	}, 5*time.Second, 1*time.Second)
 }
@@ -116,15 +117,15 @@ func policyConditionsStatusConsistently() AsyncAssertion {
 }
 
 func containPolicyAvailable() GomegaMatcher {
-	return ContainElement(nmstatev1alpha1.Condition{
-		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+	return ContainElement(nmstate.Condition{
+		Type:   nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		Status: corev1.ConditionTrue,
 	})
 }
 
 func containPolicyDegraded() GomegaMatcher {
-	return ContainElement(nmstatev1alpha1.Condition{
-		Type:   nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+	return ContainElement(nmstate.Condition{
+		Type:   nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		Status: corev1.ConditionTrue,
 	})
 }

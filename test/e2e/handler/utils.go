@@ -20,6 +20,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
@@ -58,7 +59,7 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	return dummy
 }
 
-func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev1alpha1.State, nodeSelector map[string]string) {
+func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) {
 	policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
@@ -80,26 +81,26 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstatev
 	time.Sleep(1 * time.Second)
 }
 
-func setDesiredStateWithPolicy(name string, desiredState nmstatev1alpha1.State) {
+func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
 	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, runAtWorkers)
 }
 
-func updateDesiredState(desiredState nmstatev1alpha1.State) {
+func updateDesiredState(desiredState nmstate.State) {
 	setDesiredStateWithPolicy(TestPolicy, desiredState)
 }
 
-func updateDesiredStateAndWait(desiredState nmstatev1alpha1.State) {
+func updateDesiredStateAndWait(desiredState nmstate.State) {
 	updateDesiredState(desiredState)
 	waitForAvailableTestPolicy()
 }
 
-func updateDesiredStateAtNode(node string, desiredState nmstatev1alpha1.State) {
+func updateDesiredStateAtNode(node string, desiredState nmstate.State) {
 	nodeSelector := map[string]string{"kubernetes.io/hostname": node}
 	setDesiredStateWithPolicyAndNodeSelector(TestPolicy, desiredState, nodeSelector)
 }
 
-func updateDesiredStateAtNodeAndWait(node string, desiredState nmstatev1alpha1.State) {
+func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
 	updateDesiredStateAtNode(node, desiredState)
 	waitForAvailableTestPolicy()
 }
@@ -108,7 +109,7 @@ func updateDesiredStateAtNodeAndWait(node string, desiredState nmstatev1alpha1.S
 //       to remove this
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
-	updateDesiredState(nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+	updateDesiredState(nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
@@ -181,7 +182,7 @@ func deletePolicy(name string) {
 	// delete enactments
 	enactmentsDeleteTimeout := time.Duration(60+20*len(nodes)) * time.Second
 	for _, node := range nodes {
-		enactmentKey := nmstatev1alpha1.EnactmentKey(node, name)
+		enactmentKey := nmstate.EnactmentKey(node, name)
 		Eventually(func() bool {
 			err := framework.Global.Client.Get(context.TODO(), enactmentKey, &nmstatev1alpha1.NodeNetworkConfigurationEnactment{})
 			// if we face an unexpected error do a failure since
@@ -244,7 +245,7 @@ func deleteDeviceAtNode(node string, name string) error {
 	return err
 }
 
-func interfaces(state nmstatev1alpha1.State) []interface{} {
+func interfaces(state nmstate.State) []interface{} {
 	var stateUnstructured map[string]interface{}
 	err := yaml.Unmarshal(state.Raw, &stateUnstructured)
 	Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", state)
@@ -252,16 +253,16 @@ func interfaces(state nmstatev1alpha1.State) []interface{} {
 	return interfaces
 }
 
-func currentState(node string, currentStateYaml *nmstatev1alpha1.State) AsyncAssertion {
+func currentState(node string, currentStateYaml *nmstate.State) AsyncAssertion {
 	key := types.NamespacedName{Namespace: framework.Global.Namespace, Name: node}
-	return Eventually(func() nmstatev1alpha1.RawState {
+	return Eventually(func() nmstate.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return currentStateYaml.Raw
 	}, ReadTimeout, ReadInterval)
 }
 
 func interfacesNameForNode(node string) []string {
-	var currentStateYaml nmstatev1alpha1.State
+	var currentStateYaml nmstate.State
 	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 	interfaces := interfaces(currentStateYaml)
@@ -296,7 +297,7 @@ func interfacesNameForNodeConsistently(node string) AsyncAssertion {
 
 func interfacesForNode(node string) AsyncAssertion {
 	return Eventually(func() []interface{} {
-		var currentStateYaml nmstatev1alpha1.State
+		var currentStateYaml nmstate.State
 		currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 		interfaces := interfaces(currentStateYaml)
@@ -448,7 +449,7 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 //{"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
 // use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) []byte {
-	var currentStateYaml nmstatev1alpha1.State
+	var currentStateYaml nmstate.State
 	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
 	interfaces := interfaces(currentStateYaml)

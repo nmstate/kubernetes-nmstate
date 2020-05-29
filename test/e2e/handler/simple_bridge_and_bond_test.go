@@ -6,19 +6,19 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
-func bondAbsent(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func bondAbsent(bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: absent
 `, bondName))
 }
 
-func brAndBondAbsent(bridgeName string, bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func brAndBondAbsent(bridgeName string, bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: absent
@@ -28,8 +28,8 @@ func brAndBondAbsent(bridgeName string, bondName string) nmstatev1alpha1.State {
 `, bridgeName, bondName))
 }
 
-func bondUp(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func bondUp(bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: up
@@ -42,8 +42,8 @@ func bondUp(bondName string) nmstatev1alpha1.State {
 `, bondName, firstSecondaryNic))
 }
 
-func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func brWithBondUp(bridgeName string, bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: up
@@ -65,8 +65,8 @@ func brWithBondUp(bridgeName string, bondName string) nmstatev1alpha1.State {
 `, bondName, firstSecondaryNic, bridgeName, bondName))
 }
 
-func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func bondUpWithEth1AndEth2(bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
 - name: %s
   type: bond
   state: up
@@ -85,8 +85,8 @@ func bondUpWithEth1AndEth2(bondName string) nmstatev1alpha1.State {
 `, bondName, firstSecondaryNic, secondSecondaryNic))
 }
 
-func bondUpWithEth1Eth2AndVlan(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
 - name: %s
   type: bond
   state: up

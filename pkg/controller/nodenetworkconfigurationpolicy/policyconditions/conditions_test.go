@@ -16,36 +16,37 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
 )
 
-func e(node string, policy string, conditionsSetters ...func(*nmstatev1alpha1.ConditionList, string)) nmstatev1alpha1.NodeNetworkConfigurationEnactment {
-	conditions := nmstatev1alpha1.ConditionList{}
+func e(node string, policy string, conditionsSetters ...func(*nmstate.ConditionList, string)) nmstatev1alpha1.NodeNetworkConfigurationEnactment {
+	conditions := nmstate.ConditionList{}
 	for _, conditionsSetter := range conditionsSetters {
 		conditionsSetter(&conditions, "")
 	}
 	return nmstatev1alpha1.NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
-				nmstatev1alpha1.EnactmentPolicyLabel: policy,
+				nmstate.EnactmentPolicyLabel: policy,
 			},
-			Name: nmstatev1alpha1.EnactmentKey(node, policy).Name,
+			Name: nmstate.EnactmentKey(node, policy).Name,
 		},
-		Status: nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus{
+		Status: nmstate.NodeNetworkConfigurationEnactmentStatus{
 			Conditions: conditions,
 		},
 	}
 }
 
-func p(conditionsSetter func(*nmstatev1alpha1.ConditionList, string), message string) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
-	conditions := nmstatev1alpha1.ConditionList{}
+func p(conditionsSetter func(*nmstate.ConditionList, string), message string) nmstatev1alpha1.NodeNetworkConfigurationPolicy {
+	conditions := nmstate.ConditionList{}
 	conditionsSetter(&conditions, message)
 	return nmstatev1alpha1.NodeNetworkConfigurationPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "policy1",
 		},
-		Status: nmstatev1alpha1.NodeNetworkConfigurationPolicyStatus{
+		Status: nmstate.NodeNetworkConfigurationPolicyStatus{
 			Conditions: conditions,
 		},
 	}
@@ -108,7 +109,7 @@ func newNodes(cardinality int) []corev1.Node {
 	return nodes
 }
 
-func cleanTimestamps(conditions nmstatev1alpha1.ConditionList) nmstatev1alpha1.ConditionList {
+func cleanTimestamps(conditions nmstate.ConditionList) nmstate.ConditionList {
 	dummyTime := metav1.Time{Time: time.Unix(0, 0)}
 	for i, _ := range conditions {
 		conditions[i].LastHeartbeatTime = dummyTime
@@ -149,7 +150,7 @@ var _ = Describe("Policy Conditions", func() {
 			}
 
 			updatedPolicy := c.Policy.DeepCopy()
-			updatedPolicy.Status.Conditions = nmstatev1alpha1.ConditionList{}
+			updatedPolicy.Status.Conditions = nmstate.ConditionList{}
 
 			objs = append(objs, updatedPolicy)
 

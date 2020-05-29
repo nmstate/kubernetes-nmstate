@@ -2,6 +2,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -27,45 +29,9 @@ type NodeNetworkConfigurationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NodeNetworkConfigurationPolicySpec   `json:"spec,omitempty"`
-	Status NodeNetworkConfigurationPolicyStatus `json:"status,omitempty"`
+	Spec   shared.NodeNetworkConfigurationPolicySpec   `json:"spec,omitempty"`
+	Status shared.NodeNetworkConfigurationPolicyStatus `json:"status,omitempty"`
 }
-
-// NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
-// +k8s:openapi-gen=true
-type NodeNetworkConfigurationPolicySpec struct {
-	// NodeSelector is a selector which must be true for the policy to be applied to the node.
-	// Selector which must match a node's labels for the policy to be scheduled on that node.
-	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-	// +optional
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// The desired configuration of the policy
-	DesiredState State `json:"desiredState,omitempty"`
-}
-
-// NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
-// +k8s:openapi-gen=true
-type NodeNetworkConfigurationPolicyStatus struct {
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
-}
-
-const (
-	NodeNetworkConfigurationPolicyConditionAvailable ConditionType = "Available"
-	NodeNetworkConfigurationPolicyConditionDegraded  ConditionType = "Degraded"
-)
-
-var NodeNetworkConfigurationPolicyConditionTypes = [...]ConditionType{
-	NodeNetworkConfigurationPolicyConditionAvailable,
-	NodeNetworkConfigurationPolicyConditionDegraded,
-}
-
-const (
-	NodeNetworkConfigurationPolicyConditionFailedToConfigure           ConditionReason = "FailedToConfigure"
-	NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured      ConditionReason = "SuccessfullyConfigured"
-	NodeNetworkConfigurationPolicyConditionConfigurationProgressing    ConditionReason = "ConfigurationProgressing"
-	NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode ConditionReason = "NoMatchingNode"
-)
 
 func init() {
 	SchemeBuilder.Register(&NodeNetworkConfigurationPolicy{}, &NodeNetworkConfigurationPolicyList{})

@@ -8,10 +8,10 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
-func ethernetNicsState(states map[string]string) nmstatev1alpha1.State {
+func ethernetNicsState(states map[string]string) nmstate.State {
 	tmp, err := template.New("ethernetNicsUp").Parse(`interfaces:
 {{ range $nic, $state := . }}
   - name: {{ $nic }}
@@ -25,9 +25,9 @@ func ethernetNicsState(states map[string]string) nmstatev1alpha1.State {
 	err = tmp.Execute(&stringBuilder, states)
 	Expect(err).ToNot(HaveOccurred())
 
-	return nmstatev1alpha1.NewState(stringBuilder.String())
+	return nmstate.NewState(stringBuilder.String())
 }
-func ethernetNicsUp(nics ...string) nmstatev1alpha1.State {
+func ethernetNicsUp(nics ...string) nmstate.State {
 	states := map[string]string{}
 	for _, nic := range nics {
 		states[nic] = "up"
@@ -35,8 +35,8 @@ func ethernetNicsUp(nics ...string) nmstatev1alpha1.State {
 	return ethernetNicsState(states)
 }
 
-func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func linuxBrUp(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: up
@@ -47,16 +47,16 @@ func linuxBrUp(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName, firstSecondaryNic, secondSecondaryNic))
 }
 
-func linuxBrAbsent(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func linuxBrAbsent(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: absent
 `, bridgeName))
 }
 
-func linuxBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func linuxBrUpNoPorts(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: up
@@ -68,15 +68,15 @@ func linuxBrUpNoPorts(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName))
 }
 
-func ovsBrAbsent(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func ovsBrAbsent(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ovs-bridge
     state: absent`, bridgeName))
 }
 
-func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func ovsBrUp(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ovs-bridge
     state: up
@@ -89,8 +89,8 @@ func ovsBrUp(bridgeName string) nmstatev1alpha1.State {
 `, bridgeName, firstSecondaryNic, secondSecondaryNic))
 }
 
-func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func ovsbBrWithInternalInterface(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: ovs0
     type: ovs-interface
     state: up
@@ -111,8 +111,8 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstatev1alpha1.State {
 		bridgeName, firstSecondaryNic))
 }
 
-func ifaceUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func ifaceUpWithStaticIP(iface string, ipAddress string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
       state: up
@@ -125,8 +125,8 @@ func ifaceUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
 `, iface, ipAddress))
 }
 
-func ifaceUpWithVlanUp(iface string, vlanId string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func ifaceUpWithVlanUp(iface string, vlanId string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
       state: up
@@ -136,8 +136,8 @@ func ifaceUpWithVlanUp(iface string, vlanId string) nmstatev1alpha1.State {
 `, iface, vlanId, iface, vlanId))
 }
 
-func vlanAbsent(iface string, vlanId string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func vlanAbsent(iface string, vlanId string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
       state: absent
@@ -147,15 +147,15 @@ func vlanAbsent(iface string, vlanId string) nmstatev1alpha1.State {
 `, iface, vlanId, iface, vlanId))
 }
 
-func interfaceAbsent(iface string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func interfaceAbsent(iface string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       state: absent
 `, iface))
 }
 
-func ifaceDownIPv4Disabled(iface string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func ifaceDownIPv4Disabled(iface string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
       state: down
@@ -164,8 +164,8 @@ func ifaceDownIPv4Disabled(iface string) nmstatev1alpha1.State {
 `, iface))
 }
 
-func vlanUpWithStaticIP(iface string, ipAddress string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func vlanUpWithStaticIP(iface string, ipAddress string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: vlan
       state: up

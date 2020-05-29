@@ -7,11 +7,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	yaml "sigs.k8s.io/yaml"
+
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
-		currentState = NewState(`
+		currentState = nmstate.NewState(`
 interfaces:
   - name: eth1
     type: ethernet
@@ -41,7 +43,7 @@ status:
 				Name:              "node01",
 				CreationTimestamp: metav1.Unix(0, 0),
 			},
-			Status: NodeNetworkStateStatus{
+			Status: nmstate.NodeNetworkStateStatus{
 				CurrentState:             currentState,
 				LastSuccessfulUpdateTime: metav1.Unix(0, 0),
 			},

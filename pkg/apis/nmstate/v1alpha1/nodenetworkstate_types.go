@@ -2,25 +2,8 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
 
-// NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
-// +k8s:openapi-gen=true
-type NodeNetworkStateStatus struct {
-	CurrentState             State       `json:"currentState,omitempty"`
-	LastSuccessfulUpdateTime metav1.Time `json:"lastSuccessfulUpdateTime,omitempty"`
-
-	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
-}
-
-const (
-	NodeNetworkStateConditionAvailable ConditionType = "Available"
-	NodeNetworkStateConditionFailing   ConditionType = "Failing"
-)
-
-const (
-	NodeNetworkStateConditionFailedToConfigure      ConditionReason = "FailedToConfigure"
-	NodeNetworkStateConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -33,7 +16,7 @@ type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Status NodeNetworkStateStatus `json:"status,omitempty"`
+	Status shared.NodeNetworkStateStatus `json:"status,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

@@ -13,6 +13,7 @@ import (
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
 )
@@ -21,66 +22,66 @@ var (
 	log = logf.Log.WithName("policyconditions")
 )
 
-func setPolicyProgressing(conditions *nmstatev1alpha1.ConditionList, message string) {
+func setPolicyProgressing(conditions *nmstate.ConditionList, message string) {
 	log.Info("setPolicyProgressing")
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionUnknown,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
 		message,
 	)
 }
 
-func setPolicySuccess(conditions *nmstatev1alpha1.ConditionList, message string) {
+func setPolicySuccess(conditions *nmstate.ConditionList, message string) {
 	log.Info("setPolicySuccess")
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
+		nmstate.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
 		"",
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
+		nmstate.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
 		message,
 	)
 }
 
-func setPolicyNotMatching(conditions *nmstatev1alpha1.ConditionList, message string) {
+func setPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 	log.Info("setPolicyNotMatching")
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
 		message,
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
 		message,
 	)
 }
 
-func setPolicyFailedToConfigure(conditions *nmstatev1alpha1.ConditionList, message string) {
+func setPolicyFailedToConfigure(conditions *nmstate.ConditionList, message string) {
 	log.Info("setPolicyFailedToConfigure")
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionDegraded,
+		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionTrue,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
+		nmstate.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		message,
 	)
 	conditions.Set(
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionAvailable,
+		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionFalse,
-		nmstatev1alpha1.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
+		nmstate.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		"",
 	)
 }
@@ -124,7 +125,7 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		}
 
 		enactments := nmstatev1alpha1.NodeNetworkConfigurationEnactmentList{}
-		policyLabelFilter := client.MatchingLabels{nmstatev1alpha1.EnactmentPolicyLabel: policy.Name}
+		policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
 		err = cli.List(context.TODO(), &enactments, policyLabelFilter)
 		if err != nil {
 			return errors.Wrap(err, "getting enactments failed")
@@ -181,7 +182,7 @@ func Reset(cli client.Client, policyKey types.NamespacedName) error {
 		if err != nil {
 			return errors.Wrap(err, "getting policy failed")
 		}
-		policy.Status.Conditions = nmstatev1alpha1.ConditionList{}
+		policy.Status.Conditions = nmstate.ConditionList{}
 		err = cli.Status().Update(context.TODO(), policy)
 		if err != nil {
 			if apierrors.IsConflict(err) {

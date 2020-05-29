@@ -9,11 +9,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
-func invalidConfig(bridgeName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func invalidConfig(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
     state: invalid_state
@@ -32,39 +32,39 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			resetDesiredStateForNodes()
 		})
 		It("[test_id:3796]should go from Progressing to Available", func() {
-			progressConditions := []nmstatev1alpha1.Condition{
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+			progressConditions := []nmstate.Condition{
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 					Status: corev1.ConditionTrue,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 					Status: corev1.ConditionUnknown,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionUnknown,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 					Status: corev1.ConditionTrue,
 				},
 			}
-			availableConditions := []nmstatev1alpha1.Condition{
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+			availableConditions := []nmstate.Condition{
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 					Status: corev1.ConditionFalse,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 					Status: corev1.ConditionTrue,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionFalse,
 				},
-				nmstatev1alpha1.Condition{
-					Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 					Status: corev1.ConditionTrue,
 				},
 			}
@@ -112,20 +112,20 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		It("[test_id:3795]should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				enactmentConditionsStatusEventually(node).Should(ConsistOf(
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing,
+					nmstate.Condition{
+						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 						Status: corev1.ConditionTrue,
 					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable,
+					nmstate.Condition{
+						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 						Status: corev1.ConditionFalse,
 					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing,
+					nmstate.Condition{
+						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 						Status: corev1.ConditionFalse,
 					},
-					nmstatev1alpha1.Condition{
-						Type:   nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching,
+					nmstate.Condition{
+						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 						Status: corev1.ConditionTrue,
 					},
 				))

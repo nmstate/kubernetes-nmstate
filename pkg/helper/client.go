@@ -18,6 +18,7 @@ import (
 	yaml "sigs.k8s.io/yaml"
 
 	"github.com/gobwas/glob"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
@@ -108,7 +109,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1alpha1.
 	if err != nil {
 		return errors.Wrap(err, "error running nmstatectl show")
 	}
-	observedState := nmstatev1alpha1.State{Raw: []byte(observedStateRaw)}
+	observedState := nmstate.State{Raw: []byte(observedStateRaw)}
 
 	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
 	if err != nil {
@@ -145,7 +146,7 @@ func rollback(client client.Client, cause error) error {
 	return errors.New(message)
 }
 
-func ApplyDesiredState(client client.Client, desiredState nmstatev1alpha1.State) (string, error) {
+func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string, error) {
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
@@ -192,7 +193,7 @@ func ApplyDesiredState(client client.Client, desiredState nmstatev1alpha1.State)
 	return commandOutput, nil
 }
 
-func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glob) (nmstatev1alpha1.State, error) {
+func filterOut(currentState nmstate.State, interfacesFilterGlob glob.Glob) (nmstate.State, error) {
 	if interfacesFilterGlob.Match("") {
 		return currentState, nil
 	}
@@ -219,5 +220,5 @@ func filterOut(currentState nmstatev1alpha1.State, interfacesFilterGlob glob.Glo
 		return currentState, err
 	}
 
-	return nmstatev1alpha1.State{Raw: filteredState}, nil
+	return nmstate.State{Raw: filteredState}, nil
 }

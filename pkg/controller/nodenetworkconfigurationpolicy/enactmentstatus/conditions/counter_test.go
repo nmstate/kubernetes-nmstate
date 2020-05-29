@@ -7,20 +7,21 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 )
 
 const (
-	failing     = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionFailing
-	available   = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionAvailable
-	progressing = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionProgressing
-	matching    = nmstatev1alpha1.NodeNetworkConfigurationEnactmentConditionMatching
+	failing     = nmstate.NodeNetworkConfigurationEnactmentConditionFailing
+	available   = nmstate.NodeNetworkConfigurationEnactmentConditionAvailable
+	progressing = nmstate.NodeNetworkConfigurationEnactmentConditionProgressing
+	matching    = nmstate.NodeNetworkConfigurationEnactmentConditionMatching
 	t           = corev1.ConditionTrue
 	f           = corev1.ConditionFalse
 	u           = corev1.ConditionUnknown
 )
 
-type setter = func(*nmstatev1alpha1.ConditionList, string)
+type setter = func(*nmstate.ConditionList, string)
 
 func enactments(enactments ...nmstatev1alpha1.NodeNetworkConfigurationEnactment) nmstatev1alpha1.NodeNetworkConfigurationEnactmentList {
 	return nmstatev1alpha1.NodeNetworkConfigurationEnactmentList{
@@ -30,9 +31,9 @@ func enactments(enactments ...nmstatev1alpha1.NodeNetworkConfigurationEnactment)
 
 func enactment(policyGeneration int64, setters ...setter) nmstatev1alpha1.NodeNetworkConfigurationEnactment {
 	enactment := nmstatev1alpha1.NodeNetworkConfigurationEnactment{
-		Status: nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus{
+		Status: nmstate.NodeNetworkConfigurationEnactmentStatus{
 			PolicyGeneration: policyGeneration,
-			Conditions:       nmstatev1alpha1.ConditionList{},
+			Conditions:       nmstate.ConditionList{},
 		},
 	}
 	for _, setter := range setters {
