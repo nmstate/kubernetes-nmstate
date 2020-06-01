@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -42,7 +43,7 @@ func waitForDaemonSets(t *testing.T, kubeclient kubernetes.Interface, namespace 
 	}
 	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
 		filterByApp := metav1.ListOptions{LabelSelector: "app=kubernetes-nmstate"}
-		daemonsets, err := kubeclient.AppsV1().DaemonSets(namespace).List(filterByApp)
+		daemonsets, err := kubeclient.AppsV1().DaemonSets(namespace).List(context.TODO(), filterByApp)
 		if err != nil {
 			return true, errors.Wrapf(err, "failed retrieving daemon sets for namespace %s", namespace)
 		}
@@ -64,7 +65,7 @@ func waitForDeployments(t *testing.T, kubeclient kubernetes.Interface, namespace
 
 	err := wait.PollImmediate(retryInterval, timeout, func() (done bool, err error) {
 		filterByApp := metav1.ListOptions{LabelSelector: "app=kubernetes-nmstate"}
-		deployments, err := kubeclient.AppsV1().Deployments(namespace).List(filterByApp)
+		deployments, err := kubeclient.AppsV1().Deployments(namespace).List(context.TODO(), filterByApp)
 		if err != nil {
 			return true, errors.Wrapf(err, "failed retrieving daemon sets for namespace %s", namespace)
 		}

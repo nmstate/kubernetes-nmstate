@@ -53,7 +53,7 @@ func TestE2E(tapi *testing.T) {
 	}
 
 	reporters := make([]Reporter, 0)
-	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/operator", framework.Global.Namespace, nodes))
+	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/operator", framework.Global.OperatorNamespace, nodes))
 	if ginkgoreporters.Polarion.Run {
 		reporters = append(reporters, &ginkgoreporters.Polarion)
 	}
