@@ -22,6 +22,7 @@ import (
 
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
@@ -326,6 +327,7 @@ func toUnstructured(y string) interface{} {
 func bridgeVlansAtNode(node string) (string, error) {
 	return runner.RunAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
+
 func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
 	By(fmt.Sprintf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan))
 	return Eventually(func() []string {
@@ -346,7 +348,8 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 			By("Getting vlan filtering from json output")
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 
-			vlanFlagsFilter := fmt.Sprintf("#(ifname==%s).vlans.#(vlan==%d).flags", connection, vlan)
+			gjsonExpression := linuxbridge.BuildGJsonExpression(bridgeVlans)
+			vlanFlagsFilter := fmt.Sprintf(gjsonExpression+".flags", connection, vlan)
 
 			vlanFlags := parsedBridgeVlans.Get(vlanFlagsFilter)
 			if !vlanFlags.Exists() {
@@ -384,8 +387,9 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 			}
 		} else {
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
+			gjsonExpression := linuxbridge.BuildGJsonExpression(bridgeVlans)
 			for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
-				vlanByIdAndConection := fmt.Sprintf("#(ifname==%s).vlans.#(vlan==%d)", connection, expectedVlan)
+				vlanByIdAndConection := fmt.Sprintf(gjsonExpression, connection, expectedVlan)
 				if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
 					return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
 				}
