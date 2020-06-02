@@ -40,6 +40,7 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
+	// +kubebuilder:validation:XPreserveUnknownFields
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`
 }

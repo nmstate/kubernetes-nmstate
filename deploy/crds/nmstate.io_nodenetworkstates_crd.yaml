@@ -61,6 +61,7 @@ spec:
                   of golang struct so we don't need to be in sync with the schema.
                   \n [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml"
                 type: object
+                x-kubernetes-preserve-unknown-fields: true
               lastSuccessfulUpdateTime:
                 format: date-time
                 type: string

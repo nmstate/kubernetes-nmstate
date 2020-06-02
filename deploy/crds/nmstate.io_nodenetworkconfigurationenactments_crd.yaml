@@ -66,6 +66,7 @@ spec:
                 description: The desired state rendered for the enactment's node using
                   the policy desiredState as template
                 type: object
+                x-kubernetes-preserve-unknown-fields: true
               policyGeneration:
                 description: The generation from policy needed to check if an enactment
                   condition status belongs to the same policy version
