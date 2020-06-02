@@ -15,22 +15,34 @@
 package bundle
 
 import (
-	"os"
-	"path/filepath"
-
-	"github.com/operator-framework/operator-registry/pkg/lib/bundle"
 	"github.com/spf13/cobra"
 )
+
+//nolint:structcheck
+type bundleCmd struct {
+	directory      string
+	packageName    string
+	imageTag       string
+	imageBuilder   string
+	defaultChannel string
+	channels       string
+	generateOnly   bool
+}
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "bundle",
-		Short: "Work with operator bundle metadata and bundle images",
-		Long: `Generate operator bundle metadata and build operator bundle images, which
-are used to manage operators in the Operator Lifecycle Manager.
+		Short: "Manage operator bundle metadata",
+		Long: `Manage bundle builds, bundle metadata generation, and bundle validation.
+An operator bundle is a portable operator packaging format understood by Kubernetes
+native software, like the Operator Lifecycle Manager.
 
-More information on operator bundle images and metadata:
-https://github.com/openshift/enhancements/blob/master/enhancements/olm/operator-bundle.md#docker`,
+More information about operator bundles and metadata:
+https://github.com/operator-framework/operator-registry#manifest-format.
+
+More information about the integration with OLM via SDK:
+https://sdk.operatorframework.io/docs/olm-integration/
+`,
 	}
 
 	cmd.AddCommand(
@@ -38,40 +50,4 @@ https://github.com/openshift/enhancements/blob/master/enhancements/olm/operator-
 		newValidateCmd(),
 	)
 	return cmd
-}
-
-type bundleCmd struct {
-	directory      string
-	packageName    string
-	imageTag       string
-	imageBuilder   string
-	defaultChannel string
-	channels       []string
-	generateOnly   bool
-}
-
-// cleanupFuncs returns a set of general funcs to clean up after a bundle
-// subcommand.
-func (c bundleCmd) cleanupFuncs() (fs []func()) {
-	metaDir := filepath.Join(c.directory, bundle.MetadataDir)
-	dockerFile := filepath.Join(c.directory, bundle.DockerFile)
-	metaExists := isExist(metaDir)
-	dockerFileExists := isExist(dockerFile)
-	fs = append(fs,
-		func() {
-			if !metaExists {
-				_ = os.RemoveAll(metaDir)
-			}
-		},
-		func() {
-			if !dockerFileExists {
-				_ = os.RemoveAll(dockerFile)
-			}
-		})
-	return fs
-}
-
-func isExist(path string) bool {
-	_, err := os.Stat(path)
-	return os.IsExist(err)
 }

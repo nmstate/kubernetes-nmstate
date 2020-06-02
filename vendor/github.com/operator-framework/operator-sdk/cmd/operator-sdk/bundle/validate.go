@@ -16,88 +16,219 @@ package bundle
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
-	"github.com/operator-framework/operator-registry/pkg/lib/bundle"
+	apimanifests "github.com/operator-framework/api/pkg/manifests"
+	apierrors "github.com/operator-framework/api/pkg/validation/errors"
+	registrybundle "github.com/operator-framework/operator-registry/pkg/lib/bundle"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
+
+	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/bundle/internal"
+	"github.com/operator-framework/operator-sdk/internal/flags"
+	internalregistry "github.com/operator-framework/operator-sdk/internal/registry"
 )
+
+type bundleValidateCmd struct {
+	bundleCmd
+
+	outputFormat string
+}
 
 // newValidateCmd returns a command that will validate an operator bundle image.
 func newValidateCmd() *cobra.Command {
-	c := bundleCmd{}
+	c := bundleValidateCmd{}
 	cmd := &cobra.Command{
 		Use:   "validate",
 		Short: "Validate an operator bundle image",
-		Long: `The 'operator-sdk bundle validate' command will validate both content and
-format of an operator bundle image containing operator metadata and manifests.
-This command will exit with a non-zero exit code if any validation tests fail.
+		Long: `The 'operator-sdk bundle validate' command can validate both content and
+format of an operator bundle image or an operator bundles directory on-disk
+containing operator metadata and manifests. This command will exit with an
+exit code of 1 if any validation errors arise, and 0 if only warnings arise or
+all validators pass.
 
-Note: the image being validated must exist in a remote registry, not just locally.`,
+More information about operator bundles and metadata:
+https://github.com/operator-framework/operator-registry#manifest-format.
+
+NOTE: if validating an image, the image must exist in a remote registry, not
+just locally.
+`,
 		Example: `The following command flow will generate test-operator bundle image manifests
-and validate that image:
+and validate them, assuming a bundle for 'test-operator' version v0.1.0 exists at
+<project-root>/deploy/olm-catalog/test-operator/manifests:
 
-$ cd ${HOME}/go/test-operator
+  # Generate manifests locally.
+  $ operator-sdk bundle create --generate-only
 
-# Generate manifests locally.
-$ operator-sdk bundle build --generate-only
+  # Validate the directory containing manifests and metadata.
+  $ operator-sdk bundle validate ./deploy/olm-catalog/test-operator
 
-# Modify the metadata and Dockerfile.
-$ cd ./deploy/olm-catalog/test-operator
-$ vim ./metadata/annotations.yaml
-$ vim ./Dockerfile
+To build and validate an image:
 
-# Build and push the image using the docker CLI.
-$ docker build -t quay.io/example/test-operator:v0.1.0 .
-$ docker push quay.io/example/test-operator:v0.1.0
+  # Create a registry namespace or use an existing one.
+  $ export NAMESPACE=<your registry namespace>
 
-# Ensure the image with modified metadata/Dockerfile is valid.
-$ operator-sdk bundle validate quay.io/example/test-operator:v0.1.0`,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if len(args) != 1 {
-				return errors.New("a bundle image tag is a required argument, ex. example.com/test-operator:v0.1.0")
+  # Build and push the image using the docker CLI.
+  $ operator-sdk bundle create quay.io/$NAMESPACE/test-operator:v0.1.0
+  $ docker push quay.io/$NAMESPACE/test-operator:v0.1.0
+
+  # Ensure the image with modified metadata and Dockerfile is valid.
+  $ operator-sdk bundle validate quay.io/$NAMESPACE/test-operator:v0.1.0
+
+`,
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
+			if viper.GetBool(flags.VerboseOpt) {
+				log.SetLevel(log.DebugLevel)
 			}
-			c.imageTag = args[0]
 
-			dir, err := ioutil.TempDir("", "bundle-")
-			if err != nil {
-				log.Fatal(err)
+			// Always print non-output logs to stderr as to not pollute actual command output.
+			// Note that it allows the JSON result be redirected to the Stdout. E.g
+			// if we run the command with `| jq . > result.json` the command will print just the logs
+			// and the file will have only the JSON result.
+			logger := log.NewEntry(internal.NewLoggerTo(os.Stderr))
+
+			if err = c.validate(args); err != nil {
+				return fmt.Errorf("invalid command args: %v", err)
 			}
-			defer func() {
-				if err = os.RemoveAll(dir); err != nil {
-					log.Error(err.Error())
+
+			// If the argument isn't a directory, assume it's an image.
+			if isExist(args[0]) {
+				if c.directory, err = relWd(args[0]); err != nil {
+					logger.Fatal(err)
 				}
-			}()
-			logger := log.WithFields(log.Fields{
-				"container-tool": c.imageBuilder,
-				"bundle-dir":     dir,
-			})
-			log.SetLevel(log.DebugLevel)
-			val := bundle.NewImageValidator(c.imageBuilder, logger)
-			if err = val.PullBundleImage(c.imageTag, dir); err != nil {
-				log.Fatalf("Error to unpacking image: %v", err)
+			} else {
+				c.directory, err = ioutil.TempDir("", "bundle-")
+				if err != nil {
+					return err
+				}
+				defer func() {
+					if err = os.RemoveAll(c.directory); err != nil {
+						logger.Errorf("Error removing temp bundle dir: %v", err)
+					}
+				}()
+
+				logger.Info("Unpacking image layers")
+
+				if err := c.unpackImageIntoDir(args[0], c.directory); err != nil {
+					logger.Fatalf("Error unpacking image %s: %v", args[0], err)
+				}
 			}
 
-			log.Info("Validating bundle image format and contents")
-
-			if err = val.ValidateBundleFormat(dir); err != nil {
-				log.Fatalf("Bundle format validation failed: %v", err)
-			}
-			manifestsDir := filepath.Join(dir, bundle.ManifestsDir)
-			if err = val.ValidateBundleContent(manifestsDir); err != nil {
-				log.Fatalf("Bundle content validation failed: %v", err)
+			result := c.run()
+			if err := result.PrintWithFormat(c.outputFormat); err != nil {
+				logger.Fatal(err)
 			}
 
-			log.Info("All validation tests have completed successfully")
+			logger.Info("All validation tests have completed successfully")
 
 			return nil
 		},
 	}
 
-	cmd.Flags().StringVarP(&c.imageBuilder, "image-builder", "b", "docker",
-		"Tool to extract container images. One of: [docker, podman]")
+	c.addToFlagSet(cmd.Flags())
 
 	return cmd
+}
+
+// validate verifies the command args
+func (c bundleValidateCmd) validate(args []string) error {
+	if len(args) != 1 {
+		return errors.New("an image tag or directory is a required argument")
+	}
+	if c.outputFormat != internal.JSONAlpha1 && c.outputFormat != internal.Text {
+		return fmt.Errorf("invalid value for output flag: %v", c.outputFormat)
+	}
+	return nil
+}
+
+// TODO: add a "permissive" flag to toggle whether warnings also cause a non-zero
+// exit code to be returned (true by default).
+func (c *bundleValidateCmd) addToFlagSet(fs *pflag.FlagSet) {
+	fs.StringVarP(&c.imageBuilder, "image-builder", "b", "docker",
+		"Tool to extract bundle image data. Only used when validating a bundle image. "+
+			"One of: [docker, podman]")
+	fs.StringVarP(&c.outputFormat, "output", "o", internal.Text,
+		"Result format for results. One of: [text, json-alpha1]")
+
+	// It is hidden because it is an alpha option
+	// The idea is the next versions of Operator Registry will return a List of errors
+	if err := fs.MarkHidden("output"); err != nil {
+		panic(err)
+	}
+}
+
+func (c bundleValidateCmd) run() (res internal.Result) {
+	// Create Result to be outputted
+	res = internal.NewResult()
+
+	logger := log.WithFields(log.Fields{
+		"bundle-dir":     c.directory,
+		"container-tool": c.imageBuilder,
+	})
+	val := registrybundle.NewImageValidator(c.imageBuilder, logger)
+
+	// Validate bundle format.
+	if err := val.ValidateBundleFormat(c.directory); err != nil {
+		res.AddError(fmt.Errorf("error validating format in %s: %v", c.directory, err))
+	}
+
+	// Validate bundle content.
+	// TODO(estroz): instead of using hard-coded 'manifests', look up bundle
+	// dir name in metadata labels.
+	manifestsDir := filepath.Join(c.directory, registrybundle.ManifestsDir)
+	results, err := validateBundleContent(logger, manifestsDir)
+	if err != nil {
+		res.AddError(fmt.Errorf("error validating content in %s: %v", manifestsDir, err))
+	}
+
+	// Check the Results will check the []apierrors.ManifestResult returned
+	// from the ValidateBundleContent to add the output(s) into the result
+	checkResults(results, &res)
+
+	return res
+}
+
+// unpackImageIntoDir writes files in image layers found in image imageTag to dir.
+func (c bundleValidateCmd) unpackImageIntoDir(imageTag, dir string) error {
+	logger := log.WithFields(log.Fields{
+		"bundle-dir":     dir,
+		"container-tool": c.imageBuilder,
+	})
+	val := registrybundle.NewImageValidator(c.imageBuilder, logger)
+
+	return val.PullBundleImage(imageTag, dir)
+}
+
+// validateBundleContent validates a bundle in manifestsDir.
+func validateBundleContent(logger *log.Entry, manifestsDir string) ([]apierrors.ManifestResult, error) {
+	// Detect mediaType.
+	mediaType, err := registrybundle.GetMediaType(manifestsDir)
+	if err != nil {
+		return nil, err
+	}
+	// Read the bundle.
+	bundle, err := apimanifests.GetBundleFromDir(manifestsDir)
+	if err != nil {
+		return nil, err
+	}
+
+	return internalregistry.ValidateBundleContent(logger, bundle, mediaType), nil
+}
+
+// checkResults logs warnings and errors in results, and returns true if at
+// least one error was encountered.
+func checkResults(results []apierrors.ManifestResult, res *internal.Result) {
+	for _, r := range results {
+		for _, w := range r.Warnings {
+			res.AddWarn(w)
+		}
+		for _, e := range r.Errors {
+			res.AddError(e)
+		}
+	}
 }

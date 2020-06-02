@@ -3,6 +3,6 @@
 mkdir -p test_logs/e2e/handler
 unset GOFLAGS && ${OPERATOR_SDK} test local ./test/e2e/handler \
 	--kubeconfig ${KUBECONFIG} \
-	--namespace ${HANDLER_NAMESPACE} \
+	--operator-namespace ${HANDLER_NAMESPACE} \
 	--no-setup \
 	--go-test-flags "${TEST_ARGS}"

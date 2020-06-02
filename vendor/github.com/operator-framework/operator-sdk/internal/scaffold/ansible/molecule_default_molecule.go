@@ -1,4 +1,4 @@
-// Copyright 2018 The Operator-SDK Authors
+// Copyright 2020 The Operator-SDK Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,14 +41,14 @@ dependency:
   name: galaxy
 driver:
   name: docker
-lint:
-  name: yamllint
-  enabled: False
+lint: |
+  set -e
+  yamllint -d "{extends: relaxed, rules: {line-length: {max: 120}}}" .
 platforms:
 - name: kind-default
   groups:
   - k8s
-  image: bsycorp/kind:latest-1.15
+  image: bsycorp/kind:latest-${KUBE_VERSION:-1.17}
   privileged: True
   override_command: no
   exposed_ports:
@@ -60,22 +60,25 @@ platforms:
 provisioner:
   name: ansible
   log: True
-  lint:
-    name: ansible-lint
-    enabled: False
+  lint: |
+    set -e
+    ansible-lint
   inventory:
     group_vars:
       all:
-        namespace: ${TEST_NAMESPACE:-osdk-test}
+        namespace: ${TEST_OPERATOR_NAMESPACE:-osdk-test}
+        kubeconfig_file: ${MOLECULE_EPHEMERAL_DIRECTORY}/kubeconfig
+    host_vars:
+      localhost:
+        ansible_python_interpreter: '{{ ansible_playbook_python }}'
   env:
-    K8S_AUTH_KUBECONFIG: /tmp/molecule/kind-default/kubeconfig
-    KUBECONFIG: /tmp/molecule/kind-default/kubeconfig
+    K8S_AUTH_KUBECONFIG: ${MOLECULE_EPHEMERAL_DIRECTORY}/kubeconfig
+    KUBECONFIG: ${MOLECULE_EPHEMERAL_DIRECTORY}/kubeconfig
     ANSIBLE_ROLES_PATH: ${MOLECULE_PROJECT_DIRECTORY}/roles
     KIND_PORT: '${TEST_CLUSTER_PORT:-9443}'
-scenario:
-  name: default
 verifier:
-  name: testinfra
-  lint:
-    name: flake8
+  name: ansible
+  lint: |
+    set -e
+    ansible-lint
 `

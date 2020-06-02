@@ -1,31 +1,27 @@
 package manifests
 
-import (
-	"fmt"
+// GetManifestsDir parses all bundles and a package manifest from a directory
+func GetManifestsDir(dir string) (*PackageManifest, []*Bundle, error) {
+	loader := NewPackageManifestLoader(dir)
 
-	internal "github.com/operator-framework/api/pkg/internal"
-	"github.com/operator-framework/api/pkg/validation"
-	"github.com/operator-framework/api/pkg/validation/errors"
-
-	"github.com/operator-framework/operator-registry/pkg/registry"
-)
-
-// GetManifestsDir parses all bundles and a package manifest from dir, which
-// are returned if found along with any errors or warnings encountered while
-// parsing/validating found manifests.
-func GetManifestsDir(dir string) (registry.PackageManifest, []*registry.Bundle, []errors.ManifestResult) {
-	manifests, err := internal.ManifestsStoreForDir(dir)
+	err := loader.LoadPackage()
 	if err != nil {
-		result := errors.ManifestResult{}
-		result.Add(errors.ErrInvalidParse(fmt.Sprintf("parse manifests from %q", dir), err))
-		return registry.PackageManifest{}, nil, []errors.ManifestResult{result}
+		return nil, nil, err
 	}
-	pkg := manifests.GetPackageManifest()
-	bundles := manifests.GetBundles()
-	objs := []interface{}{}
-	for _, obj := range bundles {
-		objs = append(objs, obj)
+
+	return loader.pkg, loader.bundles, nil
+}
+
+// GetBundleFromDir takes a raw directory containg an Operator Bundle and
+// serializes its component files (CSVs, CRDs, other native kube manifests)
+// and returns it as a Bundle
+func GetBundleFromDir(dir string) (*Bundle, error) {
+	loader := NewBundleLoader(dir)
+
+	err := loader.LoadBundle()
+	if err != nil {
+		return nil, err
 	}
-	results := validation.AllValidators.Validate(objs...)
-	return pkg, bundles, results
+
+	return loader.bundle, nil
 }

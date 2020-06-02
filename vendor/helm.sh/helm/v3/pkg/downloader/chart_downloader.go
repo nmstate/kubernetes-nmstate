@@ -72,6 +72,31 @@ type ChartDownloader struct {
 	RepositoryCache  string
 }
 
+// atomicWriteFile atomically (as atomic as os.Rename allows) writes a file to a
+// disk.
+func atomicWriteFile(filename string, body io.Reader, mode os.FileMode) error {
+	tempFile, err := ioutil.TempFile(filepath.Split(filename))
+	if err != nil {
+		return err
+	}
+	tempName := tempFile.Name()
+
+	if _, err := io.Copy(tempFile, body); err != nil {
+		tempFile.Close() // return value is ignored as we are already on error path
+		return err
+	}
+
+	if err := tempFile.Close(); err != nil {
+		return err
+	}
+
+	if err := os.Chmod(tempName, mode); err != nil {
+		return err
+	}
+
+	return os.Rename(tempName, filename)
+}
+
 // DownloadTo retrieves a chart. Depending on the settings, it may also download a provenance file.
 //
 // If Verify is set to VerifyNever, the verification will be nil.
@@ -101,7 +126,7 @@ func (c *ChartDownloader) DownloadTo(ref, version, dest string) (string, *proven
 
 	name := filepath.Base(u.Path)
 	destfile := filepath.Join(dest, name)
-	if err := ioutil.WriteFile(destfile, data.Bytes(), 0644); err != nil {
+	if err := atomicWriteFile(destfile, data, 0644); err != nil {
 		return destfile, nil, err
 	}
 
@@ -117,7 +142,7 @@ func (c *ChartDownloader) DownloadTo(ref, version, dest string) (string, *proven
 			return destfile, ver, nil
 		}
 		provfile := destfile + ".prov"
-		if err := ioutil.WriteFile(provfile, body.Bytes(), 0644); err != nil {
+		if err := atomicWriteFile(provfile, body, 0644); err != nil {
 			return destfile, nil, err
 		}
 
@@ -181,8 +206,10 @@ func (c *ChartDownloader) ResolveChartVersion(ref, version string) (*url.URL, er
 		c.Options = append(
 			c.Options,
 			getter.WithURL(rc.URL),
-			getter.WithTLSClientConfig(rc.CertFile, rc.KeyFile, rc.CAFile),
 		)
+		if rc.CertFile != "" || rc.KeyFile != "" || rc.CAFile != "" {
+			c.Options = append(c.Options, getter.WithTLSClientConfig(rc.CertFile, rc.KeyFile, rc.CAFile))
+		}
 		if rc.Username != "" && rc.Password != "" {
 			c.Options = append(
 				c.Options,
@@ -210,12 +237,14 @@ func (c *ChartDownloader) ResolveChartVersion(ref, version string) (*url.URL, er
 	if err != nil {
 		return u, err
 	}
-	if r != nil && r.Config != nil && r.Config.Username != "" && r.Config.Password != "" {
-		c.Options = append(c.Options, getter.WithBasicAuth(r.Config.Username, r.Config.Password))
-	}
 
-	if r.Config.CertFile != "" || r.Config.KeyFile != "" || r.Config.CAFile != "" {
-		c.Options = append(c.Options, getter.WithTLSClientConfig(r.Config.CertFile, r.Config.KeyFile, r.Config.CAFile))
+	if r != nil && r.Config != nil {
+		if r.Config.CertFile != "" || r.Config.KeyFile != "" || r.Config.CAFile != "" {
+			c.Options = append(c.Options, getter.WithTLSClientConfig(r.Config.CertFile, r.Config.KeyFile, r.Config.CAFile))
+		}
+		if r.Config.Username != "" && r.Config.Password != "" {
+			c.Options = append(c.Options, getter.WithBasicAuth(r.Config.Username, r.Config.Password))
+		}
 	}
 
 	// Next, we need to load the index, and actually look up the chart.
@@ -254,9 +283,6 @@ func (c *ChartDownloader) ResolveChartVersion(ref, version string) (*url.URL, er
 		// TODO add user-agent
 		if _, err := getter.NewHTTPGetter(getter.WithURL(rc.URL)); err != nil {
 			return repoURL, err
-		}
-		if r != nil && r.Config != nil && r.Config.Username != "" && r.Config.Password != "" {
-			c.Options = append(c.Options, getter.WithBasicAuth(r.Config.Username, r.Config.Password))
 		}
 		return u, err
 	}

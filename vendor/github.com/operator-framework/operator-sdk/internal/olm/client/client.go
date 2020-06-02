@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/blang/semver"
-	olmapiv1alpha1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
+	olmapiv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -41,8 +41,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 )
-
-const OLMNamespace = "olm"
 
 var ErrOLMNotInstalled = errors.New("no existing installation found")
 
@@ -105,22 +103,30 @@ func (c Client) DoDelete(ctx context.Context, objs ...runtime.Object) error {
 		}
 		kind := obj.GetObjectKind().GroupVersionKind().Kind
 		log.Infof("  Deleting %s %q", kind, getName(a.GetNamespace(), a.GetName()))
-		err = c.KubeClient.Delete(ctx, obj, client.PropagationPolicy(metav1.DeletePropagationForeground))
+		err = c.KubeClient.Delete(ctx, obj, client.PropagationPolicy(metav1.DeletePropagationBackground))
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return err
 			}
 			log.Infof("    %s %q does not exist", kind, getName(a.GetNamespace(), a.GetName()))
 		}
+		key, err := client.ObjectKeyFromObject(obj)
+		if err != nil {
+			return err
+		}
+		if err := wait.PollImmediateUntil(time.Millisecond*100, func() (bool, error) {
+			err := c.KubeClient.Get(ctx, key, obj)
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			} else if err != nil {
+				return false, err
+			}
+			return false, nil
+		}, ctx.Done()); err != nil {
+			return err
+		}
 	}
-
-	log.Infof("  Waiting for deleted resources to disappear")
-
-	return wait.PollImmediateUntil(time.Second, func() (bool, error) {
-		s := c.GetObjectsStatus(ctx, objs...)
-		installed, err := s.HasInstalledResources()
-		return !installed, err
-	}, ctx.Done())
+	return nil
 }
 
 func getName(namespace, name string) string {
@@ -149,19 +155,23 @@ func (c Client) DoRolloutWait(ctx context.Context, key types.NamespacedName) err
 			}
 			if deployment.Spec.Replicas != nil && deployment.Status.UpdatedReplicas < *deployment.Spec.Replicas {
 				onceReplicasUpdated.Do(func() {
-					log.Printf("  Waiting for Deployment %q to rollout: %d out of %d new replicas have been updated", key, deployment.Status.UpdatedReplicas, *deployment.Spec.Replicas)
+					log.Printf(
+						"  Waiting for Deployment %q to rollout: %d out of %d new replicas have been updated",
+						key, deployment.Status.UpdatedReplicas, *deployment.Spec.Replicas)
 				})
 				return false, nil
 			}
 			if deployment.Status.Replicas > deployment.Status.UpdatedReplicas {
 				oncePendingTermination.Do(func() {
-					log.Printf("  Waiting for Deployment %q to rollout: %d old replicas are pending termination", key, deployment.Status.Replicas-deployment.Status.UpdatedReplicas)
+					log.Printf("  Waiting for Deployment %q to rollout: %d old replicas are pending termination",
+						key, deployment.Status.Replicas-deployment.Status.UpdatedReplicas)
 				})
 				return false, nil
 			}
 			if deployment.Status.AvailableReplicas < deployment.Status.UpdatedReplicas {
 				onceNotAvailable.Do(func() {
-					log.Printf("  Waiting for Deployment %q to rollout: %d of %d updated replicas are available", key, deployment.Status.AvailableReplicas, deployment.Status.UpdatedReplicas)
+					log.Printf("  Waiting for Deployment %q to rollout: %d of %d updated replicas are available",
+						key, deployment.Status.AvailableReplicas, deployment.Status.UpdatedReplicas)
 				})
 				return false, nil
 			}
@@ -169,7 +179,8 @@ func (c Client) DoRolloutWait(ctx context.Context, key types.NamespacedName) err
 			return true, nil
 		}
 		onceSpecUpdate.Do(func() {
-			log.Printf("  Waiting for Deployment %q to rollout: waiting for deployment spec update to be observed", key)
+			log.Printf("Waiting for Deployment %q to rollout: waiting for deployment spec update to be observed",
+				key)
 		})
 		return false, nil
 	}
@@ -206,24 +217,27 @@ func (c Client) DoCSVWait(ctx context.Context, key types.NamespacedName) error {
 	return wait.PollImmediateUntil(time.Second, csvPhaseSucceeded, ctx.Done())
 }
 
-func (c Client) GetInstalledVersion(ctx context.Context) (string, error) {
-	opts := client.InNamespace(OLMNamespace)
+// GetInstalledVersion returns the OLM version installed in the namespace informed.
+func (c Client) GetInstalledVersion(ctx context.Context, namespace string) (string, error) {
+	opts := client.InNamespace(namespace)
 	csvs := &olmapiv1alpha1.ClusterServiceVersionList{}
 	if err := c.KubeClient.List(ctx, csvs, opts); err != nil {
 		if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 			return "", ErrOLMNotInstalled
 		}
-		return "", fmt.Errorf("failed to list CSVs in namespace %q: %v", OLMNamespace, err)
+		return "", fmt.Errorf("failed to list CSVs in namespace %q: %v", namespace, err)
 	}
 	var pkgServerCSV *olmapiv1alpha1.ClusterServiceVersion
-	for _, csv := range csvs.Items {
+	for i := range csvs.Items {
+		csv := csvs.Items[i]
 		name := csv.GetName()
 		// Check old and new name possibilities.
 		if name == pkgServerCSVNewName || strings.HasPrefix(name, pkgServerCSVOldNamePrefix) {
 			// There is more than one version of OLM installed in the cluster,
 			// so we can't resolve the version being used.
 			if pkgServerCSV != nil {
-				return "", fmt.Errorf("more than one OLM (package server) version installed: %q and %q", pkgServerCSV.GetName(), name)
+				return "", fmt.Errorf("more than one OLM (package server) version installed: %q and %q",
+					pkgServerCSV.GetName(), name)
 			}
 			pkgServerCSV = &csv
 		}

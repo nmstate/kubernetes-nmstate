@@ -130,6 +130,25 @@ production:
 
 See [here](https://github.com/go-sql-driver/mysql#parsetime) for more information.
 
+### Oracle
+Oracle Driver is [oci8](https://github.com/mattn/go-oci8), it is not pure golang code and rely on Oracle Office Client([Instant Client](https://www.oracle.com/technetwork/database/database-technologies/instant-client/downloads/index.html)), more detail information is [oci8 repo](https://github.com/mattn/go-oci8).
+
+#### Install with Oracle support
+
+To install the library and command line program, use the following:
+
+```bash
+go get -tags oracle -v github.com/rubenv/sql-migrate/...
+```
+
+```yml
+development:
+    dialect: oci8
+    datasource: user/password@localhost:1521/sid
+    dir: migrations/oracle
+    table: migrations
+```
+
 ### As a library
 
 Import sql-migrate into your application:
@@ -138,7 +157,7 @@ Import sql-migrate into your application:
 import "github.com/rubenv/sql-migrate"
 ```
 
-Set up a source of migrations, this can be from memory, from a set of files or from bindata (more on that later):
+Set up a source of migrations, this can be from memory, from a set of files, from bindata (more on that later), or from any library that implements [`http.FileSystem`](https://godoc.org/net/http#FileSystem):
 
 ```go
 // Hardcoded strings in memory:
@@ -159,7 +178,7 @@ migrations := &migrate.FileMigrationSource{
 
 // OR: Use migrations from a packr box
 migrations := &migrate.PackrMigrationSource{
-    Box: packr.NewBox("./migrations"),
+    Box: packr.New("migrations", "./migrations"),
 }
 
 // OR: Use migrations from bindata:
@@ -167,6 +186,11 @@ migrations := &migrate.AssetMigrationSource{
     Asset:    Asset,
     AssetDir: AssetDir,
     Dir:      "migrations",
+}
+
+// OR: Read migrations from a `http.FileSystem`
+migrationSource := &migrate.HttpFileSystemMigrationSource{
+    FileSystem: httpFS,
 }
 ```
 
@@ -250,11 +274,17 @@ If you like your Go applications self-contained (that is: a single binary): use 
 
 Just write your migration files as usual, as a set of SQL files in a folder.
 
+Import the packr package into your application:
+
+```go
+import "github.com/gobuffalo/packr/v2"
+```
+
 Use the `PackrMigrationSource` in your application to find the migrations:
 
 ```go
 migrations := &migrate.PackrMigrationSource{
-    Box: packr.NewBox("./migrations"),
+    Box: packr.New("migrations", "./migrations"),
 }
 ```
 
@@ -294,6 +324,16 @@ migrations := &migrate.AssetMigrationSource{
 Both `Asset` and `AssetDir` are functions provided by bindata.
 
 Then proceed as usual.
+
+## Embedding migrations with libraries that implement `http.FileSystem`
+
+You can also embed migrations with any library that implements `http.FileSystem`, like [`vfsgen`](https://github.com/shurcooL/vfsgen), [`parcello`](https://github.com/phogolabs/parcello), or [`go-resources`](https://github.com/omeid/go-resources).
+
+```go
+migrationSource := &migrate.HttpFileSystemMigrationSource{
+    FileSystem: httpFS,
+}
+```
 
 ## Extending
 

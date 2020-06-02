@@ -82,7 +82,7 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 			continue
 		}
 		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
-		podLogs, err := req.Stream()
+		podLogs, err := req.Stream(context.TODO())
 		if err != nil {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("error in opening stream: %v\n", err))
 			continue

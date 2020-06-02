@@ -22,20 +22,23 @@ import (
 	"fmt"
 	"strings"
 
+	jsonpatch "gomodules.xyz/jsonpatch/v3"
 	"helm.sh/helm/v3/pkg/action"
 	cpb "helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/kube"
+	helmkube "helm.sh/helm/v3/pkg/kube"
 	rpb "helm.sh/helm/v3/pkg/release"
 	"helm.sh/helm/v3/pkg/storage"
 	"helm.sh/helm/v3/pkg/storage/driver"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	apitypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"k8s.io/cli-runtime/pkg/resource"
-	"k8s.io/client-go/rest"
 
-	"github.com/mattbaird/jsonpatch"
 	"github.com/operator-framework/operator-sdk/pkg/helm/internal/types"
 )
 
@@ -46,10 +49,10 @@ type Manager interface {
 	IsInstalled() bool
 	IsUpdateRequired() bool
 	Sync(context.Context) error
-	InstallRelease(context.Context) (*rpb.Release, error)
-	UpdateRelease(context.Context) (*rpb.Release, *rpb.Release, error)
+	InstallRelease(context.Context, ...InstallOption) (*rpb.Release, error)
+	UpdateRelease(context.Context, ...UpdateOption) (*rpb.Release, *rpb.Release, error)
 	ReconcileRelease(context.Context) (*rpb.Release, error)
-	UninstallRelease(context.Context) (*rpb.Release, error)
+	UninstallRelease(context.Context, ...UninstallOption) (*rpb.Release, error)
 }
 
 type manager struct {
@@ -68,6 +71,10 @@ type manager struct {
 	deployedRelease  *rpb.Release
 	chart            *cpb.Chart
 }
+
+type InstallOption func(*action.Install) error
+type UpdateOption func(*action.Upgrade) error
+type UninstallOption func(*action.Uninstall) error
 
 // ReleaseName returns the name of the release.
 func (m manager) ReleaseName() string {
@@ -141,7 +148,8 @@ func (m manager) getDeployedRelease() (*rpb.Release, error) {
 	return deployedRelease, nil
 }
 
-func (m manager) getCandidateRelease(namespace, name string, chart *cpb.Chart, values map[string]interface{}) (*rpb.Release, error) {
+func (m manager) getCandidateRelease(namespace, name string, chart *cpb.Chart,
+	values map[string]interface{}) (*rpb.Release, error) {
 	upgrade := action.NewUpgrade(m.actionConfig)
 	upgrade.Namespace = namespace
 	upgrade.DryRun = true
@@ -149,10 +157,15 @@ func (m manager) getCandidateRelease(namespace, name string, chart *cpb.Chart, v
 }
 
 // InstallRelease performs a Helm release install.
-func (m manager) InstallRelease(ctx context.Context) (*rpb.Release, error) {
+func (m manager) InstallRelease(ctx context.Context, opts ...InstallOption) (*rpb.Release, error) {
 	install := action.NewInstall(m.actionConfig)
 	install.ReleaseName = m.releaseName
 	install.Namespace = m.namespace
+	for _, o := range opts {
+		if err := o(install); err != nil {
+			return nil, fmt.Errorf("failed to apply install option: %w", err)
+		}
+	}
 
 	installedRelease, err := install.Run(m.chart, m.values)
 	if err != nil {
@@ -178,10 +191,22 @@ func (m manager) InstallRelease(ctx context.Context) (*rpb.Release, error) {
 	return installedRelease, nil
 }
 
+func ForceUpdate(force bool) UpdateOption {
+	return func(u *action.Upgrade) error {
+		u.Force = force
+		return nil
+	}
+}
+
 // UpdateRelease performs a Helm release update.
-func (m manager) UpdateRelease(ctx context.Context) (*rpb.Release, *rpb.Release, error) {
+func (m manager) UpdateRelease(ctx context.Context, opts ...UpdateOption) (*rpb.Release, *rpb.Release, error) {
 	upgrade := action.NewUpgrade(m.actionConfig)
 	upgrade.Namespace = m.namespace
+	for _, o := range opts {
+		if err := o(upgrade); err != nil {
+			return nil, nil, fmt.Errorf("failed to apply upgrade option: %w", err)
+		}
+	}
 
 	updatedRelease, err := upgrade.Run(m.releaseName, m.chart, m.values)
 	if err != nil {
@@ -212,41 +237,44 @@ func (m manager) ReconcileRelease(ctx context.Context) (*rpb.Release, error) {
 	return m.deployedRelease, err
 }
 
-func reconcileRelease(ctx context.Context, kubeClient kube.Interface, expectedManifest string) error {
+func reconcileRelease(_ context.Context, kubeClient kube.Interface, expectedManifest string) error {
 	expectedInfos, err := kubeClient.Build(bytes.NewBufferString(expectedManifest), false)
 	if err != nil {
 		return err
 	}
 	return expectedInfos.Visit(func(expected *resource.Info, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("visit error: %w", err)
 		}
 
-		expectedClient := resource.NewClientWithOptions(expected.Client, func(r *rest.Request) {
-			*r = *r.Context(ctx)
-		})
-		helper := resource.NewHelper(expectedClient, expected.Mapping)
-
-		existing, err := helper.Get(expected.Namespace, expected.Name, false)
+		helper := resource.NewHelper(expected.Client, expected.Mapping)
+		existing, err := helper.Get(expected.Namespace, expected.Name, expected.Export)
 		if apierrors.IsNotFound(err) {
-			if _, err := helper.Create(expected.Namespace, true, expected.Object, &metav1.CreateOptions{}); err != nil {
-				return fmt.Errorf("create error: %w", err)
+			if _, err := helper.Create(expected.Namespace, true, expected.Object); err != nil {
+				return fmt.Errorf("create error: %s", err)
 			}
 			return nil
 		} else if err != nil {
-			return err
+			return fmt.Errorf("could not get object: %w", err)
 		}
 
-		patch, err := generatePatch(existing, expected.Object)
+		// Replicate helm's patch creation, which will create a Three-Way-Merge patch for
+		// native kubernetes Objects and fall back to a JSON merge patch for unstructured Objects such as CRDs
+		// We also extend the JSON merge patch by ignoring "remove" operations for fields added by kubernetes
+		// Reference in the helm source code:
+		// https://github.com/helm/helm/blob/1c9b54ad7f62a5ce12f87c3ae55136ca20f09c98/pkg/kube/client.go#L392
+		patch, patchType, err := createPatch(existing, expected)
 		if err != nil {
-			return fmt.Errorf("failed to marshal JSON patch: %w", err)
+			return fmt.Errorf("error creating patch: %w", err)
 		}
 
 		if patch == nil {
+			// nothing to do
 			return nil
 		}
 
-		_, err = helper.Patch(expected.Namespace, expected.Name, apitypes.JSONPatchType, patch, &metav1.PatchOptions{})
+		_, err = helper.Patch(expected.Namespace, expected.Name, patchType, patch,
+			&metav1.PatchOptions{})
 		if err != nil {
 			return fmt.Errorf("patch error: %w", err)
 		}
@@ -254,16 +282,46 @@ func reconcileRelease(ctx context.Context, kubeClient kube.Interface, expectedMa
 	})
 }
 
-func generatePatch(existing, expected runtime.Object) ([]byte, error) {
+func createPatch(existing runtime.Object, expected *resource.Info) ([]byte, apitypes.PatchType, error) {
 	existingJSON, err := json.Marshal(existing)
 	if err != nil {
-		return nil, err
+		return nil, apitypes.StrategicMergePatchType, err
 	}
-	expectedJSON, err := json.Marshal(expected)
+	expectedJSON, err := json.Marshal(expected.Object)
 	if err != nil {
-		return nil, err
+		return nil, apitypes.StrategicMergePatchType, err
 	}
 
+	// Get a versioned object
+	versionedObject := helmkube.AsVersioned(expected)
+
+	// Unstructured objects, such as CRDs, may not have an not registered error
+	// returned from ConvertToVersion. Anything that's unstructured should
+	// use the jsonpatch.CreateMergePatch. Strategic Merge Patch is not supported
+	// on objects like CRDs.
+	_, isUnstructured := versionedObject.(runtime.Unstructured)
+
+	// On newer K8s versions, CRDs aren't unstructured but have a dedicated type
+	_, isV1CRD := versionedObject.(*apiextv1.CustomResourceDefinition)
+	_, isV1beta1CRD := versionedObject.(*apiextv1beta1.CustomResourceDefinition)
+	isCRD := isV1CRD || isV1beta1CRD
+
+	if isUnstructured || isCRD {
+		// fall back to generic JSON merge patch
+		patch, err := createJSONMergePatch(existingJSON, expectedJSON)
+		return patch, apitypes.JSONPatchType, err
+	}
+
+	patchMeta, err := strategicpatch.NewPatchMetaFromStruct(versionedObject)
+	if err != nil {
+		return nil, apitypes.StrategicMergePatchType, err
+	}
+
+	patch, err := strategicpatch.CreateThreeWayMergePatch(expectedJSON, expectedJSON, existingJSON, patchMeta, true)
+	return patch, apitypes.StrategicMergePatchType, err
+}
+
+func createJSONMergePatch(existingJSON, expectedJSON []byte) ([]byte, error) {
 	ops, err := jsonpatch.CreatePatch(existingJSON, expectedJSON)
 	if err != nil {
 		return nil, err
@@ -273,9 +331,10 @@ func generatePatch(existing, expected runtime.Object) ([]byte, error) {
 	// fields added by Kubernetes or by the user after the existing release
 	// resource has been applied. The goal for this patch is to make sure that
 	// the fields managed by the Helm chart are applied.
+	// All "add" operations without a value (null) can be ignored
 	patchOps := make([]jsonpatch.JsonPatchOperation, 0)
 	for _, op := range ops {
-		if op.Operation != "remove" {
+		if op.Operation != "remove" && !(op.Operation == "add" && op.Value == nil) {
 			patchOps = append(patchOps, op)
 		}
 	}
@@ -291,7 +350,7 @@ func generatePatch(existing, expected runtime.Object) ([]byte, error) {
 }
 
 // UninstallRelease performs a Helm release uninstall.
-func (m manager) UninstallRelease(ctx context.Context) (*rpb.Release, error) {
+func (m manager) UninstallRelease(ctx context.Context, opts ...UninstallOption) (*rpb.Release, error) {
 	// Get history of this release
 	h, err := m.storageBackend.History(m.releaseName)
 	if err != nil {
@@ -305,6 +364,11 @@ func (m manager) UninstallRelease(ctx context.Context) (*rpb.Release, error) {
 	}
 
 	uninstall := action.NewUninstall(m.actionConfig)
+	for _, o := range opts {
+		if err := o(uninstall); err != nil {
+			return nil, fmt.Errorf("failed to apply uninstall option: %w", err)
+		}
+	}
 	uninstallResponse, err := uninstall.Run(m.releaseName)
 	return uninstallResponse.Release, err
 }

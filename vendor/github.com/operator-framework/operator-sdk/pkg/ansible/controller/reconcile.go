@@ -52,13 +52,14 @@ const (
 
 // AnsibleOperatorReconciler - object to reconcile runner requests
 type AnsibleOperatorReconciler struct {
-	GVK             schema.GroupVersionKind
-	Runner          runner.Runner
-	Client          client.Client
-	APIReader       client.Reader
-	EventHandlers   []events.EventHandler
-	ReconcilePeriod time.Duration
-	ManageStatus    bool
+	GVK              schema.GroupVersionKind
+	Runner           runner.Runner
+	Client           client.Client
+	APIReader        client.Reader
+	EventHandlers    []events.EventHandler
+	ReconcilePeriod  time.Duration
+	ManageStatus     bool
+	AnsibleDebugLogs bool
 }
 
 // Reconcile - handle the event.
@@ -85,7 +86,8 @@ func (r *AnsibleOperatorReconciler) Reconcile(request reconcile.Request) (reconc
 		duration, err := time.ParseDuration(ds)
 		if err != nil {
 			// Should attempt to update to a failed condition
-			errmark := r.markError(u, request.NamespacedName, fmt.Sprintf("Unable to parse reconcile period annotation: %v", err))
+			errmark := r.markError(u, request.NamespacedName,
+				fmt.Sprintf("Unable to parse reconcile period annotation: %v", err))
 			if errmark != nil {
 				logger.Error(errmark, "Unable to mark error annotation")
 			}
@@ -175,10 +177,12 @@ func (r *AnsibleOperatorReconciler) Reconcile(request reconcile.Request) (reconc
 			// convert to StatusJobEvent; would love a better way to do this
 			data, err := json.Marshal(event)
 			if err != nil {
+				printEventStats(statusEvent)
 				return reconcile.Result{}, err
 			}
 			err = json.Unmarshal(data, &statusEvent)
 			if err != nil {
+				printEventStats(statusEvent)
 				return reconcile.Result{}, err
 			}
 		}
@@ -186,10 +190,21 @@ func (r *AnsibleOperatorReconciler) Reconcile(request reconcile.Request) (reconc
 			failureMessages = append(failureMessages, event.GetFailedPlaybookMessage())
 		}
 	}
+
+	// To print the stats of the task
+	printEventStats(statusEvent)
+
+	// To print the full ansible result
+	r.printAnsibleResult(result)
+
 	if statusEvent.Event == "" {
 		eventErr := errors.New("did not receive playbook_on_stats event")
 		stdout, err := result.Stdout()
 		if err != nil {
+			errmark := r.markError(u, request.NamespacedName, "Failed to get ansible-runner stdout")
+			if errmark != nil {
+				logger.Error(errmark, "Unable to mark error to run reconciliation")
+			}
 			logger.Error(err, "Failed to get ansible-runner stdout")
 			return reconcileResult, err
 		}
@@ -248,7 +263,27 @@ func (r *AnsibleOperatorReconciler) Reconcile(request reconcile.Request) (reconc
 	return reconcileResult, nil
 }
 
-func (r *AnsibleOperatorReconciler) markRunning(u *unstructured.Unstructured, namespacedName types.NamespacedName) error {
+func printEventStats(statusEvent eventapi.StatusJobEvent) {
+	if len(statusEvent.StdOut) > 0 {
+		fmt.Printf("\n--------------------------- Ansible Task Status Event StdOut  -----------------\n")
+		fmt.Println(statusEvent.StdOut)
+		fmt.Printf("\n-------------------------------------------------------------------------------\n")
+	}
+}
+
+func (r *AnsibleOperatorReconciler) printAnsibleResult(result runner.RunResult) {
+	if r.AnsibleDebugLogs {
+		if res, err := result.Stdout(); err == nil && len(res) > 0 {
+			fmt.Printf("\n--------------------------- Ansible Debug Result -----------------------------\n")
+			fmt.Println(res)
+			fmt.Printf("\n-------------------------------------------------------------------------------\n")
+		}
+	}
+}
+
+func (r *AnsibleOperatorReconciler) markRunning(u *unstructured.Unstructured,
+	namespacedName types.NamespacedName) error {
+
 	// Get the latest resource to prevent updating a stale status.
 	if err := r.APIReader.Get(context.TODO(), namespacedName, u); err != nil {
 		return err
@@ -279,7 +314,8 @@ func (r *AnsibleOperatorReconciler) markRunning(u *unstructured.Unstructured, na
 
 // markError - used to alert the user to the issues during the validation of a reconcile run.
 // i.e Annotations that could be incorrect
-func (r *AnsibleOperatorReconciler) markError(u *unstructured.Unstructured, namespacedName types.NamespacedName, failureMessage string) error {
+func (r *AnsibleOperatorReconciler) markError(u *unstructured.Unstructured, namespacedName types.NamespacedName,
+	failureMessage string) error {
 	logger := logf.Log.WithName("markError")
 	// Immediately update metrics with failed reconciliation, since Get()
 	// may fail.
@@ -314,7 +350,8 @@ func (r *AnsibleOperatorReconciler) markError(u *unstructured.Unstructured, name
 	return r.Client.Status().Update(context.TODO(), u)
 }
 
-func (r *AnsibleOperatorReconciler) markDone(u *unstructured.Unstructured, namespacedName types.NamespacedName, statusEvent eventapi.StatusJobEvent, failureMessages eventapi.FailureMessages) error {
+func (r *AnsibleOperatorReconciler) markDone(u *unstructured.Unstructured, namespacedName types.NamespacedName,
+	statusEvent eventapi.StatusJobEvent, failureMessages eventapi.FailureMessages) error {
 	logger := logf.Log.WithName("markDone")
 	// Get the latest resource to prevent updating a stale status.
 	if err := r.APIReader.Get(context.TODO(), namespacedName, u); err != nil {

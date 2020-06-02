@@ -17,10 +17,11 @@ package scorecard
 import (
 	"fmt"
 
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
-// ValidateConfig takes a config for a plugin and returns a nil error if valid or an error explaining why the config is invalid
+// ValidateConfig takes a config for a plugin and returns a nil error if valid or an error
+// explaining why the config is invalid
 func (config PluginConfig) ValidateConfig(idx int) error {
 	// find plugin config type
 	pluginType := ""
@@ -38,7 +39,8 @@ func (config PluginConfig) ValidateConfig(idx int) error {
 		if err != nil {
 			return fmt.Errorf("plugin #%d has a missing or incorrect type", idx)
 		}
-		return fmt.Errorf("plugin #%d has a missing or incorrect type. Invalid plugin config: %s", idx, marshalledConfig)
+		return fmt.Errorf("plugin #%d has a missing or incorrect type. Invalid plugin config: %s",
+			idx, marshalledConfig)
 	}
 	return nil
 }

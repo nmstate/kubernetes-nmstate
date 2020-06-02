@@ -66,22 +66,35 @@ func NewCmd() *cobra.Command {
 				}
 			}
 
-			err := c.RunTests()
-			return err
+			if err := c.RunTests(); err != nil {
+				log.Fatal(err)
+			}
+			return nil
 		},
 	}
-	scorecardCmd.Flags().String(configOpt, "", fmt.Sprintf("config file (default is '<project_dir>/%s'; the config file's extension and format can be .yaml, .json, or .toml)", scorecard.DefaultConfigFile))
-	scorecardCmd.Flags().String(kubeconfigOpt, "", "Path to kubeconfig of custom resource created in cluster")
-	scorecardCmd.Flags().StringP(outputFormatOpt, "o", scorecard.TextOutputFormat, fmt.Sprintf("Output format for results. Valid values: %s, %s", scorecard.TextOutputFormat, scorecard.JSONOutputFormat))
-	scorecardCmd.Flags().String(versionOpt, schelpers.DefaultScorecardVersion, "scorecard version. Valid values: v1alpha2")
-	scorecardCmd.Flags().StringP(selectorOpt, "l", "", "selector (label query) to filter tests on")
-	scorecardCmd.Flags().BoolP(listOpt, "L", false, "If true, only print the test names that would be run based on selector filtering")
-	scorecardCmd.Flags().StringP(bundleOpt, "b", "", "OLM bundle directory path, when specified runs bundle validation")
+
+	scorecardCmd.Flags().String(configOpt, "", fmt.Sprintf(
+		"config file (default is '<project_dir>/%s.yaml'; the config file's extension and format must be .yaml",
+		scorecard.DefaultConfigFile))
+	scorecardCmd.Flags().String(kubeconfigOpt, "",
+		"Path to kubeconfig of custom resource created in cluster")
+	scorecardCmd.Flags().StringP(outputFormatOpt, "o", scorecard.TextOutputFormat,
+		fmt.Sprintf("Output format for results. Valid values: %s, %s", scorecard.TextOutputFormat,
+			scorecard.JSONOutputFormat))
+	scorecardCmd.Flags().String(versionOpt, schelpers.DefaultScorecardVersion,
+		"scorecard version. Valid values: v1alpha2")
+	scorecardCmd.Flags().StringP(selectorOpt, "l", "",
+		"selector (label query) to filter tests on")
+	scorecardCmd.Flags().BoolP(listOpt, "L", false,
+		"If true, only print the test names that would be run based on selector filtering")
+	scorecardCmd.Flags().StringP(bundleOpt, "b", "",
+		"OLM bundle directory path, when specified runs bundle validation")
 
 	if err := viper.BindPFlag(configOpt, scorecardCmd.Flags().Lookup(configOpt)); err != nil {
 		log.Fatalf("Unable to add config :%v", err)
 	}
-	if err := viper.BindPFlag("scorecard."+kubeconfigOpt, scorecardCmd.Flags().Lookup(kubeconfigOpt)); err != nil {
+	if err := viper.BindPFlag("scorecard."+kubeconfigOpt,
+		scorecardCmd.Flags().Lookup(kubeconfigOpt)); err != nil {
 		log.Fatalf("Unable to add kubeconfig :%v", err)
 	}
 	if err := viper.BindPFlag("scorecard."+outputFormatOpt, scorecardCmd.Flags().Lookup(outputFormatOpt)); err != nil {
@@ -110,7 +123,11 @@ func initConfig() (*viper.Viper, error) {
 		viper.SetConfigFile(viper.GetString(configOpt))
 	} else {
 		viper.AddConfigPath(projutil.MustGetwd())
-		// using SetConfigName allows users to use a .yaml, .json, or .toml file
+		// Note that viper allows other extensions as  .json, or .toml file as well, however,
+		// these other formats are deprecated in the SDK.
+		// By using SetConfigName allows users to use  diff extensions.
+		// todo(camilamacedo86): Check if we can replace this configuration and make the things easier for the future
+		// versions since from 0.16 we will need just support the YAML format.
 		viper.SetConfigName(scorecard.DefaultConfigFile)
 	}
 
@@ -141,7 +158,13 @@ func initConfig() (*viper.Viper, error) {
 		scorecard.Log.SetOutput(logReadWriter)
 		scorecard.Log.Info("Using config file: ", viper.ConfigFileUsed())
 	} else {
-		return nil, fmt.Errorf("could not read config file: %v\nSee %s for more information about the scorecard config file", err, scorecard.ConfigDocLink())
+		// The file var is used here to make clear the file.ext that is missing in the project
+		file := viper.ConfigFileUsed()
+		if len(file) < 1 {
+			file = scorecard.DefaultConfigFile + ".yaml"
+		}
+		return nil, fmt.Errorf("could not read config file (%v): %v\nSee %s for more information about the"+
+			" scorecard config file", file, err, scorecard.ConfigDocLink())
 	}
 	return scViper, nil
 }
@@ -150,12 +173,13 @@ func buildScorecardConfig(c *scorecard.Config) {
 
 	scViper, err := initConfig()
 	if err != nil {
-		log.Fatalf("%v", err.Error())
+		log.Fatalf("Unable to parse the scorecard config file: %v", err.Error())
 	}
 
 	outputFormat := scViper.GetString(outputFormatOpt)
 	if outputFormat != scorecard.TextOutputFormat && outputFormat != scorecard.JSONOutputFormat {
-		log.Fatalf("Invalid output format (%s); valid values: %s, %s", outputFormat, scorecard.TextOutputFormat, scorecard.JSONOutputFormat)
+		log.Fatalf("Invalid output format (%s); valid values: %s, %s", outputFormat, scorecard.TextOutputFormat,
+			scorecard.JSONOutputFormat)
 	}
 
 	version := scViper.GetString(versionOpt)
@@ -179,7 +203,8 @@ func buildScorecardConfig(c *scorecard.Config) {
 	}
 
 	c.PluginConfigs = []scorecard.PluginConfig{}
-	if err := scViper.UnmarshalKey("plugins", &c.PluginConfigs, func(c *mapstructure.DecoderConfig) { c.ErrorUnused = true }); err != nil {
+	if err := scViper.UnmarshalKey("plugins", &c.PluginConfigs,
+		func(c *mapstructure.DecoderConfig) { c.ErrorUnused = true }); err != nil {
 		log.Fatalf("%v", errors.Wrap(err, "Could not load plugin configurations"))
 	}
 

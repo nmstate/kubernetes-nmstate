@@ -22,7 +22,6 @@ import (
 
 	"github.com/operator-framework/operator-sdk/internal/scaffold"
 
-	"github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/chart"
@@ -31,13 +30,14 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 )
 
 // roleDiscoveryInterface is an interface that contains just the discovery
 // methods needed by the Helm role scaffold generator. Requiring just this
 // interface simplifies testing.
 type roleDiscoveryInterface interface {
-	ServerResources() ([]*metav1.APIResourceList, error)
+	ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error)
 }
 
 var DefaultRoleScaffold = scaffold.Role{
@@ -88,7 +88,8 @@ func GenerateRoleScaffold(dc roleDiscoveryInterface, chart *chart.Chart) scaffol
 		log.Info("Scaffolding ClusterRole and ClusterRolebinding for cluster scoped resources in the helm chart")
 		roleScaffold.IsClusterScoped = true
 	}
-	roleScaffold.CustomRules = append(roleScaffold.CustomRules, append(clusterResourceRules, namespacedResourceRules...)...)
+	roleScaffold.CustomRules = append(roleScaffold.CustomRules, append(clusterResourceRules,
+		namespacedResourceRules...)...)
 
 	log.Warn("The RBAC rules generated in deploy/role.yaml are based on the chart's default manifest." +
 		" Some rules may be missing for resources that are only enabled with custom values, and" +
@@ -98,8 +99,9 @@ func GenerateRoleScaffold(dc roleDiscoveryInterface, chart *chart.Chart) scaffol
 	return roleScaffold
 }
 
-func generateRoleRules(dc roleDiscoveryInterface, chart *chart.Chart) ([]rbacv1.PolicyRule, []rbacv1.PolicyRule, error) {
-	serverResources, err := dc.ServerResources()
+func generateRoleRules(dc roleDiscoveryInterface, chart *chart.Chart) ([]rbacv1.PolicyRule,
+	[]rbacv1.PolicyRule, error) {
+	_, serverResources, err := dc.ServerGroupsAndResources()
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to get server resources: %v", err)
 	}
@@ -165,7 +167,8 @@ func generateRoleRules(dc roleDiscoveryInterface, chart *chart.Chart) ([]rbacv1.
 				namespacedGroups[group][resourceName] = struct{}{}
 			}
 		} else {
-			log.Warnf("Skipping rule generation for %s. Failed to determine resource scope for %s.", name, resource.GroupVersionKind())
+			log.Warnf("Skipping rule generation for %s. Failed to determine resource scope for %s.",
+				name, resource.GroupVersionKind())
 			continue
 		}
 	}
@@ -187,7 +190,8 @@ func getDefaultManifests(c *chart.Chart) ([]releaseutil.Manifest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to render chart templates: %v", err)
 	}
-	_, manifests, err := releaseutil.SortManifests(releaseutil.SplitManifests(rel.Manifest), chartutil.DefaultVersionSet, releaseutil.InstallOrder)
+	_, manifests, err := releaseutil.SortManifests(releaseutil.SplitManifests(rel.Manifest),
+		chartutil.DefaultVersionSet, releaseutil.InstallOrder)
 	return manifests, err
 }
 

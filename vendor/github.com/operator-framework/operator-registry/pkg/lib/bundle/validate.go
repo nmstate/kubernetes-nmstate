@@ -7,12 +7,14 @@ import (
 	"path/filepath"
 	"strings"
 
+	v1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	v "github.com/operator-framework/api/pkg/validation"
-	v1 "github.com/operator-framework/operator-lifecycle-manager/pkg/api/apis/operators/v1alpha1"
 	"github.com/operator-framework/operator-registry/pkg/containertools"
+	validation "github.com/operator-framework/operator-registry/pkg/lib/validation"
 	"github.com/operator-framework/operator-registry/pkg/registry"
 
-	"k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,7 +24,11 @@ import (
 
 	y "github.com/ghodss/yaml"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+)
+
+const (
+	v1CRDapiVersion      = "apiextensions.k8s.io/v1"
+	v1beta1CRDapiVersion = "apiextensions.k8s.io/v1beta1"
 )
 
 type Meta struct {
@@ -57,8 +63,8 @@ func (i imageValidator) PullBundleImage(imageTag, directory string) error {
 // Outputs:
 // error: ValidattionError which contains a list of errors
 func (i imageValidator) ValidateBundleFormat(directory string) error {
-	var manifestsFound, metadataFound bool
-	var annotationsDir, manifestsDir string
+	var manifestsFound, metadataFound, annotationsFound, dependenciesFound bool
+	var metadataDir, manifestsDir string
 	var validationErrors []error
 
 	items, err := ioutil.ReadDir(directory)
@@ -76,7 +82,7 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 			case strings.TrimSuffix(MetadataDir, "/"):
 				i.logger.Debug("Found metadata directory")
 				metadataFound = true
-				annotationsDir = filepath.Join(directory, MetadataDir)
+				metadataDir = filepath.Join(directory, MetadataDir)
 			}
 		}
 	}
@@ -99,16 +105,62 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 		validationErrors = append(validationErrors, err)
 	}
 
-	// Validate annotations.yaml
-	annotationsFile, err := ioutil.ReadFile(filepath.Join(annotationsDir, AnnotationsFile))
+	// Validate annotations file
+	files, err := ioutil.ReadDir(metadataDir)
 	if err != nil {
-		fmtErr := fmt.Errorf("Unable to read annotations.yaml file: %s", err.Error())
-		validationErrors = append(validationErrors, fmtErr)
+		validationErrors = append(validationErrors, err)
+	}
+
+	// Look for the metadata and manifests sub-directories to find the annotations file
+	fileAnnotations := &AnnotationMetadata{}
+	dependenciesFile := &registry.DependenciesFile{}
+	for _, f := range files {
+		if !annotationsFound {
+			err = registry.DecodeFile(filepath.Join(metadataDir, f.Name()), fileAnnotations)
+			if err == nil && fileAnnotations.Annotations != nil {
+				annotationsFound = true
+				continue
+			}
+		}
+
+		if !dependenciesFound {
+			err = parseDependenciesFile(filepath.Join(metadataDir, f.Name()), dependenciesFile)
+			if err == nil && len(dependenciesFile.Dependencies) > 0 {
+				dependenciesFound = true
+			}
+		}
+	}
+
+	if !annotationsFound {
+		validationErrors = append(validationErrors, fmt.Errorf("Could not find annotations file"))
+	} else {
+		i.logger.Info("Found annotations file")
+		errs := validateAnnotations(mediaType, fileAnnotations)
+		if errs != nil {
+			validationErrors = append(validationErrors, errs...)
+		}
+	}
+
+	if !dependenciesFound {
+		i.logger.Info("Could not find optional dependencies file")
+	} else {
+		i.logger.Info("Found dependencies file")
+		errs := validateDependencies(dependenciesFile)
+		if errs != nil {
+			validationErrors = append(validationErrors, errs...)
+		}
+	}
+
+	if len(validationErrors) > 0 {
 		return NewValidationError(validationErrors)
 	}
 
-	var fileAnnotations AnnotationMetadata
+	return nil
+}
 
+// Validate the annotations file
+func validateAnnotations(mediaType string, fileAnnotations *AnnotationMetadata) []error {
+	var validationErrors []error
 	annotations := map[string]string{
 		MediatypeLabel:      mediaType,
 		ManifestsLabel:      ManifestsDir,
@@ -118,18 +170,9 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 		ChannelDefaultLabel: "",
 	}
 
-	i.logger.Debug("Validating annotations.yaml")
-
-	err = yaml.Unmarshal(annotationsFile, &fileAnnotations)
-	if err != nil {
-		validationErrors = append(validationErrors, fmt.Errorf("Unable to parse annotations.yaml file"))
-	}
-
 	for label, item := range annotations {
 		val, ok := fileAnnotations.Annotations[label]
-		if ok {
-			i.logger.Debugf(`Found annotation "%s" with value "%s"`, label, val)
-		} else {
+		if !ok {
 			aErr := fmt.Errorf("Missing annotation %q", label)
 			validationErrors = append(validationErrors, aErr)
 		}
@@ -160,16 +203,37 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 		}
 	}
 
-	_, err = ValidateChannelDefault(annotations[ChannelsLabel], annotations[ChannelDefaultLabel])
+	_, err := ValidateChannelDefault(annotations[ChannelsLabel], annotations[ChannelDefaultLabel])
 	if err != nil {
 		validationErrors = append(validationErrors, err)
 	}
+	return validationErrors
+}
 
-	if len(validationErrors) > 0 {
-		return NewValidationError(validationErrors)
+// Validate the dependencies file
+func validateDependencies(dependenciesFile *registry.DependenciesFile) []error {
+	var validationErrors []error
+
+	// Validate dependencies if exists
+	for _, d := range dependenciesFile.Dependencies {
+		dep := d.GetTypeValue()
+		errs := []error{}
+		if dep != nil {
+			switch dp := dep.(type) {
+			case registry.GVKDependency:
+				errs = dp.Validate()
+			case registry.PackageDependency:
+				errs = dp.Validate()
+			default:
+				errs = append(errs, fmt.Errorf("Unsupported dependency type %s", d.GetType()))
+			}
+		} else {
+			errs = append(errs, fmt.Errorf("Unsupported dependency type %s", d.GetType()))
+		}
+		validationErrors = append(validationErrors, errs...)
 	}
 
-	return nil
+	return validationErrors
 }
 
 // ValidateBundleContent confirms that the CSV and CRD files inside the bundle
@@ -249,18 +313,38 @@ func (i imageValidator) ValidateBundleContent(manifestDir string) error {
 				}
 			}
 		} else if gvk.Kind == CRDKind {
-			crd := &v1beta1.CustomResourceDefinition{}
-			err := runtime.DefaultUnstructuredConverter.FromUnstructured(k8sFile.Object, crd)
-			if err != nil {
-				validationErrors = append(validationErrors, err)
-				continue
-			}
-
-			results := crdValidator.Validate(crd)
-			if len(results) > 0 {
-				for _, err := range results[0].Errors {
+			dec := k8syaml.NewYAMLOrJSONDecoder(strings.NewReader(string(data)), 30)
+			switch gv := gvk.GroupVersion().String(); gv {
+			case v1CRDapiVersion:
+				crd := &apiextensionsv1.CustomResourceDefinition{}
+				err := dec.Decode(crd)
+				if err != nil {
 					validationErrors = append(validationErrors, err)
+					continue
 				}
+
+				results := crdValidator.Validate(crd)
+				if len(results) > 0 {
+					for _, err := range results[0].Errors {
+						validationErrors = append(validationErrors, err)
+					}
+				}
+			case v1beta1CRDapiVersion:
+				crd := &apiextensionsv1beta1.CustomResourceDefinition{}
+				err := dec.Decode(crd)
+				if err != nil {
+					validationErrors = append(validationErrors, err)
+					continue
+				}
+
+				results := crdValidator.Validate(crd)
+				if len(results) > 0 {
+					for _, err := range results[0].Errors {
+						validationErrors = append(validationErrors, err)
+					}
+				}
+			default:
+				validationErrors = append(validationErrors, fmt.Errorf("Unsupported api version of CRD: %s", gv))
 			}
 		} else {
 			err := validateKubectlable(data)
@@ -272,8 +356,8 @@ func (i imageValidator) ValidateBundleContent(manifestDir string) error {
 
 	// Validate the bundle object
 	if len(unstObjs) > 0 {
-		bundle := registry.NewBundle(csvName, "", "", unstObjs...)
-		bundleValidator := v.BundleValidator
+		bundle := registry.NewBundle(csvName, "", nil, unstObjs...)
+		bundleValidator := validation.BundleValidator
 		results := bundleValidator.Validate(bundle)
 		if len(results) > 0 {
 			for _, err := range results[0].Errors {
@@ -285,6 +369,32 @@ func (i imageValidator) ValidateBundleContent(manifestDir string) error {
 	if len(validationErrors) > 0 {
 		return NewValidationError(validationErrors)
 	}
+
+	return nil
+}
+
+func parseDependenciesFile(path string, depFile *registry.DependenciesFile) error {
+	deps := registry.Dependencies{}
+	err := registry.DecodeFile(path, &deps)
+
+	if err != nil || len(deps.RawMessage) == 0 {
+		return fmt.Errorf("Unable to decode the dependencies file %s", path)
+	}
+
+	depList := []registry.Dependency{}
+	for _, v := range deps.RawMessage {
+		jsonStr, _ := json.Marshal(v)
+		dep := registry.Dependency{}
+		err := json.Unmarshal(jsonStr, &dep)
+		if err != nil {
+			return err
+		}
+
+		dep.Value = string(jsonStr)
+		depList = append(depList, dep)
+	}
+
+	depFile.Dependencies = depList
 
 	return nil
 }

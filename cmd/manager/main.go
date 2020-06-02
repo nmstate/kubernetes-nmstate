@@ -25,10 +25,10 @@ import (
 	"github.com/nightlyone/lockfile"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"github.com/operator-framework/operator-sdk/pkg/log/zap"
-	"github.com/operator-framework/operator-sdk/pkg/restmapper"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
 	"github.com/spf13/pflag"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
@@ -109,7 +109,7 @@ func main() {
 
 	mgrOptions := manager.Options{
 		Namespace:      namespace,
-		MapperProvider: restmapper.NewDynamicRESTMapper,
+		MapperProvider: apiutil.NewDiscoveryRESTMapper,
 	}
 
 	// We need to add LeaerElection for the webhook

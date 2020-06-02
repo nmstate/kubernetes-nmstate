@@ -31,6 +31,7 @@ type BasicAndOLMPluginConfig struct {
 	CRManifest         []string        `mapstructure:"cr-manifest"`
 	CSVManifest        string          `mapstructure:"csv-path"`
 	ProxyImage         string          `mapstructure:"proxy-image"`
+	ProxyPort          int             `mapstructure:"proxy-port"`
 	ProxyPullPolicy    v1.PullPolicy   `mapstructure:"proxy-pull-policy"`
 	CRDsDir            string          `mapstructure:"crds-dir"`
 	DeployDir          string          `mapstructure:"deploy-dir"`
@@ -53,7 +54,8 @@ func validateScorecardPluginFlags(config BasicAndOLMPluginConfig, pluginType Plu
 	}
 	pullPolicy := config.ProxyPullPolicy
 	if pullPolicy != v1.PullAlways && pullPolicy != v1.PullNever && pullPolicy != v1.PullIfNotPresent {
-		return fmt.Errorf("invalid proxy pull policy: (%s); valid values: %s, %s, %s", pullPolicy, v1.PullAlways, v1.PullNever, v1.PullIfNotPresent)
+		return fmt.Errorf("invalid proxy pull policy: (%s); valid values: %s, %s, %s", pullPolicy,
+			v1.PullAlways, v1.PullNever, v1.PullIfNotPresent)
 	}
 	return nil
 }

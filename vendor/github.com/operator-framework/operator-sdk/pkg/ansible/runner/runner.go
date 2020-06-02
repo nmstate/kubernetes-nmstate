@@ -57,10 +57,14 @@ type Runner interface {
 	GetFinalizer() (string, bool)
 }
 
+// ansibleVerbosityString will return the string with the -v* levels
 func ansibleVerbosityString(verbosity int) string {
 	if verbosity > 0 {
+		// the default verbosity is 0
+		// more info: https://docs.ansible.com/ansible/latest/reference_appendices/config.html#default-verbosity
 		return fmt.Sprintf("-%v", strings.Repeat("v", verbosity))
 	}
+	// Return default verbosity
 	return ""
 }
 
@@ -68,14 +72,29 @@ type cmdFuncType func(ident, inputDirPath string, maxArtifacts, verbosity int) *
 
 func playbookCmdFunc(path string) cmdFuncType {
 	return func(ident, inputDirPath string, maxArtifacts, verbosity int) *exec.Cmd {
-		return exec.Command("ansible-runner", ansibleVerbosityString(verbosity), "--rotate-artifacts", fmt.Sprintf("%v", maxArtifacts), "-p", path, "-i", ident, "run", inputDirPath)
+		// check the verbosity since the exec.Command will fail if an arg as "" or " " be informed
+		if verbosity > 0 {
+			return exec.Command("ansible-runner", ansibleVerbosityString(verbosity), "--rotate-artifacts",
+				fmt.Sprintf("%v", maxArtifacts), "-p", path, "-i", ident, "run", inputDirPath)
+		}
+		return exec.Command("ansible-runner", "--rotate-artifacts",
+			fmt.Sprintf("%v", maxArtifacts), "-p", path, "-i", ident, "run", inputDirPath)
+
 	}
 }
 
 func roleCmdFunc(path string) cmdFuncType {
 	rolePath, roleName := filepath.Split(path)
 	return func(ident, inputDirPath string, maxArtifacts, verbosity int) *exec.Cmd {
-		return exec.Command("ansible-runner", ansibleVerbosityString(verbosity), "--rotate-artifacts", fmt.Sprintf("%v", maxArtifacts), "--role", roleName, "--roles-path", rolePath, "--hosts", "localhost", "-i", ident, "run", inputDirPath)
+		// check the verbosity since the exec.Command will fail if an arg as "" or " " be informed
+		if verbosity > 0 {
+			return exec.Command("ansible-runner", ansibleVerbosityString(verbosity), "--rotate-artifacts",
+				fmt.Sprintf("%v", maxArtifacts), "--role", roleName, "--roles-path", rolePath, "--hosts",
+				"localhost", "-i", ident, "run", inputDirPath)
+		}
+		return exec.Command("ansible-runner", "--rotate-artifacts",
+			fmt.Sprintf("%v", maxArtifacts), "--role", roleName, "--roles-path", rolePath, "--hosts",
+			"localhost", "-i", ident, "run", inputDirPath)
 	}
 }
 
@@ -156,7 +175,8 @@ func (r *runner) Run(ident string, u *unstructured.Unstructured, kubeconfig stri
 		return nil, err
 	}
 	inputDir := inputdir.InputDir{
-		Path:       filepath.Join("/tmp/ansible-operator/runner/", r.GVK.Group, r.GVK.Version, r.GVK.Kind, u.GetNamespace(), u.GetName()),
+		Path: filepath.Join("/tmp/ansible-operator/runner/", r.GVK.Group, r.GVK.Version, r.GVK.Kind,
+			u.GetNamespace(), u.GetName()),
 		Parameters: r.makeParameters(u),
 		EnvVars: map[string]string{
 			"K8S_AUTH_KUBECONFIG": kubeconfig,
@@ -203,14 +223,16 @@ func (r *runner) Run(ident string, u *unstructured.Unstructured, kubeconfig stri
 	go func() {
 		var dc *exec.Cmd
 		if r.isFinalizerRun(u) {
-			logger.V(1).Info("Resource is marked for deletion, running finalizer", "Finalizer", r.Finalizer.Name)
+			logger.V(1).Info("Resource is marked for deletion, running finalizer",
+				"Finalizer", r.Finalizer.Name)
 			dc = r.finalizerCmdFunc(ident, inputDir.Path, maxArtifacts, verbosity)
 		} else {
 			dc = r.cmdFunc(ident, inputDir.Path, maxArtifacts, verbosity)
 		}
 		// Append current environment since setting dc.Env to anything other than nil overwrites current env
 		dc.Env = append(dc.Env, os.Environ()...)
-		dc.Env = append(dc.Env, fmt.Sprintf("K8S_AUTH_KUBECONFIG=%s", kubeconfig), fmt.Sprintf("KUBECONFIG=%s", kubeconfig))
+		dc.Env = append(dc.Env, fmt.Sprintf("K8S_AUTH_KUBECONFIG=%s", kubeconfig),
+			fmt.Sprintf("KUBECONFIG=%s", kubeconfig))
 
 		output, err := dc.CombinedOutput()
 		if err != nil {
@@ -280,14 +302,15 @@ func (r *runner) makeParameters(u *unstructured.Unstructured) map[string]interfa
 	s := u.Object["spec"]
 	spec, ok := s.(map[string]interface{})
 	if !ok {
-		log.Info("Spec was not found for CR", "GroupVersionKind", u.GroupVersionKind(), "Namespace", u.GetNamespace(), "Name", u.GetName())
+		log.Info("Spec was not found for CR", "GroupVersionKind", u.GroupVersionKind(),
+			"Namespace", u.GetNamespace(), "Name", u.GetName())
 		spec = map[string]interface{}{}
 	}
 
 	parameters := paramconv.MapToSnake(spec)
 	parameters["meta"] = map[string]string{"namespace": u.GetNamespace(), "name": u.GetName()}
 
-	objKey := fmt.Sprintf("_%v_%v", strings.Replace(r.GVK.Group, ".", "_", -1), strings.ToLower(r.GVK.Kind))
+	objKey := escapeAnsibleKey(fmt.Sprintf("_%v_%v", r.GVK.Group, strings.ToLower(r.GVK.Kind)))
 	parameters[objKey] = u.Object
 
 	specKey := fmt.Sprintf("%s_spec", objKey)
@@ -302,6 +325,16 @@ func (r *runner) makeParameters(u *unstructured.Unstructured) map[string]interfa
 		}
 	}
 	return parameters
+}
+
+// escapeAnsibleKey - replaces characters that would result in an inaccessible Ansible parameter with underscores
+// ie, _cert-manager.k8s.io would be converted to _cert_manager_k8s_io
+func escapeAnsibleKey(key string) string {
+	disallowed := []string{".", "-"}
+	for _, c := range disallowed {
+		key = strings.ReplaceAll(key, c, "_")
+	}
+	return key
 }
 
 func (r *runner) GetFinalizer() (string, bool) {
