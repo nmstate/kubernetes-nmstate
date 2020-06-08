@@ -2,8 +2,8 @@
 
 set -xe
 
-old_version=$(hack/version.sh -2)
-new_version=$(hack/version.sh -1)
+old_version=$(hack/versions.sh -2)
+new_version=$(hack/versions.sh -1)
 gh_organization=nmstate
 gh_repo=kubernetes-nmstate
 

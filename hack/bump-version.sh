@@ -4,7 +4,7 @@ expected_types="(major|minor|patch)"
 current_type=$1
 
 bump() {
-    version=$(hack/version.sh -1)
+    version=$(hack/versions.sh -1)
     version_part=$(echo $version |sed $1)
     version_part=$((++version_part))
     version=$(echo $version | sed $2 | sed "s/version_part/$version_part/g")
