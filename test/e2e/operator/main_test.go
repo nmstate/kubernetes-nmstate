@@ -25,6 +25,7 @@ var (
 	t         *testing.T
 	nodes     []string
 	startTime time.Time
+	ctx       *framework.TestCtx
 )
 
 var _ = BeforeSuite(func() {
@@ -33,7 +34,11 @@ var _ = BeforeSuite(func() {
 
 	err := framework.AddToFrameworkScheme(apis.AddToScheme, nmstateList)
 	Expect(err).ToNot(HaveOccurred())
-	prepare(t)
+	ctx, _ = prepare(t)
+})
+
+var _ = AfterSuite(func() {
+	ctx.Cleanup()
 })
 
 func TestMain(m *testing.M) {

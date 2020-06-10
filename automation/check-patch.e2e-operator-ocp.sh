@@ -29,7 +29,7 @@ main() {
     make cluster-down
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
-    make cluster-sync
+    make cluster-sync-operator
     make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="-ginkgo.noColor " test-e2e-operator
 }
 

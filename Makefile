@@ -152,6 +152,9 @@ cluster-clean:
 cluster-sync:
 	./cluster/sync.sh
 
+cluster-sync-operator:
+	./cluster/sync-operator.sh
+
 prepare-patch: $(RELEASE_NOTES)
 	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh patch
 prepare-minor: $(RELEASE_NOTES)
@@ -177,12 +180,14 @@ tools: $(GO)
 	handler \
 	push-handler \
 	test/unit \
-	test/e2e \
 	generate \
 	check-gen \
+	test-e2e-handler \
+	test-e2e-operator \
+	test-e2e \
 	cluster-up \
 	cluster-down \
-	cluster-sync-handler \
+	cluster-sync-operator \
 	cluster-sync \
 	cluster-clean \
 	release \
