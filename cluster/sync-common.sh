@@ -39,7 +39,12 @@ function isDaemonSetOk {
     desiredNumberScheduled=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.desiredNumberScheduled}')
 
     numberAvailable=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.numberAvailable}')
-    numberAvailable=${numberAvailable:-0}
+
+    # There is no numberAvailable yet, return error so we don't end up with
+    # false possitive after 0==0
+    if [ "$numberAvailable" == "" ]; then
+        return 1
+    fi
 
     [ "$desiredNumberScheduled" == "$numberAvailable" ]
 }
