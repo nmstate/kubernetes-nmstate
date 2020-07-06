@@ -3,8 +3,8 @@ package nodenetworkconfigurationpolicy
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
 	webhookserver "github.com/qinqon/kube-admission-webhook/pkg/webhook/server"
-	"github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate"
 )
 
 const (
