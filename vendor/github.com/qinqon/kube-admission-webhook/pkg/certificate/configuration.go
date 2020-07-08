@@ -2,6 +2,7 @@ package certificate
 
 import (
 	"context"
+	"crypto/x509"
 	"fmt"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate/triple"
+	"github.com/qinqon/kube-admission-webhook/pkg/certificate/triple"
 )
 
 func mutatingWebhookConfig(webhook runtime.Object) *admissionregistrationv1beta1.MutatingWebhookConfiguration {
@@ -77,12 +78,13 @@ func (m *Manager) readyWebhookConfiguration() (runtime.Object, error) {
 	return webhook, err
 }
 
-func (m *Manager) updateWebhookCABundle() error {
+func (m *Manager) updateWebhookCABundle(caCert *x509.Certificate) (runtime.Object, error) {
 	m.log.Info("Updating CA bundle for webhook")
-	ca := triple.EncodeCertPEM(m.caCert)
+	var webhook runtime.Object
+	ca := triple.EncodeCertPEM(caCert)
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-
-		webhook, err := m.readyWebhookConfiguration()
+		var err error
+		webhook, err = m.readyWebhookConfiguration()
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s webhook configuration %s", m.webhookType, m.webhookName)
 		}
@@ -99,9 +101,9 @@ func (m *Manager) updateWebhookCABundle() error {
 		return nil
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to update validating webhook CABundle")
+		return nil, errors.Wrap(err, "failed to update webhook CABundle")
 	}
-	return nil
+	return webhook, nil
 }
 
 func (m *Manager) CABundle() ([]byte, error) {

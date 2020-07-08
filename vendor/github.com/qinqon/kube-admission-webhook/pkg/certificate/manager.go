@@ -3,6 +3,8 @@ package certificate
 import (
 	"crypto/x509"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -10,12 +12,11 @@ import (
 	"github.com/go-logr/logr"
 
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
-	"github.com/qinqon/kube-admission-webhook/pkg/webhook/server/certificate/triple"
+	"github.com/qinqon/kube-admission-webhook/pkg/certificate/triple"
 )
 
 // Manager do the CA and service certificate/key generation and expiration
@@ -32,9 +33,6 @@ type Manager struct {
 
 	// webhookType The Mutating or Validating Webhook configuration type
 	webhookType WebhookType
-
-	// caKeyPair contains the generated CA certificate and key
-	caCert *x509.Certificate
 
 	// now is an artifact to do some unit testing without waiting for
 	// expiration time.
@@ -88,88 +86,31 @@ func NewManager(
 		webhookType:   webhookType,
 		now:           time.Now,
 		certsDuration: certsDuration,
-		log: logf.Log.WithName("webhook/server/certificate/manager").
+		log: logf.Log.WithName("certificate/manager").
 			WithValues("webhookType", webhookType, "webhookName", webhookName),
 	}
 	return m
 }
 
-// Start the cert manager until stopCh is closed, the cert manager is in charge
-// rotation of certificates if needed.
-//
-// It  implemenets Runnable [1] so manager can add this to a
-// controller runtime manager
-//
-// [1] https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/manager/manager.go#L208
-func (m *Manager) Start(stopCh <-chan struct{}) error {
-	m.log.Info("Starting cert manager")
-
-	m.loadCACertFromCABundle()
-
-	wait.Until(func() {
-		m.waitForDeadlineAndRotate()
-	}, time.Second, stopCh)
-
-	return nil
-}
-
-// In case the manager is restarted we have to load the current CA instead
-// of generating new one
-func (m *Manager) loadCACertFromCABundle() {
+func (m *Manager) getFirstCACertFromCABundle() (*x509.Certificate, error) {
 	caBundle, err := m.CABundle()
-	if err != nil || len(caBundle) == 0 {
-		return
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting CABundle")
+	}
+
+	if len(caBundle) == 0 {
+		return nil, nil
 	}
 
 	cas, err := triple.ParseCertsPEM(caBundle)
-	if err != nil || len(cas) == 0 {
-		return
-	}
-	m.caCert = cas[0]
-}
-
-func (m *Manager) waitForDeadlineAndRotate() {
-	deadline := m.nextRotationDeadline()
-	now := m.now()
-	elapsedToRotate := deadline.Sub(now)
-	m.log.Info(fmt.Sprintf("Cert rotation times {now: %s, deadline: %s, elapsedToRotate: %s}", now, deadline, elapsedToRotate))
-	if elapsedToRotate > 0 {
-		m.log.Info(fmt.Sprintf("Waiting %v for next certificate rotation", elapsedToRotate))
-
-		timer := time.NewTimer(elapsedToRotate)
-		defer timer.Stop()
-
-		select {
-		case <-timer.C:
-		}
-	}
-	// Retry rotate if it fails no timeout is added here since this is
-	// the only thing that cert manager has to do, server will be function
-	// until it reached expiricy in case of error somewhere.
-	err := wait.PollImmediateInfinite(32*time.Second, m.rotateWaitCondition)
 	if err != nil {
-		utilruntime.HandleError(fmt.Errorf("Unable to rotate certs: %v", err))
+		return nil, errors.Wrap(err, "failed parsing PEM CABundle")
 	}
-}
 
-// In case of running it under controller-runtime the manager has to be running
-// at one pod per cluster since it generate new caBundle and it has to be unique
-// per tls secrets if done otherwise caBundle get overwritten and it could not match
-// the TLS secret.
-func (m *Manager) NeedLeaderElection() bool {
-	return true
-}
-
-// rotateWaitCondition wraps the rotate function into a `wait` Condition
-// it will transform the error into a `not ready` flag and log and
-// store error with `utilruntime.HandleError`.
-func (m *Manager) rotateWaitCondition() (bool, error) {
-	err := m.rotate()
-	if err != nil {
-		utilruntime.HandleError(err)
-		return false, nil
+	if len(cas) == 0 {
+		return nil, nil
 	}
-	return true, nil
+	return cas[0], nil
 }
 
 func (m *Manager) rotate() error {
@@ -181,20 +122,29 @@ func (m *Manager) rotate() error {
 		return errors.Wrap(err, "failed generating CA cert/key")
 	}
 
-	m.caCert = caKeyPair.Cert
-
-	err = m.updateWebhookCABundle()
+	webhook, err := m.updateWebhookCABundle(caKeyPair.Cert)
 	if err != nil {
 		return errors.Wrap(err, "failed to update CA bundle at webhook")
 	}
 
-	webhookConf, err := m.readyWebhookConfiguration()
-	if err != nil {
-		return errors.Wrap(err, "failed to reading configuration")
-	}
+	for _, clientConfig := range m.clientConfigList(webhook) {
 
-	for _, clientConfig := range m.clientConfigList(webhookConf) {
-		service := types.NamespacedName{Name: clientConfig.Service.Name, Namespace: clientConfig.Service.Namespace}
+		service := types.NamespacedName{}
+		hostnames := []string{}
+
+		if clientConfig.Service != nil {
+			service.Name = clientConfig.Service.Name
+			service.Namespace = clientConfig.Service.Namespace
+		} else if clientConfig.URL != nil {
+			service.Name = m.webhookName
+			service.Namespace = "default"
+			u, err := url.Parse(*clientConfig.URL)
+			if err != nil {
+				return errors.Wrapf(err, "failed parsing webhook URL %s", *clientConfig.URL)
+			}
+			hostnames = append(hostnames, strings.Split(u.Host, ":")[0])
+		}
+
 		keyPair, err := triple.NewServerKeyPair(
 			caKeyPair,
 			service.Name+"."+service.Namespace+".pod.cluster.local",
@@ -202,13 +152,16 @@ func (m *Manager) rotate() error {
 			service.Namespace,
 			"cluster.local",
 			nil,
-			nil,
+			hostnames,
 			m.certsDuration,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed creating server key/cert for service %+v", service)
 		}
-		m.applyTLSSecret(service, keyPair)
+		err = m.applyTLSSecret(service, keyPair)
+		if err != nil {
+			return errors.Wrapf(err, "failed applying TLS secret %s", service)
+		}
 	}
 
 	return nil
@@ -216,18 +169,74 @@ func (m *Manager) rotate() error {
 
 // nextRotationDeadline returns a value for the threshold at which the
 // current certificate should be rotated, 80%+/-10% of the expiration of the
-// certificate.
+// certificate or force rotation in case the certificate chain is faulty
 func (m *Manager) nextRotationDeadline() time.Time {
-	if m.caCert == nil {
-		m.log.Info("Certificates not created, forcing roration")
+	err := m.verifyTLS()
+	if err != nil {
+		// Sprintf is used to prevent stack trace to be printed
+		m.log.Info(fmt.Sprintf("Bad TLS certificate chain, forcing rotation: %v", err))
 		return m.now()
 	}
-	notAfter := m.caCert.NotAfter
-	totalDuration := float64(notAfter.Sub(m.caCert.NotBefore))
-	deadline := m.caCert.NotBefore.Add(jitteryDuration(totalDuration))
 
-	m.log.Info(fmt.Sprintf("Certificate expiration is %v, rotation deadline is %v", notAfter, deadline))
+	caCert, err := m.getFirstCACertFromCABundle()
+	if err != nil {
+		m.log.Info("Failed reading first CA cert from CABundle, forcing rotation", "err", err)
+		return m.now()
+	}
+
+	return m.nextRotationDeadlineForCert(caCert)
+}
+
+// nextRotationDeadlineForCert returns a value for the threshold at which the
+// current certificate should be rotated, 80%+/-10% of the expiration of the
+// certificate
+func (m *Manager) nextRotationDeadlineForCert(certificate *x509.Certificate) time.Time {
+	notAfter := certificate.NotAfter
+	totalDuration := float64(notAfter.Sub(certificate.NotBefore))
+	deadline := certificate.NotBefore.Add(jitteryDuration(totalDuration))
+
+	m.log.Info(fmt.Sprintf("Certificate expiration is %v, totalDuration is %v, rotation deadline is %v", notAfter, totalDuration, deadline))
 	return deadline
+}
+
+func (m *Manager) nextElapsedToRotate() time.Duration {
+	deadline := m.nextRotationDeadline()
+	now := m.now()
+	elapsedToRotate := deadline.Sub(now)
+	m.log.Info(fmt.Sprintf("nextElapsedToRotate {now: %s, deadline: %s, elapsedToRotate: %s}", now, deadline, elapsedToRotate))
+	return elapsedToRotate
+}
+
+// verifyTLS will verify that the caBundle and Secret are valid and can
+// be used to verify
+func (m *Manager) verifyTLS() error {
+
+	webhookConf, err := m.readyWebhookConfiguration()
+	if err != nil {
+		return errors.Wrap(err, "failed to reading configuration")
+	}
+
+	for _, clientConfig := range m.clientConfigList(webhookConf) {
+		service := clientConfig.Service
+		secretKey := types.NamespacedName{}
+		if service != nil {
+			// If the webhook has a service then create the secret
+			// with same namespce and name
+			secretKey.Name = service.Name
+			secretKey.Namespace = service.Namespace
+		} else {
+			// If it uses directly URL create a secret with webhookName and
+			// default namespace
+			secretKey.Name = m.webhookName
+			secretKey.Namespace = "default"
+		}
+		err = m.verifyTLSSecret(secretKey, clientConfig.CABundle)
+		if err != nil {
+			return errors.Wrapf(err, "failed verifying TLS secret %s", secretKey)
+		}
+	}
+
+	return nil
 }
 
 // jitteryDuration uses some jitter to set the rotation threshold so each node
