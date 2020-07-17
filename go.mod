@@ -15,7 +15,7 @@ require (
 	github.com/onsi/ginkgo v1.12.0
 	github.com/onsi/gomega v1.9.0
 	github.com/openshift/cluster-network-operator v0.0.0-20200324123637-74e803688dd9
-	github.com/operator-framework/operator-sdk v0.18.0
+	github.com/operator-framework/operator-sdk v0.18.2
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.9.0

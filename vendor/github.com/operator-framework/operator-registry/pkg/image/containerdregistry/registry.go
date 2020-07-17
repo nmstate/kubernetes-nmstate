@@ -6,6 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/ioutil"
+	"os"
+
 	"github.com/containerd/containerd/archive"
 	"github.com/containerd/containerd/archive/compression"
 	"github.com/containerd/containerd/errdefs"
@@ -15,9 +19,6 @@ import (
 	"github.com/containerd/containerd/remotes"
 	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sirupsen/logrus"
-	"io"
-	"io/ioutil"
-	"os"
 
 	"github.com/operator-framework/operator-registry/pkg/image"
 )
@@ -194,6 +195,12 @@ func ensureNamespace(ctx context.Context) context.Context {
 func adjustPerms(h *tar.Header) (bool, error) {
 	h.Uid = os.Getuid()
 	h.Gid = os.Getgid()
+
+	// Make all unpacked files owner-writable
+	// This prevents errors when unpacking a layer that contains a read-only folder (if permissions are preserved,
+	// file contents cannot be unpacked into the unpacked read-only folder).
+	// This also means that "unpacked" layers cannot be "repacked" without potential information loss
+	h.Mode |= 0200
 
 	return true, nil
 }
