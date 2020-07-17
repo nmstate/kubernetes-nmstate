@@ -9,9 +9,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/util/retry"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate/triple"
 )
@@ -33,38 +31,6 @@ func updateTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) *corev1.Secr
 	return &secret
 }
 
-func (m *Manager) setSecretOwnership(secretKey types.NamespacedName, secret *corev1.Secret) error {
-
-	service := corev1.Service{ObjectMeta: metav1.ObjectMeta{
-		Name:      secretKey.Name,
-		Namespace: secretKey.Namespace,
-	}}
-
-	err := m.get(secretKey, &service)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			m.log.Info("Orphan secret, service is not found")
-			return nil
-		}
-		return errors.Wrapf(err, "failed getting service %s to set secret owner", secretKey)
-	}
-
-	serviceGVK, err := apiutil.GVKForObject(&service, scheme.Scheme)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting gvk from service %s", secretKey)
-	}
-
-	secret.OwnerReferences = []metav1.OwnerReference{
-		{
-			Name:       service.Name,
-			Kind:       serviceGVK.Kind,
-			APIVersion: serviceGVK.GroupVersion().String(),
-			UID:        service.UID,
-		}}
-
-	return nil
-}
-
 func (m *Manager) newTLSSecret(secretKey types.NamespacedName, keyPair *triple.KeyPair) (*corev1.Secret, error) {
 
 	secret := corev1.Secret{
@@ -73,11 +39,6 @@ func (m *Manager) newTLSSecret(secretKey types.NamespacedName, keyPair *triple.K
 			Namespace:   secretKey.Namespace,
 			Annotations: map[string]string{},
 		},
-	}
-
-	err := m.setSecretOwnership(secretKey, &secret)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed setting ownership to secret %s", secretKey)
 	}
 
 	return &secret, nil
