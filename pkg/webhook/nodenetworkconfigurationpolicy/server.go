@@ -20,7 +20,7 @@ func Add(mgr manager.Manager) error {
 	// 1.- User changes nncp desiredState so it triggers deleteConditionsHook()
 	// 2.- Since we have delete the condition the status-mutate webhook get called and
 	//     there we set conditions to Unknown this final result will be updated.
-	server := webhookserver.New(mgr.GetClient(), webhookName, certificate.MutatingWebhook,
+	server := webhookserver.New(mgr.GetClient(), webhookName, certificate.MutatingWebhook, certificate.OneYearDuration,
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook()),
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook()),
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-timestamp-mutate", setTimestampAnnotationHook()),

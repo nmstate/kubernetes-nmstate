@@ -38,6 +38,9 @@ type Manager struct {
 	// expiration time.
 	now func() time.Time
 
+	// lastRotateDeadline store the value of last call from nextRotationDeadline
+	lastRotateDeadline *time.Time
+
 	// certsDuration configurated duration for CA and service certificates
 	// there is no distintion between the two to simplify manager logic
 	// and monitor only CA certificate.
@@ -92,7 +95,7 @@ func NewManager(
 	return m
 }
 
-func (m *Manager) getFirstCACertFromCABundle() (*x509.Certificate, error) {
+func (m *Manager) getCACertsFromCABundle() ([]*x509.Certificate, error) {
 	caBundle, err := m.CABundle()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting CABundle")
@@ -106,11 +109,18 @@ func (m *Manager) getFirstCACertFromCABundle() (*x509.Certificate, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing PEM CABundle")
 	}
+	return cas, nil
+}
 
+func (m *Manager) getLastAppendedCACertFromCABundle() (*x509.Certificate, error) {
+	cas, err := m.getCACertsFromCABundle()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting CA certificates from CA bundle")
+	}
 	if len(cas) == 0 {
 		return nil, nil
 	}
-	return cas[0], nil
+	return cas[len(cas)-1], nil
 }
 
 func (m *Manager) rotate() error {
@@ -122,9 +132,9 @@ func (m *Manager) rotate() error {
 		return errors.Wrap(err, "failed generating CA cert/key")
 	}
 
-	webhook, err := m.updateWebhookCABundle(caKeyPair.Cert)
+	webhook, err := m.addCertificateToCABundle(caKeyPair.Cert)
 	if err != nil {
-		return errors.Wrap(err, "failed to update CA bundle at webhook")
+		return errors.Wrap(err, "failed adding new CA cert to CA bundle at webhook")
 	}
 
 	for _, clientConfig := range m.clientConfigList(webhook) {
@@ -178,13 +188,18 @@ func (m *Manager) nextRotationDeadline() time.Time {
 		return m.now()
 	}
 
-	caCert, err := m.getFirstCACertFromCABundle()
+	// Last rotated CA cert at CABundle is the last at the slice so this
+	// calculate deadline from it.
+	caCert, err := m.getLastAppendedCACertFromCABundle()
 	if err != nil {
-		m.log.Info("Failed reading first CA cert from CABundle, forcing rotation", "err", err)
+		m.log.Info("Failed reading last CA cert from CABundle, forcing rotation", "err", err)
 		return m.now()
 	}
+	nextDeadline := m.nextRotationDeadlineForCert(caCert)
 
-	return m.nextRotationDeadlineForCert(caCert)
+	// Store last calculated deadline to use it at Reconcile
+	m.lastRotateDeadline = &nextDeadline
+	return nextDeadline
 }
 
 // nextRotationDeadlineForCert returns a value for the threshold at which the
@@ -199,11 +214,19 @@ func (m *Manager) nextRotationDeadlineForCert(certificate *x509.Certificate) tim
 	return deadline
 }
 
-func (m *Manager) nextElapsedToRotate() time.Duration {
-	deadline := m.nextRotationDeadline()
+func (m *Manager) elapsedToRotateFromLastDeadline() time.Duration {
+	deadline := m.now()
+
+	// If deadline was previously calculated return it, else do the
+	// calculations
+	if m.lastRotateDeadline != nil {
+		deadline = *m.lastRotateDeadline
+	} else {
+		deadline = m.nextRotationDeadline()
+	}
 	now := m.now()
 	elapsedToRotate := deadline.Sub(now)
-	m.log.Info(fmt.Sprintf("nextElapsedToRotate {now: %s, deadline: %s, elapsedToRotate: %s}", now, deadline, elapsedToRotate))
+	m.log.Info(fmt.Sprintf("elapsedToRotateFromLastDeadline {now: %s, deadline: %s, elapsedToRotate: %s}", now, deadline, elapsedToRotate))
 	return elapsedToRotate
 }
 

@@ -78,10 +78,29 @@ func (m *Manager) readyWebhookConfiguration() (runtime.Object, error) {
 	return webhook, err
 }
 
-func (m *Manager) updateWebhookCABundle(caCert *x509.Certificate) (runtime.Object, error) {
+func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) (runtime.Object, error) {
+	m.log.Info("Reset CA bundle with one cert for webhook")
+	webhook, err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
+		cas := []*x509.Certificate{}
+		if len(currentCABundle) > 0 {
+			var err error
+			cas, err = triple.ParseCertsPEM(currentCABundle)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed parsing current CA bundle")
+			}
+		}
+		cas = append(cas, caCert)
+		return triple.EncodeCertsPEM(cas), nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to update webhook CABundle")
+	}
+	return webhook, nil
+}
+
+func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]byte, error)) (runtime.Object, error) {
 	m.log.Info("Updating CA bundle for webhook")
 	var webhook runtime.Object
-	ca := triple.EncodeCertPEM(caCert)
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		var err error
 		webhook, err = m.readyWebhookConfiguration()
@@ -91,7 +110,11 @@ func (m *Manager) updateWebhookCABundle(caCert *x509.Certificate) (runtime.Objec
 
 		for _, clientConfig := range m.clientConfigList(webhook) {
 			// Update the CA bundle at webhook
-			clientConfig.CABundle = ca
+			updatedCABundle, err := updateCABundle(clientConfig.CABundle)
+			if err != nil {
+				return errors.Wrap(err, "failed updating CA bundle")
+			}
+			clientConfig.CABundle = updatedCABundle
 		}
 
 		err = m.client.Update(context.TODO(), webhook)

@@ -71,6 +71,16 @@ func EncodeCertPEM(cert *x509.Certificate) []byte {
 	return pem.EncodeToMemory(&block)
 }
 
+// EncodeCertsPEM returns PEM-endcoded certificates data
+func EncodeCertsPEM(certs []*x509.Certificate) []byte {
+	certsPEM := []byte{}
+	for _, cert := range certs {
+		certPEM := EncodeCertPEM(cert)
+		certsPEM = append(certsPEM, certPEM...)
+	}
+	return certsPEM
+}
+
 // ParsePrivateKeyPEM returns a private key parsed from a PEM block in the supplied data.
 // Recognizes PEM blocks for "EC PRIVATE KEY", "RSA PRIVATE KEY", or "PRIVATE KEY"
 func ParsePrivateKeyPEM(keyData []byte) (interface{}, error) {
