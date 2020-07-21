@@ -162,7 +162,7 @@ version-minor:
 version-major:
 	./hack/tag-version.sh major
 
-release: $(GITHUB_RELEASE)
+release: $(GITHUB_RELEASE) $(RELEASE_NOTES)
 	hack/release.sh
 
 vendor: $(GO)
