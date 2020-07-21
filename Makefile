@@ -58,7 +58,7 @@ GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 export GITHUB_RELEASE ?= $(GOBIN)/github-release
-RELEASE_NOTES ?= $(GOBIN)/release-notes
+export RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
 
