@@ -1,5 +1,7 @@
 # kubernetes-nmstate
 
+<img src="logo/fullcolor.png" alias="project logo" />
+
 [keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.
 
 # How it works
