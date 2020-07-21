@@ -20,7 +20,6 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/controller"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
-	"github.com/nmstate/kubernetes-nmstate/version"
 
 	"github.com/nightlyone/lockfile"
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -43,7 +42,6 @@ type ProfilerConfig struct {
 var log = logf.Log.WithName("cmd")
 
 func printVersion() {
-	log.Info(fmt.Sprintf("Operator Version: %s", version.Version))
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
 	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))

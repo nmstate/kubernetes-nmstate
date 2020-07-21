@@ -2,7 +2,8 @@
 
 set -xe
 
-tag=$(hack/version.sh)
+old_version=$(hack/versions.sh -2)
+new_version=$(hack/versions.sh -1)
 gh_organization=nmstate
 gh_repo=kubernetes-nmstate
 
@@ -12,7 +13,7 @@ function upload() {
         -u $gh_organization \
         -r $gh_repo \
         --name $(basename $resource) \
-	    --tag $tag \
+	    --tag $new_version \
 		--file $resource
 }
 
@@ -21,9 +22,9 @@ function create_github_release() {
     $GITHUB_RELEASE release \
         -u $gh_organization \
         -r $gh_repo \
-        --tag $tag \
-        --name $tag \
-        --description "$(cat version/description)"
+        --tag $new_version \
+        --name $new_version \
+        --description "$(hack/render-release-notes.sh $old_version $new_version)"
 
 
     # Upload operator CRDs
@@ -37,14 +38,9 @@ function create_github_release() {
     done
 }
 
-make OPERATOR_IMAGE_TAG=$tag HANDLER_IMAGE_TAG=$tag \
+make OPERATOR_IMAGE_TAG=$new_version HANDLER_IMAGE_TAG=$new_version \
     manifests \
     push-handler \
     push-operator
-
-# Tag master
-git tag $tag
-git push https://github.com/nmstate/kubernetes-nmstate $tag
-
 
 create_github_release

@@ -155,14 +155,14 @@ cluster-sync:
 cluster-sync-operator:
 	./cluster/sync-operator.sh
 
-prepare-patch: $(RELEASE_NOTES)
-	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh patch
-prepare-minor: $(RELEASE_NOTES)
-	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh minor
-prepare-major: $(RELEASE_NOTES)
-	RELEASE_NOTES=$(RELEASE_NOTES) ./hack/prepare-release.sh major
+version-patch:
+	./hack/tag-version.sh patch
+version-minor:
+	./hack/tag-version.sh minor
+version-major:
+	./hack/tag-version.sh major
 
-release: $(GITHUB_RELEASE)
+release: $(GITHUB_RELEASE) $(RELEASE_NOTES)
 	hack/release.sh
 
 vendor: $(GO)
