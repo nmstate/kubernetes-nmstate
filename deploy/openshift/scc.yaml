@@ -1,3 +1,4 @@
+{{define "handlerPrefix"}}{{with $prefix := .HandlerPrefix}}{{$prefix | printf "%s-"}}{{end -}}{{end}}
 ---
 apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
@@ -15,4 +16,4 @@ runAsUser:
 seLinuxContext:
   type: RunAsAny
 users:
-- system:serviceaccount:nmstate:nmstate-handler
+- system:serviceaccount:{{ .HandlerNamespace }}:{{template "handlerPrefix" .}}nmstate-handler
