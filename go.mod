@@ -19,6 +19,7 @@ require (
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.11.0
+	github.com/qinqon/qe-tools v0.1.7-0.20200721083228-4990c711ecfb
 	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.4.0
 	k8s.io/api v0.18.3
@@ -28,7 +29,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20200121204235-bf4fb3bd569c
 	k8s.io/kubectl v0.18.2
 	k8s.io/release v0.2.7
-	kubevirt.io/qe-tools v0.1.6
+	kubevirt.io/qe-tools v0.1.6 // indirect
 	sigs.k8s.io/controller-runtime v0.6.0
 	sigs.k8s.io/yaml v1.2.0
 )
