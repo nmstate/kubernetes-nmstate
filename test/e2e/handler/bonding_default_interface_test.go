@@ -19,13 +19,14 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstatev1alpha1.State {
       dhcp: true
       enabled: true
     link-aggregation:
-      mode: balance-rr
+      mode: active-backup
       options:
         miimon: '140'
+        primary: %s
       slaves:
         - %s
         - %s
-`, bondName, primaryNic, firstSecondaryNic))
+`, bondName, primaryNic, primaryNic, firstSecondaryNic))
 }
 
 func bondAbsentWithPrimaryUp(bondName string) nmstatev1alpha1.State {
