@@ -5,4 +5,4 @@ unset GOFLAGS && ${OPERATOR_SDK} test local ./test/e2e/handler \
 	--kubeconfig ${KUBECONFIG} \
 	--operator-namespace ${HANDLER_NAMESPACE} \
 	--no-setup \
-	--go-test-flags "${TEST_ARGS}  --test-suite-params=\"$POLARION_TEST_SUITE_PARAMS\""
+	--go-test-flags "${TEST_ARGS}"
