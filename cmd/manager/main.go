@@ -135,7 +135,7 @@ func main() {
 
 	// Runs only webhook controllers if it's specified
 	if environment.IsWebhook() {
-		if err := webhook.AddToManager(mgr); err != nil {
+		if err := webhook.AddToManager(os.Getenv("POD_NAMESPACE"), mgr); err != nil {
 			log.Error(err, "Cannot initialize webhook")
 			os.Exit(1)
 		}
