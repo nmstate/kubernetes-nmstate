@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -78,9 +80,9 @@ func (m *Manager) readyWebhookConfiguration() (runtime.Object, error) {
 	return webhook, err
 }
 
-func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) (runtime.Object, error) {
+func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 	m.log.Info("Reset CA bundle with one cert for webhook")
-	webhook, err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
+	_, err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
 		cas := []*x509.Certificate{}
 		if len(currentCABundle) > 0 {
 			var err error
@@ -93,9 +95,9 @@ func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) (runtime.Ob
 		return triple.EncodeCertsPEM(cas), nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update webhook CABundle")
+		return errors.Wrap(err, "failed to update webhook CABundle")
 	}
-	return webhook, nil
+	return nil
 }
 
 func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]byte, error)) (runtime.Object, error) {
@@ -141,4 +143,40 @@ func (m *Manager) CABundle() ([]byte, error) {
 	}
 
 	return clientConfigList[0].CABundle, nil
+}
+
+// getServicesFromConfiguration it retrieves all the references services at
+// webhook configuration clientConfig and in case there is URL instead of
+// ServiceRef it will reference fake one with webhook name, mgr namespace and
+// passing the url hostname at map value
+func (m *Manager) getServicesFromConfiguration(configuration runtime.Object) (map[types.NamespacedName][]string, error) {
+
+	logger := m.log.WithName("getServicesFromConfiguration")
+	services := map[types.NamespacedName][]string{}
+
+	for _, clientConfig := range m.clientConfigList(configuration) {
+
+		service := types.NamespacedName{}
+		hostnames := []string{}
+
+		if clientConfig.Service != nil {
+			logger.Info("Composing service name and namespace from ServiceRef", "serviceRef", clientConfig.Service)
+			service.Name = clientConfig.Service.Name
+			service.Namespace = clientConfig.Service.Namespace
+		} else if clientConfig.URL != nil {
+			logger.Info("Composing service name and namespace from URL", "URL", clientConfig.URL)
+			service.Name = m.webhookName
+			service.Namespace = m.namespace
+			u, err := url.Parse(*clientConfig.URL)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed parsing webhook URL %s", *clientConfig.URL)
+			}
+			hostnames = append(hostnames, strings.Split(u.Host, ":")[0])
+		} else {
+			return nil, errors.New("bad configuration, webhook without serviceRef or URL")
+		}
+
+		services[service] = hostnames
+	}
+	return services, nil
 }
