@@ -33,18 +33,23 @@ type ServerModifier func(w *webhook.Server)
 
 // Add creates a new Conditions Mutating Webhook and adds it to the Manager. The Manager will set fields on the Webhook
 // and Start it when the Manager is Started.
-func New(client client.Client, webhookName string, webhookType certificate.WebhookType, caRotateInterval time.Duration, serverOpts ...ServerModifier) *Server {
+func New(client client.Client, certificateOpts certificate.Options, serverOpts ...ServerModifier) (*Server, error) {
+	certManager, err := certificate.NewManager(client, certificateOpts)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed constructing certificate manager")
+	}
+
 	s := &Server{
 		webhookServer: &webhook.Server{
 			Port:    8443,
 			CertDir: "/etc/webhook/certs/",
 		},
-		certManager: certificate.NewManager(client, webhookName, webhookType, caRotateInterval),
+		certManager: certManager,
 		log:         logf.Log.WithName("webhook/server"),
 	}
 	s.UpdateOpts(serverOpts...)
 	s.webhookServer.Register("/readyz", healthz.CheckHandler{Checker: healthz.Ping})
-	return s
+	return s, nil
 }
 
 func WithHook(path string, hook *webhook.Admission) ServerModifier {
