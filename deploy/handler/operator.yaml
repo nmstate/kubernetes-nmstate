@@ -59,11 +59,11 @@ spec:
             - name: PROFILER_PORT
               value: "6060"
             - name: CA_ROTATE_INTERVAL
-              value: "8760h0m0s" # One Year
+              value: {{ .CARotateInterval | default "8760h0m0s" }}
             - name: CA_OVERLAP_INTERVAL
-              value: "8760h0m0s" # One Year
+              value: {{ .CAOverlapInterval | default "8760h0m0s" }}
             - name: CERT_ROTATE_INTERVAL
-              value: "4380h0m0s" # Half Year
+              value: {{ .CertRotateInterval | default "4380h0m0s" }}
           ports:
           - containerPort: 8443
             name: webhook-server
