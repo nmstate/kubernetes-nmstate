@@ -1,6 +1,11 @@
 package environment
 
-import "os"
+import (
+	"os"
+	"time"
+
+	"github.com/pkg/errors"
+)
 
 // IsOperator returns true when RUN_OPERATOR env var is present
 func IsOperator() bool {
@@ -22,4 +27,18 @@ func IsHandler() bool {
 // Returns node name runnig the pod
 func NodeName() string {
 	return os.Getenv("NODE_NAME")
+}
+
+func LookupAsDuration(varName string) (time.Duration, error) {
+	duration := time.Duration(0)
+	varValue, ok := os.LookupEnv(varName)
+	if !ok {
+		return duration, errors.Errorf("Failed to load %s from environment", varName)
+	}
+
+	duration, err := time.ParseDuration(varValue)
+	if err != nil {
+		return duration, errors.Wrapf(err, "Failed to convert %s value to time.Duration", varName)
+	}
+	return duration, nil
 }

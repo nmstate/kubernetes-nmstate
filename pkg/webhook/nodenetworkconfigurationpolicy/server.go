@@ -13,14 +13,7 @@ const (
 	webhookName = "nmstate"
 )
 
-func Add(namespace string, mgr manager.Manager) error {
-
-	certOptions := certificate.Options{
-		Namespace:        namespace,
-		WebhookName:      webhookName,
-		WebhookType:      certificate.MutatingWebhook,
-		CARotateInterval: certificate.OneYearDuration,
-	}
+func Add(mgr manager.Manager, o certificate.Options) error {
 
 	// We need two hooks, the update of nncp and nncp/status (it's a subresource) happends
 	// at different times, also if you modify status at nncp webhook it does not modify it
@@ -29,7 +22,7 @@ func Add(namespace string, mgr manager.Manager) error {
 	// 1.- User changes nncp desiredState so it triggers deleteConditionsHook()
 	// 2.- Since we have delete the condition the status-mutate webhook get called and
 	//     there we set conditions to Unknown this final result will be updated.
-	server, err := webhookserver.New(mgr.GetClient(), certOptions,
+	server, err := webhookserver.New(mgr.GetClient(), o,
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook()),
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook()),
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-timestamp-mutate", setTimestampAnnotationHook()),

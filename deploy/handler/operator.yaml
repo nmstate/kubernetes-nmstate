@@ -58,6 +58,12 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+            - name: CA_ROTATE_INTERVAL
+              value: "8760h0m0s" # One Year
+            - name: CA_OVERLAP_INTERVAL
+              value: "8760h0m0s" # One Year
+            - name: CERT_ROTATE_INTERVAL
+              value: "4380h0m0s" # Half Year
           ports:
           - containerPort: 8443
             name: webhook-server
