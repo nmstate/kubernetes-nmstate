@@ -150,6 +150,11 @@ func (r *ReconcileNMState) applyHandler(instance *nmstatev1beta1.NMState) error 
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["HandlerNodeSelector"] = instance.Spec.NodeSelector
+	// TODO: This is just a place holder to make template renderer happy
+	//       proper variable has to be read from env or CR
+	data.Data["CARotateInterval"] = ""
+	data.Data["CAOverlapInterval"] = ""
+	data.Data["CertRotateInterval"] = ""
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
