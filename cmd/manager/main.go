@@ -11,6 +11,7 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
+	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -135,7 +136,32 @@ func main() {
 
 	// Runs only webhook controllers if it's specified
 	if environment.IsWebhook() {
-		if err := webhook.AddToManager(os.Getenv("POD_NAMESPACE"), mgr); err != nil {
+
+		webhookOpts := certificate.Options{
+			Namespace:   os.Getenv("POD_NAMESPACE"),
+			WebhookName: "nmstate",
+			WebhookType: certificate.MutatingWebhook,
+		}
+
+		webhookOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
+		if err != nil {
+			log.Error(err, "Failed retrieving ca rotate interval")
+			os.Exit(1)
+		}
+
+		webhookOpts.CAOverlapInterval, err = environment.LookupAsDuration("CA_OVERLAP_INTERVAL")
+		if err != nil {
+			log.Error(err, "Failed retrieving ca overlap interval")
+			os.Exit(1)
+		}
+
+		webhookOpts.CertRotateInterval, err = environment.LookupAsDuration("CERT_ROTATE_INTERVAL")
+		if err != nil {
+			log.Error(err, "Failed retrieving cert rotate interval")
+			os.Exit(1)
+		}
+
+		if err := webhook.AddToManager(mgr, webhookOpts); err != nil {
 			log.Error(err, "Cannot initialize webhook")
 			os.Exit(1)
 		}
