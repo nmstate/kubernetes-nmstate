@@ -23,13 +23,9 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-webhook
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
-        node-role.kubernetes.io/master: ""
-      tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
       containers:
         - name: nmstate-webhook
           args:
@@ -111,15 +107,9 @@ spec:
       # https://github.com/nmstate/nmstate/pull/440
       hostNetwork: true
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
-      nodeSelector:
-        beta.kubernetes.io/arch: amd64
-      {{- range $key, $value := .HandlerNodeSelector }}
-      {{"  "}}{{- $key }}: {{  $value }}
-      {{- end}}
-      tolerations:
-        - key: node-role.kubernetes.io/master
-          operator: Exists
-          effect: NoSchedule
+      nodeSelector: {{ toYaml .HandlerNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .HandlerTolerations | nindent 8 }}
+      affinity: {{ toYaml .HandlerAffinity | nindent 8 }}
       containers:
         - name: nmstate-handler
           args:
