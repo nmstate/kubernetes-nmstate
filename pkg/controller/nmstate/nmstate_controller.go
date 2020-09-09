@@ -7,9 +7,11 @@ import (
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
+	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -145,11 +147,34 @@ func (r *ReconcileNMState) applyRBAC(instance *nmstatev1beta1.NMState) error {
 
 func (r *ReconcileNMState) applyHandler(instance *nmstatev1beta1.NMState) error {
 	data := render.MakeRenderData()
+	// Register ToYaml template method
+	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
+	// Prepare defaults
+	masterExistsNoScheduleToleration := corev1.Toleration{
+		Key:      "node-role.kubernetes.io/master",
+		Operator: corev1.TolerationOpExists,
+		Effect:   corev1.TaintEffectNoSchedule,
+	}
+	amd64ArchOnMasterNodeSelector := map[string]string{
+		"beta.kubernetes.io/arch":        "amd64",
+		"node-role.kubernetes.io/master": "",
+	}
+	amd64AndCRNodeSelector := instance.Spec.NodeSelector
+	if amd64AndCRNodeSelector == nil {
+		amd64AndCRNodeSelector = map[string]string{}
+	}
+	amd64AndCRNodeSelector["beta.kubernetes.io/arch"] = "amd64"
+
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
-	data.Data["HandlerNodeSelector"] = instance.Spec.NodeSelector
+	data.Data["WebhookNodeSelector"] = amd64ArchOnMasterNodeSelector
+	data.Data["WebhookTolerations"] = []corev1.Toleration{masterExistsNoScheduleToleration}
+	data.Data["WebhookAffinity"] = corev1.Affinity{}
+	data.Data["HandlerNodeSelector"] = amd64AndCRNodeSelector
+	data.Data["HandlerTolerations"] = []corev1.Toleration{masterExistsNoScheduleToleration}
+	data.Data["HandlerAffinity"] = corev1.Affinity{}
 	// TODO: This is just a place holder to make template renderer happy
 	//       proper variable has to be read from env or CR
 	data.Data["CARotateInterval"] = ""
