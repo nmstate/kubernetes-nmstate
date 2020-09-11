@@ -198,7 +198,7 @@ webhooks:
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1"]
+        apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies"]
   - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
     clientConfig:
@@ -209,7 +209,7 @@ webhooks:
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1"]
+        apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies/status"]
   - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
     clientConfig:
@@ -220,7 +220,7 @@ webhooks:
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1"]
+        apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
 ---
 apiVersion: policy/v1beta1

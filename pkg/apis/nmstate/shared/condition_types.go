@@ -1,4 +1,4 @@
-package v1alpha1
+package shared
 
 import (
 	"time"
@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// +k8s:openapi-gen=true
 type ConditionList []Condition
 
 // +k8s:openapi-gen=true

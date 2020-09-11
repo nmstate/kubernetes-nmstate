@@ -41,7 +41,7 @@ kubectl get nns node01 -o yaml
 ```
 
 ```yaml
-apiVersion: nmstate.io/v1alpha1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkState
 metadata:
   creationTimestamp: "2020-01-31T12:13:15Z"
@@ -53,7 +53,7 @@ metadata:
     name: node01
     uid: 5292f6a0-de2d-425c-8c66-ab95fec461e1
   resourceVersion: "946"
-  selfLink: /apis/nmstate.io/v1alpha1/nodenetworkstates/node01
+  selfLink: /apis/nmstate.io/v1beta1/nodenetworkstates/node01
   uid: aada52e6-f7fa-4bc8-b580-27c2b70f4466
 status:
   currentState:

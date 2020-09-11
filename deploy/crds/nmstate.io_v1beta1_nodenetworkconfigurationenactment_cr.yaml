@@ -1,16 +1,16 @@
-apiVersion: nmstate.io/v1alpha1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkConfigurationEnactment
 metadata:
   creationTimestamp: "2019-12-04T10:55:12Z"
   generation: 1
   name: node01.test-policy
   ownerReferences:
-  - apiVersion: nmstate.io/v1alpha1
+  - apiVersion: nmstate.io/v1beta1
     kind: NodeNetworkConfigurationPolicy
     name: test-policy
     uid: d7e35a96-6094-4b2e-a899-9ee6a5eef157
   resourceVersion: "4682"
-  selfLink: /apis/nmstate.io/v1alpha1/nodenetworkconfigurationenactments/node01.test-policy
+  selfLink: /apis/nmstate.io/v1beta1/nodenetworkconfigurationenactments/node01.test-policy
   uid: 2f255a93-c2b5-43a5-a401-7184150fa9f1
 status:
   conditions:

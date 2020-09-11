@@ -1,4 +1,4 @@
-package v1alpha1
+package v1beta1
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -20,7 +20,7 @@ interfaces:
     state: down`)
 
 		nnsManifest = `
-apiVersion: nmstate.io/v1alpha1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkState
 metadata:
   name: node01
@@ -36,7 +36,7 @@ status:
 `
 		nnsStruct = NodeNetworkState{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "nmstate.io/v1alpha1",
+				APIVersion: "nmstate.io/v1beta1",
 				Kind:       "NodeNetworkState",
 			},
 			ObjectMeta: metav1.ObjectMeta{

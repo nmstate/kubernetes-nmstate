@@ -7,10 +7,10 @@ import (
 
 	yaml "sigs.k8s.io/yaml"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
-func getBridgesUp(desiredState nmstatev1alpha1.State) (map[string][]string, error) {
+func getBridgesUp(desiredState nmstate.State) (map[string][]string, error) {
 	foundBridgesWithPorts := map[string][]string{}
 
 	desiredStateYaml, err := yaml.YAMLToJSON([]byte(desiredState.Raw))

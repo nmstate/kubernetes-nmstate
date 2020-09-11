@@ -6,7 +6,7 @@
 //
 // [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml
 
-package v1alpha1
+package shared
 
 import (
 	yaml "sigs.k8s.io/yaml"

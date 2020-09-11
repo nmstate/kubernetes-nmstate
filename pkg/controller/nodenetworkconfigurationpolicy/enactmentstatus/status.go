@@ -14,17 +14,18 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 var (
 	log = logf.Log.WithName("enactmentstatus")
 )
 
-func Update(client client.Client, key types.NamespacedName, statusSetter func(*nmstatev1alpha1.NodeNetworkConfigurationEnactmentStatus)) error {
+func Update(client client.Client, key types.NamespacedName, statusSetter func(*nmstate.NodeNetworkConfigurationEnactmentStatus)) error {
 	logger := log.WithValues("enactment", key.Name)
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		instance := &nmstatev1alpha1.NodeNetworkConfigurationEnactment{}
+		instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
 		err := client.Get(context.TODO(), key, instance)
 		if err != nil {
 			return errors.Wrap(err, "getting enactment failed")

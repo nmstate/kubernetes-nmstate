@@ -7,11 +7,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
-func boundUpWithPrimaryAndSecondary(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: up
@@ -29,8 +29,8 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstatev1alpha1.State {
 `, bondName, primaryNic, primaryNic, firstSecondaryNic))
 }
 
-func bondAbsentWithPrimaryUp(bondName string) nmstatev1alpha1.State {
-	return nmstatev1alpha1.NewState(fmt.Sprintf(`interfaces:
+func bondAbsentWithPrimaryUp(bondName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: absent

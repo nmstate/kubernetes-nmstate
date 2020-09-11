@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
 )
 
 var _ = Describe("Node controller reconcile", func() {
@@ -31,7 +31,7 @@ var _ = Describe("Node controller reconcile", func() {
 				UID:  "12345",
 			},
 		}
-		nodenetworkstate = nmstatev1alpha1.NodeNetworkState{
+		nodenetworkstate = nmstatev1beta1.NodeNetworkState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNodeName,
 			},
@@ -39,8 +39,8 @@ var _ = Describe("Node controller reconcile", func() {
 	)
 	BeforeEach(func() {
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1alpha1.SchemeGroupVersion,
-			&nmstatev1alpha1.NodeNetworkState{},
+		s.AddKnownTypes(nmstatev1beta1.SchemeGroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
 		)
 
 		objs := []runtime.Object{&node, &nodenetworkstate}
@@ -96,7 +96,7 @@ var _ = Describe("Node controller reconcile", func() {
 				_, err := reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
 
-				obtainedNNS := nmstatev1alpha1.NodeNetworkState{}
+				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
 				nnsKey := types.NamespacedName{Name: existingNodeName}
 				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 				Expect(err).ToNot(HaveOccurred())

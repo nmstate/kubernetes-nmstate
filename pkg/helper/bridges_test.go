@@ -4,14 +4,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1alpha1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
 )
 
 var (
-	badYaml = nmstatev1alpha1.NewState("}")
-	empty   = nmstatev1alpha1.NewState("")
+	badYaml = nmstate.NewState("}")
+	empty   = nmstate.NewState("")
 
-	noBridges = nmstatev1alpha1.NewState(`interfaces:
+	noBridges = nmstate.NewState(`interfaces:
   - name: bond1
     type: bond
     state: up
@@ -22,7 +22,7 @@ var (
       options:
         miimon: '120'
 `)
-	noBridgesUp = nmstatev1alpha1.NewState(`interfaces:
+	noBridgesUp = nmstate.NewState(`interfaces:
   - name: eth1
     type: ethernet
     state: up
@@ -34,13 +34,13 @@ var (
     state: absent
 `)
 
-	bridgeWithNoPorts = nmstatev1alpha1.NewState(`interfaces:
+	bridgeWithNoPorts = nmstate.NewState(`interfaces:
   - name: br1
     type: linux-bridge
     state: up
 `)
 
-	someBridgesUp = nmstatev1alpha1.NewState(`interfaces:
+	someBridgesUp = nmstate.NewState(`interfaces:
   - name: br1
     type: linux-bridge
     state: up
@@ -71,7 +71,7 @@ var (
 var _ = Describe("Network desired state bridge parser", func() {
 	var (
 		obtainedBridgesAndPorts map[string][]string
-		desiredState            nmstatev1alpha1.State
+		desiredState            nmstate.State
 		err                     error
 	)
 	JustBeforeEach(func() {

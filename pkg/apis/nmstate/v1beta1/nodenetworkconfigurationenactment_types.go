@@ -1,4 +1,4 @@
-package v1alpha1
+package v1beta1
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -24,6 +24,8 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationenactments,shortName=nnce,scope=Cluster
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason",description="Status"
+// +kubebuilder:pruning:PreserveUnknownFields
+// +kubebuilder:storageversion
 type NodeNetworkConfigurationEnactment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
