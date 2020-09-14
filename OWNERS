@@ -11,3 +11,9 @@ reviewers:
   - tsorya
   - bcrochet
   - yboaron
+
+# Bugzilla info;
+component: Networking
+subcomponent: kubernetes-nmstate-operator
+subcomponent: kubernetes-nmstate
+
