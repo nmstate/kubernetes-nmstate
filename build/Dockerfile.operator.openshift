@@ -5,7 +5,7 @@ RUN GO111MODULE=on go build --mod=vendor -o build/_output/bin/kubernetes-nmstate
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
-COPY --from=builder /go/src/github.com/nmstate/kubernetes-nmstate/build/_output/bin/kubernetes-nmstate  /usr/bin/
+COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/build/_output/bin/kubernetes-nmstate  /usr/bin/
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
 COPY deploy/handler/namespace.yaml /bindata/kubernetes-nmstate/namespace/
 COPY deploy/handler/operator.yaml /bindata/kubernetes-nmstate/handler/handler.yaml
