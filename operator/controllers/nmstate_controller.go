@@ -48,14 +48,15 @@ type NMStateReconciler struct {
 }
 
 // +kubebuilder:rbac:namespace:"{{ .OperatorNamespace}}",groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods;,verbs="*"
-// +kubebuilder:rbac:namespace:"{{ .OperatorNamespace}}",groups=apps,resources=deployments;daemonsets;replicasets;statefulsets;,verbs="*"
+// +kubebuilder:rbac:namespace:"{{ .OperatorNamespace}}",groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
 // +kubebuilder:rbac:namespace:"{{ .OperatorNamespace}}",groups=policy,resources=poddisruptionbudgets,verbs="*"
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs="*"
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,clusterrolebindings,rolebindings,roles,verbs="*"
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings;rolebindings;roles,verbs="*"
 // +kubebuilder:rbac:groups=nmstate.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources="*",verbs="*"
-// +kubebuilder:rbac:groups=apps,resources=deployments,daemonsets,replicasets,statefulsets,verbs="*"
-// +kubebuilder:rbac:groups="",resources=serviceaccounts,configmaps,namespaces,statefulsets,verbs="*"
+// +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
+// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces;statefulsets,verbs="*"
+
 func (r *NMStateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
