@@ -1,0 +1,24 @@
+# permissions for end users to edit nmstates.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nmstate-editor-role
+rules:
+- apiGroups:
+  - nmstate.io.nmstate.io
+  resources:
+  - nmstates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nmstate.io.nmstate.io
+  resources:
+  - nmstates/status
+  verbs:
+  - get
