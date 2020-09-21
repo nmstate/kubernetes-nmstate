@@ -1,18 +1,15 @@
 package bundle
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
 
-	v1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
-	v "github.com/operator-framework/api/pkg/validation"
-	"github.com/operator-framework/operator-registry/pkg/containertools"
-	validation "github.com/operator-framework/operator-registry/pkg/lib/validation"
-	"github.com/operator-framework/operator-registry/pkg/registry"
-
+	y "github.com/ghodss/yaml"
+	log "github.com/sirupsen/logrus"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	apiValidation "k8s.io/apimachinery/pkg/api/validation"
@@ -22,8 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 
-	y "github.com/ghodss/yaml"
-	log "github.com/sirupsen/logrus"
+	v1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
+	v "github.com/operator-framework/api/pkg/validation"
+	"github.com/operator-framework/operator-registry/pkg/image"
+	validation "github.com/operator-framework/operator-registry/pkg/lib/validation"
+	"github.com/operator-framework/operator-registry/pkg/registry"
 )
 
 const (
@@ -38,8 +38,8 @@ type Meta struct {
 
 // imageValidator is a struct implementation of the Indexer interface
 type imageValidator struct {
-	imageReader containertools.ImageReader
-	logger      *log.Entry
+	registry image.Registry
+	logger   *log.Entry
 }
 
 // PullBundleImage shells out to a container tool and pulls a given image tag
@@ -48,7 +48,7 @@ type imageValidator struct {
 func (i imageValidator) PullBundleImage(imageTag, directory string) error {
 	i.logger.Debug("Pulling and unpacking container image")
 
-	return i.imageReader.GetImageData(imageTag, directory)
+	return i.registry.Unpack(context.Background(), image.SimpleReference(imageTag), directory)
 }
 
 // ValidateBundle takes a directory containing the contents of a bundle and validates

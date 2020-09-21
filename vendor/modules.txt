@@ -33,7 +33,8 @@ github.com/Masterminds/squirrel
 # github.com/Microsoft/go-winio v0.4.15-0.20190919025122-fc70bd9a86b5
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
-# github.com/Microsoft/hcsshim v0.8.7
+github.com/Microsoft/go-winio/vhd
+# github.com/Microsoft/hcsshim v0.8.9
 github.com/Microsoft/hcsshim
 github.com/Microsoft/hcsshim/internal/cow
 github.com/Microsoft/hcsshim/internal/hcs
@@ -92,11 +93,10 @@ github.com/containerd/containerd/remotes/docker/schema1
 github.com/containerd/containerd/snapshots
 github.com/containerd/containerd/sys
 github.com/containerd/containerd/version
-# github.com/containerd/continuity v0.0.0-20200228182428-0f16d7a0959c
+# github.com/containerd/continuity v0.0.0-20200413184840-d3ef23f19fbb
 github.com/containerd/continuity/fs
-github.com/containerd/continuity/syscallx
 github.com/containerd/continuity/sysx
-# github.com/containerd/ttrpc v0.0.0-20190828154514-0e0f228740de
+# github.com/containerd/ttrpc v1.0.1
 github.com/containerd/ttrpc
 # github.com/coreos/prometheus-operator v0.38.1-0.20200424145508-7e176fda06cc
 github.com/coreos/prometheus-operator/pkg/apis/monitoring
@@ -164,7 +164,7 @@ github.com/docker/docker-credential-helpers/credentials
 # github.com/docker/go-connections v0.4.0
 github.com/docker/go-connections/nat
 github.com/docker/go-connections/tlsconfig
-# github.com/docker/go-metrics v0.0.1
+# github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916
 github.com/docker/go-metrics
 # github.com/docker/go-units v0.4.0
 github.com/docker/go-units
@@ -284,7 +284,7 @@ github.com/gophercloud/gophercloud/openstack/identity/v2/tokens
 github.com/gophercloud/gophercloud/openstack/identity/v3/tokens
 github.com/gophercloud/gophercloud/openstack/utils
 github.com/gophercloud/gophercloud/pagination
-# github.com/gorilla/mux v1.7.4
+# github.com/gorilla/mux v1.7.2
 github.com/gorilla/mux
 # github.com/gosuri/uitable v0.0.4
 github.com/gosuri/uitable
@@ -434,13 +434,12 @@ github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.2-0.20190823105129-775207bd45b6
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/opencontainers/runc v1.0.0-rc9
+# github.com/opencontainers/runc v0.1.1
 github.com/opencontainers/runc/libcontainer/system
-github.com/opencontainers/runc/libcontainer/user
 # github.com/openshift/cluster-network-operator v0.0.0-20200324123637-74e803688dd9
 github.com/openshift/cluster-network-operator/pkg/apply
 github.com/openshift/cluster-network-operator/pkg/render
-# github.com/operator-framework/api v0.3.7-0.20200528122852-759ca0d84007
+# github.com/operator-framework/api v0.3.8
 github.com/operator-framework/api/pkg/lib/version
 github.com/operator-framework/api/pkg/manifests
 github.com/operator-framework/api/pkg/operators
@@ -450,7 +449,7 @@ github.com/operator-framework/api/pkg/validation
 github.com/operator-framework/api/pkg/validation/errors
 github.com/operator-framework/api/pkg/validation/interfaces
 github.com/operator-framework/api/pkg/validation/internal
-# github.com/operator-framework/operator-registry v1.12.4
+# github.com/operator-framework/operator-registry v1.12.6-0.20200611222234-275301b779f8
 github.com/operator-framework/operator-registry/pkg/api
 github.com/operator-framework/operator-registry/pkg/containertools
 github.com/operator-framework/operator-registry/pkg/image
@@ -459,7 +458,7 @@ github.com/operator-framework/operator-registry/pkg/image/execregistry
 github.com/operator-framework/operator-registry/pkg/lib/bundle
 github.com/operator-framework/operator-registry/pkg/lib/validation
 github.com/operator-framework/operator-registry/pkg/registry
-# github.com/operator-framework/operator-sdk v0.18.0
+# github.com/operator-framework/operator-sdk v0.18.2
 github.com/operator-framework/operator-sdk/cmd/operator-sdk
 github.com/operator-framework/operator-sdk/cmd/operator-sdk/add
 github.com/operator-framework/operator-sdk/cmd/operator-sdk/alpha
@@ -551,7 +550,7 @@ github.com/operator-framework/operator-sdk/pkg/metrics
 github.com/operator-framework/operator-sdk/pkg/predicate
 github.com/operator-framework/operator-sdk/pkg/test
 github.com/operator-framework/operator-sdk/version
-# github.com/otiai10/copy v1.0.2
+# github.com/otiai10/copy v1.2.0
 github.com/otiai10/copy
 # github.com/pborman/uuid v1.2.0
 github.com/pborman/uuid
@@ -773,7 +772,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20191115194625-c23dd37a84c9
+# google.golang.org/genproto v0.0.0-20200117163144-32f20d992d24
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.27.0
 google.golang.org/grpc

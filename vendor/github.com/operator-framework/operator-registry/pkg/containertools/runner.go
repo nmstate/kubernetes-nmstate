@@ -4,6 +4,7 @@ package containertools
 import (
 	"fmt"
 	"os/exec"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 )
@@ -13,7 +14,6 @@ type CommandRunner interface {
 	GetToolName() string
 	Pull(image string) error
 	Build(dockerfile, tag string) error
-	Save(image, tarFile string) error
 	Inspect(image string) ([]byte, error)
 }
 
@@ -26,12 +26,12 @@ type ContainerCommandRunner struct {
 
 // NewCommandRunner takes the containerTool as an input string and returns a
 // CommandRunner to run commands with that cli tool
-func NewCommandRunner(containerTool ContainerTool, logger *logrus.Entry) CommandRunner {
-	r := ContainerCommandRunner{
-		logger: logger,
+func NewCommandRunner(containerTool ContainerTool, logger *logrus.Entry) *ContainerCommandRunner {
+	r := &ContainerCommandRunner{
+		logger:        logger,
 		containerTool: containerTool,
 	}
-	return &r
+	return r
 }
 
 // GetToolName returns the container tool this command runner is using
@@ -59,15 +59,16 @@ func (r *ContainerCommandRunner) Pull(image string) error {
 
 // Build takes a dockerfile and a tag and builds a container image
 func (r *ContainerCommandRunner) Build(dockerfile, tag string) error {
-	args := []string{"build", "-f", dockerfile}
-
+	o := DefaultBuildOptions()
 	if tag != "" {
-		args = append(args, "-t", tag)
+		o.AddTag(tag)
 	}
-
-	args = append(args, ".")
-
-	command := exec.Command(r.containerTool.String(), args...)
+	o.SetDockerfile(dockerfile)
+	o.SetContext(".")
+	command, err := r.containerTool.CommandFactory().BuildCommand(o)
+	if err != nil {
+		return fmt.Errorf("unable to perform build: %v", err)
+	}
 
 	r.logger.Infof("running %s build", r.containerTool)
 	r.logger.Infof("%s", command.Args)
@@ -81,20 +82,44 @@ func (r *ContainerCommandRunner) Build(dockerfile, tag string) error {
 	return nil
 }
 
-// Save takes a local container image and runs the save commmand to convert the
-// image into a specified tarball and push it to the local directory
-func (r *ContainerCommandRunner) Save(image, tarFile string) error {
-	args := []string{"save", image, "-o", tarFile}
+// Unpack copies a directory from a local container image to a directory in the local filesystem.
+func (r *ContainerCommandRunner) Unpack(image, src, dst string) error {
+	args := []string{"create", image, ""}
 
 	command := exec.Command(r.containerTool.String(), args...)
 
-	r.logger.Infof("running %s save", r.containerTool)
+	r.logger.Infof("running %s create", r.containerTool)
 	r.logger.Debugf("%s", command.Args)
 
 	out, err := command.CombinedOutput()
 	if err != nil {
 		r.logger.Errorf(string(out))
-		return fmt.Errorf("error saving image: %s. %v", string(out), err)
+		return fmt.Errorf("error creating container %s: %v", string(out), err)
+	}
+
+	id := strings.TrimSuffix(string(out), "\n")
+	args = []string{"cp", id + ":" + src, dst}
+	command = exec.Command(r.containerTool.String(), args...)
+
+	r.logger.Infof("running %s cp", r.containerTool)
+	r.logger.Debugf("%s", command.Args)
+
+	out, err = command.CombinedOutput()
+	if err != nil {
+		r.logger.Errorf(string(out))
+		return fmt.Errorf("error copying container directory %s: %v", string(out), err)
+	}
+
+	args = []string{"rm", id}
+	command = exec.Command(r.containerTool.String(), args...)
+
+	r.logger.Infof("running %s rm", r.containerTool)
+	r.logger.Debugf("%s", command.Args)
+
+	out, err = command.CombinedOutput()
+	if err != nil {
+		r.logger.Errorf(string(out))
+		return fmt.Errorf("error removing container %s: %v", string(out), err)
 	}
 
 	return nil
