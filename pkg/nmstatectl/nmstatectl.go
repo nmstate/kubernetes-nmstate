@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/pkg/errors"
@@ -20,7 +20,7 @@ import (
 
 var (
 	log       = logf.Log.WithName("nmstatectl")
-	statePath = "/tmp/dump.yaml"
+	statePipe = "/tmp/state.pipe"
 )
 
 const nmstateCommand = "nmstatectl"
@@ -56,11 +56,14 @@ func nmstatectl(arguments []string) (string, error) {
 }
 
 func Show() (string, error) {
-	state, err := ioutil.ReadFile(statePath)
+	fifo, err := os.OpenFile(statePipe, os.O_RDONLY, os.ModeNamedPipe)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed opening named pipe to read nmstatectl show")
 	}
-	return string(state), nil
+	defer fifo.Close()
+	var buff bytes.Buffer
+	io.Copy(&buff, fifo)
+	return buff.String(), nil
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
@@ -85,15 +88,13 @@ func Rollback() error {
 }
 
 func StartMonitor() error {
-	stateFile, err := os.Create(statePath)
+	os.Remove(statePipe)
+	err := syscall.Mkfifo(statePipe, 0666)
 	if err != nil {
-		return errors.Wrap(err, "failed to open file to dump nmstatectl-monitor state")
+		return errors.Wrap(err, "failed creating the named pipe to talk with nmstatectl")
 	}
-	defer stateFile.Close()
 
-	cmd := exec.Command("nmstatectl-monitor")
-	cmd.Stdout = stateFile
-
+	cmd := exec.Command("nmstatectl-monitor", statePipe)
 	if err := cmd.Start(); err != nil {
 		return errors.Wrap(err, "failed starting nmstatectl-monitor command")
 	}

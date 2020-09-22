@@ -1,31 +1,24 @@
 #!/usr/libexec/platform-python
 
+import os
 import sys
 import time
+import io
+from contextlib import redirect_stdout
 
-
-# TODO: Pass those as arguments
 nmstatectl_path = "/usr/bin/nmstatectl"
-interval = 5
+pipe = sys.argv[1]
 
 with open(nmstatectl_path) as nmstatectl_file:
     nmstatectl = nmstatectl_file.read()
     sys.argv = [nmstatectl_path, "show"]
     while True:
-        if sys.stdout.seekable():
-            # Move back to the biggining so we don't need to truncate the file
-            sys.stdout.seek(0)
+        with open(pipe, "w") as fifo, redirect_stdout(fifo):
+            try:
+                exec(nmstatectl)
+            except SystemExit:
+                pass
+            sys.stdout.flush()
 
-        try:
-            exec(nmstatectl)
-        except SystemExit:
-            pass
-
-        # Ensure latest 'nmstatectl show' is dumped to stdout
-        sys.stdout.flush()
-
-        if sys.stdout.seekable():
-            # Truncate values from previous calls
-            sys.stdout.truncate(sys.stdout.tell())
-
-        time.sleep(interval)
+        # take some time for the other side to close the pipe
+        time.sleep(1)
