@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -17,7 +19,8 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("nmstatectl")
+	log       = logf.Log.WithName("nmstatectl")
+	statePath = "/tmp/dump.yaml"
 )
 
 const nmstateCommand = "nmstatectl"
@@ -52,8 +55,12 @@ func nmstatectl(arguments []string) (string, error) {
 	return nmstatectlWithInput(arguments, "")
 }
 
-func Show(arguments ...string) (string, error) {
-	return nmstatectl([]string{"show"})
+func Show() (string, error) {
+	state, err := ioutil.ReadFile(statePath)
+	if err != nil {
+		return "", err
+	}
+	return string(state), nil
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
@@ -73,6 +80,22 @@ func Rollback() error {
 	_, err := nmstatectl([]string{"rollback"})
 	if err != nil {
 		return errors.Wrapf(err, "failed calling nmstatectl rollback")
+	}
+	return nil
+}
+
+func StartMonitor() error {
+	stateFile, err := os.Create(statePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to open file to dump nmstatectl-monitor state")
+	}
+	defer stateFile.Close()
+
+	cmd := exec.Command("nmstatectl-monitor")
+	cmd.Stdout = stateFile
+
+	if err := cmd.Start(); err != nil {
+		return errors.Wrap(err, "failed starting nmstatectl-monitor command")
 	}
 	return nil
 }

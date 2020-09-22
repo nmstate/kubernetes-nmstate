@@ -1,0 +1,31 @@
+#!/usr/libexec/platform-python
+
+import sys
+import time
+
+
+# TODO: Pass those as arguments
+nmstatectl_path = "/usr/bin/nmstatectl"
+interval = 5
+
+with open(nmstatectl_path) as nmstatectl_file:
+    nmstatectl = nmstatectl_file.read()
+    sys.argv = [nmstatectl_path, "show"]
+    while True:
+        if sys.stdout.seekable():
+            # Move back to the biggining so we don't need to truncate the file
+            sys.stdout.seek(0)
+
+        try:
+            exec(nmstatectl)
+        except SystemExit:
+            pass
+
+        # Ensure latest 'nmstatectl show' is dumped to stdout
+        sys.stdout.flush()
+
+        if sys.stdout.seekable():
+            # Truncate values from previous calls
+            sys.stdout.truncate(sys.stdout.tell())
+
+        time.sleep(interval)

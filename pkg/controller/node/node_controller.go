@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -19,6 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
 var (
@@ -29,6 +32,10 @@ var (
 // Add creates a new Node Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
+	err := nmstatectl.StartMonitor()
+	if err != nil {
+		return errors.Wrap(err, "failed starting nmstatectl monitor before starting the controller")
+	}
 	return add(mgr, newReconciler(mgr))
 }
 
@@ -98,7 +105,7 @@ func (r *ReconcileNode) Reconcile(request reconcile.Request) (reconcile.Result, 
 	instance := &corev1.Node{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
