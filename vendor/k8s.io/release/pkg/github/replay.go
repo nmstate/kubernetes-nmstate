@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 	"sync"
@@ -120,6 +121,28 @@ func (c *githubNotesReplayClient) ListReleases(
 	return result, record.response(), nil
 }
 
+func (c *githubNotesReplayClient) GetReleaseByTag(
+	ctx context.Context, owner, repo, tag string,
+) (*github.RepositoryRelease, *github.Response, error) {
+	data, err := c.readRecordedData(gitHubAPIGetReleaseByTag)
+	if err != nil {
+		return nil, nil, err
+	}
+	result := &github.RepositoryRelease{}
+	record := apiRecord{Result: result}
+	if err := json.Unmarshal(data, &record); err != nil {
+		return nil, nil, err
+	}
+	return result, record.response(), nil
+}
+
+// TODO: Complete logic
+func (c *githubNotesReplayClient) DownloadReleaseAsset(
+	context.Context, string, string, int64,
+) (io.ReadCloser, string, error) {
+	return nil, "", nil
+}
+
 func (c *githubNotesReplayClient) ListTags(
 	ctx context.Context, owner, repo string, opt *github.ListOptions,
 ) ([]*github.RepositoryTag, *github.Response, error) {
@@ -133,6 +156,42 @@ func (c *githubNotesReplayClient) ListTags(
 		return nil, nil, err
 	}
 	return result, record.response(), nil
+}
+
+func (c *githubNotesReplayClient) CreatePullRequest(
+	ctx context.Context, owner, repo, baseBranchName, headBranchName, title, body string,
+) (*github.PullRequest, error) {
+	return &github.PullRequest{}, nil
+}
+
+func (c *githubNotesReplayClient) GetRepository(
+	ctx context.Context, owner, repo string,
+) (*github.Repository, *github.Response, error) {
+	data, err := c.readRecordedData(gitHubAPIGetRepository)
+	if err != nil {
+		return nil, nil, err
+	}
+	repository := &github.Repository{}
+	record := apiRecord{Result: repository}
+	if err := json.Unmarshal(data, &record); err != nil {
+		return nil, nil, err
+	}
+	return repository, record.response(), nil
+}
+
+func (c *githubNotesReplayClient) ListBranches(
+	ctx context.Context, owner, repo string, opts *github.BranchListOptions,
+) ([]*github.Branch, *github.Response, error) {
+	data, err := c.readRecordedData(gitHubAPIListBranches)
+	if err != nil {
+		return nil, nil, err
+	}
+	branches := make([]*github.Branch, 0)
+	record := apiRecord{Result: branches}
+	if err := json.Unmarshal(data, &record); err != nil {
+		return nil, nil, err
+	}
+	return branches, record.response(), nil
 }
 
 func (c *githubNotesReplayClient) readRecordedData(api gitHubAPI) ([]byte, error) {

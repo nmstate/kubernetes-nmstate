@@ -21,7 +21,6 @@ import (
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/bundle"
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/cleanup"
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/completion"
-	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/execentrypoint"
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/generate"
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/migrate"
 	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/new"
@@ -73,16 +72,15 @@ func GetCLIRoot() *cobra.Command {
 		add.NewCmd(),
 		alpha.NewCmd(),
 		build.NewCmd(),
-		bundle.NewCmd(),
-		cleanup.NewCmd(),
+		bundle.NewCmdLegacy(),
+		cleanup.NewCmdLegacy(),
 		completion.NewCmd(),
-		execentrypoint.NewCmd(),
 		generate.NewCmdLegacy(),
 		migrate.NewCmd(),
 		new.NewCmd(),
 		olm.NewCmd(),
 		printdeps.NewCmd(),
-		run.NewCmd(),
+		run.NewCmdLegacy(),
 		scorecard.NewCmd(),
 		test.NewCmd(),
 		version.NewCmd(),

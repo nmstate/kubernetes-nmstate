@@ -76,7 +76,7 @@ func MergeDeploymentForUpdate(current, updated *uns.Unstructured) error {
 	return nil
 }
 
-// MergeServiceForUpdate ensures the clusterip is never written to
+// MergeServiceForUpdate ensures the ClusterIP/IPFamily is never modified
 func MergeServiceForUpdate(current, updated *uns.Unstructured) error {
 	gvk := updated.GroupVersionKind()
 	if gvk.Group == "" && gvk.Kind == "Service" {
@@ -84,9 +84,22 @@ func MergeServiceForUpdate(current, updated *uns.Unstructured) error {
 		if err != nil {
 			return err
 		}
-
 		if found {
-			return uns.SetNestedField(updated.Object, clusterIP, "spec", "clusterIP")
+			err = uns.SetNestedField(updated.Object, clusterIP, "spec", "clusterIP")
+			if err != nil {
+				return err
+			}
+		}
+
+		ipFamily, found, err := uns.NestedString(current.Object, "spec", "ipFamily")
+		if err != nil {
+			return err
+		}
+		if found {
+			err = uns.SetNestedField(updated.Object, ipFamily, "spec", "ipFamily")
+			if err != nil {
+				return err
+			}
 		}
 	}
 

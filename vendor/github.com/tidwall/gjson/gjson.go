@@ -3,11 +3,13 @@ package gjson
 
 import (
 	"encoding/json"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 	"unicode/utf16"
 	"unicode/utf8"
+	"unsafe"
 
 	"github.com/tidwall/match"
 	"github.com/tidwall/pretty"
@@ -2595,6 +2597,15 @@ func execModifier(json, path string) (pathOut, res string, ok bool) {
 	return pathOut, res, false
 }
 
+// unwrap removes the '[]' or '{}' characters around json
+func unwrap(json string) string {
+	json = trim(json)
+	if len(json) >= 2 && json[0] == '[' || json[0] == '{' {
+		json = json[1 : len(json)-1]
+	}
+	return json
+}
+
 // DisableModifiers will disable the modifier syntax
 var DisableModifiers = false
 
@@ -2603,6 +2614,9 @@ var modifiers = map[string]func(json, arg string) string{
 	"ugly":    modUgly,
 	"reverse": modReverse,
 	"this":    modThis,
+	"flatten": modFlatten,
+	"join":    modJoin,
+	"valid":   modValid,
 }
 
 // AddModifier binds a custom modifier command to the GJSON syntax.
@@ -2690,4 +2704,195 @@ func modReverse(json, arg string) string {
 		return bytesString(out)
 	}
 	return json
+}
+
+// @flatten an array with child arrays.
+//   [1,[2],[3,4],[5,[6,7]]] -> [1,2,3,4,5,[6,7]]
+// The {"deep":true} arg can be provide for deep flattening.
+//   [1,[2],[3,4],[5,[6,7]]] -> [1,2,3,4,5,6,7]
+// The original json is returned when the json is not an array.
+func modFlatten(json, arg string) string {
+	res := Parse(json)
+	if !res.IsArray() {
+		return json
+	}
+	var deep bool
+	if arg != "" {
+		Parse(arg).ForEach(func(key, value Result) bool {
+			if key.String() == "deep" {
+				deep = value.Bool()
+			}
+			return true
+		})
+	}
+	var out []byte
+	out = append(out, '[')
+	var idx int
+	res.ForEach(func(_, value Result) bool {
+		if idx > 0 {
+			out = append(out, ',')
+		}
+		if value.IsArray() {
+			if deep {
+				out = append(out, unwrap(modFlatten(value.Raw, arg))...)
+			} else {
+				out = append(out, unwrap(value.Raw)...)
+			}
+		} else {
+			out = append(out, value.Raw...)
+		}
+		idx++
+		return true
+	})
+	out = append(out, ']')
+	return bytesString(out)
+}
+
+// @join multiple objects into a single object.
+//   [{"first":"Tom"},{"last":"Smith"}] -> {"first","Tom","last":"Smith"}
+// The arg can be "true" to specify that duplicate keys should be preserved.
+//   [{"first":"Tom","age":37},{"age":41}] -> {"first","Tom","age":37,"age":41}
+// Without preserved keys:
+//   [{"first":"Tom","age":37},{"age":41}] -> {"first","Tom","age":41}
+// The original json is returned when the json is not an object.
+func modJoin(json, arg string) string {
+	res := Parse(json)
+	if !res.IsArray() {
+		return json
+	}
+	var preserve bool
+	if arg != "" {
+		Parse(arg).ForEach(func(key, value Result) bool {
+			if key.String() == "preserve" {
+				preserve = value.Bool()
+			}
+			return true
+		})
+	}
+	var out []byte
+	out = append(out, '{')
+	if preserve {
+		// Preserve duplicate keys.
+		var idx int
+		res.ForEach(func(_, value Result) bool {
+			if !value.IsObject() {
+				return true
+			}
+			if idx > 0 {
+				out = append(out, ',')
+			}
+			out = append(out, unwrap(value.Raw)...)
+			idx++
+			return true
+		})
+	} else {
+		// Deduplicate keys and generate an object with stable ordering.
+		var keys []Result
+		kvals := make(map[string]Result)
+		res.ForEach(func(_, value Result) bool {
+			if !value.IsObject() {
+				return true
+			}
+			value.ForEach(func(key, value Result) bool {
+				k := key.String()
+				if _, ok := kvals[k]; !ok {
+					keys = append(keys, key)
+				}
+				kvals[k] = value
+				return true
+			})
+			return true
+		})
+		for i := 0; i < len(keys); i++ {
+			if i > 0 {
+				out = append(out, ',')
+			}
+			out = append(out, keys[i].Raw...)
+			out = append(out, ':')
+			out = append(out, kvals[keys[i].String()].Raw...)
+		}
+	}
+	out = append(out, '}')
+	return bytesString(out)
+}
+
+// @valid ensures that the json is valid before moving on. An empty string is
+// returned when the json is not valid, otherwise it returns the original json.
+func modValid(json, arg string) string {
+	if !Valid(json) {
+		return ""
+	}
+	return json
+}
+
+// getBytes casts the input json bytes to a string and safely returns the
+// results as uniquely allocated data. This operation is intended to minimize
+// copies and allocations for the large json string->[]byte.
+func getBytes(json []byte, path string) Result {
+	var result Result
+	if json != nil {
+		// unsafe cast to string
+		result = Get(*(*string)(unsafe.Pointer(&json)), path)
+		// safely get the string headers
+		rawhi := *(*reflect.StringHeader)(unsafe.Pointer(&result.Raw))
+		strhi := *(*reflect.StringHeader)(unsafe.Pointer(&result.Str))
+		// create byte slice headers
+		rawh := reflect.SliceHeader{Data: rawhi.Data, Len: rawhi.Len}
+		strh := reflect.SliceHeader{Data: strhi.Data, Len: strhi.Len}
+		if strh.Data == 0 {
+			// str is nil
+			if rawh.Data == 0 {
+				// raw is nil
+				result.Raw = ""
+			} else {
+				// raw has data, safely copy the slice header to a string
+				result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
+			}
+			result.Str = ""
+		} else if rawh.Data == 0 {
+			// raw is nil
+			result.Raw = ""
+			// str has data, safely copy the slice header to a string
+			result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
+		} else if strh.Data >= rawh.Data &&
+			int(strh.Data)+strh.Len <= int(rawh.Data)+rawh.Len {
+			// Str is a substring of Raw.
+			start := int(strh.Data - rawh.Data)
+			// safely copy the raw slice header
+			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
+			// substring the raw
+			result.Str = result.Raw[start : start+strh.Len]
+		} else {
+			// safely copy both the raw and str slice headers to strings
+			result.Raw = string(*(*[]byte)(unsafe.Pointer(&rawh)))
+			result.Str = string(*(*[]byte)(unsafe.Pointer(&strh)))
+		}
+	}
+	return result
+}
+
+// fillIndex finds the position of Raw data and assigns it to the Index field
+// of the resulting value. If the position cannot be found then Index zero is
+// used instead.
+func fillIndex(json string, c *parseContext) {
+	if len(c.value.Raw) > 0 && !c.calcd {
+		jhdr := *(*reflect.StringHeader)(unsafe.Pointer(&json))
+		rhdr := *(*reflect.StringHeader)(unsafe.Pointer(&(c.value.Raw)))
+		c.value.Index = int(rhdr.Data - jhdr.Data)
+		if c.value.Index < 0 || c.value.Index >= len(json) {
+			c.value.Index = 0
+		}
+	}
+}
+
+func stringBytes(s string) []byte {
+	return *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: (*reflect.StringHeader)(unsafe.Pointer(&s)).Data,
+		Len:  len(s),
+		Cap:  len(s),
+	}))
+}
+
+func bytesString(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }

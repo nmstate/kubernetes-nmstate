@@ -29,6 +29,13 @@ import (
 const (
 	// PodBundleRoot is the directory containing all bundle data within a test pod.
 	PodBundleRoot = "/bundle"
+
+	// PodLabelsDir is the name of the directory containing bundle labels.
+	PodLabelsDirName = "labels"
+	// PodLabelsDir is the directory containing an annotations.yaml file that is
+	// the source of truth for bundle metadata. These labels come from the
+	// bundle image if applicable.
+	PodLabelsDir = PodBundleRoot + "/" + PodLabelsDirName
 )
 
 // getPodDefinition fills out a Pod definition based on
@@ -57,6 +64,16 @@ func getPodDefinition(configMapName string, test Test, r PodTestRunner) *v1.Pod 
 							MountPath: PodBundleRoot,
 							Name:      "scorecard-untar",
 							ReadOnly:  true,
+						},
+					},
+					Env: []v1.EnvVar{
+						{
+							Name: "SCORECARD_NAMESPACE",
+							ValueFrom: &v1.EnvVarSource{
+								FieldRef: &v1.ObjectFieldSelector{
+									FieldPath: "metadata.namespace",
+								},
+							},
 						},
 					},
 				},

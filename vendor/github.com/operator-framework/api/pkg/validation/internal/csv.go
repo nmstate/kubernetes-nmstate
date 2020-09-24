@@ -9,7 +9,6 @@ import (
 	"github.com/operator-framework/api/pkg/validation/errors"
 	interfaces "github.com/operator-framework/api/pkg/validation/interfaces"
 
-	"github.com/blang/semver"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -33,11 +32,11 @@ func validateCSVs(objs ...interface{}) (results []errors.ManifestResult) {
 func validateCSV(csv *v1alpha1.ClusterServiceVersion) errors.ManifestResult {
 	result := errors.ManifestResult{Name: csv.GetName()}
 	// Ensure CSV names are of the correct format.
-	if _, _, err := parseCSVNameFormat(csv.GetName()); err != (errors.Error{}) {
+	if err := parseCSVNameFormat(csv.GetName()); err != (errors.Error{}) {
 		result.Add(errors.ErrInvalidCSV(fmt.Sprintf("metadata.name %s", err), csv.GetName()))
 	}
 	if replaces := csv.Spec.Replaces; replaces != "" {
-		if _, _, err := parseCSVNameFormat(replaces); err != (errors.Error{}) {
+		if err := parseCSVNameFormat(replaces); err != (errors.Error{}) {
 			result.Add(errors.ErrInvalidCSV(fmt.Sprintf("spec.replaces %s", err), csv.GetName()))
 		}
 	}
@@ -50,20 +49,11 @@ func validateCSV(csv *v1alpha1.ClusterServiceVersion) errors.ManifestResult {
 	return result
 }
 
-func parseCSVNameFormat(name string) (string, semver.Version, error) {
+func parseCSVNameFormat(name string) error {
 	if violations := k8svalidation.IsDNS1123Subdomain(name); len(violations) != 0 {
-		return "", semver.Version{}, fmt.Errorf("%q is invalid:\n%s", name, violations)
+		return fmt.Errorf("%q is invalid:\n%s", name, violations)
 	}
-	splitName := strings.SplitN(name, ".", 2)
-	if len(splitName) != 2 {
-		return "", semver.Version{}, fmt.Errorf("%q must have format: {operator name}.(v)X.Y.Z", name)
-	}
-	verStr := strings.TrimLeft(splitName[1], "v")
-	nameVer, err := semver.Parse(verStr)
-	if err != nil {
-		return "", semver.Version{}, fmt.Errorf("%q contains an invalid semver %q", name, splitName[1])
-	}
-	return splitName[0], nameVer, errors.Error{}
+	return errors.Error{}
 }
 
 // checkFields runs checkEmptyFields and returns its errors.
@@ -165,6 +155,29 @@ func validateInstallModes(csv *v1alpha1.ClusterServiceVersion) (errs []errors.Er
 			errs = append(errs, errors.ErrInvalidCSV("duplicate install modes present", csv.GetName()))
 		} else if installMode.Supported {
 			anySupported = true
+		}
+	}
+
+	// validate installModes when conversionCRDs field is present in csv.Spec.Webhookdefinitions
+	// check if WebhookDefinitions is present
+	if len(csv.Spec.WebhookDefinitions) != 0 {
+		for _, WebhookDefinition := range csv.Spec.WebhookDefinitions {
+			// check if ConversionCRDs is present
+			if len(WebhookDefinition.ConversionCRDs) != 0 {
+				supportsOnlyAllNamespaces := true
+				// check if AllNamespaces is supported and other install modes are not supported
+				for _, installMode := range csv.Spec.InstallModes {
+					if installMode.Type == "AllNamespaces" && !installMode.Supported {
+						supportsOnlyAllNamespaces = false
+					}
+					if installMode.Type != "AllNamespaces" && installMode.Supported {
+						supportsOnlyAllNamespaces = false
+					}
+				}
+				if supportsOnlyAllNamespaces == false {
+					errs = append(errs, errors.ErrInvalidCSV("only AllNamespaces InstallModeType is supported when conversionCRDs is present", csv.GetName()))
+				}
+			}
 		}
 	}
 
