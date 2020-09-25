@@ -2,33 +2,40 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    control-plane: controller-manager
+    control-plane: operator
   name: system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: operator
   namespace: system
   labels:
-    control-plane: controller-manager
+    control-plane: operator
 spec:
   selector:
     matchLabels:
-      control-plane: controller-manager
+      control-plane: operator
   replicas: 1
   template:
     metadata:
       labels:
-        control-plane: controller-manager
+        control-plane: operator
     spec:
+      serviceAccountName: nmstate-operator
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
+      tolerations:
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
       containers:
       - command:
         - /manager
         args:
         - --enable-leader-election
         image: controller:latest
-        name: manager
+        name: operator
         resources:
           limits:
             cpu: 100m
@@ -36,4 +43,29 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
+        env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: OPERATOR_NAME
+              value: "kubernetes-nmstate-operator"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
+            - name: RUN_OPERATOR
+              value: ""
+            - name: HANDLER_IMAGE
+              value: quay.io/nmstate/kubernetes-nmstate-handler:v0.31.0
+            - name: HANDLER_IMAGE_PULL_POLICY
+              value: Always
+            - name: HANDLER_NAMESPACE
+              value: nmstate
       terminationGracePeriodSeconds: 10
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: operator
+  namespace: system
+  labels:
+    control-plane: operator

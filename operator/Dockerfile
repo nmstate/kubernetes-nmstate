@@ -10,6 +10,8 @@ COPY deploy/handler/role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 
 
-USER nonroot:nonroot
+#FIXME: not supported at ubi-minimal
+#      "unable to find user nonroot: no matching entries in passwd file"
+#USER nonroot:nonroot
 
 ENTRYPOINT ["/manager"]
