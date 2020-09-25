@@ -23,11 +23,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"text/template"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"k8s.io/release/pkg/notes"
 	"k8s.io/release/pkg/notes/options"
 	"k8s.io/release/pkg/release"
@@ -35,11 +37,12 @@ import (
 
 // Document represents the underlying structure of a release notes document.
 type Document struct {
-	NotesWithActionRequired Notes          `json:"action_required"`
+	NotesWithActionRequired notes.Notes    `json:"action_required"`
 	Notes                   NoteCollection `json:"notes"`
 	Downloads               *FileMetadata  `json:"downloads"`
 	CurrentRevision         string         `json:"release_tag"`
 	PreviousRevision        string
+	CVEList                 []notes.CVEData
 }
 
 // FileMetadata contains metadata about files associated with the release.
@@ -134,16 +137,16 @@ type File struct {
 
 // NoteCategory contains notes of the same `Kind` (i.e category).
 type NoteCategory struct {
-	Kind        Kind
-	NoteEntries *Notes
+	Kind        notes.Kind
+	NoteEntries *notes.Notes
 }
 
 // NoteCollection is a collection of note categories.
 type NoteCollection []NoteCategory
 
 // Sort sorts the collection by priority order.
-func (n *NoteCollection) Sort(kindPriority []Kind) {
-	indexOf := func(kind Kind) int {
+func (n *NoteCollection) Sort(kindPriority []notes.Kind) {
+	indexOf := func(kind notes.Kind) int {
 		for i, prioKind := range kindPriority {
 			if kind == prioKind {
 				return i
@@ -158,93 +161,135 @@ func (n *NoteCollection) Sort(kindPriority []Kind) {
 	})
 }
 
-type Kind string
-type NotesByKind map[Kind]Notes
-type Notes []string
-
-const (
-	KindAPIChange     Kind = "api-change"
-	KindBug           Kind = "bug"
-	KindCleanup       Kind = "cleanup"
-	KindDeprecation   Kind = "deprecation"
-	KindDesign        Kind = "design"
-	KindDocumentation Kind = "documentation"
-	KindFailingTest   Kind = "failing-test"
-	KindFeature       Kind = "feature"
-	KindFlake         Kind = "flake"
-	// TODO: These should be same case as the others. Probably fix up prettyKind()??
-	KindBugCleanupFlake Kind = "Other (Bug, Cleanup or Flake)"
-	KindUncategorized   Kind = "Uncategorized"
-)
-
-var kindPriority = []Kind{
-	KindDeprecation,
-	KindAPIChange,
-	KindFeature,
-	KindDesign,
-	KindDocumentation,
-	KindFailingTest,
-	KindBug,
-	KindCleanup,
-	KindFlake,
-	KindBugCleanupFlake,
-	KindUncategorized,
+var kindPriority = []notes.Kind{
+	notes.KindDeprecation,
+	notes.KindAPIChange,
+	notes.KindFeature,
+	notes.KindDesign,
+	notes.KindDocumentation,
+	notes.KindFailingTest,
+	notes.KindBug,
+	notes.KindRegression,
+	notes.KindCleanup,
+	notes.KindFlake,
+	notes.KindOther,
+	notes.KindUncategorized,
 }
 
-var kindMap = map[Kind]Kind{
-	KindBug:     KindBugCleanupFlake,
-	KindCleanup: KindBugCleanupFlake,
-	KindFlake:   KindBugCleanupFlake,
+var kindMap = map[notes.Kind]notes.Kind{
+	notes.KindRegression: notes.KindBug,
+	notes.KindCleanup:    notes.KindOther,
+	notes.KindFlake:      notes.KindOther,
 }
 
-// CreateDocument assembles an organized document from an unorganized set of
-// release notes
-func CreateDocument(releaseNotes notes.ReleaseNotes, history notes.ReleaseNotesHistory) (*Document, error) {
-	doc := &Document{
-		NotesWithActionRequired: Notes{},
-		Notes:                   NoteCollection{},
+// GatherReleaseNotesDocument creates a new gatherer and collects the release
+// notes into a fresh document
+func GatherReleaseNotesDocument(
+	opts *options.Options, previousRev, currentRev string,
+) (*Document, error) {
+	releaseNotes, err := notes.GatherReleaseNotes(opts)
+	if err != nil {
+		return nil, errors.Wrapf(err, "gathering release notes")
 	}
 
-	kindCategory := make(map[Kind]NoteCategory)
-	for _, pr := range history {
-		note := releaseNotes[pr]
+	doc, err := New(releaseNotes, previousRev, currentRev)
+	if err != nil {
+		return nil, errors.Wrapf(err, "creating release note document")
+	}
+
+	return doc, nil
+}
+
+// New assembles an organized document from an unorganized set of release notes
+func New(
+	releaseNotes *notes.ReleaseNotes,
+	previousRev, currentRev string,
+) (*Document, error) {
+	doc := &Document{
+		NotesWithActionRequired: notes.Notes{},
+		Notes:                   NoteCollection{},
+		CurrentRevision:         currentRev,
+		PreviousRevision:        previousRev,
+	}
+
+	stripRE := regexp.MustCompile(`^([-\*]+\s+)`)
+	// processNote encapsulates the pre-processing that might happen on a note
+	// text before it gets bulleted during rendering.
+	processNote := func(s string) string {
+		return stripRE.ReplaceAllLiteralString(s, "")
+	}
+
+	kindCategory := make(map[notes.Kind]NoteCategory)
+	for _, pr := range releaseNotes.History() {
+		note := releaseNotes.Get(pr)
+
+		cvedata, hasCVE := note.DataFields["cve"]
+		if hasCVE {
+			logrus.Infof("Release note for PR #%d has CVE vulnerability info", note.PrNumber)
+			cve := notes.CVEData{}
+			if val, ok := cvedata.(map[interface{}]interface{})["id"].(string); ok {
+				cve.ID = val
+			}
+			if val, ok := cvedata.(map[interface{}]interface{})["title"].(string); ok {
+				cve.Title = val
+			}
+			if val, ok := cvedata.(map[interface{}]interface{})["linkedPRs"].([]interface{}); ok {
+				cve.LinkedPRs = []int{}
+				for _, prid := range val {
+					cve.LinkedPRs = append(cve.LinkedPRs, prid.(int))
+				}
+			}
+			if val, ok := cvedata.(map[interface{}]interface{})["published"].(string); ok {
+				cve.Published = val
+			}
+			if val, ok := cvedata.(map[interface{}]interface{})["score"].(float64); ok {
+				cve.Score = float32(val)
+			}
+			if val, ok := cvedata.(map[interface{}]interface{})["rating"].(string); ok {
+				cve.Rating = val
+			}
+			if val, ok := cvedata.(map[interface{}]interface{})["description"].(string); ok {
+				cve.Description = val
+			}
+			doc.CVEList = append(doc.CVEList, cve)
+		}
 
 		// TODO: Refactor the logic here and add testing.
 		if note.DuplicateKind {
 			kind := mapKind(highestPriorityKind(note.Kinds))
 			if existing, ok := kindCategory[kind]; ok {
-				*existing.NoteEntries = append(*existing.NoteEntries, note.Markdown)
+				*existing.NoteEntries = append(*existing.NoteEntries, processNote(note.Markdown))
 			} else {
-				kindCategory[kind] = NoteCategory{Kind: kind, NoteEntries: &Notes{note.Markdown}}
+				kindCategory[kind] = NoteCategory{Kind: kind, NoteEntries: &notes.Notes{processNote(note.Markdown)}}
 			}
 		} else if note.ActionRequired {
-			doc.NotesWithActionRequired = append(doc.NotesWithActionRequired, note.Markdown)
+			doc.NotesWithActionRequired = append(doc.NotesWithActionRequired, processNote(note.Markdown))
 		} else {
 			for _, kind := range note.Kinds {
-				mappedKind := mapKind(Kind(kind))
+				mappedKind := mapKind(notes.Kind(kind))
 
 				if existing, ok := kindCategory[mappedKind]; ok {
-					*existing.NoteEntries = append(*existing.NoteEntries, note.Markdown)
+					*existing.NoteEntries = append(*existing.NoteEntries, processNote(note.Markdown))
 				} else {
-					kindCategory[mappedKind] = NoteCategory{Kind: mappedKind, NoteEntries: &Notes{note.Markdown}}
+					kindCategory[mappedKind] = NoteCategory{Kind: mappedKind, NoteEntries: &notes.Notes{processNote(note.Markdown)}}
 				}
 			}
 
 			if len(note.Kinds) == 0 {
 				// the note has not been categorized so far
-				kind := KindUncategorized
+				kind := notes.KindUncategorized
 				if existing, ok := kindCategory[kind]; ok {
-					*existing.NoteEntries = append(*existing.NoteEntries, note.Markdown)
+					*existing.NoteEntries = append(*existing.NoteEntries, processNote(note.Markdown))
 				} else {
-					kindCategory[kind] = NoteCategory{Kind: kind, NoteEntries: &Notes{note.Markdown}}
+					kindCategory[kind] = NoteCategory{Kind: kind, NoteEntries: &notes.Notes{processNote(note.Markdown)}}
 				}
 			}
 		}
 	}
 
 	for _, category := range kindCategory {
-		doc.Notes = append(doc.Notes, category)
 		sort.Strings(*category.NoteEntries)
+		doc.Notes = append(doc.Notes, category)
 	}
 
 	doc.Notes.Sort(kindPriority)
@@ -253,8 +298,8 @@ func CreateDocument(releaseNotes notes.ReleaseNotes, history notes.ReleaseNotesH
 }
 
 // RenderMarkdownTemplate renders a document using the golang template in
-// `templateSpec`. If `templateSpec` is set to `options.FormatDefaultGoTemplate`
-// render using the default template (markdown format).
+// `templateSpec`. If `templateSpec` is set to `options.GoTemplateDefault`,
+// then it renders in the default template markdown format.
 func (d *Document) RenderMarkdownTemplate(bucket, fileDir, templateSpec string) (string, error) {
 	urlPrefix := release.URLPrefixForBucket(bucket)
 
@@ -279,119 +324,44 @@ func (d *Document) RenderMarkdownTemplate(bucket, fileDir, templateSpec string) 
 	if err := tmpl.Execute(&s, d); err != nil {
 		return "", errors.Wrapf(err, "rendering with template")
 	}
-	return s.String(), nil
+	return strings.TrimSpace(s.String()), nil
 }
 
-// template returns either the default template or a template from file. The
-// `templateSpec` must be in the format of
-// `go-template:{default|path/to/template.ext}`
+// template returns either the default template, a template from file or an
+// inline string template. The `templateSpec` must be in the format of
+// `go-template:{default|path/to/template.ext}` or
+// `go-template:inline:string`
 func (d *Document) template(templateSpec string) (string, error) {
-	if templateSpec == options.FormatSpecDefaultGoTemplate {
+	if templateSpec == options.GoTemplateDefault {
 		return defaultReleaseNotesTemplate, nil
 	}
 
-	if !strings.HasPrefix(templateSpec, "go-template:") {
-		return "", errors.Errorf("bad template format: expected format %q, got %q", "go-template:path/to/file.txt", templateSpec)
+	if !strings.HasPrefix(templateSpec, options.GoTemplatePrefix) {
+		return "", errors.Errorf(
+			"bad template format: expected %q, %q or %q. Got: %q",
+			options.GoTemplateDefault,
+			options.GoTemplatePrefix+"<file.template>",
+			options.GoTemplateInline+"<template>",
+			templateSpec,
+		)
 	}
-	templatePath := strings.TrimPrefix(templateSpec, "go-template:")
+	templatePathOrOnline := strings.TrimPrefix(templateSpec, options.GoTemplatePrefix)
 
-	b, err := ioutil.ReadFile(templatePath)
+	// Check for inline template
+	if strings.HasPrefix(templatePathOrOnline, options.GoTemplatePrefixInline) {
+		return strings.TrimPrefix(templatePathOrOnline, options.GoTemplatePrefixInline), nil
+	}
+
+	// Assume file-based template
+	b, err := ioutil.ReadFile(templatePathOrOnline)
 	if err != nil {
 		return "", errors.Wrap(err, "reading template")
 	}
 	if len(b) == 0 {
-		return "", errors.Errorf("template %q must be non-empty", templatePath)
+		return "", errors.Errorf("template %q must be non-empty", templatePathOrOnline)
 	}
 
 	return string(b), nil
-}
-
-// RenderMarkdown accepts a Document and writes a version of that document to
-// supplied io.Writer in markdown format.
-//
-// Deprecated: Prefer using the golang template instead of markdown. Will be removed in #1019
-func (d *Document) RenderMarkdown(bucket, tars, prevTag, newTag string) (string, error) {
-	o := &strings.Builder{}
-	if err := CreateDownloadsTable(o, bucket, tars, prevTag, newTag); err != nil {
-		return "", err
-	}
-
-	nl := func() {
-		o.WriteRune('\n')
-	}
-	nlnl := func() {
-		nl()
-		nl()
-	}
-
-	// writeNote encapsulates the pre-processing that might happen on a note text
-	// before it gets bulleted and written to the io.Writer
-	writeNote := func(s string) {
-		const prefix = "- "
-		if !strings.HasPrefix(s, prefix) {
-			o.WriteString(prefix)
-		}
-		o.WriteString(s)
-		nl()
-	}
-
-	// notes with action required get their own section
-	if len(d.NotesWithActionRequired) > 0 {
-		o.WriteString("## Urgent Upgrade Notes")
-		nlnl()
-		o.WriteString("### (No, really, you MUST read this before you upgrade)")
-		nlnl()
-		for _, note := range d.NotesWithActionRequired {
-			writeNote(note)
-			nl()
-		}
-	}
-
-	// each Kind gets a section
-	if len(d.Notes) > 0 {
-		o.WriteString("## Changes by Kind")
-		nlnl()
-
-		d.Notes.Sort(kindPriority)
-		for _, category := range d.Notes {
-			o.WriteString("### ")
-			o.WriteString(prettyKind(category.Kind))
-			nlnl()
-
-			sort.Strings(*category.NoteEntries)
-			for _, note := range *category.NoteEntries {
-				writeNote(note)
-			}
-			nl()
-		}
-		nlnl()
-	}
-
-	return strings.TrimSpace(o.String()), nil
-}
-
-// sortKinds sorts kinds by their priority and returns the result in a string
-// slice
-func sortKinds(notesByKind NotesByKind) []Kind {
-	res := []Kind{}
-	for kind := range notesByKind {
-		res = append(res, kind)
-	}
-
-	indexOf := func(kind Kind) int {
-		for i, prioKind := range kindPriority {
-			if kind == prioKind {
-				return i
-			}
-		}
-		return -1
-	}
-
-	sort.Slice(res, func(i, j int) bool {
-		return indexOf(res[i]) < indexOf(res[j])
-	})
-
-	return res
 }
 
 // CreateDownloadsTable creates the markdown table with the links to the tarballs.
@@ -406,8 +376,7 @@ func CreateDownloadsTable(w io.Writer, bucket, tars, prevTag, newTag string) err
 	if fileMetadata == nil {
 		// If directory is empty, doesn't contain matching files, or is not
 		// given we will have a nil value. This is not an error in every
-		// context. Return early so we do not modify markdown. This will be
-		// removed once issue #1019 lands.
+		// context. Return early so we do not modify markdown.
 		fmt.Fprintf(w, "# %s\n\n", newTag)
 		fmt.Fprintf(w, "## Changelog since %s\n\n", prevTag)
 		return nil
@@ -450,10 +419,10 @@ func CreateDownloadsTable(w io.Writer, bucket, tars, prevTag, newTag string) err
 	return nil
 }
 
-func highestPriorityKind(kinds []string) Kind {
+func highestPriorityKind(kinds []string) notes.Kind {
 	for _, prioKind := range kindPriority {
 		for _, k := range kinds {
-			kind := Kind(k)
+			kind := notes.Kind(k)
 			if kind == prioKind {
 				return kind
 			}
@@ -461,23 +430,25 @@ func highestPriorityKind(kinds []string) Kind {
 	}
 
 	// Kind not in priority slice, returning the first one
-	return Kind(kinds[0])
+	return notes.Kind(kinds[0])
 }
 
-func mapKind(kind Kind) Kind {
+func mapKind(kind notes.Kind) notes.Kind {
 	if newKind, ok := kindMap[kind]; ok {
 		return newKind
 	}
 	return kind
 }
 
-func prettyKind(kind Kind) string {
-	if kind == KindAPIChange {
+func prettyKind(kind notes.Kind) string {
+	if kind == notes.KindAPIChange {
 		return "API Change"
-	} else if kind == KindFailingTest {
+	} else if kind == notes.KindFailingTest {
 		return "Failing Test"
-	} else if kind == KindBugCleanupFlake {
-		return string(KindBugCleanupFlake)
+	} else if kind == notes.KindBug {
+		return "Bug or Regression"
+	} else if kind == notes.KindOther {
+		return string(notes.KindOther)
 	}
 	return strings.Title(string(kind))
 }

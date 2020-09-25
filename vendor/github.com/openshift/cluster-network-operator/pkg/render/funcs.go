@@ -5,7 +5,7 @@ package render
 // getOr returns the value of m[key] if it exists, fallback otherwise.
 // As a special case, it also returns fallback if the value of m[key] is
 // the empty string
-func getOr(m map[string]interface{}, key, fallback string) interface{} {
+func getOr(m map[string]interface{}, key string, fallback interface{}) interface{} {
 	val, ok := m[key]
 	if !ok {
 		return fallback

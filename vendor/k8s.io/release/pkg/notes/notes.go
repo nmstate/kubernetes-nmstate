@@ -50,6 +50,35 @@ const (
 	maxParallelRequests = 10
 )
 
+type Notes []string
+type Kind string
+
+// CVEData Information of a linked CVE vulnerability
+type CVEData struct {
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Published   string  `json:"published"`
+	Score       float32 `json:"score"`
+	Rating      string  `json:"rating"`
+	LinkedPRs   []int   `json:"linkedPRs"`
+	Description string  `json:"description"`
+}
+
+const (
+	KindAPIChange     Kind = "api-change"
+	KindBug           Kind = "bug"
+	KindCleanup       Kind = "cleanup"
+	KindDeprecation   Kind = "deprecation"
+	KindDesign        Kind = "design"
+	KindDocumentation Kind = "documentation"
+	KindFailingTest   Kind = "failing-test"
+	KindFeature       Kind = "feature"
+	KindFlake         Kind = "flake"
+	KindRegression    Kind = "regression"
+	KindOther         Kind = "Other (Cleanup or Flake)"
+	KindUncategorized Kind = "Uncategorized"
+)
+
 // ReleaseNote is the type that represents the total sum of all the information
 // we've gathered about a single release note.
 type ReleaseNote struct {
@@ -103,6 +132,9 @@ type ReleaseNote struct {
 	// Tags each note with a release version if specified
 	// If not specified, omitted
 	ReleaseVersion string `json:"release_version,omitempty"`
+
+	// DataFields a key indexed map of data fields
+	DataFields map[string]ReleaseNotesDataField `json:"data_fields,omitempty"`
 }
 
 type Documentation struct {
@@ -112,7 +144,7 @@ type Documentation struct {
 	// The url to be linked
 	URL string `json:"url"`
 
-	// Clssifies the link as something special, like a KEP
+	// Classifies the link as something special, like a KEP
 	Type DocType `json:"type"`
 }
 
@@ -124,14 +156,48 @@ const (
 	DocTypeOfficial DocType = "official"
 )
 
+// ReleaseNotes is the main struct for collecting release notes
+type ReleaseNotes struct {
+	byPR    ReleaseNotesByPR
+	history ReleaseNotesHistory
+}
+
+// NewReleaseNotes can be used to create a new empty ReleaseNotes struct
+func NewReleaseNotes() *ReleaseNotes {
+	return &ReleaseNotes{
+		byPR: make(ReleaseNotesByPR),
+	}
+}
+
 // ReleaseNotes is a map of PR numbers referencing notes.
 // To avoid needless loops, we need to be able to reference things by PR
 // When we have to merge old and new entries, we want to be able to override
 // the old entries with the new ones efficiently.
-type ReleaseNotes map[int]*ReleaseNote
+type ReleaseNotesByPR map[int]*ReleaseNote
 
 // ReleaseNotesHistory is the sorted list of PRs in the commit history
 type ReleaseNotesHistory []int
+
+// History returns the ReleaseNotesHistory for the ReleaseNotes
+func (r *ReleaseNotes) History() ReleaseNotesHistory {
+	return r.history
+}
+
+// ByPR returns the ReleaseNotesByPR for the ReleaseNotes
+func (r *ReleaseNotes) ByPR() ReleaseNotesByPR {
+	return r.byPR
+}
+
+// Get returns the ReleaseNote for the provided prNumber
+func (r *ReleaseNotes) Get(prNumber int) *ReleaseNote {
+	return r.byPR[prNumber]
+}
+
+// Set can be used to set a release note for the provided prNumber
+func (r *ReleaseNotes) Set(prNumber int, note *ReleaseNote) {
+	r.byPR[prNumber] = note
+	r.history = append(r.history, prNumber)
+}
 
 type Result struct {
 	commit      *gogithub.RepositoryCommit
@@ -139,9 +205,10 @@ type Result struct {
 }
 
 type Gatherer struct {
-	client  github.Client
-	context context.Context
-	options *options.Options
+	client       github.Client
+	context      context.Context
+	options      *options.Options
+	MapProviders []*MapProvider
 }
 
 // NewGatherer creates a new notes gatherer
@@ -166,22 +233,49 @@ func NewGathererWithClient(ctx context.Context, c github.Client) *Gatherer {
 	}
 }
 
+// GatherReleaseNotes creates a new gatherer and collects the release notes
+// afterwards
+func GatherReleaseNotes(opts *options.Options) (*ReleaseNotes, error) {
+	logrus.Info("Gathering release notes")
+	gatherer, err := NewGatherer(context.Background(), opts)
+
+	if err != nil {
+		return nil, errors.Wrapf(err, "retrieving notes gatherer")
+	}
+
+	releaseNotes, err := gatherer.ListReleaseNotes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "listing release notes")
+	}
+
+	return releaseNotes, nil
+}
+
 // ListReleaseNotes produces a list of fully contextualized release notes
 // starting from a given commit SHA and ending at starting a given commit SHA.
-func (g *Gatherer) ListReleaseNotes() (ReleaseNotes, ReleaseNotesHistory, error) {
+func (g *Gatherer) ListReleaseNotes() (*ReleaseNotes, error) {
+	// Load map providers
+	mapProviders := []MapProvider{}
+	for _, initString := range g.options.MapProviderStrings {
+		provider, err := NewProviderFromInitString(initString)
+		if err != nil {
+			return nil, errors.Wrap(err, "while getting release notes map providers")
+		}
+		mapProviders = append(mapProviders, provider)
+	}
+
 	commits, err := g.listCommits(g.options.Branch, g.options.StartSHA, g.options.EndSHA)
 	if err != nil {
-		return nil, nil, err
+		return nil, errors.Wrap(err, "listing commits")
 	}
 
 	results, err := g.gatherNotes(commits)
 	if err != nil {
-		return nil, nil, err
+		return nil, errors.Wrap(err, "gathering notes")
 	}
 
 	dedupeCache := map[string]struct{}{}
-	notes := make(ReleaseNotes)
-	history := ReleaseNotesHistory{}
+	notes := NewReleaseNotes()
 	for _, result := range results {
 		if g.options.RequiredAuthor != "" {
 			if result.commit.GetAuthor().GetLogin() != g.options.RequiredAuthor {
@@ -192,52 +286,39 @@ func (g *Gatherer) ListReleaseNotes() (ReleaseNotes, ReleaseNotesHistory, error)
 		note, err := g.ReleaseNoteFromCommit(result, g.options.ReleaseVersion)
 		if err != nil {
 			logrus.Errorf(
-				"getting the release note from commit %s (PR #%d): %v",
+				"Getting the release note from commit %s (PR #%d): %v",
 				result.commit.GetSHA(),
 				result.pullRequest.GetNumber(),
 				err)
 			continue
 		}
 
-		// exclusionFilters is a list of regular expressions that match notes text that
-		// are deemed to have no content and should NOT be added to release notes.
-		exclusionFilters := []string{
-			"^(?i)(none|n/a)$", // 'none' or 'n/a' case insensitive
-		}
-		excluded := false
-		for _, filter := range exclusionFilters {
-			match, err := regexp.MatchString(filter, strings.ToUpper(strings.TrimSpace(note.Text)))
+		// Query our map providers for additional data for the release note
+		for _, provider := range mapProviders {
+			noteMaps, err := provider.GetMapsForPR(result.pullRequest.GetNumber())
 			if err != nil {
-				return nil, nil, err
+				return nil, errors.Wrap(err, "Error while looking up note map")
 			}
-			if match {
-				excluded = true
-				logrus.
-					WithField("sha", result.commit.GetSHA()).
-					WithField("func", "ListReleaseNotes").
-					WithField("filter", filter).
-					Debug("Excluding notes that are deemed to have no content based on filter, and should NOT be added to release notes.")
-				break
-			}
-		}
-		if excluded {
-			continue
-		}
 
+			for _, noteMap := range noteMaps {
+				if err := note.ApplyMap(noteMap); err != nil {
+					return nil, errors.Wrapf(err, "applying notemap for PR #%d", result.pullRequest.GetNumber())
+				}
+			}
+		}
 		if _, ok := dedupeCache[note.Text]; !ok {
-			notes[note.PrNumber] = note
-			history = append(history, note.PrNumber)
+			notes.Set(note.PrNumber, note)
 			dedupeCache[note.Text] = struct{}{}
 		}
 	}
 
-	return notes, history, nil
+	return notes, nil
 }
 
-// NoteTextFromString returns the text of the release note given a string which
+// noteTextFromString returns the text of the release note given a string which
 // may contain the commit message, the PR description, etc.
 // This is generally the content inside the ```release-note ``` stanza.
-func NoteTextFromString(s string) (string, error) {
+func noteTextFromString(s string) (string, error) {
 	exps := []*regexp.Regexp{
 		// (?s) is needed for '.' to be matching on newlines, by default that's disabled
 		// we need to match ungreedy 'U', because after the notes a `docs` block can occur
@@ -263,6 +344,7 @@ func NoteTextFromString(s string) (string, error) {
 		note = strings.ReplaceAll(note, "\r", "")
 		note = stripActionRequired(note)
 		note = dashify(note)
+		note = unlist(note)
 		note = strings.TrimSpace(note)
 		return note, nil
 	}
@@ -333,10 +415,11 @@ func (g *Gatherer) ReleaseNoteFromCommit(result *Result, relVer string) (*Releas
 	pr := result.pullRequest
 
 	prBody := pr.GetBody()
-	text, err := NoteTextFromString(prBody)
+	text, err := noteTextFromString(prBody)
 	if err != nil {
 		return nil, err
 	}
+
 	documentation := DocumentationFromString(prBody)
 
 	author := pr.GetUser().GetLogin()
@@ -358,6 +441,7 @@ func (g *Gatherer) ReleaseNoteFromCommit(result *Result, relVer string) (*Releas
 		isDuplicateKind = true
 	}
 
+	// TODO: Spin this to sep function
 	indented := strings.ReplaceAll(text, "\n", "\n  ")
 	markdown := fmt.Sprintf("%s ([#%d](%s), [@%s](%s))",
 		indented, pr.GetNumber(), prURL, author, authorURL)
@@ -485,10 +569,6 @@ var noteExclusionFilters = []*regexp.Regexp{
 	// the 'none','n/a','na' can also optionally be wrapped in quotes ' or "
 	regexp.MustCompile("(?i)```(release-note[s]?\\s*)?('|\")?(none|n/a|na)?('|\")?\\s*```"),
 
-	// This filter is too aggressive within the PR body and picks up matches unrelated to release notes
-	// 'none' or 'n/a' case insensitive wrapped optionally with whitespace
-	// regexp.MustCompile("(?i)\\s*(none|n/a)\\s*"),
-
 	// simple '/release-note-none' tag
 	regexp.MustCompile("/release-note-none"),
 }
@@ -500,20 +580,23 @@ var noteInclusionFilters = []*regexp.Regexp{
 	regexp.MustCompile("Does this PR introduce a user-facing change?"),
 }
 
-func matchesFilter(msg string, filters []*regexp.Regexp) *regexp.Regexp {
-	for _, filter := range filters {
-		if filter.MatchString(msg) {
-			return filter
-		}
-	}
-	return nil
-}
-
-func matchesExcludeFilter(msg string) *regexp.Regexp {
+// MatchesExcludeFilter returns true if the string matches an excluded release note
+func MatchesExcludeFilter(msg string) bool {
 	return matchesFilter(msg, noteExclusionFilters)
 }
-func matchesIncludeFilter(msg string) *regexp.Regexp {
+
+// MatchesIncludeFilter returns true if the string matches an included release note
+func MatchesIncludeFilter(msg string) bool {
 	return matchesFilter(msg, noteInclusionFilters)
+}
+
+func matchesFilter(msg string, filters []*regexp.Regexp) bool {
+	for _, filter := range filters {
+		if filter.MatchString(msg) {
+			return true
+		}
+	}
+	return false
 }
 
 // gatherNotes list commits that have release notes starting from a given
@@ -553,7 +636,7 @@ func (g *Gatherer) gatherNotes(commits []*gogithub.RepositoryCommit) (filtered [
 
 	for i, commit := range commits {
 		logrus.Infof(
-			"starting to process commit %d of %d (%0.2f%%): %s",
+			"Starting to process commit %d of %d (%0.2f%%): %s",
 			i+1, nrOfCommits, (float64(i+1)/float64(nrOfCommits))*100.0,
 			commit.GetSHA(),
 		)
@@ -581,9 +664,10 @@ func (g *Gatherer) notesForCommit(commit *gogithub.RepositoryCommit) (*Result, e
 	prs, err := g.prsFromCommit(commit)
 	if err != nil {
 		if err == errNoPRIDFoundInCommitMessage || err == errNoPRFoundForCommitSHA {
-			logrus.
-				WithField("func", "listCommitsWithNotes").
-				Debugf("No matches found when parsing PR from commit sha %q", commit.GetSHA())
+			logrus.Infof(
+				"No matches found when parsing PR from commit SHA %s",
+				commit.GetSHA(),
+			)
 			return nil, nil
 		}
 		return nil, err
@@ -592,30 +676,22 @@ func (g *Gatherer) notesForCommit(commit *gogithub.RepositoryCommit) (*Result, e
 	for _, pr := range prs {
 		prBody := pr.GetBody()
 
-		logrus.
-			WithField("func", "listCommitsWithNotes").
-			WithField("pr no", pr.GetNumber()).
-			WithField("pr body", pr.GetBody()).
-			Debugf("Obtaining PR associated with commit sha %q", commit.GetSHA())
+		logrus.Infof(
+			"Got PR #%d for commit: %s", pr.GetNumber(), commit.GetSHA(),
+		)
 
-		if re := matchesExcludeFilter(prBody); re != nil {
-			logrus.
-				WithField("func", "listCommitsWithNotes").
-				WithField("filter", re.String()).
-				Debug("Excluding notes for PR based on the exclusion filter.")
-			// try next PR
+		if MatchesExcludeFilter(prBody) {
+			logrus.Infof(
+				"Skipping PR #%d because it contains no release note",
+				pr.GetNumber(),
+			)
 			continue
 		}
 
-		if re := matchesIncludeFilter(prBody); re != nil {
+		if MatchesIncludeFilter(prBody) {
 			res := &Result{commit: commit, pullRequest: pr}
-			logrus.
-				WithField("func", "listCommitsWithNotes").
-				WithField("filter", re.String()).
-				Debug("Including notes for PR based on the inclusion filter.")
-
-			// TODO is this really intentional?
-			// Do not test further PRs for this commmit as soon as one PR matched
+			logrus.Infof("PR #%d seems to contain a release note", pr.GetNumber())
+			// Do not test further PRs for this commit as soon as one PR matched
 			return res, nil
 		}
 	}
@@ -648,10 +724,7 @@ func (g *Gatherer) prsFromCommit(commit *gogithub.RepositoryCommit) (
 ) {
 	githubPRs, err := g.prsForCommitFromMessage(*commit.Commit.Message)
 	if err != nil {
-		logrus.
-			WithField("err", err).
-			WithField("sha", commit.GetSHA()).
-			Debug("getting the pr numbers from commit message")
+		logrus.Infof("No PR found for commit %s: %v", commit.GetSHA(), err)
 		return g.prsForCommitFromSHA(*commit.SHA)
 	}
 	return githubPRs, err
@@ -706,8 +779,47 @@ func stripDash(note string) string {
 	return re.ReplaceAllString(note, "")
 }
 
+const listPrefix = "- "
+
 func dashify(note string) string {
-	return strings.ReplaceAll(note, "* ", "- ")
+	return strings.ReplaceAll(note, "* ", listPrefix)
+}
+
+// unlist transforms a single markdown list entry to a flat note entry
+func unlist(note string) string {
+	if !strings.HasPrefix(note, listPrefix) {
+		return note
+	}
+
+	res := strings.Builder{}
+	scanner := bufio.NewScanner(strings.NewReader(note))
+	firstLine := true
+	trim := true
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// Per default strip the two dashes from the list
+		prefix := "  "
+
+		if strings.HasPrefix(line, listPrefix) {
+			if firstLine {
+				// First list item, strip the prefix
+				prefix = listPrefix
+				firstLine = false
+			} else {
+				// Another list item? Treat it as sublist and do not trim any
+				// more.
+				trim = false
+			}
+		}
+
+		if trim {
+			line = strings.TrimPrefix(line, prefix)
+		}
+
+		res.WriteString(line + "\n")
+	}
+	return res.String()
 }
 
 func hasString(a []string, x string) bool {
@@ -859,4 +971,69 @@ func prettifySIGList(sigs []string) string {
 	}
 
 	return sigList
+}
+
+// ApplyMap Modifies the content of the release using information from
+//  a ReleaseNotesMap
+func (rn *ReleaseNote) ApplyMap(noteMap *ReleaseNotesMap) error {
+	logrus.Infof("Applying map to note from PR %d", rn.PrNumber)
+	reRenderMarkdown := false
+	if noteMap.ReleaseNote.Author != nil {
+		rn.Author = *noteMap.ReleaseNote.Author
+		rn.AuthorURL = "https://github.com/" + *noteMap.ReleaseNote.Author
+		reRenderMarkdown = true
+	}
+
+	if noteMap.ReleaseNote.Text != nil {
+		rn.Text = *noteMap.ReleaseNote.Text
+		reRenderMarkdown = true
+	}
+
+	if noteMap.ReleaseNote.Documentation != nil {
+		rn.Documentation = *noteMap.ReleaseNote.Documentation
+	}
+
+	if noteMap.ReleaseNote.Areas != nil {
+		rn.Areas = *noteMap.ReleaseNote.Areas
+	}
+
+	if noteMap.ReleaseNote.Kinds != nil {
+		rn.Kinds = *noteMap.ReleaseNote.Kinds
+	}
+
+	if noteMap.ReleaseNote.SIGs != nil {
+		rn.SIGs = *noteMap.ReleaseNote.SIGs
+	}
+
+	if noteMap.ReleaseNote.Feature != nil {
+		rn.Feature = *noteMap.ReleaseNote.Feature
+	}
+
+	if noteMap.ReleaseNote.ActionRequired != nil {
+		rn.ActionRequired = *noteMap.ReleaseNote.ActionRequired
+	}
+
+	if noteMap.ReleaseNote.ReleaseVersion != nil {
+		rn.ReleaseVersion = *noteMap.ReleaseNote.ReleaseVersion
+	}
+
+	// If there are datafields, add them
+	if len(noteMap.DataFields) > 0 {
+		rn.DataFields = make(map[string]ReleaseNotesDataField)
+	}
+	for key, df := range noteMap.DataFields {
+		rn.DataFields[key] = df
+	}
+
+	// If parts of the markup where modified, change them
+	// TODO: Spin this to sep function
+	if reRenderMarkdown {
+		indented := strings.ReplaceAll(rn.Text, "\n", "\n  ")
+		markdown := fmt.Sprintf("%s ([#%d](%s), [@%s](%s))",
+			indented, rn.PrNumber, rn.PrURL, rn.Author, rn.AuthorURL)
+		// Uppercase the first character of the markdown to make it look uniform
+		rn.Markdown = strings.ToUpper(string(markdown[0])) + markdown[1:]
+		logrus.Warn(rn.Markdown)
+	}
+	return nil
 }

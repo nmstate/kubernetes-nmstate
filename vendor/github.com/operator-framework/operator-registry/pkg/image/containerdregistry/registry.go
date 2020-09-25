@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
 	"github.com/containerd/containerd/archive"
@@ -73,12 +72,7 @@ func (r *Registry) Unpack(ctx context.Context, ref image.Reference, dir string) 
 	// Set the default namespace if unset
 	ctx = ensureNamespace(ctx)
 
-	img, err := r.Images().Get(ctx, ref.String())
-	if err != nil {
-		return err
-	}
-
-	manifest, err := images.Manifest(ctx, r.Content(), img.Target, r.platform)
+	manifest, err := r.getManifest(ctx, ref)
 	if err != nil {
 		return err
 	}
@@ -101,12 +95,25 @@ func (r *Registry) Unpack(ctx context.Context, ref image.Reference, dir string) 
 func (r *Registry) Labels(ctx context.Context, ref image.Reference) (map[string]string, error) {
 	// Set the default namespace if unset
 	ctx = ensureNamespace(ctx)
-	tmpDir, err := ioutil.TempDir("./", "bundle_tmp")
+
+	manifest, err := r.getManifest(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(tmpDir)
+	imageConfig, err := r.getImage(ctx, *manifest)
+	if err != nil {
+		return nil, err
+	}
 
+	return imageConfig.Config.Labels, nil
+}
+
+// Destroy cleans up the on-disk boltdb file and other cache files, unless preserve cache is true
+func (r *Registry) Destroy() (err error) {
+	return r.destroy()
+}
+
+func (r *Registry) getManifest(ctx context.Context, ref image.Reference) (*ocispec.Manifest, error) {
 	img, err := r.Images().Get(ctx, ref.String())
 	if err != nil {
 		return nil, err
@@ -116,7 +123,10 @@ func (r *Registry) Labels(ctx context.Context, ref image.Reference) (map[string]
 	if err != nil {
 		return nil, err
 	}
+	return &manifest, nil
+}
 
+func (r *Registry) getImage(ctx context.Context, manifest ocispec.Manifest) (*ocispec.Image, error) {
 	ra, err := r.Content().ReaderAt(ctx, manifest.Config)
 	if err != nil {
 		return nil, err
@@ -138,14 +148,7 @@ func (r *Registry) Labels(ctx context.Context, ref image.Reference) (map[string]
 	if err := json.Unmarshal(buf.Bytes(), &imageConfig); err != nil {
 		return nil, err
 	}
-
-	return imageConfig.Config.Labels, nil
-}
-
-
-// Destroy cleans up the on-disk boltdb file and other cache files, unless preserve cache is true
-func (r *Registry) Destroy() (err error) {
-	return r.destroy()
+	return &imageConfig, nil
 }
 
 func (r *Registry) fetch(ctx context.Context, fetcher remotes.Fetcher, root ocispec.Descriptor) error {

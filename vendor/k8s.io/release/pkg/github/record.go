@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -40,6 +41,9 @@ const (
 	gitHubAPIListPullRequestsWithCommit gitHubAPI = "ListPullRequestsWithCommit"
 	gitHubAPIListReleases               gitHubAPI = "ListReleases"
 	gitHubAPIListTags                   gitHubAPI = "ListTags"
+	gitHubAPIGetRepository              gitHubAPI = "GetRepository"
+	gitHubAPIListBranches               gitHubAPI = "ListBranches"
+	gitHubAPIGetReleaseByTag            gitHubAPI = "GetReleaseByTag"
 )
 
 type apiRecord struct {
@@ -134,6 +138,26 @@ func (c *githubNotesRecordClient) ListReleases(
 	return releases, resp, nil
 }
 
+func (c *githubNotesRecordClient) GetReleaseByTag(
+	ctx context.Context, owner, repo, tag string,
+) (*github.RepositoryRelease, *github.Response, error) {
+	release, resp, err := c.client.GetReleaseByTag(ctx, owner, repo, tag)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := c.recordAPICall(gitHubAPIGetReleaseByTag, release, resp); err != nil {
+		return nil, nil, err
+	}
+	return release, resp, nil
+}
+
+// TODO: Complete logic
+func (c *githubNotesRecordClient) DownloadReleaseAsset(
+	context.Context, string, string, int64,
+) (io.ReadCloser, string, error) {
+	return nil, "", nil
+}
+
 func (c *githubNotesRecordClient) ListTags(
 	ctx context.Context, owner, repo string, opt *github.ListOptions,
 ) ([]*github.RepositoryTag, *github.Response, error) {
@@ -147,6 +171,42 @@ func (c *githubNotesRecordClient) ListTags(
 	return tags, resp, nil
 }
 
+func (c *githubNotesRecordClient) CreatePullRequest(
+	ctx context.Context, owner, repo, baseBranchName, headBranchName, title, body string,
+) (*github.PullRequest, error) {
+	return &github.PullRequest{}, nil
+}
+
+func (c *githubNotesRecordClient) GetRepository(
+	ctx context.Context, owner, repo string,
+) (*github.Repository, *github.Response, error) {
+	repository, resp, err := c.client.GetRepository(ctx, owner, repo)
+	if err != nil {
+		return repository, resp, err
+	}
+
+	if err := c.recordAPICall(gitHubAPIGetRepository, repository, resp); err != nil {
+		return nil, nil, err
+	}
+
+	return repository, resp, nil
+}
+
+func (c *githubNotesRecordClient) ListBranches(
+	ctx context.Context, owner, repo string, opts *github.BranchListOptions,
+) ([]*github.Branch, *github.Response, error) {
+	branches, resp, err := c.client.ListBranches(ctx, owner, repo, opts)
+	if err != nil {
+		return branches, resp, err
+	}
+
+	if err := c.recordAPICall(gitHubAPIListBranches, branches, resp); err != nil {
+		return nil, nil, err
+	}
+
+	return branches, resp, nil
+}
+
 // recordAPICall records a single GitHub API call into a JSON file by ensuring
 // naming conventions
 func (c *githubNotesRecordClient) recordAPICall(
@@ -155,7 +215,7 @@ func (c *githubNotesRecordClient) recordAPICall(
 	if result == nil {
 		return errors.New("no result to record")
 	}
-	logrus.Debugf("recording API call %s to %s", api, c.recordDir)
+	logrus.Debugf("Recording API call %s to %s", api, c.recordDir)
 
 	c.recordMutex.Lock()
 	defer c.recordMutex.Unlock()

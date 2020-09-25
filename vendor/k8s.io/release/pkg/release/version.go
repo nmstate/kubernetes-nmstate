@@ -26,28 +26,60 @@ import (
 	"k8s.io/release/pkg/http"
 )
 
+// Version is a wrapper around version related functionality
+type Version struct {
+	client VersionClient
+}
+
+// VersionClient is a client for getting Kubernetes versions
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 -generate
+//counterfeiter:generate . VersionClient
+type VersionClient interface {
+	GetURLResponse(string) (string, error)
+}
+
+type versionClient struct{}
+
+func (*versionClient) GetURLResponse(url string) (string, error) {
+	return http.GetURLResponse(url, true)
+}
+
 // VersionType is a simple wrapper around a Kubernetes release version
 type VersionType string
 
 const (
-	// VersionStable references the latest stable Kubernetes version,
-	// for example `v1.17.3`
+	// VersionTypeStable references the latest stable Kubernetes
+	// version, for example `v1.17.3`
 	VersionTypeStable VersionType = "release/stable"
 
-	// VersionStablePreRelease references the latest stable pre release
-	// Kubernetes version, for example `v1.19.0-alpha.0`
+	// VersionTypeStablePreRelease references the latest stable pre
+	// release Kubernetes version, for example `v1.19.0-alpha.0`
 	VersionTypeStablePreRelease VersionType = "release/latest"
 
-	// VersionStable references the latest CI Kubernetes version,
+	// VersionTypeCILatest references the latest CI Kubernetes version,
 	// for example `v1.19.0-alpha.0.721+f8ff8f44206ff4`
 	VersionTypeCILatest VersionType = "ci/latest"
+
+	// VersionTypeCILatestCross references the latest CI cross build Kubernetes
+	// version, for example `v1.19.0-alpha.0.721+f8ff8f44206ff4`
+	VersionTypeCILatestCross VersionType = "ci/k8s-master"
 
 	// baseURL is the base URL for every release version retrieval
 	baseURL = "https://dl.k8s.io/"
 )
 
-// url retrieves the full URL of the Kubernetes release version
-func (t VersionType) url(version string) string {
+// NewVersion creates a new Version
+func NewVersion() *Version {
+	return &Version{&versionClient{}}
+}
+
+// SetClient can be used to manually set the internal Version client
+func (v *Version) SetClient(client VersionClient) {
+	v.client = client
+}
+
+// URL retrieves the full URL of the Kubernetes release version
+func (t VersionType) URL(version string) string {
 	url := baseURL + string(t)
 
 	if version != "" {
@@ -59,14 +91,14 @@ func (t VersionType) url(version string) string {
 }
 
 // GetKubeVersion retrieves the version of the provided Kubernetes version type
-func GetKubeVersion(versionType VersionType) (string, error) {
+func (v *Version) GetKubeVersion(versionType VersionType) (string, error) {
 	logrus.Infof("Retrieving Kubernetes release version for %s", versionType)
-	return kubeVersionFromURL(versionType.url(""))
+	return v.kubeVersionFromURL(versionType.URL(""))
 }
 
 // GetKubeVersionForBranch returns the remote Kubernetes release version for
 // the provided branch
-func GetKubeVersionForBranch(versionType VersionType, branch string) (string, error) {
+func (v *Version) GetKubeVersionForBranch(versionType VersionType, branch string) (string, error) {
 	logrus.Infof(
 		"Retrieving Kubernetes release version for %s on branch %s",
 		versionType, branch,
@@ -79,16 +111,16 @@ func GetKubeVersionForBranch(versionType VersionType, branch string) (string, er
 		}
 		version = strings.TrimPrefix(branch, "release-")
 	}
-	url := versionType.url(version)
+	url := versionType.URL(version)
 
-	return kubeVersionFromURL(url)
+	return v.kubeVersionFromURL(url)
 }
 
 // kubeVersionFromURL retrieves the Kubernetes version from the provided URL
 // ans strips the tag prefix if `stripTagPrefix` is `true`
-func kubeVersionFromURL(url string) (string, error) {
+func (v *Version) kubeVersionFromURL(url string) (string, error) {
 	logrus.Infof("Retrieving Kubernetes build version from %s...", url)
-	version, httpErr := http.GetURLResponse(url, true)
+	version, httpErr := v.client.GetURLResponse(url)
 	if httpErr != nil {
 		return "", errors.Wrap(httpErr, "retrieving kube version")
 	}

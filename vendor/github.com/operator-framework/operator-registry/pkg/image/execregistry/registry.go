@@ -41,7 +41,7 @@ func (r *Registry) Pull(ctx context.Context, ref image.Reference) error {
 // Unpack writes the unpackaged content of an image to a directory.
 // If the referenced image does not exist in the registry, an error is returned.
 func (r *Registry) Unpack(ctx context.Context, ref image.Reference, dir string) error {
-	return r.cmd.Unpack(ref.String(), "/", dir)
+	return r.cmd.Unpack(ref.String(), "/.", dir)
 }
 
 // Labels gets the labels for an image reference.

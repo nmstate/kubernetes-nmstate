@@ -16,6 +16,7 @@ package bundle
 
 import (
 	"fmt"
+	"path/filepath"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,7 +29,6 @@ import (
 //nolint:maligned
 type bundleCmd struct {
 	// Options to turn on different parts of bundling.
-	kustomize bool
 	manifests bool
 	metadata  bool
 
@@ -37,15 +37,11 @@ type bundleCmd struct {
 	version      string
 	inputDir     string
 	outputDir    string
-	manifestRoot string
-	apisDir      string
+	kustomizeDir string
+	deployDir    string
 	crdsDir      string
 	stdout       bool
 	quiet        bool
-
-	// Interactive options.
-	interactiveLevel projutil.InteractiveLevel
-	interactive      bool
 
 	// Metadata options.
 	channels       string
@@ -53,33 +49,31 @@ type bundleCmd struct {
 	overwrite      bool
 }
 
+//nolint:maligned
+type bundleCmdLegacy struct {
+	bundleCmd
+
+	apisDir          string
+	interactiveLevel projutil.InteractiveLevel
+	interactive      bool
+}
+
 // NewCmd returns the 'bundle' command configured for the new project layout.
 func NewCmd() *cobra.Command {
 	c := &bundleCmd{}
 	cmd := &cobra.Command{
-		Use:   "bundle",
-		Short: "Generates bundle data for the operator",
+		Use:     "bundle",
+		Short:   "Generates bundle data for the operator",
+		Long:    longHelp,
+		Example: examples,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if len(args) != 0 {
 				return fmt.Errorf("command %s doesn't accept any arguments", cmd.CommandPath())
 			}
 
-			// Check if the user has any specific preference to enable/disable
-			// interactive prompts. Default behaviour is to disable the prompt
-			// unless a base bundle does not exist.
-			if cmd.Flags().Changed("interactive") {
-				if c.interactive {
-					c.interactiveLevel = projutil.InteractiveOnAll
-				} else {
-					c.interactiveLevel = projutil.InteractiveHardOff
-				}
-			}
-
-			// Generate kustomize bases, manifests, and metadata by default if no
-			// flags are set so the default behavior is "do everything".
+			// Generate manifests and metadata by default if no flags are set so the default behavior is "do everything".
 			fs := cmd.Flags()
-			if !fs.Changed("kustomize") && !fs.Changed("metadata") && !fs.Changed("manifests") {
-				c.kustomize = true
+			if !fs.Changed("metadata") && !fs.Changed("manifests") {
 				c.manifests = true
 				c.metadata = true
 			}
@@ -90,23 +84,26 @@ func NewCmd() *cobra.Command {
 			}
 			c.setCommonDefaults(cfg)
 
-			if c.kustomize {
-				if err = c.runKustomize(cfg); err != nil {
-					log.Fatalf("Error generating bundle bases: %v", err)
-				}
-			}
+			// Validate command args before running so a preceding mode doesn't run
+			// before a following validation fails.
 			if c.manifests {
 				if err = c.validateManifests(cfg); err != nil {
 					return fmt.Errorf("invalid command options: %v", err)
-				}
-				if err = c.runManifests(cfg); err != nil {
-					log.Fatalf("Error generating bundle manifests: %v", err)
 				}
 			}
 			if c.metadata {
 				if err = c.validateMetadata(cfg); err != nil {
 					return fmt.Errorf("invalid command options: %v", err)
 				}
+			}
+
+			// Run command logic.
+			if c.manifests {
+				if err = c.runManifests(cfg); err != nil {
+					log.Fatalf("Error generating bundle manifests: %v", err)
+				}
+			}
+			if c.metadata {
 				if err = c.runMetadata(); err != nil {
 					log.Fatalf("Error generating bundle metadata: %v", err)
 				}
@@ -116,9 +113,8 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&c.kustomize, "kustomize", false, "Generate kustomize bases")
-	cmd.Flags().BoolVar(&c.manifests, "manifests", false, "Generate bundle manifests")
-	cmd.Flags().BoolVar(&c.metadata, "metadata", false, "Generate bundle metadata and Dockerfile")
+	cmd.Flags().StringVar(&c.kustomizeDir, "kustomize-dir", filepath.Join("config", "manifests"),
+		"Directory containing kustomize bases and a kustomization.yaml for operator-framework manifests")
 	cmd.Flags().BoolVar(&c.stdout, "stdout", false, "Write bundle manifest to stdout")
 
 	c.addCommonFlagsTo(cmd.Flags())
@@ -128,10 +124,12 @@ func NewCmd() *cobra.Command {
 
 // NewCmdLegacy returns the 'bundle' command configured for the legacy project layout.
 func NewCmdLegacy() *cobra.Command {
-	c := &bundleCmd{}
+	c := &bundleCmdLegacy{}
 	cmd := &cobra.Command{
-		Use:   "bundle",
-		Short: "Generates bundle data for the operator",
+		Use:     "bundle",
+		Short:   "Generates bundle data for the operator",
+		Long:    longHelpLegacy,
+		Example: examplesLegacy,
 		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			if len(args) != 0 {
 				return fmt.Errorf("command %s doesn't accept any arguments", cmd.CommandPath())
@@ -156,21 +154,29 @@ func NewCmdLegacy() *cobra.Command {
 				c.manifests = true
 			}
 
-			c.setCommonDefaultsLegacy()
+			c.setCommonDefaults()
 
+			// Validate command args before running so a preceding mode doesn't run
+			// before a following validation fails.
 			if c.manifests {
-				if err = c.validateManifestsLegacy(); err != nil {
+				if err = c.validateManifests(); err != nil {
 					return fmt.Errorf("invalid command options: %v", err)
 				}
-				if err = c.runManifestsLegacy(); err != nil {
+			}
+			if c.metadata {
+				if err = c.validateMetadata(); err != nil {
+					return fmt.Errorf("invalid command options: %v", err)
+				}
+			}
+
+			// Run command logic.
+			if c.manifests {
+				if err = c.runManifests(); err != nil {
 					log.Fatalf("Error generating bundle manifests: %v", err)
 				}
 			}
 			if c.metadata {
-				if err = c.validateMetadataLegacy(); err != nil {
-					return fmt.Errorf("invalid command options: %v", err)
-				}
-				if err = c.runMetadataLegacy(); err != nil {
+				if err = c.runMetadata(); err != nil {
 					log.Fatalf("Error generating bundle metadata: %v", err)
 				}
 			}
@@ -179,8 +185,9 @@ func NewCmdLegacy() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().BoolVar(&c.manifests, "manifests", false, "Generate bundle manifests")
-	cmd.Flags().BoolVar(&c.metadata, "metadata", false, "Generate bundle metadata and Dockerfile")
+	cmd.Flags().StringVar(&c.apisDir, "apis-dir", "", "Root directory for API type defintions")
+	cmd.Flags().BoolVar(&c.interactive, "interactive", false, "When set or no bundle base exists, an interactive "+
+		"command prompt will be presented to accept bundle ClusterServiceVersion metadata")
 
 	c.addCommonFlagsTo(cmd.Flags())
 
@@ -189,28 +196,20 @@ func NewCmdLegacy() *cobra.Command {
 
 // TODO(estroz): add flag to skip API metadata regeneration.
 func (c *bundleCmd) addCommonFlagsTo(fs *pflag.FlagSet) {
+	fs.BoolVar(&c.manifests, "manifests", false, "Generate bundle manifests")
+	fs.BoolVar(&c.metadata, "metadata", false, "Generate bundle metadata and Dockerfile")
+
 	fs.StringVar(&c.operatorName, "operator-name", "", "Name of the bundle's operator")
 	fs.StringVarP(&c.version, "version", "v", "", "Semantic version of the operator in the generated bundle. "+
 		"Only set if creating a new bundle or upgrading your operator")
 	fs.StringVar(&c.inputDir, "input-dir", "", "Directory to read an existing bundle from. "+
-		"This directory is the parent of your bundle 'manifests' directory, and different from --manifest-root")
+		"This directory is the parent of your bundle 'manifests' directory, and different from --deploy-dir")
 	fs.StringVar(&c.outputDir, "output-dir", "", "Directory to write the bundle to")
-
-	fs.StringVar(&c.manifestRoot, "manifest-root", "", "Root directory for operator manifests such as "+
-		"Deployments and RBAC, ex. 'deploy' or 'config'. This directory is different from that passed to --input-dir")
-	// NB(estroz): still debating the name of this flag. For now, hide it as an
-	// "alpha" flag so we do not have to deprecate it if we change this name.
-	// TODO(estroz): decide on this flag's name before making 'init' default.
-	if err := fs.MarkHidden("manifest-root"); err != nil {
-		panic(err)
-	}
-
-	fs.StringVar(&c.apisDir, "apis-dir", "", "Root directory for API type defintions")
+	fs.StringVar(&c.deployDir, "deploy-dir", "", "Root directory for operator manifests such as "+
+		"Deployments and RBAC, ex. 'deploy'. This directory is different from that passed to --input-dir")
 	fs.StringVar(&c.crdsDir, "crds-dir", "", "Root directory for CustomResoureDefinition manifests")
 	fs.StringVar(&c.channels, "channels", "alpha", "A comma-separated list of channels the bundle belongs to")
 	fs.StringVar(&c.defaultChannel, "default-channel", "", "The default channel for the bundle")
-	fs.BoolVar(&c.overwrite, "overwrite", false, "Overwrite the bundle's metadata and Dockerfile if they exist")
+	fs.BoolVar(&c.overwrite, "overwrite", true, "Overwrite the bundle's metadata and Dockerfile if they exist")
 	fs.BoolVarP(&c.quiet, "quiet", "q", false, "Run in quiet mode")
-	fs.BoolVar(&c.interactive, "interactive", false, "When set or no bundle base exists, an interactive "+
-		"command prompt will be presented to accept bundle ClusterServiceVersion metadata")
 }

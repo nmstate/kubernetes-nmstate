@@ -19,6 +19,7 @@ package release
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -47,7 +48,7 @@ const (
 	versionDirtyRE    = `(-dirty)`
 	dockerBuildPath   = "_output/release-tars"
 	bazelBuildPath    = "bazel-bin/build/release-tars"
-	bazelVersionPath  = "bazel-genfiles/version"
+	bazelVersionPath  = "bazel-bin/version"
 	dockerVersionPath = "kubernetes/version"
 	kubernetesTar     = "kubernetes.tar.gz"
 
@@ -81,18 +82,18 @@ const (
 	ProductionBucketURL = "https://dl.k8s.io"
 )
 
-// GetDefaultKubernetesRepoURL returns the default HTTPS repo URL for Release Engineering tools.
+// GetDefaultToolRepoURL returns the default HTTPS repo URL for Release Engineering tools.
 // Expected: https://github.com/kubernetes/release
-func GetDefaultToolRepoURL() (string, error) {
+func GetDefaultToolRepoURL() string {
 	return GetToolRepoURL(DefaultToolOrg, DefaultToolRepo, false)
 }
 
-// GetKubernetesRepoURL takes a GitHub org and repo, and useSSH as a boolean and
+// GetToolRepoURL takes a GitHub org and repo, and useSSH as a boolean and
 // returns a repo URL for Release Engineering tools.
 // Expected result is one of the following:
 // - https://github.com/<org>/release
 // - git@github.com:<org>/release
-func GetToolRepoURL(org, repo string, useSSH bool) (string, error) {
+func GetToolRepoURL(org, repo string, useSSH bool) string {
 	if org == "" {
 		org = GetToolOrg()
 	}
@@ -131,6 +132,12 @@ func BuiltWithBazel(workDir string) (bool, error) {
 // ReadBazelVersion reads the version from a Bazel build.
 func ReadBazelVersion(workDir string) (string, error) {
 	version, err := ioutil.ReadFile(filepath.Join(workDir, bazelVersionPath))
+	if os.IsNotExist(err) {
+		// The check for version in bazel-genfiles can be removed once everyone is
+		// off of versions before 0.25.0.
+		// https://github.com/bazelbuild/bazel/issues/8651
+		version, err = ioutil.ReadFile(filepath.Join(workDir, "bazel-genfiles/version"))
+	}
 	return string(version), err
 }
 
@@ -183,7 +190,7 @@ func GetKubecrossVersion(branches ...string) (string, error) {
 
 // URLPrefixForBucket returns the URL prefix for the provided bucket string
 func URLPrefixForBucket(bucket string) string {
-	urlPrefix := fmt.Sprintf("https://storage.googleapis.com/%s/release", bucket)
+	urlPrefix := fmt.Sprintf("https://storage.googleapis.com/%s", bucket)
 	if bucket == ProductionBucket {
 		urlPrefix = ProductionBucketURL
 	}

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/operator-framework/api/pkg/manifests"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/api/pkg/validation/errors"
@@ -116,6 +117,12 @@ func validateHubCSVSpec(csv v1alpha1.ClusterServiceVersion) []error {
 		if _, ok := validCapabilities[capability]; !ok {
 			errs = append(errs, fmt.Errorf("csv.Metadata.Annotations.Capabilities %s is not a valid capabilities level", capability))
 		}
+	}
+
+	// spec.Version needs to be set
+	emptyVersion, _ := semver.New("0.0.0")
+	if csv.Spec.Version.Equals(*emptyVersion) {
+		errs = append(errs, fmt.Errorf("csv.Spec.Version is not set"))
 	}
 
 	if csv.Spec.Icon != nil {

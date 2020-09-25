@@ -48,7 +48,15 @@ type imageValidator struct {
 func (i imageValidator) PullBundleImage(imageTag, directory string) error {
 	i.logger.Debug("Pulling and unpacking container image")
 
-	return i.registry.Unpack(context.Background(), image.SimpleReference(imageTag), directory)
+	var (
+		ctx = context.TODO()
+		ref = image.SimpleReference(imageTag)
+	)
+	if err := i.registry.Pull(ctx, ref); err != nil {
+		return err
+	}
+
+	return i.registry.Unpack(ctx, ref, directory)
 }
 
 // ValidateBundle takes a directory containing the contents of a bundle and validates
@@ -124,7 +132,7 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 		}
 
 		if !dependenciesFound {
-			err = parseDependenciesFile(filepath.Join(metadataDir, f.Name()), dependenciesFile)
+			err = registry.DecodeFile(filepath.Join(metadataDir, f.Name()), &dependenciesFile)
 			if err == nil && len(dependenciesFile.Dependencies) > 0 {
 				dependenciesFound = true
 			}
@@ -193,20 +201,18 @@ func validateAnnotations(mediaType string, fileAnnotations *AnnotationMetadata) 
 				aErr := fmt.Errorf("Expecting annotation %q to have value %q instead of %q", label, MetadataDir, val)
 				validationErrors = append(validationErrors, aErr)
 			}
-		case ChannelsLabel, ChannelDefaultLabel:
+		case ChannelsLabel:
 			if val == "" {
 				aErr := fmt.Errorf("Expecting annotation %q to have non-empty value", label)
 				validationErrors = append(validationErrors, aErr)
 			} else {
 				annotations[label] = val
 			}
+		case ChannelDefaultLabel:
+			annotations[label] = val
 		}
 	}
 
-	_, err := ValidateChannelDefault(annotations[ChannelsLabel], annotations[ChannelDefaultLabel])
-	if err != nil {
-		validationErrors = append(validationErrors, err)
-	}
 	return validationErrors
 }
 
@@ -225,10 +231,10 @@ func validateDependencies(dependenciesFile *registry.DependenciesFile) []error {
 			case registry.PackageDependency:
 				errs = dp.Validate()
 			default:
-				errs = append(errs, fmt.Errorf("Unsupported dependency type %s", d.GetType()))
+				errs = append(errs, fmt.Errorf("unsupported dependency type %s", d.GetType()))
 			}
 		} else {
-			errs = append(errs, fmt.Errorf("Unsupported dependency type %s", d.GetType()))
+			errs = append(errs, fmt.Errorf("couldn't parse dependency of type %s", d.GetType()))
 		}
 		validationErrors = append(validationErrors, errs...)
 	}
@@ -369,32 +375,6 @@ func (i imageValidator) ValidateBundleContent(manifestDir string) error {
 	if len(validationErrors) > 0 {
 		return NewValidationError(validationErrors)
 	}
-
-	return nil
-}
-
-func parseDependenciesFile(path string, depFile *registry.DependenciesFile) error {
-	deps := registry.Dependencies{}
-	err := registry.DecodeFile(path, &deps)
-
-	if err != nil || len(deps.RawMessage) == 0 {
-		return fmt.Errorf("Unable to decode the dependencies file %s", path)
-	}
-
-	depList := []registry.Dependency{}
-	for _, v := range deps.RawMessage {
-		jsonStr, _ := json.Marshal(v)
-		dep := registry.Dependency{}
-		err := json.Unmarshal(jsonStr, &dep)
-		if err != nil {
-			return err
-		}
-
-		dep.Value = string(jsonStr)
-		depList = append(depList, dep)
-	}
-
-	depFile.Dependencies = depList
 
 	return nil
 }

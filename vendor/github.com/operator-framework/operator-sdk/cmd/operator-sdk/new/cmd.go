@@ -18,24 +18,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
 	"path/filepath"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"k8s.io/client-go/discovery"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	"sigs.k8s.io/yaml"
 
-	"github.com/operator-framework/operator-sdk/cmd/operator-sdk/internal/genutil"
 	"github.com/operator-framework/operator-sdk/internal/flags/apiflags"
+	"github.com/operator-framework/operator-sdk/internal/genutil"
 	"github.com/operator-framework/operator-sdk/internal/scaffold"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/ansible"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/helm"
 	"github.com/operator-framework/operator-sdk/internal/scaffold/input"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
-	"github.com/operator-framework/operator-sdk/pkg/helm/watches"
 )
 
 func NewCmd() *cobra.Command { //nolint:golint
@@ -56,9 +51,6 @@ generates a default directory layout based on the input <project-name>.
 		Example: `  # Create a new project directory
   $ mkdir $HOME/projects/example.com/
   $ cd $HOME/projects/example.com/
-
-  # Go project
-  $ operator-sdk new app-operator
 
   # Ansible project
   $ operator-sdk new app-operator --type=ansible \
@@ -99,18 +91,22 @@ generates a default directory layout based on the input <project-name>.
 `,
 		RunE: newFunc,
 	}
-	newCmd.Flags().StringVar(&operatorType, "type", "go",
-		"Type of operator to initialize (choices: \"go\", \"ansible\" or \"helm\")")
-	newCmd.Flags().StringVar(&repo, "repo", "",
-		"Project repository path for Go operators. Used as the project's Go import path. This must be set if "+
-			"outside of $GOPATH/src (e.g. github.com/example-inc/my-operator)")
+
+	newCmd.Flags().StringVar(&operatorType, "type", "",
+		"Type of operator to initialize (choices: \"ansible\" or \"helm\")")
+	if err := newCmd.MarkFlagRequired("type"); err != nil {
+		log.Fatalf("Failed to mark `type` flag for `new` subcommand as required")
+	}
+
+	// todo(camilamacedo86): remove before 1.0.0
 	newCmd.Flags().BoolVar(&gitInit, "git-init", false,
 		"Initialize the project directory as a git repository (default false)")
-	newCmd.Flags().StringVar(&headerFile, "header-file", "",
-		"Path to file containing headers for generated Go files. Copied to hack/boilerplate.go.txt")
-	newCmd.Flags().BoolVar(&makeVendor, "vendor", false, "Use a vendor directory for dependencies")
-	newCmd.Flags().BoolVar(&skipValidation, "skip-validation", false,
-		"Do not validate the resulting project's structure and dependencies. (Only used for --type go)")
+	err := newCmd.Flags().MarkDeprecated("git-init",
+		"instead run `git init` once your project is created to use git")
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	newCmd.Flags().BoolVar(&generatePlaybook, "generate-playbook", false,
 		"Generate a playbook skeleton. (Only used for --type ansible)")
 
@@ -124,11 +120,7 @@ var (
 	apiFlags         apiflags.APIFlags
 	operatorType     string
 	projectName      string
-	headerFile       string
-	repo             string
 	gitInit          bool
-	makeVendor       bool
-	skipValidation   bool
 	generatePlaybook bool
 )
 
@@ -144,32 +136,41 @@ func newFunc(cmd *cobra.Command, args []string) error {
 	log.Infof("Creating new %s operator '%s'.", strings.Title(operatorType), projectName)
 
 	switch operatorType {
-	case projutil.OperatorTypeGo:
-		if repo == "" {
-			repo = path.Join(projutil.GetGoPkg(), projectName)
-		}
-		if err := doGoScaffold(); err != nil {
-			log.Fatal(err)
-		}
-		if err := getDeps(); err != nil {
-			log.Fatal(err)
-		}
-		if !skipValidation {
-			if err := validateProject(); err != nil {
-				log.Fatal(err)
-			}
-		}
-
 	case projutil.OperatorTypeAnsible:
 		if err := doAnsibleScaffold(); err != nil {
 			log.Fatal(err)
 		}
 	case projutil.OperatorTypeHelm:
-		if err := doHelmScaffold(); err != nil {
+		// create the project dir
+		err := os.MkdirAll(projectName, 0755)
+		if err != nil {
+			log.Fatal(err)
+		}
+		// go inside of the project dir
+		err = os.Chdir(filepath.Join(projutil.MustGetwd(), projectName))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		cfg := input.Config{
+			AbsProjectPath: filepath.Join(projutil.MustGetwd()),
+			ProjectName:    projectName,
+		}
+
+		createOpts := helm.CreateChartOptions{
+			ResourceAPIVersion: apiFlags.APIVersion,
+			ResourceKind:       apiFlags.Kind,
+			Chart:              apiFlags.HelmChartRef,
+			Version:            apiFlags.HelmChartVersion,
+			Repo:               apiFlags.HelmChartRepo,
+			CRDVersion:         apiFlags.CrdVersion,
+		}
+
+		if err := helm.Init(cfg, createOpts); err != nil {
 			log.Fatal(err)
 		}
 	}
-
+	//todo: remove before 1.0.0
 	if gitInit {
 		if err := initGit(); err != nil {
 			log.Fatal(err)
@@ -206,48 +207,6 @@ func mustBeNewProject() {
 		log.Fatalf("Project (%v) in (%v) path already exists. Please use a different project name or delete "+
 			"the existing one", projectName, fp)
 	}
-}
-
-func doGoScaffold() error {
-	cfg := &input.Config{
-		Repo:           repo,
-		AbsProjectPath: filepath.Join(projutil.MustGetwd(), projectName),
-		ProjectName:    projectName,
-	}
-	s := &scaffold.Scaffold{}
-
-	if headerFile != "" {
-		err := s.Execute(cfg, &scaffold.Boilerplate{BoilerplateSrcPath: headerFile})
-		if err != nil {
-			return fmt.Errorf("boilerplate scaffold failed: %v", err)
-		}
-		s.BoilerplatePath = headerFile
-	}
-
-	if err := projutil.CheckGoModules(); err != nil {
-		return err
-	}
-
-	err := s.Execute(cfg,
-		&scaffold.GoMod{},
-		&scaffold.Tools{},
-		&scaffold.Cmd{},
-		&scaffold.Dockerfile{},
-		&scaffold.Entrypoint{},
-		&scaffold.UserSetup{},
-		&scaffold.ServiceAccount{},
-		&scaffold.Role{},
-		&scaffold.RoleBinding{},
-		&scaffold.Operator{},
-		&scaffold.Apis{},
-		&scaffold.Controller{},
-		&scaffold.Version{},
-		&scaffold.Gitignore{},
-	)
-	if err != nil {
-		return fmt.Errorf("new Go scaffold failed: %v", err)
-	}
-	return nil
 }
 
 func doAnsibleScaffold() error {
@@ -343,92 +302,13 @@ func doAnsibleScaffold() error {
 	return nil
 }
 
-func doHelmScaffold() error {
-	cfg := &input.Config{
-		AbsProjectPath: filepath.Join(projutil.MustGetwd(), projectName),
-		ProjectName:    projectName,
-	}
-
-	createOpts := helm.CreateChartOptions{
-		ResourceAPIVersion: apiFlags.APIVersion,
-		ResourceKind:       apiFlags.Kind,
-		Chart:              apiFlags.HelmChartRef,
-		Version:            apiFlags.HelmChartVersion,
-		Repo:               apiFlags.HelmChartRepo,
-	}
-
-	resource, chart, err := helm.CreateChart(cfg.AbsProjectPath, createOpts)
-	if err != nil {
-		return fmt.Errorf("failed to create helm chart: %v", err)
-	}
-
-	valuesPath := filepath.Join("<project_dir>", helm.HelmChartsDir, chart.Name(), "values.yaml")
-
-	rawValues, err := yaml.Marshal(chart.Values)
-	if err != nil {
-		return fmt.Errorf("failed to get raw chart values: %v", err)
-	}
-	crSpec := fmt.Sprintf("# Default values copied from %s\n\n%s", valuesPath, rawValues)
-
-	roleScaffold := helm.DefaultRoleScaffold
-	if k8sCfg, err := config.GetConfig(); err != nil {
-		log.Warnf("Using default RBAC rules: failed to get Kubernetes config: %s", err)
-	} else if dc, err := discovery.NewDiscoveryClientForConfig(k8sCfg); err != nil {
-		log.Warnf("Using default RBAC rules: failed to create Kubernetes discovery client: %s", err)
-	} else {
-		roleScaffold = helm.GenerateRoleScaffold(dc, chart)
-	}
-
-	// update watch.yaml for the given resource.
-	watchesFile := filepath.Join(cfg.AbsProjectPath, watches.WatchesFile)
-	if err := watches.UpdateForResource(watchesFile, resource, chart.Name()); err != nil {
-		return fmt.Errorf("failed to create watches.yaml: %w", err)
-	}
-
-	s := &scaffold.Scaffold{}
-	err = s.Execute(cfg,
-		&helm.Dockerfile{},
-		&scaffold.ServiceAccount{},
-		&roleScaffold,
-		&scaffold.RoleBinding{IsClusterScoped: roleScaffold.IsClusterScoped},
-		&helm.Operator{},
-		&scaffold.CR{
-			Resource: resource,
-			Spec:     crSpec,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("new helm scaffold failed: %v", err)
-	}
-
-	if err = genutil.GenerateCRDNonGo(projectName, *resource, apiFlags.CrdVersion); err != nil {
-		return err
-	}
-
-	if err := scaffold.UpdateRoleForResource(resource, cfg.AbsProjectPath); err != nil {
-		return fmt.Errorf("failed to update the RBAC manifest for resource (%v, %v): %v",
-			resource.APIVersion, resource.Kind, err)
-	}
-	return nil
-}
-
 func verifyFlags() error {
-	if operatorType != projutil.OperatorTypeGo && operatorType != projutil.OperatorTypeAnsible && operatorType !=
-		projutil.OperatorTypeHelm {
-		return fmt.Errorf("value of --type can only be `go`, `ansible`, or `helm`: %v",
+	if operatorType != projutil.OperatorTypeAnsible && operatorType != projutil.OperatorTypeHelm {
+		return fmt.Errorf("value of --type can only be `ansible`, or `helm`: %v",
 			projutil.ErrUnknownOperatorType{Type: operatorType})
 	}
 	if operatorType != projutil.OperatorTypeAnsible && generatePlaybook {
 		return fmt.Errorf("value of --generate-playbook can only be used with --type `ansible`")
-	}
-	if operatorType == projutil.OperatorTypeGo {
-		if len(apiFlags.APIVersion) != 0 || len(apiFlags.Kind) != 0 {
-			return fmt.Errorf("operators of type Go do not use --api-version or --kind")
-		}
-
-		if err := projutil.CheckRepo(repo); err != nil {
-			return err
-		}
 	}
 	if err := apiFlags.VerifyCommonFlags(operatorType); err != nil {
 		return err
@@ -437,56 +317,23 @@ func verifyFlags() error {
 	return nil
 }
 
+// todo(camilamacedo86): remove before 1.0.0
+// Deprecated: the git-init flag was deprecated since has no need to make the command run the git init.
+// users are allowed to easily do that when they wish. This func is just used here to run the git-init
 func execProjCmd(cmd string, args ...string) error {
 	dc := exec.Command(cmd, args...)
 	dc.Dir = filepath.Join(projutil.MustGetwd(), projectName)
 	return projutil.ExecCmd(dc)
 }
 
-func getDeps() error {
-
-	// Only when a user requests a vendor directory be created should
-	// "go mod vendor" be run during project initialization.
-	if !makeVendor {
-		return nil
-	}
-
-	log.Info("Running go mod vendor")
-	opts := projutil.GoCmdOptions{
-		Args: []string{"-v"},
-		Dir:  filepath.Join(projutil.MustGetwd(), projectName),
-	}
-	if err := projutil.GoCmd("mod vendor", opts); err != nil {
-		return err
-	}
-	log.Info("Done getting dependencies")
-	return nil
-}
-
+// todo(camilamacedo86): remove before 1.0.0
+// Deprecated: the git-init flag was deprecated since has no need to make the command run the git init.
+// users are allowed to easily do that when they wish.
 func initGit() error {
 	log.Info("Running git init")
 	if err := execProjCmd("git", "init"); err != nil {
 		return fmt.Errorf("failed to run git init: %v", err)
 	}
 	log.Info("Run git init done")
-	return nil
-}
-
-func validateProject() error {
-	log.Info("Validating project")
-	// Run "go build ./..." to make sure all packages can be built
-	// correctly. From "go help build":
-	//
-	//	When compiling multiple packages or a single non-main package,
-	//	build compiles the packages but discards the resulting object,
-	//	serving only as a check that the packages can be built.
-	opts := projutil.GoCmdOptions{
-		PackagePath: "./...",
-		Dir:         filepath.Join(projutil.MustGetwd(), projectName),
-	}
-	if err := projutil.GoBuild(opts); err != nil {
-		return err
-	}
-	log.Info("Project validation successful.")
 	return nil
 }

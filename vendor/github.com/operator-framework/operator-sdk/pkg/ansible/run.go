@@ -23,6 +23,19 @@ import (
 	"strconv"
 	"strings"
 
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+
 	"github.com/operator-framework/operator-sdk/pkg/ansible/controller"
 	aoflags "github.com/operator-framework/operator-sdk/pkg/ansible/flags"
 	proxy "github.com/operator-framework/operator-sdk/pkg/ansible/proxy"
@@ -34,19 +47,6 @@ import (
 	"github.com/operator-framework/operator-sdk/pkg/leader"
 	"github.com/operator-framework/operator-sdk/pkg/metrics"
 	sdkVersion "github.com/operator-framework/operator-sdk/version"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 )
 
 var (
@@ -60,7 +60,8 @@ var (
 func printVersion() {
 	log.Info(fmt.Sprintf("Go Version: %s", runtime.Version()))
 	log.Info(fmt.Sprintf("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH))
-	log.Info(fmt.Sprintf("Version of operator-sdk: %v", sdkVersion.Version))
+	log.Info(fmt.Sprintf("Version of ansible-operator: %v", sdkVersion.Version))
+	log.Info(fmt.Sprintf("Git commit of ansible-operator: %v", sdkVersion.GitCommit))
 }
 
 // Run will start the ansible operator and proxy, blocking until one of them
@@ -113,6 +114,12 @@ func Run(flags *aoflags.AnsibleOperatorFlags) error {
 		options.Namespace = metav1.NamespaceAll
 	}
 
+	err = setAnsibleEnvVars(flags)
+	if err != nil {
+		log.Error(err, "Failed to set environment variable.")
+		return err
+	}
+
 	// Create a new manager to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, options)
 	if err != nil {
@@ -141,6 +148,7 @@ func Run(flags *aoflags.AnsibleOperatorFlags) error {
 			AnsibleDebugLogs: getAnsibleDebugLog(),
 			MaxWorkers:       w.MaxWorkers,
 			ReconcilePeriod:  w.ReconcilePeriod,
+			Selector:         w.Selector,
 		})
 		if ctr == nil {
 			return fmt.Errorf("failed to add controller for GVK %v", w.GroupVersionKind.String())
@@ -289,4 +297,24 @@ func getAnsibleDebugLog() bool {
 			envVar, val)
 	}
 	return val
+}
+
+// setAnsibleEnvVars will set environment variables based on CLI flags
+func setAnsibleEnvVars(f *aoflags.AnsibleOperatorFlags) error {
+	if len(f.AnsibleRolesPath) > 0 {
+		if err := os.Setenv(aoflags.AnsibleRolesPathEnvVar, f.AnsibleRolesPath); err != nil {
+			return fmt.Errorf("failed to set environment variable %s: %v", aoflags.AnsibleRolesPathEnvVar, err)
+		}
+		log.Info("Set the environment variable", "envVar", aoflags.AnsibleRolesPathEnvVar,
+			"value", f.AnsibleRolesPath)
+	}
+
+	if len(f.AnsibleCollectionsPath) > 0 {
+		if err := os.Setenv(aoflags.AnsibleCollectionsPathEnvVar, f.AnsibleCollectionsPath); err != nil {
+			return fmt.Errorf("failed to set environment variable %s: %v", aoflags.AnsibleCollectionsPathEnvVar, err)
+		}
+		log.Info("Set the environment variable", "envVar", aoflags.AnsibleCollectionsPathEnvVar,
+			"value", f.AnsibleCollectionsPath)
+	}
+	return nil
 }
