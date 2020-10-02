@@ -13,7 +13,7 @@ import (
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 func createBridgeOnTheDefaultInterface() nmstate.State {

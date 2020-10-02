@@ -16,7 +16,7 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
 	apis "github.com/nmstate/kubernetes-nmstate/pkg/apis"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 

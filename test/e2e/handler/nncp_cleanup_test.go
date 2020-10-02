@@ -10,8 +10,8 @@ import (
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 )
 
 var _ = Describe("NNCP cleanup", func() {

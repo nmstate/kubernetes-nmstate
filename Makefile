@@ -1,198 +1,152 @@
-SHELL := /bin/bash
-
-IMAGE_REGISTRY ?= quay.io
-IMAGE_REPO ?= nmstate
-NAMESPACE ?= nmstate
-
-HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
-HANDLER_IMAGE_TAG ?= latest
-HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
-HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
-HANDLER_PREFIX ?=
-OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
-OPERATOR_IMAGE_TAG ?= latest
-OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME):$(OPERATOR_IMAGE_TAG)
-OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_FULL_NAME)
-
-export HANDLER_NAMESPACE ?= nmstate
-export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
-HANDLER_PULL_POLICY ?= Always
-OPERATOR_PULL_POLICY ?= Always
-IMAGE_BUILDER ?= docker
-
-WHAT ?= ./pkg
-
-unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
-
-export KUBEVIRT_PROVIDER ?= k8s-1.19
-export KUBEVIRT_NUM_NODES ?= 2 # 1 master, 1 worker needed for e2e tests
-export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
-
-export E2E_TEST_TIMEOUT ?= 40m
-
-e2e_test_args = -test.v -test.timeout=$(E2E_TEST_TIMEOUT) -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
-
-ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
-export PRIMARY_NIC ?= eth0
-export FIRST_SECONDARY_NIC ?= eth1
-export SECOND_SECONDARY_NIC ?= eth2
-else
-export PRIMARY_NIC ?= ens3
-export FIRST_SECONDARY_NIC ?= ens8
-export SECOND_SECONDARY_NIC ?= ens9
+# Current Operator version
+VERSION ?= 0.0.1
+# Default bundle image tag
+BUNDLE_IMG ?= controller-bundle:$(VERSION)
+# Options for 'bundle-build'
+ifneq ($(origin CHANNELS), undefined)
+BUNDLE_CHANNELS := --channels=$(CHANNELS)
 endif
-BIN_DIR = $(CURDIR)/build/_output/bin/
+ifneq ($(origin DEFAULT_CHANNEL), undefined)
+BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+endif
+BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+
+# Image URL to use all building/pushing image targets
+IMG ?= controller:latest
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+CRD_OPTIONS ?= "crd:trivialVersions=true"
+
+# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
+ifeq (,$(shell go env GOBIN))
+GOBIN=$(shell go env GOPATH)/bin
+else
+GOBIN=$(shell go env GOBIN)
+endif
 
 export GOPROXY=direct
 export GOSUMDB=off
 export GOFLAGS=-mod=vendor
-export GOROOT=$(BIN_DIR)/go/
-export GOBIN=$(GOROOT)/bin/
-export PATH := $(GOROOT)/bin:$(PATH)
 
-export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
-export SSH ?= ./cluster/ssh.sh
-export KUBECTL ?= ./cluster/kubectl.sh
+all: manager
 
-GINKGO ?= $(GOBIN)/ginkgo
-OPERATOR_SDK ?= $(GOBIN)/operator-sdk
-OPENAPI_GEN ?= $(GOBIN)/openapi-gen
-export GITHUB_RELEASE ?= $(GOBIN)/github-release
-export RELEASE_NOTES ?= $(GOBIN)/release-notes
-GOFMT := $(GOBIN)/gofmt
-export GO := $(GOBIN)/go
+# Run tests
+test: generate fmt vet manifests
+	go test ./... -coverprofile cover.out
 
-LOCAL_REGISTRY ?= registry:5000
+# Build manager binary
+manager: generate fmt vet
+	go build -o bin/manager main.go
 
-export MANIFESTS_DIR ?= build/_output/manifests
+# Run against the configured Kubernetes cluster in ~/.kube/config
+run: generate fmt vet manifests
+	go run ./main.go
 
-all: check handler
+# Install CRDs into a cluster
+install: manifests kustomize
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
-check: vet whitespace-check gofmt-check
+# Uninstall CRDs from a cluster
+uninstall: manifests kustomize
+	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found -f -
 
-format: whitespace-format gofmt
+resources:
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default
 
-vet: $(GO)
-	$(GO) vet ./cmd/... ./pkg/... ./test/...
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+deploy: manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
-whitespace-format:
-	hack/whitespace.sh format
+# Generate manifests e.g. CRD, RBAC etc.
+manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=config/crd/bases
 
-gofmt: $(GO)
-	$(GOFMT) -w cmd/ pkg/ test/e2e/
+# Run go fmt against code
+fmt:
+	go fmt ./...
 
-whitespace-check:
-	hack/whitespace.sh check
+# Run go vet against code
+vet:
+	go vet ./...
 
-gofmt-check: $(GO)
-	test -z "`$(GOFMT) -l cmd/ pkg/ test/e2e/`" || ($(GOFMT) -l cmd/ pkg/ test/e2e/ && exit 1)
+# Generate code
+generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-$(GO):
-	hack/install-go.sh $(BIN_DIR)
+# Build the docker image
+docker-build: manager test
+	docker build . -f Dockerfile.operator -t ${IMG}
 
-$(GINKGO): go.mod
-	$(MAKE) tools
-$(OPERATOR_SDK): go.mod
-	$(MAKE) tools
-$(OPENAPI_GEN): go.mod
-	$(MAKE) tools
-$(GITHUB_RELEASE): go.mod
-	$(MAKE) tools
-$(RELEASE_NOTES): go.mod
-	$(MAKE) tools
+# Push the docker image
+docker-push: IMG=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r')/controller:latest
+docker-push: docker-build
+	docker push ${IMG}
 
-gen-k8s: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate k8s
+# find or download controller-gen
+# download controller-gen if necessary
+controller-gen:
+ifeq (, $(shell which controller-gen))
+	@{ \
+	set -e ;\
+	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$CONTROLLER_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.0 ;\
+	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+	}
+CONTROLLER_GEN=$(GOBIN)/controller-gen
+else
+CONTROLLER_GEN=$(shell which controller-gen)
+endif
 
-gen-openapi: $(OPENAPI_GEN)
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1alpha1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1beta1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
+kustomize:
+ifeq (, $(shell which kustomize))
+	@{ \
+	set -e ;\
+	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
+	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
+	go mod init tmp ;\
+	go get sigs.k8s.io/kustomize/kustomize/v3@v3.8.4 ;\
+	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
+	}
+KUSTOMIZE=$(GOBIN)/kustomize
+else
+KUSTOMIZE=$(shell which kustomize)
+endif
 
-gen-crds: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate crds
+# Generate bundle manifests and metadata, then validate generated files.
+.PHONY: bundle
+bundle: manifests
+	operator-sdk generate kustomize manifests -q
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
+	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
+	operator-sdk bundle validate ./bundle
 
-check-gen: generate
-	./hack/check-gen.sh
+# Build the bundle image.
+.PHONY: bundle-build
+bundle-build:
+	docker build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
-generate: gen-openapi gen-k8s gen-crds
-
-manifests: $(GO)
-	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
-
-handler: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) build $(HANDLER_IMAGE) --image-builder $(IMAGE_BUILDER)
-push-handler: handler
-	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
-operator: handler
-	$(IMAGE_BUILDER) build --build-arg=BASE_IMAGE=$(HANDLER_IMAGE) -t $(OPERATOR_IMAGE) -f build/Dockerfile.operator .
-push-operator: operator
-	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
-push: push-handler push-operator
-
-test/unit: $(GINKGO)
-	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
-
-test-e2e-handler: $(OPERATOR_SDK)
-	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" ./hack/run-e2e-test-handler.sh
-
-test-e2e-operator: manifests $(OPERATOR_SDK)
-	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" KUBECTL=$(KUBECTL) MANIFESTS_DIR=$(MANIFESTS_DIR) ./hack/run-e2e-test-operator.sh
-
-test-e2e: test-e2e-operator test-e2e-handler
-
+.PHONY: cluster-up
 cluster-up:
 	./cluster/up.sh
 
+.PHONY: cluster-down
 cluster-down:
 	./cluster/down.sh
 
-cluster-clean:
-	./cluster/clean.sh
+.PHONY: cluster-sync
+cluster-sync: docker-push
+cluster-sync: IMG=registry:5000/controller:latest
+cluster-sync: install deploy
 
-cluster-sync:
-	./cluster/sync.sh
+.PHONY: cluster-clean
+cluster-clean: uninstall
+	kubectl delete --ignore-not-found namespace nmstate
 
-cluster-sync-operator:
-	./cluster/sync-operator.sh
-
-version-patch:
-	./hack/tag-version.sh patch
-version-minor:
-	./hack/tag-version.sh minor
-version-major:
-	./hack/tag-version.sh major
-
-release: $(GITHUB_RELEASE) $(RELEASE_NOTES)
-	hack/release.sh
-
+.PHONY: vendor
 vendor: $(GO)
-	$(GO) mod tidy
-	$(GO) mod vendor
+	go mod tidy
+	go mod vendor
 
-tools: $(GO)
-	./hack/install-tools.sh
-
-.PHONY: \
-	all \
-	check \
-	format \
-	vet \
-	handler \
-	push-handler \
-	test/unit \
-	generate \
-	check-gen \
-	test-e2e-handler \
-	test-e2e-operator \
-	test-e2e \
-	cluster-up \
-	cluster-down \
-	cluster-sync-operator \
-	cluster-sync \
-	cluster-clean \
-	release \
-	vendor \
-	whitespace-check \
-	whitespace-format \
-	manifests \
-	tools

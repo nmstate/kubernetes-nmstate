@@ -14,8 +14,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	shared "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
+	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 )
 
 type expectedConditionsStatus struct {
