@@ -1,6 +1,5 @@
 # Temporary Build Files
-build/_output
-build/_test
+_bin/
 
 # Cloned kubevirtci
 _kubevirtci

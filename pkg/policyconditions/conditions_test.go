@@ -18,7 +18,7 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus/conditions"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
 func e(node string, policy string, conditionsSetters ...func(*nmstate.ConditionList, string)) nmstatev1beta1.NodeNetworkConfigurationEnactment {
@@ -129,7 +129,7 @@ var _ = Describe("Policy Conditions", func() {
 		func(c ConditionsCase) {
 			objs := []runtime.Object{}
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.SchemeGroupVersion,
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 				&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},

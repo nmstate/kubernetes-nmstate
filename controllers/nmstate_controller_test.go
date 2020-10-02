@@ -90,9 +90,6 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 		})
 
-		AfterEach(func() {
-			copyManifests()
-		})
 		It("should return error", func() {
 			os.RemoveAll("./testdata/kubernetes-nmstate/crds/")
 			os.MkdirAll("./testdata/kubernetes-nmstate/crds/", os.ModePerm)

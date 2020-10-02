@@ -14,18 +14,17 @@ import (
 	ginkgoreporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
 
 	corev1 "k8s.io/api/core/v1"
-	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
+	//knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/nmstate/kubernetes-nmstate/pkg/apis"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
-	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
 var (
-	f                    = framework.Global
 	t                    *testing.T
 	nodes                []string
 	startTime            time.Time
@@ -39,38 +38,33 @@ var (
 )
 
 var _ = BeforeSuite(func() {
-	By("Adding custom resource scheme to framework")
-	nodeNetworkStateList := &nmstatev1beta1.NodeNetworkStateList{}
-	err := framework.AddToFrameworkScheme(apis.AddToScheme, nodeNetworkStateList)
-	Expect(err).ToNot(HaveOccurred())
+	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	prepare(t)
-
-	resetDesiredStateForNodes()
-})
-
-func TestMain(m *testing.M) {
 	primaryNic = environment.GetVarWithDefault("PRIMARY_NIC", "eth0")
 	firstSecondaryNic = environment.GetVarWithDefault("FIRST_SECONDARY_NIC", "eth1")
 	secondSecondaryNic = environment.GetVarWithDefault("SECOND_SECONDARY_NIC", "eth2")
-	framework.MainEntry(m)
-}
+	testenv.TestMain()
 
-func TestE2E(tapi *testing.T) {
-	t = tapi
-	RegisterFailHandler(Fail)
+	testenv.Start()
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	filterWorkers := dynclient.MatchingLabels{"node-role.kubernetes.io/worker": ""}
-	err := framework.Global.Client.List(context.TODO(), &nodeList, filterWorkers)
+	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
+	err := testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
 
+	resetDesiredStateForNodes()
+})
+
+func TestE2E(t *testing.T) {
+
+	RegisterFailHandler(Fail)
+
 	reporters := make([]Reporter, 0)
-	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", framework.Global.OperatorNamespace, nodes))
+	//reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes))
 	if ginkgoreporters.Polarion.Run {
 		reporters = append(reporters, &ginkgoreporters.Polarion)
 	}

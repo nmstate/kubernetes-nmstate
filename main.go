@@ -29,6 +29,7 @@ import (
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/controllers"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -78,15 +79,25 @@ func main() {
 		}
 		// +kubebuilder:scaffold:builder
 	} else if environment.IsHandler() {
+		//TODO: Predicate
 		if err = (&controllers.NodeReconciler{
 			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NMState"),
+			Log:    ctrl.Log.WithName("controllers").WithName("Node"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NMState")
 			os.Exit(1)
 		}
 		// +kubebuilder:scaffold:builder
+		//TODO: Predicate
+		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create controller", "controller", "NMState")
+			os.Exit(1)
+		}
 	}
 
 	setupLog.Info("starting manager")

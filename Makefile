@@ -16,62 +16,99 @@ IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
 
-# Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
-ifeq (,$(shell go env GOBIN))
-GOBIN=$(shell go env GOPATH)/bin
-else
-GOBIN=$(shell go env GOBIN)
-endif
+BIN_DIR=$(CURDIR)/_bin/
 
+export GOFLAGS=-mod=vendor
 export GOPROXY=direct
 export GOSUMDB=off
-export GOFLAGS=-mod=vendor
+export GOROOT=$(BIN_DIR)/go/
+export GOBIN=$(BIN_DIR)
+export PATH := $(BIN_DIR):$(GOROOT)/bin:$(PATH)
+
+OPENAPI_GEN ?= $(GOBIN)/openapi-gen
+CONTROLLER_GEN ?= $(GOBIN)/controller-gen
+KUSTOMIZE ?= $(GOBIN)/kustomize
+GINKGO?= $(GOBIN)/ginkgo
+export GITHUB_RELEASE ?= $(GOBIN)/github-release
+export RELEASE_NOTES ?= $(GOBIN)/release-notes
+GOFMT := $(GOBIN)/gofmt
+export GO := $(GOROOT)/bin/go
 
 all: manager
 
+$(GO):
+	hack/install-go.sh $(BIN_DIR)
+
+$(GINKGO): go.mod
+	$(MAKE) tools
+$(OPENAPI_GEN): go.mod
+	$(MAKE) tools
+$(GITHUB_RELEASE): go.mod
+	$(MAKE) tools
+$(RELEASE_NOTES): go.mod
+	$(MAKE) tools
+$(CONTROLLER_GEN): go.mod
+	$(MAKE) tools
+$(KUSTOMIZE): go.mod
+	$(MAKE) tools
+
+E2E_TEST_TIMEOUT ?= 40m
+unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
+e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
+
 # Run tests
-test: generate fmt vet manifests
-	go test ./... -coverprofile cover.out
+test-unit: $(GO)
+	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) ./controllers ./api ./pkg ... -coverprofile cover.out
+
+# Run handler functests
+test-e2e-handler: $(GINKGO)
+	$(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
+
+# Run operator functests
+test-e2e-operator: $(GINKGO)
+	$(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
 
 # Build manager binary
-manager: generate fmt vet
-	go build -o bin/manager main.go
+manager: $(GO) generate fmt vet
+	$(GO) build -o $(BIN_DIR)/manager main.go
 
 # Run against the configured Kubernetes cluster in ~/.kube/config
-run: generate fmt vet manifests
-	go run ./main.go
+run: $(GO) generate fmt vet manifests
+	$(GO) run ./main.go
 
 # Install CRDs into a cluster
-install: manifests kustomize
+install: manifests $(KUSTOMIZE)
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from a cluster
-uninstall: manifests kustomize
+uninstall: manifests $(KUSTOMIZE)
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found -f -
 
-resources:
+resources: $(KUSTOMIZE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
-deploy: manifests kustomize
+deploy: manifests $(KUSTOMIZE)
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Generate manifests e.g. CRD, RBAC etc.
-manifests: controller-gen
+manifests: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role paths="./..." output:crd:artifacts:config=config/crd/bases
 
-# Run go fmt against code
-fmt:
-	go fmt ./...
+# Run $(GO) fmt against code
+fmt: $(GO)
+	$(GO) fmt ./test/... ./pkg/... ./controllers/... ./api/...
+	$(GO) fmt main.go
 
-# Run go vet against code
-vet:
-	go vet ./...
+# Run $(GO) vet against code
+vet: $(GO)
+	$(GO) vet ./test/... ./pkg/... ./controllers/... ./api/...
+	$(GO) vet main.go
 
 # Generate code
-generate: controller-gen
+generate: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
@@ -83,41 +120,9 @@ docker-push: IMG=localhost:$(shell ./cluster/cli.sh ports registry | tr -d '\r')
 docker-push: docker-build
 	docker push ${IMG}
 
-# find or download controller-gen
-# download controller-gen if necessary
-controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/controller-tools/cmd/controller-gen@v0.4.0 ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
-
-kustomize:
-ifeq (, $(shell which kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go get sigs.k8s.io/kustomize/kustomize/v3@v3.8.4 ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-KUSTOMIZE=$(GOBIN)/kustomize
-else
-KUSTOMIZE=$(shell which kustomize)
-endif
-
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
-bundle: manifests
+bundle: manifests $(KUSTOMIZE)
 	operator-sdk generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | operator-sdk generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
@@ -147,6 +152,9 @@ cluster-clean: uninstall
 
 .PHONY: vendor
 vendor: $(GO)
-	go mod tidy
-	go mod vendor
+	$(GO) mod tidy
+	$(GO) mod vendor
 
+.PHONY: tools
+tools: $(GO)
+	./hack/install-tools.sh

@@ -1,4 +1,4 @@
-package node
+package controllers
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 var _ = Describe("Node controller reconcile", func() {
 	var (
 		cl               client.Client
-		reconciler       ReconcileNode
+		reconciler       NodeReconciler
 		existingNodeName = "node01"
 		node             = corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
@@ -39,7 +39,7 @@ var _ = Describe("Node controller reconcile", func() {
 	)
 	BeforeEach(func() {
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1beta1.SchemeGroupVersion,
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 			&nmstatev1beta1.NodeNetworkState{},
 		)
 
@@ -48,8 +48,8 @@ var _ = Describe("Node controller reconcile", func() {
 		// Create a fake client to mock API calls.
 		cl = fake.NewFakeClientWithScheme(s, objs...)
 
-		reconciler.client = cl
-		reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+		reconciler.Client = cl
+		nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 	})
 	Context("when node is not found", func() {
 		var (
@@ -73,11 +73,11 @@ var _ = Describe("Node controller reconcile", func() {
 		})
 		Context("and nodenetworkstate is there too", func() {
 			AfterEach(func() {
-				reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+				nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 			})
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
 				// Mocking nmstatectl.Show
-				reconciler.nmstateUpdater = func(client client.Client, node *corev1.Node,
+				nmstateUpdater = func(client client.Client, node *corev1.Node,
 					namespace client.ObjectKey) error {
 					return nil
 				}

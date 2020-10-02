@@ -1,4 +1,4 @@
-package nodenetworkconfigurationpolicy
+package controllers
 
 import (
 	. "github.com/onsi/ginkgo"

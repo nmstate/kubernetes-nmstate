@@ -12,7 +12,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	"github.com/nmstate/kubernetes-nmstate/pkg/controller/nodenetworkconfigurationpolicy/enactmentstatus"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 )
 
 type EnactmentConditions struct {
