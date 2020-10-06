@@ -106,6 +106,9 @@ spec:
       # future nmstate/NM is in place.
       # https://github.com/nmstate/nmstate/pull/440
       hostNetwork: true
+      # Use Default to get node's DNS configuration [1]
+      # [1] https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
+      dnsPolicy: Default
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .HandlerNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .HandlerTolerations | nindent 8 }}
