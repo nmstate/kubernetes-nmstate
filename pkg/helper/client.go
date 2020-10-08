@@ -18,8 +18,8 @@ import (
 	yaml "sigs.k8s.io/yaml"
 
 	"github.com/gobwas/glob"
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"

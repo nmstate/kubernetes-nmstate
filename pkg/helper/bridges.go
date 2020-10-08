@@ -7,7 +7,7 @@ import (
 
 	yaml "sigs.k8s.io/yaml"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 func getBridgesUp(desiredState nmstate.State) (map[string][]string, error) {

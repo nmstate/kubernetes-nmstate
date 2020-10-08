@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {

@@ -1,0 +1,87 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: nodenetworkconfigurationenactments.nmstate.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type=="Available")].reason
+    description: Status
+    name: Status
+    type: string
+  group: nmstate.io
+  names:
+    kind: NodeNetworkConfigurationEnactment
+    listKind: NodeNetworkConfigurationEnactmentList
+    plural: nodenetworkconfigurationenactments
+    shortNames:
+    - nnce
+    singular: nodenetworkconfigurationenactment
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        status:
+          description: NodeNetworkConfigurationEnactmentStatus defines the observed state of NodeNetworkConfigurationEnactment
+          properties:
+            conditions:
+              items:
+                properties:
+                  lastHearbeatTime:
+                    format: date-time
+                    type: string
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - status
+                - type
+                type: object
+              type: array
+            desiredState:
+              description: The desired state rendered for the enactment's node using the policy desiredState as template
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            policyGeneration:
+              description: The generation from policy needed to check if an enactment condition status belongs to the same policy version
+              format: int64
+              type: integer
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

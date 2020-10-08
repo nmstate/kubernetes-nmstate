@@ -31,10 +31,10 @@ function clean() {
         $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_v1beta1_nmstate_cr.yaml
     fi
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/operator.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments_crd.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies_crd.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates_crd.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nmstates_crd.yaml
+    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments.yaml
+    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml
+    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates.yaml
+    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nmstates.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/namespace.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/service_account.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role.yaml

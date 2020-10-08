@@ -32,7 +32,7 @@ spec:
           image: {{ .OperatorImage }}
           imagePullPolicy: {{ .OperatorPullPolicy }}
           command:
-          - kubernetes-nmstate
+          - manager
           env:
             - name: WATCH_NAMESPACE
               value: ""

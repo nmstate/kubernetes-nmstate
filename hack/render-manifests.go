@@ -11,7 +11,7 @@ import (
 )
 
 func exitWithError(err error, cause string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, "render-manifests.go: error: %v\n", errors.Wrapf(err, cause, args))
+	fmt.Fprintf(os.Stderr, "render-manifests.go: error: %v\n", errors.Wrapf(err, cause, args...))
 	os.Exit(1)
 }
 
@@ -80,7 +80,7 @@ func main() {
 
 		err = t.Execute(f, inventory)
 		if err != nil {
-			exitWithError(err, "failed expanding template %s", tmpl)
+			exitWithError(err, "failed expanding template %+v", tmpl)
 		}
 	}
 }

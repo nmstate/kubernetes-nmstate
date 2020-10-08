@@ -21,7 +21,7 @@
 First, install kubernetes-nmstate operator:
 
 ```
-kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/{{ .CurrentRevision }}/nmstate.io_nmstates_crd.yaml
+kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/{{ .CurrentRevision }}/nmstate.io_nmstates.yaml
 kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/{{ .CurrentRevision }}/namespace.yaml
 kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/{{ .CurrentRevision }}/service_account.yaml
 kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/{{ .CurrentRevision }}/role.yaml

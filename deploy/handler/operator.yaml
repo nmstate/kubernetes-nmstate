@@ -34,7 +34,7 @@ spec:
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
-          - kubernetes-nmstate
+          - manager
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -118,7 +118,7 @@ spec:
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
-            - kubernetes-nmstate
+            - manager
           env:
             - name: WATCH_NAMESPACE
               value: ""

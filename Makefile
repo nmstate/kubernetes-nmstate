@@ -20,7 +20,7 @@ HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
 IMAGE_BUILDER ?= docker
 
-WHAT ?= ./pkg
+WHAT ?= ./pkg ./controllers ./api
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
@@ -57,6 +57,7 @@ export KUBECTL ?= ./cluster/kubectl.sh
 GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 OPENAPI_GEN ?= $(GOBIN)/openapi-gen
+CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 export GITHUB_RELEASE ?= $(GOBIN)/github-release
 export RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
@@ -66,6 +67,9 @@ LOCAL_REGISTRY ?= registry:5000
 
 export MANIFESTS_DIR ?= build/_output/manifests
 
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+CRD_OPTIONS ?= "crd:trivialVersions=true"
+
 all: check handler
 
 check: vet whitespace-check gofmt-check
@@ -73,19 +77,19 @@ check: vet whitespace-check gofmt-check
 format: whitespace-format gofmt
 
 vet: $(GO)
-	$(GO) vet ./cmd/... ./pkg/... ./test/...
+	$(GO) vet ./...
 
 whitespace-format:
 	hack/whitespace.sh format
 
 gofmt: $(GO)
-	$(GOFMT) -w cmd/ pkg/ test/e2e/
+	$(GOFMT) -w *.go test/ hack/ api/ controllers/ pkg/
 
 whitespace-check:
 	hack/whitespace.sh check
 
 gofmt-check: $(GO)
-	test -z "`$(GOFMT) -l cmd/ pkg/ test/e2e/`" || ($(GOFMT) -l cmd/ pkg/ test/e2e/ && exit 1)
+	test -z "`$(GOFMT) -l *.go test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l *.go test/ hack/ api/ controllers/ pkg/ && exit 1)
 
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
@@ -100,16 +104,19 @@ $(GITHUB_RELEASE): go.mod
 	$(MAKE) tools
 $(RELEASE_NOTES): go.mod
 	$(MAKE) tools
+$(CONTROLLER_GEN): go.mod
+	$(MAKE) tools
 
-gen-k8s: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate k8s
+gen-k8s: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-openapi: $(OPENAPI_GEN)
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1alpha1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./pkg/apis/nmstate/v1beta1 -O zz_generated.openapi -p ./pkg/apis/nmstate/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
+	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/v1alpha1 -O zz_generated.openapi -p ./api/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
+	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/v1beta1 -O zz_generated.openapi -p ./api/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
+	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/shared -O zz_generated.openapi -p ./api/shared -h ./hack/boilerplate.go.txt -r "-"
 
-gen-crds: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) generate crds
+gen-crds: $(CONTROLLER_GEN)
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
 check-gen: generate
 	./hack/check-gen.sh
@@ -119,12 +126,18 @@ generate: gen-openapi gen-k8s gen-crds
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-handler: $(OPERATOR_SDK)
-	$(OPERATOR_SDK) build $(HANDLER_IMAGE) --image-builder $(IMAGE_BUILDER)
+manager: $(OPERATOR_SDK)
+	$(GO) build -o $(BIN_DIR)/manager main.go
+
+handler: manager
+	$(IMAGE_BUILDER) build . -f build/Dockerfile -t ${HANDLER_IMAGE}
+
 push-handler: handler
 	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
+
 operator: handler
-	$(IMAGE_BUILDER) build --build-arg=BASE_IMAGE=$(HANDLER_IMAGE) -t $(OPERATOR_IMAGE) -f build/Dockerfile.operator .
+	$(IMAGE_BUILDER) build . -f build/Dockerfile.operator -t $(OPERATOR_IMAGE)
+
 push-operator: operator
 	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
 push: push-handler push-operator
