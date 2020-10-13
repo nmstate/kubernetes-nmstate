@@ -17,7 +17,7 @@ function deploy_operator() {
     $kubectl apply -f $MANIFESTS_DIR/service_account.yaml
     $kubectl apply -f $MANIFESTS_DIR/role.yaml
     $kubectl apply -f $MANIFESTS_DIR/role_binding.yaml
-    $kubectl apply -f deploy/crds/nmstate.io_nmstates_crd.yaml
+    $kubectl apply -f deploy/crds/nmstate.io_nmstates.yaml
     $kubectl apply -f $MANIFESTS_DIR/operator.yaml
 }
 

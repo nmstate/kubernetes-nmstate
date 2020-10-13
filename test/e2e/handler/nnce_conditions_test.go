@@ -9,8 +9,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 func invalidConfig(bridgeName string) nmstate.State {

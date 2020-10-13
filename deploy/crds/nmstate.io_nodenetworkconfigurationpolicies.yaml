@@ -1,0 +1,92 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.3.0
+  creationTimestamp: null
+  name: nodenetworkconfigurationpolicies.nmstate.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.conditions[?(@.type=="Available")].reason
+    description: Status
+    name: Status
+    type: string
+  group: nmstate.io
+  names:
+    kind: NodeNetworkConfigurationPolicy
+    listKind: NodeNetworkConfigurationPolicyList
+    plural: nodenetworkconfigurationpolicies
+    shortNames:
+    - nncp
+    singular: nodenetworkconfigurationpolicy
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: NodeNetworkConfigurationPolicy is the Schema for the nodenetworkconfigurationpolicies API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
+          properties:
+            desiredState:
+              description: The desired configuration of the policy
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+            nodeSelector:
+              additionalProperties:
+                type: string
+              description: 'NodeSelector is a selector which must be true for the policy to be applied to the node. Selector which must match a node''s labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+              type: object
+          type: object
+        status:
+          description: NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
+          properties:
+            conditions:
+              items:
+                properties:
+                  lastHearbeatTime:
+                    format: date-time
+                    type: string
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - status
+                - type
+                type: object
+              type: array
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: false
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

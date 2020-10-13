@@ -1,9 +1,6 @@
-ARG BASE_IMAGE=quay.io/nmstate/kubernetes-nmstate-handler:latest
-FROM ${BASE_IMAGE} AS handler
-
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
-COPY --from=handler /usr/local/bin/kubernetes-nmstate /usr/local/bin/kubernetes-nmstate
+COPY build/_output/bin/manager /usr/local/bin/manager
 
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
 COPY deploy/handler/namespace.yaml /bindata/kubernetes-nmstate/namespace/
@@ -12,4 +9,4 @@ COPY deploy/handler/service_account.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 
-ENTRYPOINT ["kubernetes-nmstate"]
+ENTRYPOINT ["manager"]

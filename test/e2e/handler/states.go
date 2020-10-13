@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 func ethernetNicsState(states map[string]string) nmstate.State {

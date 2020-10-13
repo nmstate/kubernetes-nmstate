@@ -7,7 +7,7 @@ RUN dnf install -b -y dnf-plugins-core && \
     dnf remove -y dnf-plugins-core && \
     dnf clean all
 
-COPY build/_output/bin/kubernetes-nmstate /usr/local/bin/kubernetes-nmstate
+COPY build/_output/bin/manager /usr/local/bin/manager
 COPY build/bin /usr/local/bin
 
-ENTRYPOINT ["kubernetes-nmstate"]
+ENTRYPOINT ["manager"]

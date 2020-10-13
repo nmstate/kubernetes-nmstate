@@ -20,8 +20,8 @@ import (
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/pkg/apis/nmstate/v1beta1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
