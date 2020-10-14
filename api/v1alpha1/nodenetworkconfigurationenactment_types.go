@@ -18,11 +18,11 @@ type NodeNetworkConfigurationEnactmentList struct {
 
 // +genclient
 // +kubebuilder:object:root=true
-
-// NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationenactments,shortName=nnce,scope=Cluster
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason",description="Status"
+
+// NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
 type NodeNetworkConfigurationEnactment struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

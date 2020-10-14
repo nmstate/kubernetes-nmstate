@@ -120,7 +120,7 @@ spec:
       containers:
         - name: nmstate-handler
           args:
-            - --v=production
+          - --v=production
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}

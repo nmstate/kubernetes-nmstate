@@ -120,7 +120,7 @@ generate: gen-k8s gen-crds
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-manager: $(OPERATOR_SDK)
+manager: $(GO)
 	$(GO) build -o $(BIN_DIR)/manager main.go
 
 handler: manager
@@ -129,7 +129,7 @@ handler: manager
 push-handler: handler
 	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
 
-operator: handler
+operator: manager
 	$(IMAGE_BUILDER) build . -f build/Dockerfile.operator -t $(OPERATOR_IMAGE)
 
 push-operator: operator
