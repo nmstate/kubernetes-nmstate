@@ -81,6 +81,8 @@ tags
 ### VisualStudioCode ###
 .vscode/*
 .history
+### Goland IDE ###
+.idea
 
 ### Test logs ###
 test_logs
