@@ -442,6 +442,11 @@ func dhcpFlag(node string, name string) bool {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
 
+func autoDNS(node string, name string) bool {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.auto-dns", name)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
+}
+
 func ifaceInSlice(ifaceName string, names []string) bool {
 	for _, name := range names {
 		if ifaceName == name {
