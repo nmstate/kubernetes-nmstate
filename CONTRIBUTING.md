@@ -48,7 +48,7 @@ make DEV_IMAGE_REGISTRY=quay.io IMAGE_REPO=foo cluster-sync
 
 ```shell
 # If pkg/apis/ has been changed, run generator to update client code
-make gen-k8s gen-openapi
+make gen-k8s
 
 # Build handler operator (both its binary and docker image)
 make handler

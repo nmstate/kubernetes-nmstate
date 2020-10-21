@@ -8,7 +8,7 @@ type RawState []byte
 // so we don't need to be in sync with the schema.
 //
 // [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml
-// +k8s:openapi-gen=true
+// +kubebuilder:validation:Type=object
 type State struct {
 	Raw RawState `json:"-"`
 }

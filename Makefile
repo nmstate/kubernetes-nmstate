@@ -56,7 +56,6 @@ export KUBECTL ?= ./cluster/kubectl.sh
 
 GINKGO ?= $(GOBIN)/ginkgo
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
-OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 export GITHUB_RELEASE ?= $(GOBIN)/github-release
 export RELEASE_NOTES ?= $(GOBIN)/release-notes
@@ -110,18 +109,13 @@ $(CONTROLLER_GEN): go.mod
 gen-k8s: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-gen-openapi: $(OPENAPI_GEN)
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/v1alpha1 -O zz_generated.openapi -p ./api/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/v1beta1 -O zz_generated.openapi -p ./api/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/shared -O zz_generated.openapi -p ./api/shared -h ./hack/boilerplate.go.txt -r "-"
-
 gen-crds: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
 check-gen: generate
 	./hack/check-gen.sh
 
-generate: gen-openapi gen-k8s gen-crds
+generate: gen-k8s gen-crds
 
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
