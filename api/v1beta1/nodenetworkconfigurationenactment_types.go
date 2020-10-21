@@ -20,7 +20,6 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:object:root=true
 
 // NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
-// +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationenactments,shortName=nnce,scope=Cluster
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason",description="Status"

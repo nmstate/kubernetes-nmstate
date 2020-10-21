@@ -7,10 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +k8s:openapi-gen=true
 type ConditionList []Condition
 
-// +k8s:openapi-gen=true
 type Condition struct {
 	Type               ConditionType          `json:"type"`
 	Status             corev1.ConditionStatus `json:"status"`
@@ -20,10 +18,8 @@ type Condition struct {
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 
-// +k8s:openapi-gen=true
 type ConditionType string
 
-// +k8s:openapi-gen=true
 type ConditionReason string
 
 func NewCondition(conditionType ConditionType, status corev1.ConditionStatus, reason ConditionReason, message string) Condition {

@@ -5,7 +5,6 @@ import (
 )
 
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
-// +k8s:openapi-gen=true
 type NodeNetworkStateStatus struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
 	CurrentState             State       `json:"currentState,omitempty"`

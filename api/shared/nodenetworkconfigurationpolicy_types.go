@@ -1,7 +1,6 @@
 package shared
 
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
-// +k8s:openapi-gen=true
 type NodeNetworkConfigurationPolicySpec struct {
 	// NodeSelector is a selector which must be true for the policy to be applied to the node.
 	// Selector which must match a node's labels for the policy to be scheduled on that node.
@@ -15,7 +14,6 @@ type NodeNetworkConfigurationPolicySpec struct {
 }
 
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
-// +k8s:openapi-gen=true
 type NodeNetworkConfigurationPolicyStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }
