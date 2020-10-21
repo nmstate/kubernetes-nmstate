@@ -9,6 +9,8 @@ reviewers:
   - AlonaKaplan
   - bcrochet
   - yboaron
+  - RamLavi
+  - rhrazdil
 
 # Bugzilla info;
 component: Networking
