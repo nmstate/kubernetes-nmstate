@@ -8,10 +8,9 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
-
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
 var _ = Describe("NNCP cleanup", func() {
@@ -39,7 +38,7 @@ var _ = Describe("NNCP cleanup", func() {
 				Eventually(func() bool {
 					key := nmstate.EnactmentKey(node, bridge1)
 					enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-					err := framework.Global.Client.Get(context.TODO(), key, &enactment)
+					err := testenv.Client.Get(context.TODO(), key, &enactment)
 					return errors.IsNotFound(err)
 				}, 10*time.Second, 1*time.Second).Should(BeTrue(), "Enactment has not being deleted")
 			}

@@ -13,8 +13,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/types"
-
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
 )
 
 type KubernetesNMStateReporter struct {
@@ -127,9 +125,6 @@ func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime
 }
 
 func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time) error {
-	if framework.Global.LocalOperator {
-		return nil
-	}
 
 	// Let's print the pods logs to the GinkgoWriter so
 	// we see the failure directly at prow junit output without opening files
@@ -139,6 +134,12 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 }
 
 func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
+	err := os.MkdirAll(r.artifactsDir, 0644)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	name := fmt.Sprintf("%s/%s_%s.log", r.artifactsDir, testName, logType)
 	fi, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {

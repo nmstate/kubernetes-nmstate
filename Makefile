@@ -30,7 +30,7 @@ export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 40m
 
-e2e_test_args = -test.v -test.timeout=$(E2E_TEST_TIMEOUT) -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
+e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 export PRIMARY_NIC ?= eth0
@@ -54,8 +54,8 @@ export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
 export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
+KUBECTL ?= ./cluster/kubectl.sh
 GINKGO ?= $(GOBIN)/ginkgo
-OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 export GITHUB_RELEASE ?= $(GOBIN)/github-release
 export RELEASE_NOTES ?= $(GOBIN)/release-notes
@@ -94,8 +94,6 @@ $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
 $(GINKGO): go.mod
-	$(MAKE) tools
-$(OPERATOR_SDK): go.mod
 	$(MAKE) tools
 $(OPENAPI_GEN): go.mod
 	$(MAKE) tools
@@ -139,11 +137,11 @@ push: push-handler push-operator
 test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
-test-e2e-handler: $(OPERATOR_SDK)
-	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" ./hack/run-e2e-test-handler.sh
+test-e2e-handler: $(GINKGO)
+	KUBECONFIG=$(shell ./cluster/kubeconfig.sh) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
 
-test-e2e-operator: manifests $(OPERATOR_SDK)
-	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" KUBECTL=$(KUBECTL) MANIFESTS_DIR=$(MANIFESTS_DIR) ./hack/run-e2e-test-operator.sh
+test-e2e-operator: manifests $(GINKGO)
+	KUBECONFIG=$(shell ./cluster/kubeconfig.sh) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
 

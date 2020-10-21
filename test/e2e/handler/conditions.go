@@ -10,12 +10,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	yaml "sigs.k8s.io/yaml"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
-
 	corev1 "k8s.io/api/core/v1"
 
 	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
 type expectedConditionsStatus struct {
@@ -34,7 +33,7 @@ func conditionsToYaml(conditions shared.ConditionList) string {
 func nodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1beta1.NodeNetworkConfigurationEnactment {
 	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
 	Eventually(func() error {
-		return framework.Global.Client.Get(context.TODO(), key, &enactment)
+		return testenv.Client.Get(context.TODO(), key, &enactment)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return enactment
 }
