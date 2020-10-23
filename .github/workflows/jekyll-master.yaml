@@ -1,0 +1,26 @@
+name: Build and deploy jekyll site
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  jekyll:
+    runs-on: ubuntu-16.04 # can change this to ubuntu-latest if you prefer
+    steps:
+      - name: 📂 setup
+        uses: actions/checkout@v2
+      - name: 💎 setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 2.6 # can change this to 2.7 or whatever version you prefer
+      - name: 🔨 install dependencies & build site
+        uses: limjh16/jekyll-action-ts@v2
+        with:
+          enable_cache: true
+          jekyll_src: docs
+      - name: 🚀 deploy (github-pages)
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site

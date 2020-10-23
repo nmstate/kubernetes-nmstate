@@ -1,4 +1,7 @@
-# Deployment on Local Cluster
+---
+title: "Deployment on Local Cluster"
+permalink: /deployment-local-cluster/
+---
 
 Kubernetes-nmstate project allows you to spin up a virtualized
 Kubernets/OpenShift cluster thanks to

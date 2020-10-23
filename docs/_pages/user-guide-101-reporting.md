@@ -1,4 +1,7 @@
-# Introduction: Reporting
+---
+title: "User Guide: reporting"
+permalink: /user-guide-101-reporting/
+---
 
 The operator periodically reports state of node network interfaces to the API
 server. These reports are available through `NodeNetworkState` objects that are

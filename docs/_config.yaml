@@ -1,3 +1,30 @@
-# _config.yml
-
-title: "Jekyll Actions Demo"
+theme: minimal-mistakes-jekyll
+minimal_mistakes_skin: "air"
+locale: "en-US"
+title: "The Kubernetes-nmstate project"
+description: A Declarative API for Kubernetes Node Network Management
+name: "The Kubernetes nmstate team"
+url: "https://nmstate.github.io"
+baseurl: "/kubernetes-nmstate"
+repository: "nmstate/kubernetes-nmstate"
+logo: "/assets/images/logo/fullcolor.png"
+github:
+  repository_url: https://github.com/nmstate/kubernetes-nmstate
+markdown: kramdown
+kramdown:
+  input: GFM
+plugins:
+  - jekyll-spaceship
+include:
+  - _pages
+  - examples
+defaults:
+  # _pages
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: single
+      author_profile: true
+      sidebar:
+        nav: "main"

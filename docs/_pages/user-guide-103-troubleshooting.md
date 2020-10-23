@@ -1,4 +1,7 @@
-# Introduction: Troubleshooting
+---
+title: "User Guide: troubleshooting"
+permalink: /user-guide-103-troubleshooting/
+---
 
 Node network configuration is a risky business. A lot can go wrong and when it
 does, it can render the whole node unreachable and non-operational. This guide

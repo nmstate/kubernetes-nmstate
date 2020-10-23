@@ -1,4 +1,7 @@
-# Introduction: Configuration
+---
+title: "User Guide: configuration"
+permalink: /user-guide-102-configuration/
+---
 
 The operator allows users to configure various network interface types, DNS and
 routing on cluster nodes. The configuration is driven by two main object types,

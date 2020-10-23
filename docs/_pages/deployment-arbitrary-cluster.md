@@ -1,4 +1,7 @@
-# Deployment on Arbitrary Cluster
+---
+title: "Deployment on Arbitrary Cluster"
+permalink: /deployment-arbitrary-cluster/
+---
 
 In this guide, we will cover the installation of NetworkManager
 and kubernetes-nmstate on your arbitrary cluster.

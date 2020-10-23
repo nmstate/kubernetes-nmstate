@@ -1,0 +1,15 @@
+main:
+  - title: User Guide
+    children:
+      - title: "Reporting"
+        url: /user-guide-101-reporting
+      - title: "Configuration"
+        url: /user-guide-102-configuration
+      - title: "Troubleshooting"
+        url: /user-guide-103-troubleshooting
+  - title: Deployment
+    children:
+      - title: "Local cluster"
+        url: /deployment-local-cluster
+      - title: "Arbitrary cluster"
+        url: /deployment-arbitrary-cluster
