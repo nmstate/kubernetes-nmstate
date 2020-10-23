@@ -1,4 +1,7 @@
-# Introduction: Configuration
+---
+title: "Configuration"
+tag: "user-guide"
+---
 
 The operator allows users to configure various network interface types, DNS and
 routing on cluster nodes. The configuration is driven by two main object types,
@@ -26,27 +29,10 @@ First of all, let's apply the manifest:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](user-guide/bond0-eth1-eth2_up.yaml)
+[Download example]({{ "user-guide/bond0-eth1-eth2_up.yaml" | relative_url }})
 
 ```yaml
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: bond0-eth1-eth2
-spec:
-  desiredState:
-    interfaces:
-    - name: bond0
-      type: bond
-      state: up
-      ipv4:
-        dhcp: true
-        enabled: true
-      link-aggregation:
-        mode: balance-rr
-        slaves:
-        - eth1
-        - eth2
+{% include_absolute 'user-guide/bond0-eth1-eth2_up.yaml' %}
 ```
 
 ```shell
@@ -269,18 +255,10 @@ interface to `state: absent`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](user-guide/bond0-eth1-eth2_absent.yaml)
+[Download example]({{ "user-guide/bond0-eth1-eth2_absent.yaml" | relative_url }})
 
 ```yaml
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: bond0-eth1-eth2
-spec:
-  desiredState:
-    interfaces:
-    - name: bond0
-      state: absent
+{% include_absolute 'user-guide/bond0-eth1-eth2_absent.yaml' %}
 ```
 
 ```shell
@@ -349,36 +327,10 @@ In order to configure IP on previously enslaved NICs, apply a new Policy:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](user-guide/eth1-eth2_up.yaml)
+[Download example]({{ "/user-guide/eth1-eth2_up.yaml" | relative_url }})
 
 ```yaml
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: eth1
-spec:
-  desiredState:
-    interfaces:
-    - name: eth1
-      type: ethernet
-      state: up
-      ipv4:
-        dhcp: true
-        enabled: true
----
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: eth2
-spec:
-  desiredState:
-    interfaces:
-    - name: eth2
-      type: ethernet
-      state: up
-      ipv4:
-        dhcp: true
-        enabled: true
+{% include_absolute 'user-guide/eth1-eth2_up.yaml' %}
 ```
 
 ```shell
@@ -451,24 +403,10 @@ all the key-value pairs in the `nodeSelector`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](user-guide/vlan100_node01_up.yaml)
+[Download example]({{ "user-guide/vlan100_node01_up.yaml" | relative_url }})
 
 ```yaml
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: vlan100
-spec:
-  nodeSelector:
-    kubernetes.io/hostname: node01
-  desiredState:
-    interfaces:
-    - name: eth1.100
-      type: vlan
-      state: up
-      vlan:
-        base-iface: eth1
-        id: 100
+{% include_absolute 'user-guide/vlan100_node01_up.yaml %}
 ```
 
 ```shell
@@ -521,4 +459,4 @@ status:
 
 The following tutorial will guide you through troubleshooting of a failed
 configuration:
-[Troubleshooting](user-guide-103-troubleshooting.md)
+[Troubleshooting]({{ "user-guide/103-troubleshooting.html" | relative_url }})

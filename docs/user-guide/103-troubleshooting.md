@@ -1,4 +1,7 @@
-# Introduction: Troubleshooting
+---
+title: "Troubleshooting"
+tag: "user-guide"
+---
 
 Node network configuration is a risky business. A lot can go wrong and when it
 does, it can render the whole node unreachable and non-operational. This guide
@@ -19,19 +22,10 @@ interface and observe the results:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example](user-guide/eth666_up.yaml)
+[Download example]({{ "user-guide/eth666_up.yaml" | relative_url }})
 
 ```yaml
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: eth666
-spec:
-  desiredState:
-  interfaces:
-  - name: eth666
-    type: ethernet
-    state: up
+{% include_absolute 'user-guide/eth666_up.yaml' %}
 ```
 
 ```shell
@@ -128,5 +122,4 @@ kubectl delete nncp eth666
 
 This was the last article from the introduction series. You can continue reading
 specific recipes on how to configure various interface types. You will find them
-in the [Deployment and Usage section](../README.md#deployment-and-usage) of the
-project's README.
+in the [Deployment]({{ "deployment.html" | relative_url }}) or [Examples]({{ "examples.html" | relative_url }}) pages.
