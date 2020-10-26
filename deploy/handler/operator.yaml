@@ -21,6 +21,8 @@ spec:
         app: kubernetes-nmstate
         component: kubernetes-nmstate-webhook
         name: {{template "handlerPrefix" .}}nmstate-webhook
+      annotations:
+        description: kubernetes-nmstate-webhook resets NNCP status
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
@@ -101,6 +103,8 @@ spec:
         app: kubernetes-nmstate
         component: kubernetes-nmstate-handler
         name: {{template "handlerPrefix" .}}nmstate-handler
+      annotations:
+        description: kubernetes-nmstate-handler configures and presents node networking, reconciling declerative NNCP and reports with NNS and NNCE
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # future nmstate/NM is in place.
