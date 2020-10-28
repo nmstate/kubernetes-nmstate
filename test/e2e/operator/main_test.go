@@ -15,7 +15,6 @@ import (
 
 	framework "github.com/operator-framework/operator-sdk/pkg/test"
 
-	"github.com/nmstate/kubernetes-nmstate/api"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
@@ -32,7 +31,7 @@ var _ = BeforeSuite(func() {
 	By("Adding custom resource scheme to framework")
 	nmstateList := &nmstatev1beta1.NMStateList{}
 
-	err := framework.AddToFrameworkScheme(api.AddToScheme, nmstateList)
+	err := framework.AddToFrameworkScheme(nmstatev1beta1.AddToScheme, nmstateList)
 	Expect(err).ToNot(HaveOccurred())
 	ctx, _ = prepare(t)
 })

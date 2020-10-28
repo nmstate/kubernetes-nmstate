@@ -30,7 +30,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NMStateSpec defines the desired state of NMstate
+            description: NMStateSpec defines the desired state of NMState
             properties:
               nodeSelector:
                 additionalProperties:

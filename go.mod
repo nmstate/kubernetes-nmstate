@@ -17,12 +17,10 @@ require (
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.12.0
-	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.6.1
 	k8s.io/api v0.18.9
 	k8s.io/apimachinery v0.18.9
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/klog v1.0.0
 	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	k8s.io/kubectl v0.18.2
 	k8s.io/release v0.4.0

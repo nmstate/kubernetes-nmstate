@@ -7,10 +7,10 @@ import (
 )
 
 // +kubebuilder:object:root=true
-
-// NodeNetworkState is the Schema for the nodenetworkstates API
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkstates,shortName=nns,scope=Cluster
+
+// NodeNetworkState is the Schema for the nodenetworkstates API
 type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

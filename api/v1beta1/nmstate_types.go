@@ -1,5 +1,5 @@
 /*
-Copyright The Kubernetes Authors.
+
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,18 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:object:root=true
-
-// NMState is the Schema for the nmstates API
-// +kubebuilder:resource:path=nmstates,scope=Cluster
-// +kubebuilder:storageversion
-type NMState struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NMStateSpec `json:"spec,omitempty"`
-}
-
-// NMStateSpec defines the desired state of NMstate
+// NMStateSpec defines the desired state of NMState
 type NMStateSpec struct {
 	// NodeSelector is an optional selector that will be added to handler DaemonSet manifest
 	// for both workers and masters (https://github.com/nmstate/kubernetes-nmstate/blob/master/deploy/handler/operator.yaml).
@@ -39,6 +28,17 @@ type NMStateSpec struct {
 	// as labels applied to the node.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+}
+
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=nmstates,scope=Cluster
+// +kubebuilder:storageversion
+
+// NMState is the Schema for the nmstates API
+type NMState struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	Spec              NMStateSpec `json:"spec,omitempty"`
 }
 
 // +kubebuilder:object:root=true
