@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
@@ -72,9 +72,9 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 	podLogOpts := corev1.PodLogOptions{}
 	podLogOpts.SinceTime = &metav1.Time{Time: sinceTime}
 	podList := &corev1.PodList{}
-	err := framework.Global.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
+	err := testenv.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
-	podsClientset := framework.Global.KubeClient.CoreV1().Pods(namespace)
+	podsClientset := testenv.KubeClient.CoreV1().Pods(namespace)
 
 	for _, pod := range podList.Items {
 		appLabel, hasAppLabel := pod.Labels["app"]

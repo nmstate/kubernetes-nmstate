@@ -7,7 +7,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,6 +15,8 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/deployment"
+
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
 var (
@@ -55,11 +56,11 @@ var _ = Describe("NMState operator", func() {
 			var nmstate = defaultNMState
 			nmstate.Name = "wrong-name"
 			BeforeEach(func() {
-				err := framework.Global.Client.Create(context.TODO(), &nmstate, &framework.CleanupOptions{})
+				err := testenv.Client.Create(context.TODO(), &nmstate)
 				Expect(err).ToNot(HaveOccurred(), "NMState CR with incorrect name is created without error")
 			})
 			AfterEach(func() {
-				err := framework.Global.Client.Delete(context.TODO(), &nmstate, &client.DeleteOptions{})
+				err := testenv.Client.Delete(context.TODO(), &nmstate, &client.DeleteOptions{})
 				Expect(err).ToNot(HaveOccurred(), "NMState CR with incorrect name is removed without error")
 			})
 			It("should ignore it", func() {
@@ -87,7 +88,7 @@ var _ = Describe("NMState operator", func() {
 })
 
 func installNMState(nmstate nmstatev1beta1.NMState) {
-	err := framework.Global.Client.Create(context.TODO(), &nmstate, &framework.CleanupOptions{})
+	err := testenv.Client.Create(context.TODO(), &nmstate)
 	Expect(err).ToNot(HaveOccurred(), "NMState CR created without error")
 }
 
@@ -96,7 +97,7 @@ func installDefaultNMState() {
 }
 
 func uninstallNMState(nmstate nmstatev1beta1.NMState) {
-	err := framework.Global.Client.Delete(context.TODO(), &nmstate, &client.DeleteOptions{})
+	err := testenv.Client.Delete(context.TODO(), &nmstate, &client.DeleteOptions{})
 	if !apierrors.IsNotFound(err) {
 		Expect(err).ToNot(HaveOccurred(), "NMState CR successfully removed")
 	}

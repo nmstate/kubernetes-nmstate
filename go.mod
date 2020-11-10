@@ -6,7 +6,6 @@ require (
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/github-release/github-release v0.8.1
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/spec v0.19.4
 	github.com/gobwas/glob v0.2.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nightlyone/lockfile v1.0.0
@@ -21,7 +20,7 @@ require (
 	k8s.io/api v0.18.9
 	k8s.io/apimachinery v0.18.9
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
+	k8s.io/klog v1.0.0
 	k8s.io/kubectl v0.18.2
 	k8s.io/release v0.4.0
 	kubevirt.io/qe-tools v0.1.6

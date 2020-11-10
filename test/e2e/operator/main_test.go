@@ -12,36 +12,29 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
-
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
 var (
-	f         = framework.Global
 	t         *testing.T
 	nodes     []string
 	startTime time.Time
-	ctx       *framework.TestCtx
 )
 
 var _ = BeforeSuite(func() {
-	By("Adding custom resource scheme to framework")
-	nmstateList := &nmstatev1beta1.NMStateList{}
 
-	err := framework.AddToFrameworkScheme(nmstatev1beta1.AddToScheme, nmstateList)
-	Expect(err).ToNot(HaveOccurred())
-	ctx, _ = prepare(t)
-})
+	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-var _ = AfterSuite(func() {
-	ctx.Cleanup()
+	testenv.Start()
+
 })
 
 func TestMain(m *testing.M) {
-	framework.MainEntry(m)
+	testenv.TestMain()
 }
 
 func TestE2E(tapi *testing.T) {
@@ -50,14 +43,14 @@ func TestE2E(tapi *testing.T) {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err := framework.Global.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
+	err := testenv.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
 
 	reporters := make([]Reporter, 0)
-	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/operator", framework.Global.OperatorNamespace, nodes))
+	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/operator", testenv.OperatorNamespace, nodes))
 	if ginkgoreporters.Polarion.Run {
 		reporters = append(reporters, &ginkgoreporters.Polarion)
 	}
