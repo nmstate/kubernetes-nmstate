@@ -107,8 +107,9 @@ func main() {
 	}
 
 	mgrOptions := manager.Options{
-		Namespace:      namespace,
-		MapperProvider: apiutil.NewDiscoveryRESTMapper,
+		Namespace:          namespace,
+		MapperProvider:     apiutil.NewDiscoveryRESTMapper,
+		MetricsBindAddress: "0", // disable metrics
 	}
 
 	// We need to add LeaerElection for the webhook
