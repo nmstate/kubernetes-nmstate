@@ -64,8 +64,7 @@ func init() {
 }
 
 func main() {
-	var metricsAddr, logType string
-	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	var logType string
 	flag.StringVar(&logType, "v", "production", "Log type (debug/production).")
 	flag.Parse()
 
@@ -85,7 +84,8 @@ func main() {
 	}
 
 	ctrlOptions := ctrl.Options{
-		Scheme: scheme,
+		Scheme:             scheme,
+		MetricsBindAddress: "0", // disable metrics
 	}
 
 	// We need to add LeaerElection for the webhook
