@@ -8,17 +8,6 @@ cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
 # cloud.google.com/go/storage v1.3.0
 cloud.google.com/go/storage
-# github.com/Azure/go-autorest/autorest v0.9.3-0.20191028180845-3492b2aff503
-github.com/Azure/go-autorest/autorest
-github.com/Azure/go-autorest/autorest/azure
-# github.com/Azure/go-autorest/autorest/adal v0.8.1-0.20191028180845-3492b2aff503
-github.com/Azure/go-autorest/autorest/adal
-# github.com/Azure/go-autorest/autorest/date v0.2.0
-github.com/Azure/go-autorest/autorest/date
-# github.com/Azure/go-autorest/logger v0.1.0
-github.com/Azure/go-autorest/logger
-# github.com/Azure/go-autorest/tracing v0.5.0
-github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
 # github.com/GoogleCloudPlatform/testgrid v0.0.10
@@ -43,8 +32,6 @@ github.com/blang/semver
 github.com/cespare/xxhash/v2
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dgrijalva/jwt-go v3.2.0+incompatible
-github.com/dgrijalva/jwt-go
 # github.com/dustin/go-humanize v1.0.0
 github.com/dustin/go-humanize
 # github.com/emirpasic/gods v1.12.0
@@ -126,9 +113,8 @@ github.com/go-logr/logr
 github.com/go-logr/zapr
 # github.com/go-stack/stack v1.8.0
 github.com/go-stack/stack
-# github.com/gobuffalo/envy v1.7.1
-github.com/gobuffalo/envy
-# github.com/gobuffalo/flect v0.2.1
+# github.com/gobuffalo/flect v0.2.2
+## explicit
 github.com/gobuffalo/flect
 # github.com/gobwas/glob v0.2.3
 ## explicit
@@ -176,15 +162,6 @@ github.com/googleapis/gax-go/v2
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
-# github.com/gophercloud/gophercloud v0.10.0
-github.com/gophercloud/gophercloud
-github.com/gophercloud/gophercloud/openstack
-github.com/gophercloud/gophercloud/openstack/identity/v2/tenants
-github.com/gophercloud/gophercloud/openstack/identity/v2/tokens
-github.com/gophercloud/gophercloud/openstack/identity/v3/extensions/ec2tokens
-github.com/gophercloud/gophercloud/openstack/identity/v3/tokens
-github.com/gophercloud/gophercloud/openstack/utils
-github.com/gophercloud/gophercloud/pagination
 # github.com/hashicorp/errwrap v1.0.0
 github.com/hashicorp/errwrap
 # github.com/hashicorp/go-multierror v1.0.0
@@ -193,6 +170,7 @@ github.com/hashicorp/go-multierror
 github.com/hashicorp/golang-lru
 github.com/hashicorp/golang-lru/simplelru
 # github.com/huandu/xstrings v1.3.1
+## explicit
 github.com/huandu/xstrings
 # github.com/imdario/mergo v0.3.9
 github.com/imdario/mergo
@@ -202,8 +180,6 @@ github.com/inconshreveable/log15
 github.com/inconshreveable/mousetrap
 # github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
 github.com/jbenet/go-context/io
-# github.com/joho/godotenv v1.3.0
-github.com/joho/godotenv
 # github.com/json-iterator/go v1.1.10
 github.com/json-iterator/go
 # github.com/jstemmer/go-junit-report v0.9.1
@@ -219,8 +195,6 @@ github.com/kevinburke/rest
 github.com/kevinburke/ssh_config
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/markbates/inflect v1.0.4
-github.com/markbates/inflect
 # github.com/mattn/go-colorable v0.1.6
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
@@ -282,7 +256,6 @@ github.com/onsi/gomega
 github.com/onsi/gomega/format
 github.com/onsi/gomega/gbytes
 github.com/onsi/gomega/gexec
-github.com/onsi/gomega/gstruct/errors
 github.com/onsi/gomega/internal/assertion
 github.com/onsi/gomega/internal/asyncassertion
 github.com/onsi/gomega/internal/oraclematcher
@@ -297,26 +270,6 @@ github.com/onsi/gomega/types
 ## explicit
 github.com/openshift/cluster-network-operator/pkg/apply
 github.com/openshift/cluster-network-operator/pkg/render
-# github.com/operator-framework/api v0.3.13
-github.com/operator-framework/api/pkg/operators
-# github.com/operator-framework/operator-registry v1.13.4
-github.com/operator-framework/operator-registry/pkg/api
-github.com/operator-framework/operator-registry/pkg/image
-github.com/operator-framework/operator-registry/pkg/registry
-# github.com/operator-framework/operator-sdk v0.19.4
-## explicit
-github.com/operator-framework/operator-sdk/internal/scaffold
-github.com/operator-framework/operator-sdk/internal/scaffold/input
-github.com/operator-framework/operator-sdk/internal/scaffold/internal/deps
-github.com/operator-framework/operator-sdk/internal/util/fileutil
-github.com/operator-framework/operator-sdk/internal/util/k8sutil
-github.com/operator-framework/operator-sdk/internal/util/kubebuilder
-github.com/operator-framework/operator-sdk/internal/util/projutil
-github.com/operator-framework/operator-sdk/pkg/k8sutil
-github.com/operator-framework/operator-sdk/pkg/test
-github.com/operator-framework/operator-sdk/version
-# github.com/pborman/uuid v1.2.0
-github.com/pborman/uuid
 # github.com/phoracek/networkmanager-go v0.1.0
 ## explicit
 github.com/phoracek/networkmanager-go/src
@@ -342,19 +295,12 @@ github.com/prometheus/procfs/internal/util
 github.com/qinqon/kube-admission-webhook/pkg/certificate
 github.com/qinqon/kube-admission-webhook/pkg/certificate/triple
 github.com/qinqon/kube-admission-webhook/pkg/webhook/server
-# github.com/rogpeppe/go-internal v1.5.0
-github.com/rogpeppe/go-internal/modfile
-github.com/rogpeppe/go-internal/module
-github.com/rogpeppe/go-internal/semver
 # github.com/saschagrunert/go-modiff v1.2.0
 github.com/saschagrunert/go-modiff/pkg/modiff
 # github.com/sergi/go-diff v1.1.0
 github.com/sergi/go-diff/diffmatchpatch
 # github.com/sirupsen/logrus v1.6.0
 github.com/sirupsen/logrus
-# github.com/spf13/afero v1.2.2
-github.com/spf13/afero
-github.com/spf13/afero/mem
 # github.com/spf13/cobra v1.0.0
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
@@ -426,12 +372,14 @@ golang.org/x/crypto/ssh/terminal
 golang.org/x/exp/apidiff
 golang.org/x/exp/cmd/apidiff
 # golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f
+## explicit
 golang.org/x/lint
 golang.org/x/lint/golint
 # golang.org/x/mod v0.2.0
 golang.org/x/mod/module
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20200625001655-4c5254603344
+## explicit
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/html
@@ -452,6 +400,7 @@ golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
 # golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae
+## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
@@ -492,7 +441,6 @@ golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
 golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/imports
 golang.org/x/tools/internal/analysisinternal
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
@@ -534,12 +482,14 @@ google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31
+## explicit
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/type/expr
 # google.golang.org/grpc v1.30.0
+## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
@@ -581,6 +531,7 @@ google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
 # google.golang.org/protobuf v1.25.0
+## explicit
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
 google.golang.org/protobuf/compiler/protogen
 google.golang.org/protobuf/encoding/prototext
@@ -694,7 +645,8 @@ k8s.io/api/settings/v1alpha1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apiextensions-apiserver v0.18.6 => k8s.io/apiextensions-apiserver v0.18.9
+# k8s.io/apiextensions-apiserver v0.18.8 => k8s.io/apiextensions-apiserver v0.18.9
+## explicit
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1
 k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1
@@ -752,8 +704,6 @@ k8s.io/apimachinery/third_party/forked/golang/reflect
 # k8s.io/client-go v12.0.0+incompatible => k8s.io/client-go v0.18.2
 ## explicit
 k8s.io/client-go/discovery
-k8s.io/client-go/discovery/cached
-k8s.io/client-go/discovery/cached/memory
 k8s.io/client-go/dynamic
 k8s.io/client-go/kubernetes
 k8s.io/client-go/kubernetes/scheme
@@ -801,12 +751,8 @@ k8s.io/client-go/pkg/apis/clientauthentication
 k8s.io/client-go/pkg/apis/clientauthentication/v1alpha1
 k8s.io/client-go/pkg/apis/clientauthentication/v1beta1
 k8s.io/client-go/pkg/version
-k8s.io/client-go/plugin/pkg/client/auth
-k8s.io/client-go/plugin/pkg/client/auth/azure
 k8s.io/client-go/plugin/pkg/client/auth/exec
 k8s.io/client-go/plugin/pkg/client/auth/gcp
-k8s.io/client-go/plugin/pkg/client/auth/oidc
-k8s.io/client-go/plugin/pkg/client/auth/openstack
 k8s.io/client-go/rest
 k8s.io/client-go/rest/watch
 k8s.io/client-go/restmapper
@@ -840,7 +786,7 @@ k8s.io/klog
 k8s.io/klog/v2
 # k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 k8s.io/kube-openapi/pkg/util/proto
-# k8s.io/kubectl v0.18.2 => k8s.io/kubectl v0.18.9
+# k8s.io/kubectl v0.18.8 => k8s.io/kubectl v0.18.9
 ## explicit
 k8s.io/kubectl/pkg/util/deployment
 # k8s.io/release v0.4.0
@@ -869,7 +815,7 @@ k8s.io/utils/trace
 ## explicit
 kubevirt.io/qe-tools/pkg/ginkgo-reporters
 kubevirt.io/qe-tools/pkg/polarion-xml
-# sigs.k8s.io/controller-runtime v0.6.2
+# sigs.k8s.io/controller-runtime v0.6.3
 ## explicit
 sigs.k8s.io/controller-runtime
 sigs.k8s.io/controller-runtime/pkg/builder
@@ -930,8 +876,6 @@ sigs.k8s.io/controller-tools/pkg/schemapatcher
 sigs.k8s.io/controller-tools/pkg/schemapatcher/internal/yaml
 sigs.k8s.io/controller-tools/pkg/version
 sigs.k8s.io/controller-tools/pkg/webhook
-# sigs.k8s.io/kubebuilder v1.0.9-0.20200618125005-36aa113dbe99
-sigs.k8s.io/kubebuilder/pkg/model/config
 # sigs.k8s.io/structured-merge-diff/v3 v3.0.0
 sigs.k8s.io/structured-merge-diff/v3/value
 # sigs.k8s.io/yaml v1.2.0
