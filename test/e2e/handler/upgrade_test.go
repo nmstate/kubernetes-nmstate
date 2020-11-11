@@ -8,10 +8,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
-
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
+
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
 var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
@@ -25,7 +25,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 					DesiredState: linuxBrUp(bridge1),
 				},
 			}
-			Expect(framework.Global.Client.Create(context.TODO(), &policy, &framework.CleanupOptions{})).To(Succeed(), "should success creating a v1alpha1 nncp")
+			Expect(testenv.Client.Create(context.TODO(), &policy)).To(Succeed(), "should success creating a v1alpha1 nncp")
 		})
 		AfterEach(func() {
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))

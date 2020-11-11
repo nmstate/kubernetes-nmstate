@@ -19,13 +19,12 @@ type NodeNetworkConfigurationPolicyList struct {
 
 // +genclient
 // +kubebuilder:object:root=true
-
-// NodeNetworkConfigurationPolicy is the Schema for the nodenetworkconfigurationpolicies API
-// +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationpolicies,shortName=nncp,scope=Cluster
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason",description="Status"
 // +kubebuilder:storageversion
+
+// NodeNetworkConfigurationPolicy is the Schema for the nodenetworkconfigurationpolicies API
 type NodeNetworkConfigurationPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

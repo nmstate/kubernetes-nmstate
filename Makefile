@@ -30,7 +30,7 @@ export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 40m
 
-e2e_test_args = -test.v -test.timeout=$(E2E_TEST_TIMEOUT) -ginkgo.v -ginkgo.slowSpecThreshold=60 $(E2E_TEST_ARGS)
+e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 export PRIMARY_NIC ?= eth0
@@ -54,9 +54,8 @@ export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
 export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
+KUBECTL ?= ./cluster/kubectl.sh
 GINKGO ?= $(GOBIN)/ginkgo
-OPERATOR_SDK ?= $(GOBIN)/operator-sdk
-OPENAPI_GEN ?= $(GOBIN)/openapi-gen
 CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 export GITHUB_RELEASE ?= $(GOBIN)/github-release
 export RELEASE_NOTES ?= $(GOBIN)/release-notes
@@ -96,8 +95,6 @@ $(GO):
 
 $(GINKGO): go.mod
 	$(MAKE) tools
-$(OPERATOR_SDK): go.mod
-	$(MAKE) tools
 $(OPENAPI_GEN): go.mod
 	$(MAKE) tools
 $(GITHUB_RELEASE): go.mod
@@ -110,23 +107,18 @@ $(CONTROLLER_GEN): go.mod
 gen-k8s: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-gen-openapi: $(OPENAPI_GEN)
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/v1alpha1 -O zz_generated.openapi -p ./api/v1alpha1 -h ./hack/boilerplate.go.txt -r "-"
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/v1beta1 -O zz_generated.openapi -p ./api/v1beta1 -h ./hack/boilerplate.go.txt -r "-"
-	$(OPENAPI_GEN) --logtostderr=true -o "" -i ./api/shared -O zz_generated.openapi -p ./api/shared -h ./hack/boilerplate.go.txt -r "-"
-
 gen-crds: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
 check-gen: generate
 	./hack/check-gen.sh
 
-generate: gen-openapi gen-k8s gen-crds
+generate: gen-k8s gen-crds
 
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-manager: $(OPERATOR_SDK)
+manager: $(GO)
 	$(GO) build -o $(BIN_DIR)/manager main.go
 
 handler: manager
@@ -135,7 +127,7 @@ handler: manager
 push-handler: handler
 	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
 
-operator: handler
+operator: manager
 	$(IMAGE_BUILDER) build . -f build/Dockerfile.operator -t $(OPERATOR_IMAGE)
 
 push-operator: operator
@@ -145,11 +137,11 @@ push: push-handler push-operator
 test/unit: $(GINKGO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
-test-e2e-handler: $(OPERATOR_SDK)
-	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" ./hack/run-e2e-test-handler.sh
+test-e2e-handler: $(GINKGO)
+	KUBECONFIG=$(shell ./cluster/kubeconfig.sh) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
 
-test-e2e-operator: manifests $(OPERATOR_SDK)
-	OPERATOR_SDK="$(OPERATOR_SDK)" TEST_ARGS="$(e2e_test_args)" KUBECTL=$(KUBECTL) MANIFESTS_DIR=$(MANIFESTS_DIR) ./hack/run-e2e-test-operator.sh
+test-e2e-operator: manifests $(GINKGO)
+	KUBECONFIG=$(shell ./cluster/kubeconfig.sh) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
 

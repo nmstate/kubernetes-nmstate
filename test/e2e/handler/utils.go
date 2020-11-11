@@ -17,13 +17,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	yaml "sigs.k8s.io/yaml"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
@@ -65,16 +65,16 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
 	Eventually(func() error {
-		err := framework.Global.Client.Get(context.TODO(), key, &policy)
+		err := testenv.Client.Get(context.TODO(), key, &policy)
 		policy.Spec.DesiredState = desiredState
 		policy.Spec.NodeSelector = nodeSelector
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				return framework.Global.Client.Create(context.TODO(), &policy, &framework.CleanupOptions{})
+				return testenv.Client.Create(context.TODO(), &policy)
 			}
 			return err
 		}
-		return framework.Global.Client.Update(context.TODO(), &policy)
+		return testenv.Client.Update(context.TODO(), &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
 	//FIXME: until we don't have webhook we have to wait for reconcile
 	//       to start so we are sure that conditions are reset and we can
@@ -137,7 +137,7 @@ func resetDesiredStateForNodes() {
 func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState {
 	state := nmstatev1beta1.NodeNetworkState{}
 	Eventually(func() error {
-		return framework.Global.Client.Get(context.TODO(), key, &state)
+		return testenv.Client.Get(context.TODO(), key, &state)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return state
 }
@@ -146,18 +146,18 @@ func nodeNetworkConfigurationPolicy(policyName string) nmstatev1beta1.NodeNetwor
 	key := types.NamespacedName{Name: policyName}
 	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	EventuallyWithOffset(1, func() error {
-		return framework.Global.Client.Get(context.TODO(), key, &policy)
+		return testenv.Client.Get(context.TODO(), key, &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return policy
 }
 
 func deleteNodeNeworkStates() {
 	nodeNetworkStateList := &nmstatev1beta1.NodeNetworkStateList{}
-	err := framework.Global.Client.List(context.TODO(), nodeNetworkStateList, &dynclient.ListOptions{})
+	err := testenv.Client.List(context.TODO(), nodeNetworkStateList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	var deleteErrors []error
 	for _, nodeNetworkState := range nodeNetworkStateList.Items {
-		deleteErrors = append(deleteErrors, framework.Global.Client.Delete(context.TODO(), &nodeNetworkState))
+		deleteErrors = append(deleteErrors, testenv.Client.Delete(context.TODO(), &nodeNetworkState))
 	}
 	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
 }
@@ -166,7 +166,7 @@ func deletePolicy(name string) {
 	By(fmt.Sprintf("Deleting policy %s", name))
 	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
-	err := framework.Global.Client.Delete(context.TODO(), policy)
+	err := testenv.Client.Delete(context.TODO(), policy)
 	if apierrors.IsNotFound(err) {
 		return
 	}
@@ -174,7 +174,7 @@ func deletePolicy(name string) {
 
 	// Wait for policy to be removed
 	EventuallyWithOffset(1, func() bool {
-		err := framework.Global.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1beta1.NodeNetworkConfigurationPolicy{})
+		err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1beta1.NodeNetworkConfigurationPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
 
@@ -185,7 +185,7 @@ func deletePolicy(name string) {
 	for _, node := range nodes {
 		enactmentKey := nmstate.EnactmentKey(node, name)
 		Eventually(func() bool {
-			err := framework.Global.Client.Get(context.TODO(), enactmentKey, &nmstatev1beta1.NodeNetworkConfigurationEnactment{})
+			err := testenv.Client.Get(context.TODO(), enactmentKey, &nmstatev1beta1.NodeNetworkConfigurationEnactment{})
 			// if we face an unexpected error do a failure since
 			// we don't know if enactment was deleted
 			if err != nil && !apierrors.IsNotFound(err) {
@@ -255,7 +255,7 @@ func interfaces(state nmstate.State) []interface{} {
 }
 
 func currentState(node string, currentStateYaml *nmstate.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: framework.Global.OperatorNamespace, Name: node}
+	key := types.NamespacedName{Namespace: testenv.OperatorNamespace, Name: node}
 	return Eventually(func() nmstate.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return currentStateYaml.Raw
@@ -311,7 +311,7 @@ func interfacesForNode(node string) AsyncAssertion {
 func waitForNodeNetworkStateUpdate(node string) {
 	now := time.Now()
 	EventuallyWithOffset(1, func() time.Time {
-		key := types.NamespacedName{Namespace: framework.Global.OperatorNamespace, Name: node}
+		key := types.NamespacedName{Namespace: testenv.OperatorNamespace, Name: node}
 		nnsUpdateTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
 		return nnsUpdateTime.Time
 	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Node %s should have a fresh nns)", node))
@@ -439,6 +439,11 @@ func currentStateJSON(node string) []byte {
 
 func dhcpFlag(node string, name string) bool {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.dhcp", name)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
+}
+
+func autoDNS(node string, name string) bool {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.auto-dns", name)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
 

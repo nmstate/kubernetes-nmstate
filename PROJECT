@@ -1,0 +1,11 @@
+domain: nmstate.io
+layout: go.kubebuilder.io/v2
+projectName: kubernetes-nmstate
+repo: github.com/nmstate/kubernetes-nmstate
+resources:
+- group: nmstate.io
+  kind: NMState
+  version: v1beta1
+version: 3-alpha
+plugins:
+  go.sdk.operatorframework.io/v2-alpha: {}

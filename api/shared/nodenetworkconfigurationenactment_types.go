@@ -7,7 +7,6 @@ import (
 )
 
 // NodeNetworkConfigurationEnactmentStatus defines the observed state of NodeNetworkConfigurationEnactment
-// +k8s:openapi-gen=true
 type NodeNetworkConfigurationEnactmentStatus struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// The desired state rendered for the enactment's node using

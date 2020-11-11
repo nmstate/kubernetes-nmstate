@@ -131,7 +131,7 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.N
 	return nil
 }
 
-func rollback(client client.Client, cause error) error {
+func rollback(client client.Client, probes []probe.Probe, cause error) error {
 	message := fmt.Sprintf("rolling back desired state configuration: %s", cause)
 	err := nmstatectl.Rollback()
 	if err != nil {
@@ -139,7 +139,7 @@ func rollback(client client.Client, cause error) error {
 	}
 
 	// wait for system to settle after rollback
-	probesErr := probe.RunAll(client)
+	probesErr := probe.Run(client, probes)
 	if probesErr != nil {
 		return errors.Wrap(errors.Wrap(err, "failed running probes after rollback"), message)
 	}
@@ -150,6 +150,10 @@ func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
+
+	// Before apply we get the probes that are working fine, they should be
+	// working fine after apply
+	probes := probe.Select(client)
 
 	// commit timeout doubles the default gw ping probe and check API server
 	// connectivity timeout, to
@@ -166,7 +170,7 @@ func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string
 	// set
 	bridgesUpWithPorts, err := getBridgesUp(desiredState)
 	if err != nil {
-		return "", rollback(client, fmt.Errorf("error retrieving up bridges from desired state"))
+		return "", rollback(client, probes, fmt.Errorf("error retrieving up bridges from desired state"))
 	}
 
 	commandOutput := ""
@@ -174,13 +178,13 @@ func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string
 		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
 		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
 		if err != nil {
-			return commandOutput, rollback(client, err)
+			return commandOutput, rollback(client, probes, err)
 		}
 	}
 
-	err = probe.RunAll(client)
+	err = probe.Run(client, probes)
 	if err != nil {
-		return "", rollback(client, errors.Wrap(err, "failed runnig probes after network changes"))
+		return "", rollback(client, probes, errors.Wrap(err, "failed runnig probes after network changes"))
 	}
 
 	commitOutput, err := nmstatectl.Commit()

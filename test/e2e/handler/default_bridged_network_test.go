@@ -11,9 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	framework "github.com/operator-framework/operator-sdk/pkg/test"
-
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
 func createBridgeOnTheDefaultInterface() nmstate.State {
@@ -161,7 +160,7 @@ func nodeReadyConditionStatus(nodeName string) (corev1.ConditionStatus, error) {
 	// expected so Eventually will retry after expected interval value.
 	oneSecondTimeoutCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	err := framework.Global.Client.Get(oneSecondTimeoutCtx, key, &node)
+	err := testenv.Client.Get(oneSecondTimeoutCtx, key, &node)
 	if err != nil {
 		return "", err
 	}

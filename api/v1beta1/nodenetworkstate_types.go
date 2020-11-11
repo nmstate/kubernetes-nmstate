@@ -6,13 +6,12 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
-// +kubebuilder:object:root=true
-
-// NodeNetworkState is the Schema for the nodenetworkstates API
-// +k8s:openapi-gen=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkstates,shortName=nns,scope=Cluster
 // +kubebuilder:storageversion
+// +kubebuilder:object:root=true
+
+// NodeNetworkState is the Schema for the nodenetworkstates API
 type NodeNetworkState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

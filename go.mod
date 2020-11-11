@@ -1,34 +1,38 @@
 module github.com/nmstate/kubernetes-nmstate
 
-go 1.13
+go 1.15
 
 require (
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/github-release/github-release v0.8.1
 	github.com/go-logr/logr v0.1.0
-	github.com/go-openapi/spec v0.19.4
+	github.com/gobuffalo/flect v0.2.2 // indirect
 	github.com/gobwas/glob v0.2.3
+	github.com/huandu/xstrings v1.3.1 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nightlyone/lockfile v1.0.0
 	github.com/onsi/ginkgo v1.12.1
 	github.com/onsi/gomega v1.10.1
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
-	github.com/operator-framework/operator-sdk v0.19.4
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.12.0
-	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.6.1
+	golang.org/x/lint v0.0.0-20191125180803-fdd1cda4f05f // indirect
+	golang.org/x/net v0.0.0-20200625001655-4c5254603344 // indirect
+	golang.org/x/sys v0.0.0-20200625212154-ddb9806d33ae // indirect
+	google.golang.org/genproto v0.0.0-20200701001935-0939c5918c31 // indirect
+	google.golang.org/grpc v1.30.0 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
 	k8s.io/api v0.18.9
+	k8s.io/apiextensions-apiserver v0.18.8 // indirect
 	k8s.io/apimachinery v0.18.9
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/klog v1.0.0
-	k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
-	k8s.io/kubectl v0.18.2
+	k8s.io/kubectl v0.18.8
 	k8s.io/release v0.4.0
 	kubevirt.io/qe-tools v0.1.6
-	sigs.k8s.io/controller-runtime v0.6.2
-	sigs.k8s.io/controller-tools v0.3.0
+	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/controller-tools v0.4.0
 	sigs.k8s.io/yaml v1.2.0
 )
 
