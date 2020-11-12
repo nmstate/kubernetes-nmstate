@@ -1,0 +1,18 @@
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: static-ip
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: node01
+  desiredState:
+    interfaces:
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        address:
+        - ip: 10.244.0.1
+          prefix-length: 24
+        dhcp: false
+        enabled: true
