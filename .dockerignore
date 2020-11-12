@@ -16,9 +16,6 @@ _kubevirtci
 kubevirtci
 
 # No need for source code is already compiled
-pkg
-cmd
-vendor
 docs
 
 # Test and infra
