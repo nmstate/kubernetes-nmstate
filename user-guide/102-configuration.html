@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.20.2 by Michael Rose
+  Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Configuration - The Kubernetes NMState project</title>
+<meta name="description" content="A declarative API for Kubernetes node network management">
+
+
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="The Kubernetes NMState project">
+<meta property="og:title" content="Configuration">
+<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/user-guide/102-configuration.html">
+
+
+  <meta property="og:description" content="A declarative API for Kubernetes node network management">
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="canonical" href="https://nmstate.github.io/kubernetes-nmstate/user-guide/102-configuration.html">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "The Kubernetes NMState team",
+      "url": "https://nmstate.github.io/kubernetes-nmstate/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/kubernetes-nmstate/feed.xml" type="application/atom+xml" rel="alternate" title="The Kubernetes NMState project Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/kubernetes-nmstate/assets/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/kubernetes-nmstate/"><img src="/kubernetes-nmstate/assets/images/logo/fullcolor.png" alt=""></a>
+        
+        <a class="site-title" href="/kubernetes-nmstate/">
+          The Kubernetes NMState project
+          
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/deployment.html">Deployment</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/user-guide.html">User Guide</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/examples.html">Examples</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="https://github.com/nmstate/kubernetes-nmstate">GitHub</a>
+            </li>
+</ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name"></h3>
+    
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+    
+      
+      
+      
+      
+    
+    
+      
+
+<nav class="nav__list">
+  
+  <input id="ac-toc" name="accordion-toc" type="checkbox">
+  <label for="ac-toc">Toggle Menu</label>
+  <ul class="nav__items">
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/deployment.html"><span class="nav__sub-title">Deployment</span></a>
+        
+
+        
+        <ul>
+          
+            <li><a href="/kubernetes-nmstate/deployment/local-cluster.html">Local cluster</a></li>
+          
+            <li><a href="/kubernetes-nmstate/deployment/arbitrary-cluster.html">Arbitrary cluster</a></li>
+          
+        </ul>
+        
+      </li>
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/user-guide.html"><span class="nav__sub-title">User Guide</span></a>
+        
+
+        
+        <ul>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/101-reporting.html">Reporting</a></li>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/102-configuration.html" class="active">Configuration</a></li>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/103-troubleshooting.html">Troubleshooting</a></li>
+          
+        </ul>
+        
+      </li>
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/examples.html"><span class="nav__sub-title">Examples</span></a>
+        
+
+        
+      </li>
+    
+      <li>
+        
+          <a href="https://github.com/nmstate/kubernetes-nmstate"><span class="nav__sub-title">GitHub</span></a>
+        
+
+        
+      </li>
+    
+  </ul>
+</nav>
+
+    
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Configuration">
+    
+    
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Configuration
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <p>The operator allows users to configure various network interface types, DNS and
+routing on cluster nodes. The configuration is driven by two main object types,
+<code class="language-plaintext highlighter-rouge">NodeNetworkConfigurationPolicy</code> (Policy) and
+<code class="language-plaintext highlighter-rouge">NodeNetworkConfigurationEnactment</code> (Enactment).</p>
+
+<p>A Policy describes what is the desired network configuration on cluster nodes.
+It is created by used and applies cluster-wide. On the other hand, an Enactment
+is a read-only object that carries execution state of a Policy per each Node.</p>
+
+<p>Policies are applied on node via NetworkManager. Thanks to this, the
+configuration is persistent on the node and survives reboots.</p>
+
+<h2 id="creating-interfaces">Creating interfaces</h2>
+
+<p>Each Policy has a name (<code class="language-plaintext highlighter-rouge">metadata.name</code>) and desired state
+(<code class="language-plaintext highlighter-rouge">spec.desiredState</code>). The desired state can contains declarative specification
+of the node network configuration following <a href="https://nmstate.github.io/">nmstate
+API</a>.</p>
+
+<p>In the following example, we will create a Policy that configures a bonding over
+NICs <code class="language-plaintext highlighter-rouge">eth1</code> and <code class="language-plaintext highlighter-rouge">eth2</code> across the whole cluster.</p>
+
+<p>First of all, let’s apply the manifest:</p>
+
+<!-- When updating following example, don't forget to update respective attached file -->
+
+<p><a href="/kubernetes-nmstate/user-guide/bond0-eth1-eth2_up.yaml">Download example</a></p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">bond0-eth1-eth2</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bond</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">link-aggregation</span><span class="pi">:</span>
+        <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
+        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">eth1</span>
+        <span class="pi">-</span> <span class="s">eth2</span>
+
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> bond0-eth1-eth2_up.yaml
+</code></pre></div></div>
+
+<p>Wait for the Policy to be successfully applied:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait </span>nncp bond0-eth1-eth2 <span class="nt">--for</span> <span class="nv">condition</span><span class="o">=</span>Available <span class="nt">--timeout</span> 2m
+</code></pre></div></div>
+
+<p>List all the Policies applied on the cluster:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nodenetworkconfigurationpolicies
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME              STATUS
+bond0-eth1-eth2   SuccessfullyConfigured
+</code></pre></div></div>
+
+<p>We can also use short name <code class="language-plaintext highlighter-rouge">nncp</code> to reach the same effect:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nncp
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME              STATUS
+bond0-eth1-eth2   SuccessfullyConfigured
+</code></pre></div></div>
+
+<p>By using <code class="language-plaintext highlighter-rouge">-o yaml</code> we obtain the full Policy with its current state:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nncp bond0-eth1-eth2 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># output truncated</span>
+<span class="na">status</span><span class="pi">:</span>
+  <span class="na">conditions</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">message</span><span class="pi">:</span> <span class="s">2/2 nodes successfully configured</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">SuccessfullyConfigured</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">True"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Available</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">SuccessfullyConfigured</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Degraded</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">status</code> section contains conditions (previously used with the <code class="language-plaintext highlighter-rouge">wait</code>
+command). There is one for successful configuration (<code class="language-plaintext highlighter-rouge">Available</code>) and one for a
+failed one (<code class="language-plaintext highlighter-rouge">Degraded</code>). As the output show, the Policy was applied successfully
+on both nodes.</p>
+
+<p>As mentioned in the introduction, for each Policy there is a set of Enactments
+created by the operator. List of Enactments of all Policies and Nodes:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nodenetworkconfigurationenactments
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                     STATUS
+node01.bond0-eth1-eth2   SuccessfullyConfigured
+node02.bond0-eth1-eth2   SuccessfullyConfigured
+</code></pre></div></div>
+
+<p>We can also use short name <code class="language-plaintext highlighter-rouge">nnce</code> to reach the same effect:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                     STATUS
+node01.bond0-eth1-eth2   SuccessfullyConfigured
+node02.bond0-eth1-eth2   SuccessfullyConfigured
+</code></pre></div></div>
+
+<p>By using <code class="language-plaintext highlighter-rouge">-o yaml</code> we obtain the full status of given Enactment:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce node01.bond0-eth1-eth2 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># output truncated</span>
+<span class="na">status</span><span class="pi">:</span>
+  <span class="na">conditions</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">SuccessfullyConfigured</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Failing</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">message</span><span class="pi">:</span> <span class="s">successfully reconciled</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">SuccessfullyConfigured</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">True"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Available</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:09Z"</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">SuccessfullyConfigured</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Progressing</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:04Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:04Z"</span>
+    <span class="na">message</span><span class="pi">:</span> <span class="s">All policy selectors are matching the node</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">AllSelectorsMatching</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">True"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Matching</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">link-aggregation</span><span class="pi">:</span>
+        <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
+        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">eth1</span>
+        <span class="pi">-</span> <span class="s">eth2</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bond</span>
+</code></pre></div></div>
+
+<p>The output contains the <code class="language-plaintext highlighter-rouge">desiredState</code> applied by the Policy for the given Node.
+It also contains a list of conditions. This list is more detailed than the one
+in Policy. It shows whether the Policy matched given Node
+(<code class="language-plaintext highlighter-rouge">AllSelectorsMatching</code>), if the <code class="language-plaintext highlighter-rouge">desiredState</code> is currently being applied on
+the node (<code class="language-plaintext highlighter-rouge">Progressing</code>), if the configuration failed (<code class="language-plaintext highlighter-rouge">Failing</code>) or succeeded
+(<code class="language-plaintext highlighter-rouge">Available</code>).</p>
+
+<!-- TODO: Once we have an article about node selectors, link it here -->
+
+<p>Our Enactment shows that it successfully applied the configuration, let’s use
+<code class="language-plaintext highlighter-rouge">NodeNetworkState</code> to verify it:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nns node01 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Output truncated</span>
+<span class="na">status</span><span class="pi">:</span>
+  <span class="na">currentState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">address</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">192.168.66.127</span>
+          <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
+        <span class="na">auto-dns</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">auto-gateway</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">auto-routes</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">autoconf</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">link-aggregation</span><span class="pi">:</span>
+        <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
+        <span class="na">options</span><span class="pi">:</span> <span class="pi">{}</span>
+        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">eth2</span>
+        <span class="pi">-</span> <span class="s">eth1</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:01</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bond</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">autoconf</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:01</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">autoconf</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:01</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+</code></pre></div></div>
+
+<p>As seen in the output, the configuration is indeed applied and there is a bond
+available with two NICs used as its slaves.</p>
+
+<h2 id="removing-interfaces">Removing interfaces</h2>
+
+<p>One may expect that by removal of the Policy, the applied configuration would be
+reverted. However, that’s not the case. The Policy is not owning the
+configuration on the host, it is merely applying the difference needed to reach
+the desired state. After removal of the Policy, the configuration on the node
+remains the same.</p>
+
+<p>In order to remove a configured interface from nodes, we need to explicitly
+specify it in the Policy. That can by done by changing the <code class="language-plaintext highlighter-rouge">state: up</code> of the
+interface to <code class="language-plaintext highlighter-rouge">state: absent</code>:</p>
+
+<!-- When updating following example, don't forget to update respective attached file -->
+
+<p><a href="/kubernetes-nmstate/user-guide/bond0-eth1-eth2_absent.yaml">Download example</a></p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">bond0-eth1-eth2</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">absent</span>
+
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> bond0-eth1-eth2_absent.yaml
+</code></pre></div></div>
+
+<blockquote>
+  <p><strong>Note:</strong> Alternative approach to <code class="language-plaintext highlighter-rouge">apply</code> would be to use <code class="language-plaintext highlighter-rouge">edit</code> and change the state from <code class="language-plaintext highlighter-rouge">up</code> to <code class="language-plaintext highlighter-rouge">absent</code> manually:</p>
+
+  <div class="language-shell highlighter-rouge">
+<div class="highlight"><pre class="highlight"><code>kubectl edit nncp bond0-eth1-eth2
+</code></pre></div>  </div>
+</blockquote>
+
+<p>Wait for the Policy to be applied and the interface removed:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait </span>nncp bond0-eth1-eth2 <span class="nt">--for</span> <span class="nv">condition</span><span class="o">=</span>Available <span class="nt">--timeout</span> 2m
+</code></pre></div></div>
+
+<p>After the Policy is applied, it is not needed anymore and it can be deleted:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete nncp bond0-eth1-eth2
+</code></pre></div></div>
+
+<h2 id="restore-original-configuration">Restore original configuration</h2>
+
+<p>Another maybe surprising behavior is, that by removing an interface, original
+configuration of the node interfaces is not restored. In case of the bonding it
+means that after it is deleted, its slave NICs won’t come back up, even if they
+had previously configured IP address. The operator is not owning the interfaces
+and does not want to do anything that is not explicitly specified, that’s up to
+the user.</p>
+
+<p><code class="language-plaintext highlighter-rouge">NodeNetworkState</code> shows that both of the NICs are now down and without any IP
+configuration.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nns node01 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># output truncated</span>
+<span class="na">status</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:00</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">down</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:01</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">down</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+</code></pre></div></div>
+
+<p>In order to configure IP on previously enslaved NICs, apply a new Policy:</p>
+
+<!-- When updating following example, don't forget to update respective attached file -->
+
+<p><a href="/kubernetes-nmstate/user-guide/eth1-eth2_up.yaml">Download example</a></p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+<span class="nn">---</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> eth1-eth2_up.yaml
+</code></pre></div></div>
+
+<p>Wait for the Policy to get applied:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait </span>nncp eth1 eth2 <span class="nt">--for</span> <span class="nv">condition</span><span class="o">=</span>Available <span class="nt">--timeout</span> 2m
+</code></pre></div></div>
+
+<p>Both NICs are now back up and with assigned IPs:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nns node01 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># output truncated</span>
+<span class="na">status</span><span class="pi">:</span>
+  <span class="na">currentState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">address</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">192.168.66.126</span>
+          <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
+        <span class="na">auto-dns</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">auto-gateway</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">auto-routes</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">autoconf</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:00</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">address</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">192.168.66.127</span>
+          <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
+        <span class="na">auto-dns</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">auto-gateway</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">auto-routes</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">autoconf</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+      <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:01</span>
+      <span class="na">mtu</span><span class="pi">:</span> <span class="m">1500</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+</code></pre></div></div>
+
+<h2 id="selecting-nodes">Selecting nodes</h2>
+
+<p>All the Policies we used so far were applied on all nodes across the cluster. It
+is however possible to select only a subset of nodes using via a node selector.</p>
+
+<p>In the following example, we configure a VLAN interface with tag 100 over a NIC
+<code class="language-plaintext highlighter-rouge">eth1</code>. This configuration will be done only on node which has labels matching
+all the key-value pairs in the <code class="language-plaintext highlighter-rouge">nodeSelector</code>:</p>
+
+<!-- When updating following example, don't forget to update respective attached file -->
+
+<p><a href="/kubernetes-nmstate/user-guide/vlan100_node01_up.yaml">Download example</a></p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">vlan100</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">nodeSelector</span><span class="pi">:</span>
+    <span class="s">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node01</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1.100</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">vlan</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">vlan</span><span class="pi">:</span>
+        <span class="na">base-iface</span><span class="pi">:</span> <span class="s">eth1</span>
+        <span class="na">id</span><span class="pi">:</span> <span class="m">100</span>
+
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> vlan100_node01_up.yaml
+</code></pre></div></div>
+
+<p>Wait for the Policy to get applied:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait </span>nncp vlan100 <span class="nt">--for</span> <span class="nv">condition</span><span class="o">=</span>Available <span class="nt">--timeout</span> 2m
+</code></pre></div></div>
+
+<p>The list of Enactments then shows that the Policy has been applied only on
+Node <code class="language-plaintext highlighter-rouge">node01</code>, while <code class="language-plaintext highlighter-rouge">node02</code> is reporting <code class="language-plaintext highlighter-rouge">NodeSelectorNotMatching</code>:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME             STATUS
+node01.eth1      SuccessfullyConfigured
+node01.eth2      SuccessfullyConfigured
+node01.vlan100   SuccessfullyConfigured
+node02.eth1      SuccessfullyConfigured
+node02.eth2      SuccessfullyConfigured
+node02.vlan100   NodeSelectorNotMatching
+</code></pre></div></div>
+
+<p>After a closer observation, we can see that it was indeed caused by not-matching
+selectors:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce node02.vlan100 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># output truncated</span>
+<span class="na">status</span><span class="pi">:</span>
+  <span class="na">conditions</span><span class="pi">:</span>
+  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T15:34:26Z"</span>
+    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T15:34:26Z"</span>
+    <span class="na">message</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Unmatching</span><span class="nv"> </span><span class="s">labels:</span><span class="nv"> </span><span class="s">map[kubernetes.io/hostname:node01]'</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">NodeSelectorNotMatching</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Matching</span>
+</code></pre></div></div>
+
+<h2 id="continue-reading">Continue reading</h2>
+
+<p>The following tutorial will guide you through troubleshooting of a failed
+configuration:
+<a href="/kubernetes-nmstate/user-guide/103-troubleshooting.html">Troubleshooting</a></p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+
+      </footer>
+
+      
+
+      
+    </div>
+
+    
+  </article>
+
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/nmstate/kubernetes-nmstate" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+    
+
+    <li><a href="/kubernetes-nmstate/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">© 2020 The Kubernetes NMState team. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/kubernetes-nmstate/assets/js/main.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>

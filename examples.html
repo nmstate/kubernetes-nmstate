@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.20.2 by Michael Rose
+  Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Examples - The Kubernetes NMState project</title>
+<meta name="description" content="A declarative API for Kubernetes node network management">
+
+
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="The Kubernetes NMState project">
+<meta property="og:title" content="Examples">
+<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/examples.html">
+
+
+  <meta property="og:description" content="A declarative API for Kubernetes node network management">
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="canonical" href="https://nmstate.github.io/kubernetes-nmstate/examples.html">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "The Kubernetes NMState team",
+      "url": "https://nmstate.github.io/kubernetes-nmstate/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/kubernetes-nmstate/feed.xml" type="application/atom+xml" rel="alternate" title="The Kubernetes NMState project Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/kubernetes-nmstate/assets/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/kubernetes-nmstate/"><img src="/kubernetes-nmstate/assets/images/logo/fullcolor.png" alt=""></a>
+        
+        <a class="site-title" href="/kubernetes-nmstate/">
+          The Kubernetes NMState project
+          
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/deployment.html">Deployment</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/user-guide.html">User Guide</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/examples.html">Examples</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="https://github.com/nmstate/kubernetes-nmstate">GitHub</a>
+            </li>
+</ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name"></h3>
+    
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+    
+      
+      
+      
+      
+    
+    
+      
+
+<nav class="nav__list">
+  
+  <input id="ac-toc" name="accordion-toc" type="checkbox">
+  <label for="ac-toc">Toggle Menu</label>
+  <ul class="nav__items">
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/deployment.html"><span class="nav__sub-title">Deployment</span></a>
+        
+
+        
+        <ul>
+          
+            <li><a href="/kubernetes-nmstate/deployment/local-cluster.html">Local cluster</a></li>
+          
+            <li><a href="/kubernetes-nmstate/deployment/arbitrary-cluster.html">Arbitrary cluster</a></li>
+          
+        </ul>
+        
+      </li>
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/user-guide.html"><span class="nav__sub-title">User Guide</span></a>
+        
+
+        
+        <ul>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/101-reporting.html">Reporting</a></li>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/102-configuration.html">Configuration</a></li>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/103-troubleshooting.html">Troubleshooting</a></li>
+          
+        </ul>
+        
+      </li>
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/examples.html"><span class="nav__sub-title">Examples</span></a>
+        
+
+        
+      </li>
+    
+      <li>
+        
+          <a href="https://github.com/nmstate/kubernetes-nmstate"><span class="nav__sub-title">GitHub</span></a>
+        
+
+        
+      </li>
+    
+  </ul>
+</nav>
+
+    
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Examples">
+    
+    
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Examples
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+          <aside class="sidebar__right sticky">
+            <nav class="toc">
+              <header><h4 class="nav__title">
+<i class="fas fa-network-wired"></i> NNCP Examples</h4></header>
+              <ul class="toc__menu">
+  <li><a href="#linux-bonding">Linux bonding</a></li>
+  <li><a href="#linux-bonding-with-vlan">Linux bonding with VLAN</a></li>
+  <li><a href="#dhcp">DHCP</a></li>
+  <li><a href="#dns">DNS</a></li>
+  <li><a href="#ethernet">Ethernet</a></li>
+  <li><a href="#linux-bridge">Linux bridge</a></li>
+  <li><a href="#open-vswitch-bridge-interface">Open vSwitch bridge interface</a></li>
+  <li><a href="#open-vswitch-bridge">Open vSwitch bridge</a></li>
+  <li><a href="#routes">Routes</a></li>
+  <li><a href="#static-ip">Static IP</a></li>
+  <li><a href="#vlan">VLAN</a></li>
+  <li><a href="#worker-selector">Worker selector</a></li>
+</ul>
+
+            </nav>
+          </aside>
+        
+        <h2 id="linux-bonding">Linux bonding</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1betaa1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">bond</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bond</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">link-aggregation</span><span class="pi">:</span>
+        <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
+        <span class="na">options</span><span class="pi">:</span>
+          <span class="na">miimon</span><span class="pi">:</span> <span class="s1">'</span><span class="s">140'</span>
+        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">eth1</span>
+        <span class="pi">-</span> <span class="s">eth2</span>
+
+</code></pre></div></div>
+
+<h2 id="linux-bonding-with-vlan">Linux bonding with VLAN</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">bond-vlan</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">bond</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">link-aggregation</span><span class="pi">:</span>
+        <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
+        <span class="na">options</span><span class="pi">:</span>
+          <span class="na">miimon</span><span class="pi">:</span> <span class="s1">'</span><span class="s">140'</span>
+        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">eth1</span>
+        <span class="pi">-</span> <span class="s">eth2</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">bond0.102</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">vlan</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">vlan</span><span class="pi">:</span>
+        <span class="na">base-iface</span><span class="pi">:</span> <span class="s">bond0</span>
+        <span class="na">id</span><span class="pi">:</span> <span class="m">102</span>
+
+</code></pre></div></div>
+
+<h2 id="dhcp">DHCP</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">dhcp</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+<h2 id="dns">DNS</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">dns</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">dns-resolver</span><span class="pi">:</span>
+      <span class="na">config</span><span class="pi">:</span>
+        <span class="na">search</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">example.com</span>
+        <span class="pi">-</span> <span class="s">example.org</span>
+        <span class="na">server</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">8.8.8.8</span>
+        <span class="pi">-</span> <span class="s">2001:4860:4860::8888</span>
+
+</code></pre></div></div>
+
+<h2 id="ethernet">Ethernet</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ethernet</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+<h2 id="linux-bridge">Linux bridge</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">linux-bridge</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">br1</span>
+      <span class="na">description</span><span class="pi">:</span> <span class="s">Linux bridge with eth1 as a port</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">linux-bridge</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">bridge</span><span class="pi">:</span>
+        <span class="na">options</span><span class="pi">:</span>
+          <span class="na">stp</span><span class="pi">:</span>
+            <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">port</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+
+</code></pre></div></div>
+
+<h2 id="open-vswitch-bridge-interface">Open vSwitch bridge interface</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ovs-bridge-iface</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ovs0</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">ovs-interface</span>
+        <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+        <span class="na">ipv4</span><span class="pi">:</span>
+          <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+          <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">br1</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s">ovs bridge with eth1 as a port and ovs0 as an internal interface</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">ovs-bridge</span>
+        <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+        <span class="na">bridge</span><span class="pi">:</span>
+          <span class="na">options</span><span class="pi">:</span>
+            <span class="na">stp</span><span class="pi">:</span> <span class="no">true</span>
+          <span class="na">port</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">ovs0</span>
+
+</code></pre></div></div>
+
+<h2 id="open-vswitch-bridge">Open vSwitch bridge</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">ovs-bridge</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">br1</span>
+      <span class="na">description</span><span class="pi">:</span> <span class="s">ovs bridge with eth1 as a port</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ovs-bridge</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">bridge</span><span class="pi">:</span>
+        <span class="na">options</span><span class="pi">:</span>
+          <span class="na">stp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">port</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+
+</code></pre></div></div>
+
+<h2 id="routes">Routes</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">route</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">nodeSelector</span><span class="pi">:</span>
+    <span class="s">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node01</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+        <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+        <span class="na">ipv4</span><span class="pi">:</span>
+          <span class="na">address</span><span class="pi">:</span>
+          <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">192.0.2.251</span>
+            <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
+          <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+          <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+    <span class="na">routes</span><span class="pi">:</span>
+      <span class="na">config</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">destination</span><span class="pi">:</span> <span class="s">198.51.100.0/24</span>
+        <span class="na">metric</span><span class="pi">:</span> <span class="m">150</span>
+        <span class="na">next-hop-address</span><span class="pi">:</span> <span class="s">192.0.2.1</span>
+        <span class="na">next-hop-interface</span><span class="pi">:</span> <span class="s">eth1</span>
+        <span class="na">table-id</span><span class="pi">:</span> <span class="m">254</span>
+
+</code></pre></div></div>
+
+<h2 id="static-ip">Static IP</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">static-ip</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">nodeSelector</span><span class="pi">:</span>
+    <span class="s">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node01</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">address</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">10.244.0.1</span>
+          <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+<h2 id="vlan">VLAN</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">vlan</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1.102</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">vlan</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+<h2 id="worker-selector">Worker selector</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">worker-selector</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="c1"># Note that workers on Kubernetes are not labeled by default</span>
+  <span class="na">nodeSelector</span><span class="pi">:</span>
+    <span class="s">node-role.kubernetes.io/worker</span><span class="pi">:</span> <span class="s2">"</span><span class="s">"</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+
+      </footer>
+
+      
+
+      
+    </div>
+
+    
+  </article>
+
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/nmstate/kubernetes-nmstate" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+    
+
+    <li><a href="/kubernetes-nmstate/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">© 2020 The Kubernetes NMState team. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/kubernetes-nmstate/assets/js/main.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>

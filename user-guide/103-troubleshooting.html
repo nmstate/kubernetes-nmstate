@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.20.2 by Michael Rose
+  Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+--><html lang="en" class="no-js">
+  <head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Troubleshooting - The Kubernetes NMState project</title>
+<meta name="description" content="A declarative API for Kubernetes node network management">
+
+
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="The Kubernetes NMState project">
+<meta property="og:title" content="Troubleshooting">
+<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting.html">
+
+
+  <meta property="og:description" content="A declarative API for Kubernetes node network management">
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="canonical" href="https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting.html">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "The Kubernetes NMState team",
+      "url": "https://nmstate.github.io/kubernetes-nmstate/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/kubernetes-nmstate/feed.xml" type="application/atom+xml" rel="alternate" title="The Kubernetes NMState project Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/kubernetes-nmstate/assets/css/main.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/kubernetes-nmstate/"><img src="/kubernetes-nmstate/assets/images/logo/fullcolor.png" alt=""></a>
+        
+        <a class="site-title" href="/kubernetes-nmstate/">
+          The Kubernetes NMState project
+          
+        </a>
+        <ul class="visible-links">
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/deployment.html">Deployment</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/user-guide.html">User Guide</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="/kubernetes-nmstate/examples.html">Examples</a>
+            </li>
+<li class="masthead__menu-item">
+              <a href="https://github.com/nmstate/kubernetes-nmstate">GitHub</a>
+            </li>
+</ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name"></h3>
+    
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+    
+      
+      
+      
+      
+    
+    
+      
+
+<nav class="nav__list">
+  
+  <input id="ac-toc" name="accordion-toc" type="checkbox">
+  <label for="ac-toc">Toggle Menu</label>
+  <ul class="nav__items">
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/deployment.html"><span class="nav__sub-title">Deployment</span></a>
+        
+
+        
+        <ul>
+          
+            <li><a href="/kubernetes-nmstate/deployment/local-cluster.html">Local cluster</a></li>
+          
+            <li><a href="/kubernetes-nmstate/deployment/arbitrary-cluster.html">Arbitrary cluster</a></li>
+          
+        </ul>
+        
+      </li>
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/user-guide.html"><span class="nav__sub-title">User Guide</span></a>
+        
+
+        
+        <ul>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/101-reporting.html">Reporting</a></li>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/102-configuration.html">Configuration</a></li>
+          
+            <li><a href="/kubernetes-nmstate/user-guide/103-troubleshooting.html" class="active">Troubleshooting</a></li>
+          
+        </ul>
+        
+      </li>
+    
+      <li>
+        
+          <a href="/kubernetes-nmstate/examples.html"><span class="nav__sub-title">Examples</span></a>
+        
+
+        
+      </li>
+    
+      <li>
+        
+          <a href="https://github.com/nmstate/kubernetes-nmstate"><span class="nav__sub-title">GitHub</span></a>
+        
+
+        
+      </li>
+    
+  </ul>
+</nav>
+
+    
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Troubleshooting">
+    
+    
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Troubleshooting
+</h1>
+          
+
+
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <p>Node network configuration is a risky business. A lot can go wrong and when it
+does, it can render the whole node unreachable and non-operational. This guide
+will show you how to obtain information about failed configuration and how does
+the operator protect the user from breaking the cluster networking.</p>
+
+<h2 id="invalid-configuration">Invalid configuration</h2>
+
+<p>If any of the following cases render the configuration faulty, the setup will be
+automatically rolled back and Enactment will report the failure.</p>
+
+<ul>
+  <li>Configuration fails to be applied on the host (due missing interfaces, inability to obtain IP, invalid attributes, …)</li>
+  <li>Connectivity to the default gateway is broken</li>
+  <li>Connectivity to the API server is broken</li>
+</ul>
+
+<p>In the following example, we will create a Policy configuring and unavailable
+interface and observe the results:</p>
+
+<!-- When updating following example, don't forget to update respective attached file -->
+
+<p><a href="/kubernetes-nmstate/user-guide/eth666_up.yaml">Download example</a></p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">eth666</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth666</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> eth666_up.yaml
+</code></pre></div></div>
+
+<p>Let’s wait for <code class="language-plaintext highlighter-rouge">Degraded</code> condition since we anticipate the Policy to fail.
+Usually, one would wait for <code class="language-plaintext highlighter-rouge">Available</code> until the timeout.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait </span>nncp eth666 <span class="nt">--for</span> <span class="nv">condition</span><span class="o">=</span>Degraded <span class="nt">--timeout</span> 2m
+</code></pre></div></div>
+
+<p>We can list the Enactments to see why we are in the <code class="language-plaintext highlighter-rouge">Degraded</code> state:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME            STATUS
+node01.eth666   FailedToConfigure
+node02.eth666   FailedToConfigure
+</code></pre></div></div>
+
+<p>Both Enactments have <code class="language-plaintext highlighter-rouge">FailedToConfigure</code>, let’s see why:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce node01.eth666 <span class="nt">-o</span> yaml
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># output truncated
+status:
+  conditions:
+  - lastHearbeatTime: "2020-02-08T20:23:15Z"
+    lastTransitionTime: "2020-02-08T20:23:15Z"
+    message: |-
+      error reconciling NodeNetworkConfigurationPolicy at desired state apply: , failed to execute nmstatectl set --no-commit --timeout 240: 'exit status 1' '' '2020-02-08 20:23:09,563 root         DEBUG    Checkpoint /org/freedesktop/NetworkManager/Checkpoint/3 created for all devices: 240
+      2020-02-08 20:23:09,564 root         DEBUG    Adding new interfaces: ['eth666']
+      2020-02-08 20:23:09,564 root         DEBUG    Connection settings for ConnectionSetting.create:
+      id: eth666
+      iface: eth666
+      uuid: 70b556e5-e2da-4e46-a98f-531bc73d0bf5
+      type: 802-3-ethernet
+      autoconnect: True
+      autoconnect_slaves: &lt;enum NM_SETTING_CONNECTION_AUTOCONNECT_SLAVES_YES of type NM.SettingConnectionAutoconnectSlaves&gt;
+      2020-02-08 20:23:09,565 root         DEBUG    Editing interfaces: []
+      2020-02-08 20:23:09,567 root         DEBUG    Executing NM action: func=add_connection_async
+      2020-02-08 20:23:09,572 root         DEBUG    Connection adding succeeded: dev=eth666
+      2020-02-08 20:23:09,572 root         DEBUG    Executing NM action: func=safe_activate_async
+      2020-02-08 20:23:09,573 root         ERROR    NM main-loop aborted: Connection activation failed on connection_id eth666: error=nm-manager-error-quark: No suitable device found for this connection (devicecni0 not available because profile is not compatible with device (mismatching interface name)). (3)      2020-02-08 20:23:09,576 root         DEBUG    Checkpoint /org/freedesktop/NetworkManager/Checkpoint/3 rollback executed: dbus.Dictionary({dbus.String('/org/freedesktop/NetworkManager/Devices/9'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/10'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/5'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/8'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/3'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/7'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/2'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/6'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/1'): dbus.UInt32(0), dbus.String('/org/freedesktop/NetworkManager/Devices/4'): dbus.UInt32(0)}, signature=dbus.Signature('su'))
+      Traceback (most recent call last):
+        File "/usr/bin/nmstatectl", line 11, in &lt;module&gt;
+          load_entry_point('nmstate==0.2.2', 'console_scripts', 'nmstatectl')()
+        File "/usr/lib/python3.7/site-packages/nmstatectl/nmstatectl.py", line 59, in main
+          return args.func(args)
+        File "/usr/lib/python3.7/site-packages/nmstatectl/nmstatectl.py", line 221, in apply
+          return apply_state(statedata, args.verify, args.commit, args.timeout)
+        File "/usr/lib/python3.7/site-packages/nmstatectl/nmstatectl.py", line 237, in apply_state
+          checkpoint = libnmstate.apply(state, verify_change, commit, timeout)
+        File "/usr/lib/python3.7/site-packages/libnmstate/netapplier.py", line 66, in apply
+          state.State(desired_state), verify_change, commit, rollback_timeout
+        File "/usr/lib/python3.7/site-packages/libnmstate/netapplier.py", line 148, in _apply_ifaces_state
+          con_profiles=ifaces_add_configs + ifaces_edit_configs,
+        File "/usr/lib64/python3.7/contextlib.py", line 119, in __exit__
+          next(self.gen)
+        File "/usr/lib/python3.7/site-packages/libnmstate/netapplier.py", line 215, in _setup_providers
+          mainloop.error
+      libnmstate.error.NmstateLibnmError: Unexpected failure of libnm when running the mainloop: run execution
+      '
+    reason: FailedToConfigure
+    status: "True"
+    type: Failing
+</code></pre></div></div>
+
+<p>The message in <code class="language-plaintext highlighter-rouge">Failing</code> condition is currently a little bloated since it
+contains the whole error output of a failed call. The interesting message is in
+the <code class="language-plaintext highlighter-rouge">ERROR</code> log line:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connection activation failed on connection_id eth666: error=nm-manager-error-quark: No suitable device found for this connection
+</code></pre></div></div>
+
+<p>The configuration therefore failed due to absence of NIC <code class="language-plaintext highlighter-rouge">eth666</code> on the node.
+Now we can either fix the Policy to edit an available interface or safely remove
+it:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete nncp eth666
+</code></pre></div></div>
+
+<h2 id="continue-reading">Continue reading</h2>
+
+<p>This was the last article from the introduction series. You can continue reading
+specific recipes on how to configure various interface types. You will find them
+in the <a href="/kubernetes-nmstate/deployment.html">Deployment</a> or <a href="/kubernetes-nmstate/examples.html">Examples</a> pages.</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+
+      </footer>
+
+      
+
+      
+    </div>
+
+    
+  </article>
+
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+
+    
+      
+        
+          <li><a href="https://github.com/nmstate/kubernetes-nmstate" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+    
+
+    <li><a href="/kubernetes-nmstate/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">© 2020 The Kubernetes NMState team. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/kubernetes-nmstate/assets/js/main.min.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
