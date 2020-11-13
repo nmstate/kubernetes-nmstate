@@ -6,11 +6,11 @@ baseurl="kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/${PULL_NUMBER}/pu
 sed -i "s#^url:.*#url: \"$url\"#" docs/_config.yaml
 sed -i "s#^baseurl:.*#baseurl: \"$baseurl\"#" docs/_config.yaml
 
-# Build the docs
-docker build docs --build-arg BRANCH=${PULL_BASE_REF} -t kubernetes-nmstate-docs
+
+docker run -v $(pwd)/docs:/docs/ ruby make -C docs install check
 
 # Copy the docs to the artifacts
 mkdir -p $ARTIFACTS/gh-pages
-docker run -v $ARTIFACTS:/artifacts kubernetes-nmstate-docs cp -r docs/build/$baseurl /artifacts
+rsync -rt --links docs/build/$baseurl $ARTIFACTS/gh-pages
 
 echo "kubernetes-nmstate preview URL: ${url}/${baseurl}index.html"
