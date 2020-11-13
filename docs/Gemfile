@@ -3,6 +3,10 @@
 source 'https://rubygems.org'
 
 gem 'jekyll', '~> 4.0'
+gem 'jekyll-spaceship'
+gem "minimal-mistakes-jekyll"
+gem 'html-proofer'
+gem 'jekyll-github-metadata'
 
 group :jekyll_plugins do
   gem 'jekyll-timeago', '~> 0.13.1'

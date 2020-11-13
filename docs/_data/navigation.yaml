@@ -1,0 +1,22 @@
+main:
+  - title: Deployment
+    url: deployment.html
+    children:
+      - title: "Local cluster"
+        url: /deployment/local-cluster.html
+      - title: "Arbitrary cluster"
+        url: /deployment/arbitrary-cluster.html
+  - title: User Guide
+    url: /user-guide.html
+    children:
+      - title: "Reporting"
+        url: /user-guide/101-reporting.html
+      - title: "Configuration"
+        url: /user-guide/102-configuration.html
+      - title: "Troubleshooting"
+        url: /user-guide/103-troubleshooting.html
+  - title: Examples
+    url: /examples.html
+  - title: "GitHub"
+    icon: "fab fa-fw fa-github"
+    url: https://github.com/nmstate/kubernetes-nmstate

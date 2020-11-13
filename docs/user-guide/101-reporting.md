@@ -1,4 +1,7 @@
-# Introduction: Reporting
+---
+title: "Reporting"
+tag: "user-guide"
+---
 
 The operator periodically reports state of node network interfaces to the API
 server. These reports are available through `NodeNetworkState` objects that are
@@ -187,4 +190,4 @@ The `NodeNetworkState` will now list all interfaces seen on the host.
 ## Continue reading
 
 The following tutorial will guide you through the configuration of node
-networking: [Configuration](user-guide-102-configuration.md)
+networking: [Configuration]({{ "user-guide/102-configuration.html" | relative_url }} )

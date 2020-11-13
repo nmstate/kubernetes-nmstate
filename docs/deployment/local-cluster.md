@@ -1,4 +1,7 @@
-# Deployment on Local Cluster
+---
+title: "Deployment on Local Cluster"
+tag: "deployment"
+---
 
 Kubernetes-nmstate project allows you to spin up a virtualized
 Kubernets/OpenShift cluster thanks to
@@ -8,11 +11,11 @@ cluster with two nodes and preinstalled node dependencies. Then we will deploy
 kubernetes-nmstate from local sources.
 
 If you want to deploy kubernetes-nmstate on your arbitrary cluster, read
-the [deployment on arbitrary cluster guide](deployment-arbitrary-cluster.md).
+the [deployment on arbitrary cluster guide]({{ "deployment/arbitrary-cluster.html" | relative_url }}).
 
 Start your local cluster. If you want to use OpenShift instead of Kubernetes or
 a different amount of nodes, check the
-[development guide](../CONTRIBUTING.md#local-cluster).
+[development guide]({{ site.github.repository_url }}/blob/master/CONTRIBUTING.md#local-cluster).
 
 Start the local cluster
 
@@ -54,5 +57,5 @@ cluster/kubectl.sh proxy --port=8080 --disable-filter=true &
 ```
 
 You can stop here and play with the cluster on your own or continue with the
-other [user guides](../README.md#deployment-and-usage) that will guide you
+other [user guides]({{ site.github.repository_url }}/blob/master/README.md#deployment-and-usage) that will guide you
 through requesting of node interfaces and their configuration.
