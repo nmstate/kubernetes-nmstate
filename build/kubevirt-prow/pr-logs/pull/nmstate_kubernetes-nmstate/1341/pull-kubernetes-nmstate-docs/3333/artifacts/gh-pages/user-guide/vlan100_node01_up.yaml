@@ -1,0 +1,16 @@
+# When updating this file, don't forget to update the tutorial.
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: vlan100
+spec:
+  nodeSelector:
+    kubernetes.io/hostname: node01
+  desiredState:
+    interfaces:
+    - name: eth1.100
+      type: vlan
+      state: up
+      vlan:
+        base-iface: eth1
+        id: 100

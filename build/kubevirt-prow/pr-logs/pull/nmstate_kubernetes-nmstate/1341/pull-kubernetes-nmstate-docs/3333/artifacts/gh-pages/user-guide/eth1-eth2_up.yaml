@@ -1,0 +1,28 @@
+# When updating this file, don't forget to update the tutorial.
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: eth1
+spec:
+  desiredState:
+    interfaces:
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true
+---
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: eth2
+spec:
+  desiredState:
+    interfaces:
+    - name: eth2
+      type: ethernet
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true

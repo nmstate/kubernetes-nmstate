@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/user-guide/101-reporting.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/user-guide/102-configuration.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/user-guide/103-troubleshooting.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/deployment/arbitrary-cluster.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/deployment.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/examples.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/deployment/local-cluster.html</loc>
+</url>
+<url>
+<loc>https://storage.googleapis.com/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/1341/pull-kubernetes-nmstate-docs/3333/artifacts/gh-pages/user-guide.html</loc>
+</url>
+</urlset>

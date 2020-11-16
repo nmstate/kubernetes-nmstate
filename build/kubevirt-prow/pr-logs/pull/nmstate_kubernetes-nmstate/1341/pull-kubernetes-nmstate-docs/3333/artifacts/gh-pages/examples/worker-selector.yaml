@@ -1,0 +1,16 @@
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: worker-selector
+spec:
+  # Note that workers on Kubernetes are not labeled by default
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  desiredState:
+    interfaces:
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true

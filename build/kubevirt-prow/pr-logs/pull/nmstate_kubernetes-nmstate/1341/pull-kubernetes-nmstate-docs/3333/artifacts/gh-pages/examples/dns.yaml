@@ -1,0 +1,14 @@
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: dns
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search:
+        - example.com
+        - example.org
+        server:
+        - 8.8.8.8
+        - 2001:4860:4860::8888
