@@ -83,7 +83,7 @@ func (ec *EnactmentConditions) NotifySuccess() {
 func (ec *EnactmentConditions) Reset() {
 	ec.logger.Info("Reset")
 	err := ec.updateEnactmentConditions(func(conditionList *nmstate.ConditionList, message string) {
-		conditionList = &nmstate.ConditionList{}
+		*conditionList = nil
 	}, "")
 	if err != nil {
 		ec.logger.Error(err, "Error resetting conditions")
