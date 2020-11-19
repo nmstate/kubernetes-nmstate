@@ -75,7 +75,7 @@ func enactmentConditionsStatusConsistently(node string) AsyncAssertion {
 	return enactmentConditionsStatusForPolicyConsistently(node, TestPolicy)
 }
 
-// In case a condition does not exist create with Unknonw type, this way
+// In case a condition does not exist create with Unknown type, this way
 // is easier to just use gomega matchers to check in a homogenous way that
 // condition is not present or unknown.
 func policyConditionsStatus(policyName string) shared.ConditionList {

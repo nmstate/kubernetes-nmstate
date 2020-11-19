@@ -20,11 +20,13 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,12 +43,15 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var (
-	nodeName       string
-	watchPredicate = predicate.Funcs{
+	nodeName                   string
+	nodeConfigurationTimeout   = 5 * time.Minute
+	nodeRunningUpdateRetryTime = 5 * time.Second
+	watchPredicate             = predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
 			return true
 		},
@@ -128,6 +133,81 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	})
 }
 
+func (r *NodeNetworkConfigurationPolicyReconciler) getEnactmentCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
+	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
+	err := r.Client.List(context.TODO(), &enactments, policyLabelFilter)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting enactment list failed")
+	}
+	enactmentCount := enactmentconditions.Count(enactments, policy.Generation)
+	return enactmentCount, nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) setNodeRunningUpdate(policyKey types.NamespacedName) error {
+	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	err := r.Client.Get(context.TODO(), policyKey, policy)
+	if err != nil {
+		return err
+	}
+	if policy.Status.NodeRunningUpdate != "" {
+		return fmt.Errorf("another node is working on configuration")
+	}
+	policy.Status.NodeRunningUpdate = nodeName
+	policy.Status.NodeUpdateStart = &metav1.Time{Time: time.Now()}
+	err = r.Client.Status().Update(context.TODO(), policy)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(
+	policy *nmstatev1beta1.NodeNetworkConfigurationPolicy,
+	ec *enactmentconditions.EnactmentConditions,
+) (ctrl.Result, error) {
+	if policy.Status.NodeRunningUpdate != "" && metav1.Now().Sub(policy.Status.NodeUpdateStart.Time) > nodeConfigurationTimeout {
+		// a node has been running the update for too long
+		errmsg := fmt.Errorf("A node has been configuring for too long, aborting")
+		ec.NotifyFailedToConfigure(errmsg)
+		return reconcile.Result{}, errmsg
+	}
+	err := r.setNodeRunningUpdate(types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()})
+	if err != nil {
+		return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
+	}
+	return ctrl.Result{}, nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(policyKey types.NamespacedName) {
+	instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := r.Client.Get(context.TODO(), policyKey, instance)
+		if err != nil {
+			r.Log.Info("Failed to get policy, retrying")
+			return err
+		}
+		// release only if we are the owner
+		if instance.Status.NodeRunningUpdate != nodeName {
+			return nil
+		}
+
+		instance.Status.NodeRunningUpdate = ""
+		instance.Status.NodeUpdateStart = nil
+
+		err = r.Client.Status().Update(context.TODO(), instance)
+		if err != nil {
+			if apierrors.IsConflict(err) {
+				r.Log.Info("Failed to update policy status, retrying")
+			} else {
+				r.Log.Error(err, "Failed to release NodeRunningUpdate")
+			}
+			return err
+		}
+		return nil
+	})
+}
+
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
 // and what is in the NodeNetworkConfigurationPolicy.Spec
 // Note:
@@ -161,6 +241,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 	enactmentConditions := enactmentconditions.New(r.Client, nmstateapi.EnactmentKey(nodeName, instance.Name))
 
+	if !instance.Spec.Parallel {
+		defer r.releaseNodeRunningUpdate(request.NamespacedName)
+	}
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
@@ -180,6 +263,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 	enactmentConditions.NotifyMatching()
 
+	if !instance.Spec.Parallel {
+		res, err := r.claimNodeRunningUpdate(instance, &enactmentConditions)
+		if err != nil {
+			return res, err
+		}
+	}
+
 	enactmentConditions.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(r.Client, instance.Spec.DesiredState)
 	if err != nil {
@@ -187,6 +277,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 		enactmentConditions.NotifyFailedToConfigure(errmsg)
 		log.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
+
 		return ctrl.Result{}, nil
 	}
 	log.Info("nmstate", "output", nmstateOutput)

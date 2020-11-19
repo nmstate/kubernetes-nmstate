@@ -28,7 +28,7 @@ export KUBEVIRT_PROVIDER ?= k8s-1.19
 export KUBEVIRT_NUM_NODES ?= 2 # 1 master, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
-export E2E_TEST_TIMEOUT ?= 40m
+export E2E_TEST_TIMEOUT ?= 60m
 
 e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
 
