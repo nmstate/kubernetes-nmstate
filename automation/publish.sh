@@ -20,6 +20,7 @@ source automation/check-patch.setup.sh
         IMAGE_REGISTRY=${image_registry}  \
         IMAGE_REPO=${image_repo} \
         push-handler
+        push-operator
 )
 
 # We don't have a versioned docs webpage so we only update it from master and
