@@ -19,7 +19,7 @@ source automation/check-patch.setup.sh
     make \
         IMAGE_REGISTRY=${image_registry}  \
         IMAGE_REPO=${image_repo} \
-        push-handler
+        push-handler \
         push-operator
 )
 
