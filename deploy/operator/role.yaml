@@ -1,65 +1,24 @@
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  creationTimestamp: null
-  name: nmstate-operator
-  namespace: {{ .OperatorNamespace }}
-rules:
-- apiGroups:
-  - ""
-  resources:
-  - services
-  - endpoints
-  - persistentvolumeclaims
-  - events
-  - configmaps
-  - secrets
-  - pods
-  verbs:
-  - '*'
-- apiGroups:
-  - apps
-  resources:
-  - deployments
-  - daemonsets
-  - replicasets
-  - statefulsets
-  verbs:
-  - '*'
-- apiGroups:
-  - policy
-  resources:
-  - poddisruptionbudgets
-  verbs:
-  - '*'
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
   name: nmstate-operator
-  namespace: {{ .OperatorNamespace }}
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - serviceaccounts
+  - statefulsets
+  verbs:
+  - '*'
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
-  verbs:
-  - '*'
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterroles
-  - clusterrolebindings
-  - rolebindings
-  - roles
-  verbs:
-  - '*'
-- apiGroups:
-  - nmstate.io
-  resources:
-  - '*'
   verbs:
   - '*'
 - apiGroups:
@@ -71,17 +30,60 @@ rules:
 - apiGroups:
   - apps
   resources:
-  - deployments
   - daemonsets
+  - deployments
   - replicasets
   - statefulsets
   verbs:
   - '*'
 - apiGroups:
+  - nmstate.io
+  resources:
+  - '*'
+  verbs:
+  - '*'
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  - rolebindings
+  - roles
+  verbs:
+  - '*'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  creationTimestamp: null
+  name: nmstate-operator
+  namespace: '{{ .OperatorNamespace }}'
+rules:
+- apiGroups:
   - ""
   resources:
-  - serviceaccounts
   - configmaps
-  - namespaces
+  - endpoints
+  - events
+  - persistentvolumeclaims
+  - pods
+  - secrets
+  - services
   verbs:
-  - "*"
+  - '*'
+- apiGroups:
+  - apps
+  resources:
+  - daemonsets
+  - deployments
+  - replicasets
+  - statefulsets
+  verbs:
+  - '*'
+- apiGroups:
+  - policy
+  resources:
+  - poddisruptionbudgets
+  verbs:
+  - '*'
