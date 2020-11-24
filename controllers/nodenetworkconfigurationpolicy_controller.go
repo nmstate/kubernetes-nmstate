@@ -20,7 +20,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -165,18 +164,14 @@ func (r *NodeNetworkConfigurationPolicyReconciler) setNodeRunningUpdate(policyKe
 func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(
 	policy *nmstatev1beta1.NodeNetworkConfigurationPolicy,
 	ec *enactmentconditions.EnactmentConditions,
-) (ctrl.Result, error) {
+) error {
 	if policy.Status.NodeRunningUpdate != "" && metav1.Now().Sub(policy.Status.NodeUpdateStart.Time) > nodeConfigurationTimeout {
 		// a node has been running the update for too long
-		errmsg := fmt.Errorf("A node has been configuring for too long, aborting")
-		ec.NotifyFailedToConfigure(errmsg)
-		return reconcile.Result{}, errmsg
+		err := fmt.Errorf("A node has been configuring for too long, aborting")
+		ec.NotifyFailedToConfigure(err)
+		return err
 	}
-	err := r.setNodeRunningUpdate(types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()})
-	if err != nil {
-		return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
-	}
-	return ctrl.Result{}, nil
+	return r.setNodeRunningUpdate(types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()})
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(policyKey types.NamespacedName) {
@@ -184,27 +179,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(poli
 	_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		err := r.Client.Get(context.TODO(), policyKey, instance)
 		if err != nil {
-			r.Log.Info("Failed to get policy, retrying")
 			return err
-		}
-		// release only if we are the owner
-		if instance.Status.NodeRunningUpdate != nodeName {
-			return nil
 		}
 
 		instance.Status.NodeRunningUpdate = ""
 		instance.Status.NodeUpdateStart = nil
 
-		err = r.Client.Status().Update(context.TODO(), instance)
-		if err != nil {
-			if apierrors.IsConflict(err) {
-				r.Log.Info("Failed to update policy status, retrying")
-			} else {
-				r.Log.Error(err, "Failed to release NodeRunningUpdate")
-			}
-			return err
-		}
-		return nil
+		return r.Client.Status().Update(context.TODO(), instance)
 	})
 }
 
@@ -241,9 +222,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 	enactmentConditions := enactmentconditions.New(r.Client, nmstateapi.EnactmentKey(nodeName, instance.Name))
 
-	if !instance.Spec.Parallel {
-		defer r.releaseNodeRunningUpdate(request.NamespacedName)
-	}
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
@@ -264,10 +242,15 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 	enactmentConditions.NotifyMatching()
 
 	if !instance.Spec.Parallel {
-		res, err := r.claimNodeRunningUpdate(instance, &enactmentConditions)
+		err := r.claimNodeRunningUpdate(instance, &enactmentConditions)
 		if err != nil {
-			return res, err
+			if apierrors.IsConflict(err) {
+				return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
+			} else {
+				return ctrl.Result{}, err
+			}
 		}
+		defer r.releaseNodeRunningUpdate(request.NamespacedName)
 	}
 
 	enactmentConditions.NotifyProgressing()
@@ -277,7 +260,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 		enactmentConditions.NotifyFailedToConfigure(errmsg)
 		log.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
-
 		return ctrl.Result{}, nil
 	}
 	log.Info("nmstate", "output", nmstateOutput)

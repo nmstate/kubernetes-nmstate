@@ -51,7 +51,6 @@ spec:
               parallel:
                 description: When set to true, changes are applied to all nodes in parallel
                 type: boolean
-                x-kubernetes-preserve-unknown-fields: true
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
@@ -79,10 +78,10 @@ spec:
                   type: object
                 type: array
               nodeRunningUpdate:
-                description: NodeRunningUpdate field is used for serializing cluster nodes configuration
+                description: NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
                 type: string
               nodeUpdateStart:
-                description: NodeUpdateStart marks starting time of a node on a policy configuration
+                description: NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
                 format: date-time
                 type: string
             type: object
@@ -124,7 +123,6 @@ spec:
               parallel:
                 description: When set to true, changes are applied to all nodes in parallel
                 type: boolean
-                x-kubernetes-preserve-unknown-fields: true
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
@@ -152,10 +150,10 @@ spec:
                   type: object
                 type: array
               nodeRunningUpdate:
-                description: NodeRunningUpdate field is used for serializing cluster nodes configuration
+                description: NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
                 type: string
               nodeUpdateStart:
-                description: NodeUpdateStart marks starting time of a node on a policy configuration
+                description: NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
                 format: date-time
                 type: string
             type: object

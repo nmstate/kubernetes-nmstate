@@ -16,7 +16,6 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`
 
-	// +kubebuilder:validation:XPreserveUnknownFields
 	// When set to true, changes are applied to all nodes in parallel
 	// +optional
 	Parallel bool `json:"parallel,omitempty"`
@@ -26,11 +25,11 @@ type NodeNetworkConfigurationPolicySpec struct {
 type NodeNetworkConfigurationPolicyStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 
-	// NodeRunningUpdate field is used for serializing cluster nodes configuration
+	// NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
 	// +optional
 	NodeRunningUpdate string `json:"nodeRunningUpdate,omitempty" optional:"true"`
 
-	// NodeUpdateStart marks starting time of a node on a policy configuration
+	// NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
 	// +optional
 	NodeUpdateStart *metav1.Time `json:"nodeUpdateStart,omitempty" optional:"true"`
 }
