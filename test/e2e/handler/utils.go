@@ -33,8 +33,9 @@ const ReadInterval = 1 * time.Second
 const TestPolicy = "test-policy"
 
 var (
-	bridgeCounter = 0
-	bondConunter  = 0
+	bridgeCounter   = 0
+	bondConunter    = 0
+	parallelRollout = environment.GetBoolVarWithDefault("NMSTATE_PARALLEL_ROLLOUT", false)
 )
 
 func interfacesName(interfaces []interface{}) []string {
@@ -68,6 +69,7 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 		err := testenv.Client.Get(context.TODO(), key, &policy)
 		policy.Spec.DesiredState = desiredState
 		policy.Spec.NodeSelector = nodeSelector
+		policy.Spec.Parallel = parallelRollout
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				return testenv.Client.Create(context.TODO(), &policy)
