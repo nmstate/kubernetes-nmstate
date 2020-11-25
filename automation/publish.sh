@@ -30,8 +30,10 @@ publish_docs() {
     (
         cd /tmp/gh-pages
         git add -A
+        git config user.name $GITHUB_USER
+        git config user.email $GITHUB_EMAIL
         git commit -m "updated $(date +"%d.%m.%Y %H:%M:%S")"
-        git push https://${GITHUB_USER}github.com/nmstate/kubernetes-nmstate gh-pages
+        git push https://${GITHUB_USER}@github.com/nmstate/kubernetes-nmstate gh-pages
     )
     echo -e "\033[0;32mdemo updated $(date +"%d.%m.%Y %H:%M:%S")\033[0m"
 }
