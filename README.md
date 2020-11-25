@@ -1,3 +1,4 @@
+
 # kubernetes-nmstate
 
 <img src="logo/fullcolor.png" alias="project logo" />
@@ -36,17 +37,17 @@ details in
 # Deployment and Usage
 
 You can choose to deploy this operator on a
-[local virtualized cluster](docs/deployment-local-cluster.md) or on your
-[arbitrary cluster](docs/deployment-arbitrary-cluster.md).
+[local virtualized cluster](https://nmstate.github.io/kubernetes-nmstate/deployment/local-cluster) or on your
+[arbitrary cluster](https://nmstate.github.io/kubernetes-nmstate/deployment/arbitrary-cluster).
 
 Following comprehensive 101 series is the best place to start learning about all
 the features:
 
-1. [Reporting](docs/user-guide-101-reporting.md) -
+1. [Reporting](https://nmstate.github.io/kubernetes-nmstate/user-guide/101-reporting) -
    observe the current state of network on cluster nodes.
-2. [Configuring](docs/user-guide-102-configuration.md) -
+2. [Configuring](https://nmstate.github.io/kubernetes-nmstate/user-guide/102-configuration) -
    configure networks and observe the progress.
-3. [Troubleshooting](docs/user-guide-103-troubleshooting.md) -
+3. [Troubleshooting](https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting) -
    see what's wrong if a configuration fails.
 
 These example manifests should serve as reference on how to configure various
