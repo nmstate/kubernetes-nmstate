@@ -132,7 +132,7 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1beta1.NMState) err
 func (r *NMStateReconciler) applyRBAC(instance *nmstatev1beta1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "rbac", true)
@@ -159,7 +159,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	amd64AndCRNodeSelector["beta.kubernetes.io/arch"] = "amd64"
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["WebhookNodeSelector"] = amd64ArchOnMasterNodeSelector
