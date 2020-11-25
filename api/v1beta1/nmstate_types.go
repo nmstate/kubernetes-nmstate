@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -30,15 +31,22 @@ type NMStateSpec struct {
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 }
 
+// NMStateStatus defines the observed state of NMState
+type NMStateStatus struct {
+	Conditions shared.ConditionList `json:"conditions,omitempty"`
+}
+
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=nmstates,scope=Cluster
 // +kubebuilder:storageversion
+// +kubebuilder:subresource=status
 
 // NMState is the Schema for the nmstates API
 type NMState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NMStateSpec `json:"spec,omitempty"`
+	Spec              NMStateSpec   `json:"spec,omitempty"`
+	Status            NMStateStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
