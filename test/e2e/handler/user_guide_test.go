@@ -6,7 +6,7 @@ import (
 	. "github.com/onsi/ginkgo"
 )
 
-var _ = Describe("Introduction", func() {
+var _ = Describe("[user-guide] Introduction", func() {
 	runConfiguration := func() {
 		kubectlAndCheck("apply", "-f", "docs/user-guide/bond0-eth1-eth2_up.yaml")
 		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "2m")

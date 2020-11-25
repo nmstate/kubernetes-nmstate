@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"sync"
 
 	. "github.com/onsi/ginkgo"
@@ -32,22 +31,18 @@ var _ = Describe("NNCP with parallel set to true", func() {
 			},
 		}
 		BeforeEach(func() {
-			node := nodes[0]
 			By("Create a policy")
 			updateDesiredState(linuxBrUp(bridge1))
-			By(fmt.Sprintf("Wait for %s progressing state reached", node))
-			enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
 		})
 		AfterEach(func() {
+			By("Remove the bridge")
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			By("Remove the policy")
 			deletePolicy(TestPolicy)
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
-		It("should be progressing on multiple nodes at the same time", func() {
-			if !parallelRollout {
-				Skip("Parallel rollout need to be enabled")
-			}
+		It("[parallel] should be progressing on multiple nodes", func() {
 			progressingEnactments := 0
 
 			var wg sync.WaitGroup
@@ -68,7 +63,7 @@ var _ = Describe("NNCP with parallel set to true", func() {
 					progressingEnactments++
 				}
 			}
-			By("Check that all node enactments turned progressing before others turned available")
+			By("Check that multiple enactments are progressing.")
 			Expect(progressingEnactments).Should(BeNumerically(">", 1))
 		})
 	})
