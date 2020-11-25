@@ -61,6 +61,8 @@ export GITHUB_RELEASE ?= $(GOBIN)/github-release
 export RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
+OPM ?= $(GOBIN)/opm
+OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -68,6 +70,23 @@ export MANIFESTS_DIR ?= build/_output/manifests
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
+
+# Current Operator version
+VERSION ?= 0.0.1
+# Default bundle image tag
+BUNDLE_IMG ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/kubernetes-nmstate-operator-bundle:$(VERSION)
+# Options for 'bundle-build'
+ifneq ($(origin CHANNELS), undefined)
+BUNDLE_CHANNELS := --channels=$(CHANNELS)
+endif
+ifneq ($(origin DEFAULT_CHANNEL), undefined)
+BUNDLE_DEFAULT_CHANNEL := --default-channel=$(DEFAULT_CHANNEL)
+endif
+BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
+
+INDEX_VERSION ?= 1.0.0
+# Default index image tag
+INDEX_IMG ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/kubernetes-nmstate-operator-index:$(INDEX_VERSION)
 
 all: check handler
 
@@ -93,16 +112,13 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(GINKGO): go.mod
-	$(MAKE) tools
-$(OPENAPI_GEN): go.mod
-	$(MAKE) tools
-$(GITHUB_RELEASE): go.mod
-	$(MAKE) tools
-$(RELEASE_NOTES): go.mod
-	$(MAKE) tools
-$(CONTROLLER_GEN): go.mod
-	$(MAKE) tools
+$(GINKGO): go.mod tools
+$(OPENAPI_GEN): go.mod tools
+$(GITHUB_RELEASE): go.mod tools
+$(RELEASE_NOTES): go.mod tools
+$(CONTROLLER_GEN): go.mod tools
+$(OPM): go.mod tools
+$(OPERATOR_SDK): go.mod tools
 
 gen-k8s: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -180,6 +196,27 @@ vendor: $(GO)
 tools: $(GO)
 	./hack/install-tools.sh
 
+# Generate bundle manifests and metadata, then validate generated files.
+bundle: $(OPERATOR_SDK) gen-crds manifests
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
+	$(OPERATOR_SDK) bundle validate ./bundle
+
+# Build the bundle image.
+bundle-build:
+	$(IMAGE_BUILDER) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+
+# Build the index
+index-build: $(OPM) bundle-build
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG)
+
+bundle-push: bundle-build
+	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
+
+index-push: index-build
+	$(IMAGE_BUILDER) push $(INDEX_IMG)
+
+olm-push: bundle-push index-push
+
 .PHONY: \
 	all \
 	check \
@@ -202,5 +239,7 @@ tools: $(GO)
 	vendor \
 	whitespace-check \
 	whitespace-format \
-	manifests \
-	tools
+	generate-manifests \
+	tools \
+	bundle \
+	bundle-build
