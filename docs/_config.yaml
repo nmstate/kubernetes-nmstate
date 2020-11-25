@@ -5,7 +5,7 @@ title: "The Kubernetes NMState project"
 description: A declarative API for Kubernetes node network management
 name: "The Kubernetes NMState team"
 url: "https://nmstate.github.io"
-baseurl: "/kubernetes-nmstate"
+baseurl: "kubernetes-nmstate"
 logo: "assets/images/logo/fullcolor.png"
 markdown: kramdown
 repository: nmstate/kubernetes-nmstate
