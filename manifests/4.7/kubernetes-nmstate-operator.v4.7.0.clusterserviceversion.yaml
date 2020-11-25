@@ -10,23 +10,23 @@ metadata:
           "name": "nmstate"
         },
         "spec": {
-          "nodeSelector": ""
+          "nodeSelector": {
+            "beta.kubernetes.io/arch": "amd64"
+          }
         }
       }]
     capabilities: Basic Install
-    operators.operatorframework.io/builder: operator-sdk-v1.0.0
-    operators.operatorframework.io/project_layout: go.kubebuilder.io/v2
-    categories: Networking
+    certified: "false"
+    categories: OpenShift Optional
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
-    containerImage: quay.io/nmstate/kubernetes-nmstate-operator:latest
+    containerImage: quay.io/openshift/origin-kubernetes-nmstate-operator:4.7
     createdAt: 2020-011-12 17:13:03
-    support: nmstate.io
-    repository: https://github.com/nmstate/kubernetes-nmstate
-    operatorframework.io/suggested-namespace: nmstate
-    certified: "false"
-  name: kubernetes-nmstate-operator.v0.0.1
-  namespace: placeholder
+    olm.skipRange: ">=4.3.0-0 < 4.7.0-0"
+    support: Red Hat, Inc.
+    repository: https://github.com/openshift/kubernetes-nmstate
+  name: kubernetes-nmstate-operator.v4.7.0
+  namespace: openshift-nmstate
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
@@ -90,6 +90,14 @@ spec:
           - namespaces
           verbs:
           - '*'
+        - apiGroups:
+          - security.openshift.io
+          resources:
+          - securitycontextconstraints
+          verbs:
+          - use
+          resourceNames:
+          - privileged
         serviceAccountName: nmstate-operator
       deployments:
       - name: nmstate-operator
@@ -123,14 +131,12 @@ spec:
                   value: "6060"
                 - name: RUN_OPERATOR
                 - name: HANDLER_IMAGE
-                  value: quay.io/nmstate/kubernetes-nmstate-handler:latest
+                  value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.7
                 - name: HANDLER_IMAGE_PULL_POLICY
                   value: Always
                 - name: HANDLER_NAMESPACE
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: metadata.annotations['olm.targetNamespaces']
-                image: quay.io/nmstate/kubernetes-nmstate-operator:latest
+                  value: openshift-nmstate
+                image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.7
                 imagePullPolicy: Always
                 name: nmstate-operator
                 resources: {}
@@ -171,6 +177,16 @@ spec:
           verbs:
           - '*'
         serviceAccountName: nmstate-operator
+      - rules:
+        - apiGroups:
+          - security.openshift.io
+          resources:
+          - securitycontextconstraints
+          verbs:
+          - use
+          resourceNames:
+          - privileged
+        serviceAccountName: nmstate-handler
     strategy: deployment
   installModes:
   - supported: true
@@ -189,12 +205,15 @@ spec:
   - name: Kubernetes Nmstate Operator
     url: https://github.com/nmstate/kubernetes-nmstate
   maintainers:
-  - email: brad@redhat.com
-    name: Brad P. Crochet
-  maturity: alpha
+  - email: support@redhat.com
+    name: Red Hat
+  maturity: beta
   provider:
-    name: NMState
+    name: Red Hat, Inc.
   selector:
     matchLabels:
       name: kubernetes-nmstate-operator
-  version: 0.0.1
+  version: 4.7.0
+  labels:
+    olm-owner-enterprise-app: kubernetes-nmstate-operator
+    olm-status-descriptors: kubernetes-nmstate-operator.v4.7.0
