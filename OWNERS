@@ -7,7 +7,6 @@ approvers:
 reviewers:
   - phoracek
   - qinqon
-  - yboaron
   - RamLavi
   - rhrazdil
   - cybertron
@@ -15,5 +14,5 @@ reviewers:
 
 # Bugzilla info;
 component: Networking
-subcomponent: kubernetes-nmstate-operator
-subcomponent: kubernetes-nmstate
+subcomponent: kubernetes-nmstate-operator,kubernetes-nmstate
+
