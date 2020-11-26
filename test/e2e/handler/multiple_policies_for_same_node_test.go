@@ -2,7 +2,6 @@ package handler
 
 import (
 	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -18,15 +17,15 @@ var _ = Describe("NodeNetworkState", func() {
 
 		BeforeEach(func() {
 			setDesiredStateWithPolicy(staticIpPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress))
-			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(staticIpPolicy)
+			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(vlanPolicy)
 		})
 
 		AfterEach(func() {
 			setDesiredStateWithPolicy(staticIpPolicy, ifaceDownIPv4Disabled(firstSecondaryNic))
-			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(staticIpPolicy)
+			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(vlanPolicy)
 			deletePolicy(staticIpPolicy)
 			deletePolicy(vlanPolicy)

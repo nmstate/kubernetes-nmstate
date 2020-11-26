@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("NNS LastSuccessfulUpdateTime", func() {
+var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	Context("when updating nns", func() {
 		It("timestamp should be changed", func() {
 			for _, node := range nodes {

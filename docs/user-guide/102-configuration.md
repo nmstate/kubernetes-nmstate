@@ -9,11 +9,14 @@ routing on cluster nodes. The configuration is driven by two main object types,
 `NodeNetworkConfigurationEnactment` (Enactment).
 
 A Policy describes what is the desired network configuration on cluster nodes.
-It is created by used and applies cluster-wide. On the other hand, an Enactment
-is a read-only object that carries execution state of a Policy per each Node.
+It is created by users and applies cluster-wide. User needs to ensure that only one policy is in progress
+at a time. Creating a new policy before existing one finishes has undefined behaviour.
+An Enactment, on the other hand, is a read-only object that carries execution state of a Policy per each Node.
 
-Policies are applied on node via NetworkManager. Thanks to this, the
+Policies are applied on a node via NetworkManager. Thanks to this, the
 configuration is persistent on the node and survives reboots.
+
+:warning: Only one policy can be in progress at a time.
 
 ## Creating interfaces
 

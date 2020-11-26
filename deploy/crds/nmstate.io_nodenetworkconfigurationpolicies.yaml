@@ -48,6 +48,9 @@ spec:
                   type: string
                 description: 'NodeSelector is a selector which must be true for the policy to be applied to the node. Selector which must match a node''s labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                 type: object
+              parallel:
+                description: When set to true, changes are applied to all nodes in parallel
+                type: boolean
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
@@ -74,6 +77,13 @@ spec:
                   - type
                   type: object
                 type: array
+              nodeRunningUpdate:
+                description: NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
+                type: string
+              nodeUpdateStart:
+                description: NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
+                format: date-time
+                type: string
             type: object
         type: object
     served: true
@@ -110,6 +120,9 @@ spec:
                   type: string
                 description: 'NodeSelector is a selector which must be true for the policy to be applied to the node. Selector which must match a node''s labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                 type: object
+              parallel:
+                description: When set to true, changes are applied to all nodes in parallel
+                type: boolean
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
@@ -136,6 +149,13 @@ spec:
                   - type
                   type: object
                 type: array
+              nodeRunningUpdate:
+                description: NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
+                type: string
+              nodeUpdateStart:
+                description: NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
+                format: date-time
+                type: string
             type: object
         type: object
     served: true

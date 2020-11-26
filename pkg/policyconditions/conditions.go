@@ -186,7 +186,7 @@ func Reset(cli client.Client, policyKey types.NamespacedName) error {
 		err = cli.Status().Update(context.TODO(), policy)
 		if err != nil {
 			if apierrors.IsConflict(err) {
-				logger.Info("conflict reseting policy conditions, retrying")
+				logger.Info("conflict resetting policy conditions, retrying")
 			} else {
 				logger.Error(err, "failed to reset policy conditions")
 			}

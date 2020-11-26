@@ -31,7 +31,15 @@ main() {
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
-    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-noColor" E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml" test-e2e-handler
+
+    export E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml"
+    if [ $NMSTATE_PARALLEL_ROLLOUT == "true" ]; then
+       E2E_TEST_SUITE_ARGS="${E2E_TEST_SUITE_ARGS} -ginkgo.skip='user-guide|nns'"
+    else
+       E2E_TEST_SUITE_ARGS="${E2E_TEST_SUITE_ARGS} -ginkgo.skip='parallel'"
+    fi
+
+    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-noColor" test-e2e-handler
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"

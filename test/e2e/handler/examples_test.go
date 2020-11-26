@@ -17,7 +17,7 @@ type exampleSpec struct {
 // It only checks the top level API, hence it does not verify that the
 // configuration is indeed applied on nodes. That should be tested by dedicated
 // test suites for each feature.
-var _ = Describe("Examples", func() {
+var _ = Describe("[user-guide] Examples", func() {
 	beforeTestIfaceExample := func(fileName string) {
 		kubectlAndCheck("apply", "-f", fmt.Sprintf("docs/examples/%s", fileName))
 	}
