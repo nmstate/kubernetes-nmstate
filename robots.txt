@@ -1,1 +1,1 @@
-Sitemap: https://storage.googleapis.com/kubernetes-nmstate/sitemap.xml
+Sitemap: https://nmstate.github.io/kubernetes-nmstate/sitemap.xml
