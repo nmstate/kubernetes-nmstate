@@ -120,16 +120,16 @@ func resetDesiredStateForNodes() {
     type: ethernet
     state: down
     ipv4:
-      dhcp: false
+      enabled: false
     ipv6:
-      dhcp: false
+      enabled: false
   - name: %s
     type: ethernet
     state: down
     ipv4:
-      dhcp: false
+      enabled: false
     ipv6:
-      dhcp: false
+      enabled: false
 
 `, primaryNic, firstSecondaryNic, secondSecondaryNic)))
 	waitForAvailableTestPolicy()
