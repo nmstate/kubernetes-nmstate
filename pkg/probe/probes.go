@@ -124,10 +124,18 @@ func defaultGw() (string, error) {
 		if err != nil {
 			return false, errors.Wrap(err, "failed retrieving current state to retrieve default gw")
 		}
+		defaultGwGjsonPath := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-address"
 		defaultGw = gjsonCurrentState.
-			Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
+			Get(defaultGwGjsonPath).String()
 		if defaultGw == "" {
-			log.Info("default gw missing", "state", gjsonCurrentState.String())
+			msg := "default gw missing"
+			defaultGwLog := log.WithValues("path", defaultGwGjsonPath)
+			defaultGwLogDebug := defaultGwLog.V(1)
+			if defaultGwLogDebug.Enabled() {
+				defaultGwLogDebug.Info(msg, "state", gjsonCurrentState.String())
+			} else {
+				defaultGwLog.Info(msg)
+			}
 			return false, nil
 		}
 
