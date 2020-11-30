@@ -110,6 +110,14 @@ func (r *KubernetesNMStateReporter) logDeviceStatus(testName string) {
 func (r *KubernetesNMStateReporter) Cleanup() {
 	// clean up artifacts from previous run
 	if r.artifactsDir != "" {
+		_, err := os.Stat(r.artifactsDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return
+			} else {
+				panic(err)
+			}
+		}
 		names, err := ioutil.ReadDir(r.artifactsDir)
 		if err != nil {
 			panic(err)

@@ -15,7 +15,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	//knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
+	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -68,7 +68,7 @@ func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	reporters := make([]Reporter, 0)
-	//reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes))
+	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes))
 	if ginkgoreporters.Polarion.Run {
 		reporters = append(reporters, &ginkgoreporters.Polarion)
 	}
