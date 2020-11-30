@@ -23,7 +23,6 @@ metadata:
     olm.skipRange: ">=4.3.0-0 < 4.7.0-0"
     support: Red Hat, Inc.
     repository: https://github.com/openshift/kubernetes-nmstate
-    certified: "false"
   name: kubernetes-nmstate-operator.v4.7.0
   namespace: openshift-nmstate
 spec:
