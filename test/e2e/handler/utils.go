@@ -257,7 +257,7 @@ func interfaces(state nmstate.State) []interface{} {
 }
 
 func currentState(node string, currentStateYaml *nmstate.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: testenv.OperatorNamespace, Name: node}
+	key := types.NamespacedName{Name: node}
 	return Eventually(func() nmstate.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return currentStateYaml.Raw
@@ -313,7 +313,7 @@ func interfacesForNode(node string) AsyncAssertion {
 func waitForNodeNetworkStateUpdate(node string) {
 	now := time.Now()
 	EventuallyWithOffset(1, func() time.Time {
-		key := types.NamespacedName{Namespace: testenv.OperatorNamespace, Name: node}
+		key := types.NamespacedName{Name: node}
 		nnsUpdateTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
 		return nnsUpdateTime.Time
 	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Node %s should have a fresh nns)", node))
