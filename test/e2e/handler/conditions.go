@@ -5,6 +5,7 @@ import (
 	"time"
 
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	. "github.com/onsi/gomega/types"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -30,12 +31,31 @@ func conditionsToYaml(conditions shared.ConditionList) string {
 	return string(manifest)
 }
 
+func enactmentsStatusToYaml() string {
+	enactmentsStatus := indexEnactmentStatusByName()
+	manifest, err := yaml.Marshal(enactmentsStatus)
+	Expect(err).ToNot(HaveOccurred())
+	return string(manifest)
+}
+
 func nodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1beta1.NodeNetworkConfigurationEnactment {
 	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
 	Eventually(func() error {
 		return testenv.Client.Get(context.TODO(), key, &enactment)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
 	return enactment
+}
+
+func indexEnactmentStatusByName() map[string]shared.NodeNetworkConfigurationEnactmentStatus {
+	enactmentList := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	Eventually(func() error {
+		return testenv.Client.List(context.TODO(), &enactmentList)
+	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
+	enactmentStatusByName := map[string]shared.NodeNetworkConfigurationEnactmentStatus{}
+	for _, enactment := range enactmentList.Items {
+		enactmentStatusByName[enactment.Name] = enactment.Status
+	}
+	return enactmentStatusByName
 }
 
 func enactmentConditionsStatus(node string, policy string) shared.ConditionList {
@@ -80,19 +100,18 @@ func enactmentConditionsStatusConsistently(node string) AsyncAssertion {
 // condition is not present or unknown.
 func policyConditionsStatus(policyName string) shared.ConditionList {
 	policy := nodeNetworkConfigurationPolicy(policyName)
-	obtainedConditions := shared.ConditionList{}
+	conditions := shared.ConditionList{}
 	for _, policyConditionType := range shared.NodeNetworkConfigurationPolicyConditionTypes {
-		obtainedCondition := policy.Status.Conditions.Find(policyConditionType)
-		obtainedConditionStatus := corev1.ConditionUnknown
-		if obtainedCondition != nil {
-			obtainedConditionStatus = obtainedCondition.Status
+		condition := policy.Status.Conditions.Find(policyConditionType)
+		if condition == nil {
+			condition = &shared.Condition{
+				Type:   policyConditionType,
+				Status: corev1.ConditionUnknown,
+			}
 		}
-		obtainedConditions = append(obtainedConditions, shared.Condition{
-			Type:   policyConditionType,
-			Status: obtainedConditionStatus,
-		})
+		conditions = append(conditions, *condition)
 	}
-	return obtainedConditions
+	return conditions
 }
 
 func policyConditionsStatusForPolicyEventually(policy string) AsyncAssertion {
@@ -116,31 +135,39 @@ func policyConditionsStatusConsistently() AsyncAssertion {
 }
 
 func containPolicyAvailable() GomegaMatcher {
-	return ContainElement(shared.Condition{
-		Type:   shared.NodeNetworkConfigurationPolicyConditionAvailable,
-		Status: corev1.ConditionTrue,
-	})
+	return ContainElement(MatchFields(IgnoreExtras, Fields{
+		"Type":    Equal(shared.NodeNetworkConfigurationPolicyConditionAvailable),
+		"Status":  Equal(corev1.ConditionTrue),
+		"Reason":  Not(BeEmpty()),
+		"Message": Not(BeEmpty()),
+	}))
 }
 
 func containPolicyDegraded() GomegaMatcher {
-	return ContainElement(shared.Condition{
-		Type:   shared.NodeNetworkConfigurationPolicyConditionDegraded,
-		Status: corev1.ConditionTrue,
-	})
+	return ContainElement(MatchFields(IgnoreExtras, Fields{
+		"Type":    Equal(shared.NodeNetworkConfigurationPolicyConditionDegraded),
+		"Status":  Equal(corev1.ConditionTrue),
+		"Reason":  Not(BeEmpty()),
+		"Message": Not(BeEmpty()),
+	}))
 }
 
 func waitForAvailableTestPolicy() {
-	policyConditionsStatusEventually().Should(containPolicyAvailable())
+	waitForAvailablePolicy(TestPolicy)
 }
 
 func waitForDegradedTestPolicy() {
-	policyConditionsStatusEventually().Should(containPolicyDegraded())
+	waitForDegradedPolicy(TestPolicy)
 }
 
 func waitForAvailablePolicy(policy string) {
-	policyConditionsStatusForPolicyEventually(policy).Should(containPolicyAvailable())
+	waitForPolicy(policy, containPolicyAvailable())
 }
 
 func waitForDegradedPolicy(policy string) {
-	policyConditionsStatusForPolicyEventually(policy).Should(containPolicyDegraded())
+	waitForPolicy(policy, containPolicyDegraded())
+}
+
+func waitForPolicy(policy string, matcher GomegaMatcher) {
+	policyConditionsStatusForPolicyEventually(policy).Should(matcher, "should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml())
 }
