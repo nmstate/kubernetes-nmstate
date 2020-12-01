@@ -9,7 +9,7 @@
 set -e
 
 function format() {
-    git ls-files | grep -v "^vendor/" | xargs sed --follow-symlinks -i 's/[[:space:]]*$//'
+    git ls-files | grep -v "^vendor/" | grep -v "logo/" | xargs sed --follow-symlinks -i 's/[[:space:]]*$//'
 }
 
 function check() {
