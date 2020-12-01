@@ -20,6 +20,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
 	"time"
 
@@ -49,13 +50,11 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
 
 var (
 	nodeName                                string
-	nodeConfigurationTimeout                = 5 * time.Minute
 	nodeRunningUpdateRetryTime              = 5 * time.Second
 	onCreateOrUpdateWithDifferentGeneration = predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
@@ -155,7 +154,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	})
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) getEnactmentCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
+func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountsByPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
 	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
 	err := r.Client.List(context.TODO(), &enactments, policyLabelFilter)
@@ -166,35 +165,21 @@ func (r *NodeNetworkConfigurationPolicyReconciler) getEnactmentCount(policy *nms
 	return enactmentCount, nil
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) setNodeRunningUpdate(policyKey types.NamespacedName) error {
-	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
+	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	err := r.Client.Get(context.TODO(), policyKey, policy)
 	if err != nil {
 		return err
 	}
 	if policy.Status.NodeRunningUpdate != "" {
-		return fmt.Errorf("another node is working on configuration")
+		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("Another node is working on configuration"))
 	}
 	policy.Status.NodeRunningUpdate = nodeName
-	policy.Status.NodeUpdateStart = &metav1.Time{Time: time.Now()}
 	err = r.Client.Status().Update(context.TODO(), policy)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(
-	policy *nmstatev1beta1.NodeNetworkConfigurationPolicy,
-	ec *enactmentconditions.EnactmentConditions,
-) error {
-	if policy.Status.NodeRunningUpdate != "" && metav1.Now().Sub(policy.Status.NodeUpdateStart.Time) > nodeConfigurationTimeout {
-		// a node has been running the update for too long
-		err := fmt.Errorf("A node has been configuring for too long, aborting")
-		ec.NotifyFailedToConfigure(err)
-		return err
-	}
-	return r.setNodeRunningUpdate(types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()})
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(policyKey types.NamespacedName) {
@@ -204,10 +189,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(poli
 		if err != nil {
 			return err
 		}
-
 		instance.Status.NodeRunningUpdate = ""
-		instance.Status.NodeUpdateStart = nil
-
 		return r.Client.Status().Update(context.TODO(), instance)
 	})
 }
@@ -263,9 +245,19 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 	}
 
 	enactmentConditions.NotifyMatching()
-
 	if !instance.Spec.Parallel {
-		err := r.claimNodeRunningUpdate(instance, &enactmentConditions)
+		enactmentCount, err := r.enactmentsCountsByPolicy(instance)
+		if err != nil {
+			log.Error(err, "Error getting enactment counts")
+			return ctrl.Result{}, nil
+		}
+		if enactmentCount.Failed() > 0 {
+			err = fmt.Errorf("policy has failing enactments, aborting")
+			log.Error(err, "")
+			enactmentConditions.NotifyAborted(err)
+			return ctrl.Result{}, nil
+		}
+		err = r.claimNodeRunningUpdate(instance)
 		if err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err

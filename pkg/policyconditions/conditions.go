@@ -143,7 +143,7 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		// Let's get conditions with true status count filtered by policy generation
 		enactmentsCount := enactmentconditions.Count(enactments, policy.Generation)
 
-		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching()
+		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching() + enactmentsCount.Aborted()
 
 		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
 		if numberOfFinishedEnactments < numberOfNmstateNodes {
@@ -152,8 +152,11 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 			if enactmentsCount.Matching() == 0 {
 				message := "Policy does not match any node"
 				setPolicyNotMatching(&policy.Status.Conditions, message)
-			} else if enactmentsCount.Failed() > 0 {
+			} else if enactmentsCount.Failed() > 0 || enactmentsCount.Aborted() > 0 {
 				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), enactmentsCount.Matching())
+				if enactmentsCount.Aborted() > 0 {
+					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCount.Aborted())
+				}
 				setPolicyFailedToConfigure(&policy.Status.Conditions, message)
 			} else {
 				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), enactmentsCount.Available())

@@ -25,6 +25,7 @@ const (
 	NodeNetworkConfigurationEnactmentConditionFailing     ConditionType = "Failing"
 	NodeNetworkConfigurationEnactmentConditionProgressing ConditionType = "Progressing"
 	NodeNetworkConfigurationEnactmentConditionMatching    ConditionType = "Matching"
+	NodeNetworkConfigurationEnactmentConditionAborted     ConditionType = "Aborted"
 )
 
 var NodeNetworkConfigurationEnactmentConditionTypes = [...]ConditionType{
@@ -32,6 +33,7 @@ var NodeNetworkConfigurationEnactmentConditionTypes = [...]ConditionType{
 	NodeNetworkConfigurationEnactmentConditionFailing,
 	NodeNetworkConfigurationEnactmentConditionProgressing,
 	NodeNetworkConfigurationEnactmentConditionMatching,
+	NodeNetworkConfigurationEnactmentConditionAborted,
 }
 
 const (
@@ -40,6 +42,7 @@ const (
 	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing         ConditionReason = "ConfigurationProgressing"
 	NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching          ConditionReason = "NodeSelectorNotMatching"
 	NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching ConditionReason = "AllSelectorsMatching"
+	NodeNetworkConfigurationEnactmentConditionConfigurationAborted             ConditionReason = "ConfigurationAborted"
 )
 
 func EnactmentKey(node string, policy string) types.NamespacedName {
