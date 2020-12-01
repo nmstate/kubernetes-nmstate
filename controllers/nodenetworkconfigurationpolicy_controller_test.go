@@ -30,7 +30,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 			nodeNetworkConfigurationPolicy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 
-			predicate := watchPredicate
+			predicate := onCreateOrUpdateWithDifferentGeneration
 
 			Expect(predicate.
 				CreateFunc(event.CreateEvent{

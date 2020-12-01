@@ -20,19 +20,26 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/util/retry"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
+	ctrl "sigs.k8s.io/controller-runtime"
+	builder "sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
@@ -47,10 +54,10 @@ import (
 )
 
 var (
-	nodeName                   string
-	nodeConfigurationTimeout   = 5 * time.Minute
-	nodeRunningUpdateRetryTime = 5 * time.Second
-	watchPredicate             = predicate.Funcs{
+	nodeName                                string
+	nodeConfigurationTimeout                = 5 * time.Minute
+	nodeRunningUpdateRetryTime              = 5 * time.Second
+	onCreateOrUpdateWithDifferentGeneration = predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
 			return true
 		},
@@ -61,6 +68,22 @@ var (
 			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
 			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
 			return generationIsDifferent
+		},
+	}
+
+	onLabelsUpdatedForThisNode = predicate.Funcs{
+		CreateFunc: func(createEvent event.CreateEvent) bool {
+			return false
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return false
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			labelsChanged := !reflect.DeepEqual(updateEvent.MetaOld.GetLabels(), updateEvent.MetaNew.GetLabels())
+			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.MetaNew)
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
 		},
 	}
 )
@@ -270,10 +293,45 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+
+	allPolicies := handler.ToRequestsFunc(
+		func(handler.MapObject) []reconcile.Request {
+			log := r.Log.WithValues("allPolicies")
+			allPoliciesAsRequest := []reconcile.Request{}
+			policyList := nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
+			err := r.Client.List(context.TODO(), &policyList)
+			if err != nil {
+				log.Error(err, "failed listing all NodeNetworkConfigurationPolicies to re-reconcile them after node created or updated")
+				return []reconcile.Request{}
+			}
+			for _, policy := range policyList.Items {
+				allPoliciesAsRequest = append(allPoliciesAsRequest, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: policy.Name,
+					}})
+			}
+			return allPoliciesAsRequest
+		})
+
+	// Reconcile NNCP if they are created or updated
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkConfigurationPolicy{}).
-		WithEventFilter(watchPredicate).
+		WithEventFilter(onCreateOrUpdateWithDifferentGeneration).
 		Complete(r)
+	if err != nil {
+		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening NNCP events")
+	}
+
+	// Reconcile all NNCPs if Node is updated (for example labels are changed), node creation event
+	// is not needed since all NNCPs are going to be Reconcile at node startup.
+	err = ctrl.NewControllerManagedBy(mgr).
+		For(&corev1.Node{}).
+		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: allPolicies}, builder.WithPredicates(onLabelsUpdatedForThisNode)).
+		Complete(r)
+	if err != nil {
+		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening Node events")
+	}
+	return nil
 }
 
 func desiredState(object runtime.Object) (nmstateapi.State, error) {
