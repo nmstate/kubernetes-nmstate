@@ -47,7 +47,6 @@ var _ = BeforeSuite(func() {
 	primaryNic = environment.GetVarWithDefault("PRIMARY_NIC", "eth0")
 	firstSecondaryNic = environment.GetVarWithDefault("FIRST_SECONDARY_NIC", "eth1")
 	secondSecondaryNic = environment.GetVarWithDefault("SECOND_SECONDARY_NIC", "eth2")
-	testenv.TestMain()
 
 	testenv.Start()
 
@@ -64,6 +63,7 @@ var _ = BeforeSuite(func() {
 })
 
 func TestE2E(t *testing.T) {
+	testenv.TestMain()
 
 	RegisterFailHandler(Fail)
 
