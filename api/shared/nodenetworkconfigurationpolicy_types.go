@@ -12,18 +12,21 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`
 
-	// When set to true, changes are applied to all nodes in parallel
+	// Percentage of matching cluster nodes that may apply policy configuration concurrently.
+	// If not specified, policy is applied one node at a time.
+	// Value of 0 means all nodes apply policy in parallel,
+	// Value of n, n > 1 means that up to n% of cluster nodes may apply policy configuration concurrently.
 	// +optional
-	Parallel bool `json:"parallel,omitempty"`
+	ChunkSize *int `json:"chunkSize,omitempty"`
 }
 
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicyStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 
-	// NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
+	// NodeChunkCapacity is used as a semaphore to synchronize nodes applying policy configuration
 	// +optional
-	NodeRunningUpdate string `json:"nodeRunningUpdate,omitempty" optional:"true"`
+	NodeChunkCapacity int `json:"nodeChunkCapacity,omitempty" optional:"true"`
 }
 
 const (

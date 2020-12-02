@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"math"
 	"reflect"
 	"time"
 
@@ -56,6 +57,7 @@ import (
 var (
 	nodeName                                string
 	nodeRunningUpdateRetryTime              = 5 * time.Second
+	defaultMaxNodeCapacity                  = 1
 	onCreateOrUpdateWithDifferentGeneration = predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
 			return true
@@ -165,16 +167,33 @@ func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountsByPolicy(poli
 	return enactmentCount, nil
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
+func (r *NodeNetworkConfigurationPolicyReconciler) calculateMaxCapacityFromPercentage(enactmentCounts enactmentconditions.ConditionCount, chunkSize int) int {
+	if chunkSize > 100 {
+		chunkSize = 100
+	}
+	result := int(math.Round(float64(enactmentCounts.Matching()) * float64(chunkSize) / 100.0))
+	if result == 0 {
+		result = 1
+	}
+	return result
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy, enactmentCounts enactmentconditions.ConditionCount) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	err := r.Client.Get(context.TODO(), policyKey, policy)
 	if err != nil {
 		return err
 	}
-	if policy.Status.NodeRunningUpdate != "" {
-		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("Another node is working on configuration"))
+
+	maxNodeCapacity := defaultMaxNodeCapacity
+	if policy.Spec.ChunkSize != nil {
+		maxNodeCapacity = r.calculateMaxCapacityFromPercentage(enactmentCounts, *policy.Spec.ChunkSize)
 	}
-	policy.Status.NodeRunningUpdate = nodeName
+
+	if policy.Status.NodeChunkCapacity >= maxNodeCapacity {
+		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("Capacity of nodes applying policy is full"))
+	}
+	policy.Status.NodeChunkCapacity += 1
 	err = r.Client.Status().Update(context.TODO(), policy)
 	if err != nil {
 		return err
@@ -189,7 +208,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(poli
 		if err != nil {
 			return err
 		}
-		instance.Status.NodeRunningUpdate = ""
+		instance.Status.NodeChunkCapacity -= 1
 		return r.Client.Status().Update(context.TODO(), instance)
 	})
 }
@@ -245,7 +264,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 	}
 
 	enactmentConditions.NotifyMatching()
-	if !instance.Spec.Parallel {
+	if instance.Spec.ChunkSize == nil || *instance.Spec.ChunkSize > 0 {
 		enactmentCount, err := r.enactmentsCountsByPolicy(instance)
 		if err != nil {
 			log.Error(err, "Error getting enactment counts")
@@ -257,7 +276,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 			enactmentConditions.NotifyAborted(err)
 			return ctrl.Result{}, nil
 		}
-		err = r.claimNodeRunningUpdate(instance)
+		err = r.claimNodeRunningUpdate(instance, enactmentCount)
 		if err != nil {
 			if apierrors.IsConflict(err) {
 				return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err

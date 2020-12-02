@@ -13,11 +13,11 @@ func GetVarWithDefault(name string, defaultValue string) string {
 	return value
 }
 
-func GetBoolVarWithDefault(name string, defaultValue bool) bool {
-	value := os.Getenv(name)
-	boolValue, err := strconv.ParseBool(value)
+func GetIntVarWithDefault(name string, defaultValue int) int {
+	valueStr := os.Getenv(name)
+	value, err := strconv.ParseInt(valueStr, 10, 64)
 	if err != nil {
-		boolValue = defaultValue
+		return defaultValue
 	}
-	return boolValue
+	return int(value)
 }

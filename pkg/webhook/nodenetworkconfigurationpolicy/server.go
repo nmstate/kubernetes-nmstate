@@ -15,7 +15,7 @@ const (
 
 func Add(mgr manager.Manager, o certificate.Options) error {
 
-	// We need two hooks, the update of nncp and nncp/status (it's a subresource) happends
+	// We need two hooks, the update of nncp and nncp/status (it's a subresource) happens
 	// at different times, also if you modify status at nncp webhook it does not modify it
 	// you need at nncp/status webhook that will catch that and do the final modifications.
 	// So this works this way:
