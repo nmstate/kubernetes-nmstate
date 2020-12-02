@@ -25,25 +25,26 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		})
 
 		AfterEach(func() {
-			By(fmt.Sprintf("Deleteting linux bridge %s", bridge1))
-			setDesiredStateWithPolicy(bridge1, linuxBrAbsent(bridge1))
+			By(fmt.Sprintf("Deleteting linux bridge %s at all nodes", bridge1))
+			setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrAbsent(bridge1))
 			waitForAvailablePolicy(bridge1)
 			deletePolicy(bridge1)
-			resetDesiredStateForNodes()
+			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
+			waitForAvailableTestPolicy()
 
 			By("Remove test label from node")
 			removeLabelsFromNode(nodes[0], testNodeSelector)
 		})
 
 		It("[test_id:3813]should not update any nodes and have false Matching state", func() {
-			for _, node := range nodes {
+			for _, node := range allNodes {
 				enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
 					nmstate.Condition{
 						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 						Status: corev1.ConditionFalse,
 					}))
 			}
-			for _, node := range nodes {
+			for _, node := range allNodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
 		})
@@ -51,19 +52,19 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		Context("and we remove the node selector", func() {
 			BeforeEach(func() {
 				By(fmt.Sprintf("Remove node selector at policy %s", bridge1))
-				setDesiredStateWithPolicyAndNodeSelector(bridge1, linuxBrUp(bridge1), map[string]string{})
+				setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrUp(bridge1))
 				waitForAvailablePolicy(bridge1)
 			})
 
 			It("should update all nodes and have Matching enactment state", func() {
-				for _, node := range nodes {
+				for _, node := range allNodes {
 					enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
 						nmstate.Condition{
 							Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 							Status: corev1.ConditionTrue,
 						}))
 				}
-				for _, node := range nodes {
+				for _, node := range allNodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 				}
 

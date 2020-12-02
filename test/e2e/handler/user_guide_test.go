@@ -25,7 +25,10 @@ var _ = Describe("[user-guide] Introduction", func() {
 	// Policies are not deleted as a part of the tutorial, so we need additional function here
 	cleanupConfiguration := func() {
 		deletePolicy("vlan100")
-		updateDesiredStateAndWait(interfaceAbsent("eth1.100"))
+		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, interfaceAbsent("eth1.100"))
+		waitForAvailableTestPolicy()
+		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
+		waitForAvailableTestPolicy()
 	}
 
 	runTroubleshooting := func() {
@@ -41,7 +44,6 @@ var _ = Describe("[user-guide] Introduction", func() {
 	Context("Configuration tutorial", func() {
 		AfterEach(func() {
 			cleanupConfiguration()
-			resetDesiredStateForNodes()
 		})
 
 		It("should succeed executing all the commands", func() {
@@ -58,7 +60,6 @@ var _ = Describe("[user-guide] Introduction", func() {
 	Context("All tutorials in a row", func() {
 		AfterEach(func() {
 			cleanupConfiguration()
-			resetDesiredStateForNodes()
 		})
 
 		It("should succeed executing all the commands", func() {

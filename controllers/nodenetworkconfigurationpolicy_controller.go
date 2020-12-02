@@ -296,7 +296,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 
 	allPolicies := handler.ToRequestsFunc(
 		func(handler.MapObject) []reconcile.Request {
-			log := r.Log.WithValues("allPolicies")
+			log := r.Log.WithName("allPolicies")
 			allPoliciesAsRequest := []reconcile.Request{}
 			policyList := nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
 			err := r.Client.List(context.TODO(), &policyList)
