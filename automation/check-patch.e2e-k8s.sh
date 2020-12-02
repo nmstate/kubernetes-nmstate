@@ -34,7 +34,7 @@ main() {
 
     export E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml"
     if [ $NMSTATE_PARALLEL_ROLLOUT == "true" ]; then
-       E2E_TEST_SUITE_ARGS="${E2E_TEST_SUITE_ARGS} -ginkgo.skip='user-guide|nns'"
+       E2E_TEST_SUITE_ARGS="${E2E_TEST_SUITE_ARGS} -ginkgo.skip='user-guide|nns|sequential'"
     else
        E2E_TEST_SUITE_ARGS="${E2E_TEST_SUITE_ARGS} -ginkgo.skip='parallel'"
     fi

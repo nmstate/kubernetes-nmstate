@@ -29,6 +29,10 @@ var _ = Describe("NNCP with parallel set to true", func() {
 				Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 				Status: corev1.ConditionTrue,
 			},
+			nmstate.Condition{
+				Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+				Status: corev1.ConditionFalse,
+			},
 		}
 		BeforeEach(func() {
 			By("Create a policy")

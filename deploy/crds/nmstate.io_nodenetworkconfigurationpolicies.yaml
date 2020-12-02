@@ -80,10 +80,6 @@ spec:
               nodeRunningUpdate:
                 description: NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
                 type: string
-              nodeUpdateStart:
-                description: NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
-                format: date-time
-                type: string
             type: object
         type: object
     served: true
@@ -151,10 +147,6 @@ spec:
                 type: array
               nodeRunningUpdate:
                 description: NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
-                type: string
-              nodeUpdateStart:
-                description: NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
-                format: date-time
                 type: string
             type: object
         type: object

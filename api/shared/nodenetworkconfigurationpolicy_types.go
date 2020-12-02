@@ -1,9 +1,5 @@
 package shared
 
-import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
-
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicySpec struct {
 	// NodeSelector is a selector which must be true for the policy to be applied to the node.
@@ -28,10 +24,6 @@ type NodeNetworkConfigurationPolicyStatus struct {
 	// NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
 	// +optional
 	NodeRunningUpdate string `json:"nodeRunningUpdate,omitempty" optional:"true"`
-
-	// NodeUpdateStart marks starting time of a node on a policy configuration when Parallel flag is false
-	// +optional
-	NodeUpdateStart *metav1.Time `json:"nodeUpdateStart,omitempty" optional:"true"`
 }
 
 const (

@@ -50,6 +50,10 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 					Status: corev1.ConditionTrue,
 				},
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+					Status: corev1.ConditionFalse,
+				},
 			}
 			availableConditions := []nmstate.Condition{
 				nmstate.Condition{
@@ -67,6 +71,10 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				nmstate.Condition{
 					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 					Status: corev1.ConditionTrue,
+				},
+				nmstate.Condition{
+					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+					Status: corev1.ConditionFalse,
 				},
 			}
 			var wg sync.WaitGroup
@@ -98,9 +106,31 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 	})
 
 	Context("when applying invalid configuration", func() {
+		var failingEnactmentConditions = []interface{}{
+			shared.Condition{
+				Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
+				Status: corev1.ConditionTrue,
+			},
+			shared.Condition{
+				Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
+				Status: corev1.ConditionFalse,
+			},
+			shared.Condition{
+				Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
+				Status: corev1.ConditionFalse,
+			},
+			shared.Condition{
+				Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
+				Status: corev1.ConditionTrue,
+			},
+			shared.Condition{
+				Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
+				Status: corev1.ConditionFalse,
+			},
+		}
+
 		BeforeEach(func() {
 			updateDesiredState(invalidConfig(bridge1))
-
 		})
 
 		AfterEach(func() {
@@ -110,25 +140,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			resetDesiredStateForNodes()
 		})
 
-		It("[test_id:3795]should have Failing ConditionType set to true", func() {
-			failingEnactmentConditions := []interface{}{
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionTrue,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
-					Status: corev1.ConditionFalse,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
-					Status: corev1.ConditionFalse,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
-					Status: corev1.ConditionTrue,
-				},
-			}
+		It("[test_id:3795][parallel] should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				By(fmt.Sprintf("Check %s failing state is reached", node))
 				enactmentConditionsStatusEventually(node).Should(ConsistOf(failingEnactmentConditions...), "should eventually reach failing conditions at enactments")
@@ -143,11 +155,81 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
+					defer GinkgoRecover()
 					By(fmt.Sprintf("Check %s failing state is kept", node))
 					enactmentConditionsStatusConsistently(node).Should(ConsistOf(failingEnactmentConditions...), "should consistently keep failing conditions at enactments")
 				}()
 			}
 			wg.Wait()
+		})
+
+		It("[test_id:3795][sequential] should have one Failing the rest Aborted ConditionType set to true", func() {
+			var abortedEnactmentConditions = []interface{}{
+				shared.Condition{
+					Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
+					Status: corev1.ConditionFalse,
+				},
+				shared.Condition{
+					Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
+					Status: corev1.ConditionFalse,
+				},
+				shared.Condition{
+					Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
+					Status: corev1.ConditionFalse,
+				},
+				shared.Condition{
+					Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
+					Status: corev1.ConditionTrue,
+				},
+				shared.Condition{
+					Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
+					Status: corev1.ConditionTrue,
+				},
+			}
+			checkEnactmentCounts := func(policy string) {
+				failingConditions := 0
+				abortedConditions := 0
+				for _, node := range nodes {
+					conditionList := enactmentConditionsStatus(node, TestPolicy)
+					success, _ := ConsistOf(conditionList).Match(failingEnactmentConditions)
+					if success {
+						failingConditions++
+					}
+					success, _ = ConsistOf(conditionList).Match(abortedEnactmentConditions)
+					if success {
+						abortedConditions++
+					}
+				}
+				Expect(failingConditions).To(Equal(1), "one node only should have failing enactment")
+				Expect(abortedConditions).To(Equal(len(nodes)-1), "other nodes should have aborted enactment")
+			}
+
+			By("Check policy is at degraded state")
+			waitForDegradedTestPolicy()
+
+			By("Check there is one failing enactment and the rest are aborted")
+			checkEnactmentCounts(TestPolicy)
+
+			By("Check that the enactment stays in failing or aborted state")
+			var wg sync.WaitGroup
+			wg.Add(len(nodes))
+			for i, _ := range nodes {
+				node := nodes[i]
+				go func() {
+					defer wg.Done()
+					defer GinkgoRecover()
+					By(fmt.Sprintf("Check %s failing state is kept", node))
+					enactmentConditionsStatusConsistently(node).Should(
+						SatisfyAny(
+							ConsistOf(failingEnactmentConditions...),
+							ConsistOf(abortedEnactmentConditions...),
+						), "should consistently keep failing or aborted conditions at enactments")
+				}()
+			}
+			wg.Wait()
+
+			By("Check there is still one failing enactment and the rest are aborted")
+			checkEnactmentCounts(TestPolicy)
 		})
 	})
 })

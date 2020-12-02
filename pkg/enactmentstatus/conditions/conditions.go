@@ -72,6 +72,14 @@ func (ec *EnactmentConditions) NotifyFailedToConfigure(failedErr error) {
 	}
 }
 
+func (ec *EnactmentConditions) NotifyAborted(failedErr error) {
+	ec.logger.Info("NotifyConfigurationAborted")
+	err := ec.updateEnactmentConditions(SetConfigurationAborted, failedErr.Error())
+	if err != nil {
+		ec.logger.Error(err, "Error notifying state ConfigurationAborted")
+	}
+}
+
 func (ec *EnactmentConditions) NotifySuccess() {
 	ec.logger.Info("NotifySuccess")
 	err := ec.updateEnactmentConditions(SetSuccess, "successfully reconciled")
@@ -123,6 +131,43 @@ func SetFailed(conditions *nmstate.ConditionList, reason nmstate.ConditionReason
 		reason,
 		"",
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		"",
+	)
+}
+
+func SetConfigurationAborted(conditions *nmstate.ConditionList, message string) {
+	SetAborted(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationAborted, message)
+}
+
+func SetAborted(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+		corev1.ConditionTrue,
+		reason,
+		message,
+	)
 }
 
 func SetSuccess(conditions *nmstate.ConditionList, message string) {
@@ -140,6 +185,12 @@ func SetSuccess(conditions *nmstate.ConditionList, message string) {
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
 		"",
@@ -162,6 +213,12 @@ func SetProgressing(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionUnknown,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
 		"",
 	)
@@ -196,6 +253,12 @@ func SetNotMatching(conditions *nmstate.ConditionList, reason nmstate.ConditionR
 		reason,
 		message,
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
 }
 
 func SetMatching(conditions *nmstate.ConditionList, message string) {
@@ -222,5 +285,11 @@ func SetMatching(conditions *nmstate.ConditionList, message string) {
 		corev1.ConditionTrue,
 		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
 		message,
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+		corev1.ConditionUnknown,
+		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		"",
 	)
 }
