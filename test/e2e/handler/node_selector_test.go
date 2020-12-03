@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -31,6 +32,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			deletePolicy(bridge1)
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
 			waitForAvailableTestPolicy()
+			deletePolicy(TestPolicy)
 
 			By("Remove test label from node")
 			removeLabelsFromNode(nodes[0], testNodeSelector)
@@ -82,6 +84,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
 						Status: corev1.ConditionTrue,
 					}))
+				//TODO: Remove this when webhook retest policy status when node labels are changed
+				time.Sleep(3 * time.Second)
 				waitForAvailablePolicy(bridge1)
 				interfacesNameForNodeEventually(nodes[0]).Should(ContainElement(bridge1))
 			})
