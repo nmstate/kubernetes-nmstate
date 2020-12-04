@@ -128,7 +128,7 @@ spec:
                 - name: PROFILER_PORT
                   value: "6060"
                 - name: RUN_OPERATOR
-                - name: RELATED_IMAGE_HANDLER_IMAGE
+                - name: HANDLER_IMAGE
                   value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.7
                 - name: HANDLER_IMAGE_PULL_POLICY
                   value: Always
