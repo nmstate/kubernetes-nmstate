@@ -23,6 +23,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 				},
 				Spec: nmstate.NodeNetworkConfigurationPolicySpec{
 					DesiredState: linuxBrUp(bridge1),
+					NodeSelector: map[string]string{"node-role.kubernetes.io/worker": ""},
+					Parallel:     parallelRollout,
 				},
 			}
 			Expect(testenv.Client.Create(context.TODO(), &policy)).To(Succeed(), "should success creating a v1alpha1 nncp")

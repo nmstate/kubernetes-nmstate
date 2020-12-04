@@ -28,7 +28,7 @@ export KUBEVIRT_PROVIDER ?= k8s-1.19
 export KUBEVIRT_NUM_NODES ?= 2 # 1 master, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
-export E2E_TEST_TIMEOUT ?= 60m
+export E2E_TEST_TIMEOUT ?= 80m
 
 e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
 
@@ -112,13 +112,20 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(GINKGO): go.mod tools
-$(OPENAPI_GEN): go.mod tools
-$(GITHUB_RELEASE): go.mod tools
-$(RELEASE_NOTES): go.mod tools
-$(CONTROLLER_GEN): go.mod tools
-$(OPM): go.mod tools
-$(OPERATOR_SDK): go.mod tools
+$(GINKGO): go.mod
+	$(MAKE) tools
+$(OPENAPI_GEN): go.mod
+	$(MAKE) tools
+$(GITHUB_RELEASE): go.mod
+	$(MAKE) tools
+$(RELEASE_NOTES): go.mod
+	$(MAKE) tools
+$(CONTROLLER_GEN): go.mod
+	$(MAKE) tools
+$(OPM): go.mod
+	$(MAKE) tools
+$(OPERATOR_SDK): go.mod
+	$(MAKE) tools
 
 gen-k8s: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."

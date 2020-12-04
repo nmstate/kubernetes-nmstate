@@ -1,8 +1,8 @@
 FROM centos:8
 
 RUN dnf install -b -y dnf-plugins-core && \
-    dnf copr enable -y networkmanager/NetworkManager-1.22 && \
-    dnf copr enable -y nmstate/nmstate-0.2 && \
+    dnf copr enable -y networkmanager/NetworkManager-1.26 && \
+    dnf copr enable -y nmstate/nmstate-0.3 && \
     dnf install -b -y nmstate iproute iputils && \
     dnf remove -y dnf-plugins-core && \
     dnf clean all

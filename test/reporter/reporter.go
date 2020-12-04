@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/types"
 )
@@ -136,7 +135,7 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 
 	// Let's print the pods logs to the GinkgoWriter so
 	// we see the failure directly at prow junit output without opening files
-	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime), GinkgoWriter)
+	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime))
 
 	return nil
 }

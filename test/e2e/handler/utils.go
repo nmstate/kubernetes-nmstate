@@ -84,6 +84,10 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 	time.Sleep(1 * time.Second)
 }
 
+func setDesiredStateWithPolicyWithoutNodeSelector(name string, desiredState nmstate.State) {
+	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, map[string]string{})
+}
+
 func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
 	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, runAtWorkers)
@@ -112,26 +116,7 @@ func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
-	updateDesiredState(nmstate.NewState(fmt.Sprintf(`interfaces:
-  - name: %s
-    type: ethernet
-    state: up
-  - name: %s
-    type: ethernet
-    state: down
-    ipv4:
-      dhcp: false
-    ipv6:
-      dhcp: false
-  - name: %s
-    type: ethernet
-    state: down
-    ipv4:
-      dhcp: false
-    ipv6:
-      dhcp: false
-
-`, primaryNic, firstSecondaryNic, secondSecondaryNic)))
+	updateDesiredState(resetPrimaryAndSecondaryNICs())
 	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
