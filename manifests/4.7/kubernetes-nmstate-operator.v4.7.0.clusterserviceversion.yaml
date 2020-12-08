@@ -7,10 +7,10 @@ metadata:
         "apiVersion": "nmstate.io/v1beta1",
         "kind": "NMState",
         "metadata": {
-          "name": "openshift-nmstate"
+          "name": "nmstate"
         },
         "spec": {
-          "nodeSelector": ""
+          "nodeSelector": "beta.kubernetes.io/arch=amd64"
         }
       }]
     capabilities: Basic Install
