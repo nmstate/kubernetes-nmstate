@@ -229,6 +229,18 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
+  - name: nodenetworkconfigurationpolicies-mutate-all.nmstate.io
+    clientConfig:
+      service:
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
+        path: "/nodenetworkconfigurationpolicies-mutate-all"
+    rules:
+      - operations: ["UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1"]
+        resources: ["nodes"]
+
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget

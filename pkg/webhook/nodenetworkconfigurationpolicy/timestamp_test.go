@@ -14,8 +14,8 @@ import (
 )
 
 func expectTimestampAnnotationAtPolicy(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, testStartTime time.Time) {
-	ExpectWithOffset(1, policy.ObjectMeta.Annotations).To(HaveKey(TimestampLabelKey))
-	annotation := policy.ObjectMeta.Annotations[TimestampLabelKey]
+	ExpectWithOffset(1, policy.ObjectMeta.Annotations).To(HaveKey(TimestampPolicyLabelKey))
+	annotation := policy.ObjectMeta.Annotations[TimestampPolicyLabelKey]
 	mutationTimestamp, err := strconv.ParseInt(annotation, 10, 64)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred(), "mutation timestamp should have int64 value")
 	ExpectWithOffset(1, mutationTimestamp).To(BeNumerically(">", testStartTime.UnixNano()), "mutation timestamp should be updated by the webhook")

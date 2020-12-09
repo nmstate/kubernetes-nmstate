@@ -1,6 +1,7 @@
 package nodenetworkconfigurationpolicy
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -13,6 +14,17 @@ func deleteConditionsHook() *webhook.Admission {
 			mutatePolicyHandler(
 				always,
 				deleteConditions,
+			)),
+	}
+}
+
+func deleteConditionsOnNodeLabelsModifiedHook(cli client.Client) *webhook.Admission {
+	return &webhook.Admission{
+		Handler: admission.HandlerFunc(
+			mutateAllPoliciesHandler(cli,
+				onModifiedNodeLabels,
+				deleteConditions,
+				setTimestampAnnotation(TimestampAllPoliciesLabelKey),
 			)),
 	}
 }
@@ -32,7 +44,7 @@ func setTimestampAnnotationHook() *webhook.Admission {
 		Handler: admission.HandlerFunc(
 			mutatePolicyHandler(
 				always,
-				setTimestampAnnotation,
+				setTimestampAnnotation(TimestampPolicyLabelKey),
 			)),
 	}
 }
