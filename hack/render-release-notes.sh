@@ -12,7 +12,7 @@ end() {
 trap end EXIT SIGINT SIGTERM SIGSTOP
 
 $RELEASE_NOTES \
-    --format go-template:$script_dir/release-notes.tmpl \
+    --go-template go-template:$script_dir/release-notes.tmpl \
     --release-version $new_version \
     --required-author "" \
     --github-org nmstate \
