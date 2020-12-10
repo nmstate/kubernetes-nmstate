@@ -4,6 +4,20 @@ IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
+NMSTATE_CURRENT_COPR_REPO=nmstate-0.3
+NM_CURRENT_COPR_REPO=NetworkManager-1.26
+
+NMSTATE_FUTURE_COPR_REPO=nmstate
+NM_FUTURE_COPR_REPO=NetworkManager-1.26
+
+ifeq ($(NMSTATE_PIN), future)
+	NMSTATE_COPR_REPO=$(NMSTATE_FUTURE_COPR_REPO)
+	NM_COPR_REPO=$(NM_FUTURE_COPR_REPO)
+else
+	NMSTATE_COPR_REPO=$(NMSTATE_CURRENT_COPR_REPO)
+	NM_COPR_REPO=$(NM_CURRENT_COPR_REPO)
+endif
+
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
@@ -148,7 +162,7 @@ manager: $(GO)
 	$(GO) build -o $(BIN_DIR)/manager main.go
 
 handler: manager
-	$(IMAGE_BUILDER) build . -f build/Dockerfile -t ${HANDLER_IMAGE}
+	$(IMAGE_BUILDER) build . -f build/Dockerfile -t ${HANDLER_IMAGE} --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
 
 push-handler: handler
 	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
