@@ -24,7 +24,7 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
       options:
         miimon: '140'
         primary: %s
-      slaves:
+      port:
         - %s
 `, bondName, primaryNic, primaryNic))
 }

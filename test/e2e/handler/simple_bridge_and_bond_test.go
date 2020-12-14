@@ -35,7 +35,7 @@ func bondUp(bondName string) nmstate.State {
     state: up
     link-aggregation:
       mode: active-backup
-      slaves:
+      port:
         - %s
       options:
         miimon: '120'
@@ -49,7 +49,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstate.State {
     state: up
     link-aggregation:
       mode: active-backup
-      slaves:
+      port:
         - %s
       options:
         miimon: '120'
@@ -79,7 +79,7 @@ func bondUpWithEth1AndEth2(bondName string) nmstate.State {
     mode: balance-rr
     options:
       miimon: '140'
-    slaves:
+    port:
     - %s
     - %s
 `, bondName, firstSecondaryNic, secondSecondaryNic))
@@ -99,7 +99,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
     mode: balance-rr
     options:
       miimon: '140'
-    slaves:
+    port:
     - %s
     - %s
 - name: %s.102
@@ -216,7 +216,7 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
-		Context("with bond interface that has 2 eths as slaves", func() {
+		Context("with bond interface that has 2 eths as ports", func() {
 			BeforeEach(func() {
 				updateDesiredStateAndWait(bondUpWithEth1AndEth2(bond1))
 			})
@@ -227,7 +227,7 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 				resetDesiredStateForNodes()
 			})
-			It("should have the bond interface with 2 slaves at currentState", func() {
+			It("should have the bond interface with 2 ports at currentState", func() {
 				var (
 					expectedBond = interfaceByName(interfaces(bondUpWithEth1AndEth2(bond1)), bond1)
 				)
@@ -237,7 +237,7 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 			})
 		})
-		Context("with bond interface that has 2 eths as slaves and vlan tag on the bond", func() {
+		Context("with bond interface that has 2 eths as ports and vlan tag on the bond", func() {
 			BeforeEach(func() {
 				updateDesiredStateAndWait(bondUpWithEth1Eth2AndVlan(bond1))
 			})
@@ -248,7 +248,7 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 				resetDesiredStateForNodes()
 			})
-			It("should have the bond interface with 2 slaves at currentState", func() {
+			It("should have the bond interface with 2 ports at currentState", func() {
 				var (
 					expectedBond        = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), bond1)
 					expectedVlanBond102 = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), fmt.Sprintf("%s.102", bond1))
