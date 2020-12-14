@@ -42,7 +42,3 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1beta1.NodeNetworkConfig
 		return response
 	}
 }
-
-func always(nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
-	return true
-}
