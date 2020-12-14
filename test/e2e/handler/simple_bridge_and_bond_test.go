@@ -38,7 +38,7 @@ func bondUp(bondName string) nmstate.State {
       port:
         - %s
       options:
-        miimon: '120'
+        miimon: 120
 `, bondName, firstSecondaryNic))
 }
 
@@ -52,7 +52,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstate.State {
       port:
         - %s
       options:
-        miimon: '120'
+        miimon: 120
   - name: %s
     type: linux-bridge
     state: up
@@ -78,7 +78,7 @@ func bondUpWithEth1AndEth2(bondName string) nmstate.State {
   link-aggregation:
     mode: balance-rr
     options:
-      miimon: '140'
+      miimon: 140
     port:
     - %s
     - %s
@@ -98,7 +98,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   link-aggregation:
     mode: balance-rr
     options:
-      miimon: '140'
+      miimon: 140
     port:
     - %s
     - %s

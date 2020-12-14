@@ -22,7 +22,7 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
     link-aggregation:
       mode: active-backup
       options:
-        miimon: '140'
+        miimon: 140
         primary: %s
       port:
         - %s
