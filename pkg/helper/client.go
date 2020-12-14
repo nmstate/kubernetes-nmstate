@@ -122,9 +122,10 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.N
 
 	err = client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
-		// Request object not found, could have been deleted after reconcile request.
-		if !apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return errors.Wrap(err, "Request object not found, could have been deleted after reconcile request")
+		} else {
+			return errors.Wrap(err, "Error updating nodeNetworkState")
 		}
 	}
 
