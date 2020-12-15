@@ -9,7 +9,7 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/onsi/ginkgo v1.12.1
+	github.com/onsi/ginkgo v1.14.0
 	github.com/onsi/gomega v1.10.1
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.14.3
@@ -23,7 +23,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kubectl v0.18.8
 	k8s.io/release v0.4.0
-	kubevirt.io/qe-tools v0.1.6
+	kubevirt.io/qe-tools v0.1.7
 	sigs.k8s.io/controller-runtime v0.6.3
 	sigs.k8s.io/controller-tools v0.4.0
 	sigs.k8s.io/yaml v1.2.0
