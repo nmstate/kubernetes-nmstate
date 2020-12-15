@@ -81,6 +81,8 @@ func main() {
 		}
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
+		//TODO: Check that nmstatectl container is up trying to create a
+		// connection
 	}
 
 	ctrlOptions := ctrl.Options{

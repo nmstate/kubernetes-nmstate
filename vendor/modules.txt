@@ -734,6 +734,12 @@ github.com/tidwall/match
 github.com/tidwall/pretty
 # github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 github.com/tomnomnom/linkheader
+# github.com/varlink/go v0.4.0
+## explicit
+github.com/varlink/go/cmd/varlink-go-interface-generator
+github.com/varlink/go/varlink
+github.com/varlink/go/varlink/idl
+github.com/varlink/go/varlink/internal/ctxio
 # github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2
 github.com/voxelbrain/goptions
 # github.com/xanzy/ssh-agent v0.2.1

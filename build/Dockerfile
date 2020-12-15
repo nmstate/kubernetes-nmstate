@@ -9,6 +9,7 @@ RUN dnf install -b -y dnf-plugins-core && \
     dnf remove -y dnf-plugins-core && \
     dnf clean all
 
+COPY build/nmstate_varlink.py /usr/lib/python3.6/site-packages/nmstatectl/nmstate_varlink.py
 COPY build/_output/bin/manager /usr/local/bin/manager
 COPY build/bin /usr/local/bin
 

@@ -17,9 +17,9 @@ func nmstateHandlerPods() ([]string, error) {
 	return names, err
 }
 
-func runAtPods(pods []string, arguments ...string) {
+func runAtPods(pods []string, container string, arguments ...string) {
 	for _, pod := range pods {
-		exec := []string{"exec", "-n", testenv.OperatorNamespace, pod, "--"}
+		exec := []string{"exec", "-n", testenv.OperatorNamespace, "-c", "nmstate-handler", pod, "--"}
 		execArguments := append(exec, arguments...)
 		_, err := cmd.Kubectl(execArguments...)
 		ExpectWithOffset(2, err).ToNot(HaveOccurred())
@@ -29,5 +29,5 @@ func runAtPods(pods []string, arguments ...string) {
 func RunAtHandlerPods(arguments ...string) {
 	handlerPods, err := nmstateHandlerPods()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	runAtPods(handlerPods, arguments...)
+	runAtPods(handlerPods, "nmstate-handler", arguments...)
 }

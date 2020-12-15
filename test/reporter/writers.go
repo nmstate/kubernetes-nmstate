@@ -13,6 +13,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
@@ -69,32 +70,34 @@ func networkManagerLogsWriter(nodes []string, sinceTime time.Time) func(io.Write
 }
 
 func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
-	podLogOpts := corev1.PodLogOptions{}
-	podLogOpts.SinceTime = &metav1.Time{Time: sinceTime}
 	podList := &corev1.PodList{}
-	err := testenv.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
+	err := testenv.Client.List(context.TODO(), podList, &dynclient.ListOptions{
+		LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector(),
+	})
 	Expect(err).ToNot(HaveOccurred())
 	podsClientset := testenv.KubeClient.CoreV1().Pods(namespace)
 
 	for _, pod := range podList.Items {
-		appLabel, hasAppLabel := pod.Labels["app"]
-		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
-			continue
+		for _, container := range pod.Spec.Containers {
+			podLogOpts := corev1.PodLogOptions{
+				SinceTime: &metav1.Time{Time: sinceTime},
+				Container: container.Name,
+			}
+			req := podsClientset.GetLogs(pod.Name, &podLogOpts)
+			podLogs, err := req.Stream(context.TODO())
+			if err != nil {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("error in opening stream: %v\n", err))
+				continue
+			}
+			defer podLogs.Close()
+			rawLogs, err := ioutil.ReadAll(podLogs)
+			if err != nil {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
+				continue
+			}
+			formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
+			io.WriteString(writer, formattedLogs)
 		}
-		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
-		podLogs, err := req.Stream(context.TODO())
-		if err != nil {
-			io.WriteString(GinkgoWriter, fmt.Sprintf("error in opening stream: %v\n", err))
-			continue
-		}
-		defer podLogs.Close()
-		rawLogs, err := ioutil.ReadAll(podLogs)
-		if err != nil {
-			io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
-			continue
-		}
-		formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
-		io.WriteString(writer, formattedLogs)
 	}
 }
 

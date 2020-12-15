@@ -1,0 +1,12 @@
+--- a/nmstate_varlink.py	2020-12-16 13:46:19.827079843 +0000
++++ b/nmstate_varlink.py	2020-12-16 13:45:48.484880395 +0000
+@@ -68,6 +68,9 @@
+     log_list = list()
+     stringio.seek(0)
+     for log in stringio.getvalue().replace("x\00", "").split("\n")[:-1]:
++        print("---foo---")
++        print(log)
++        print("---bar---")
+         log_list.append(json.loads(log))
+     stringio.seek(0)
+     stringio.truncate()

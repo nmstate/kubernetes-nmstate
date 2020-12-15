@@ -1,78 +1,90 @@
 package nmstatectl
 
 import (
-	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
-	"io"
-	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/pkg/ionmstate"
 )
 
-var (
-	log = logf.Log.WithName("nmstatectl")
-)
-
-const nmstateCommand = "nmstatectl"
-
-func nmstatectlWithInput(arguments []string, input string) (string, error) {
-	cmd := exec.Command(nmstateCommand, arguments...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
-	if input != "" {
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			return "", fmt.Errorf("failed to create pipe for writing into %s: %v", nmstateCommand, err)
-		}
-		go func() {
-			defer stdin.Close()
-			_, err = io.WriteString(stdin, input)
-			if err != nil {
-				fmt.Printf("failed to write input into stdin: %v\n", err)
-			}
-		}()
-
+func Show() (string, error) {
+	c, err := ionmstate.NewConnection()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed connecting to varlink to call nmstate show")
 	}
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s %s: '%v' '%s' '%s'", nmstateCommand, strings.Join(arguments, " "), err, stdout.String(), stderr.String())
+	defer c.Close()
+
+	state, logs, err := ionmstate.Show().Call(context.Background(), c, nil)
+	logsAsString := ionmstate.ConvertLogsToString(logs)
+	if err != nil {
+		return "", fmt.Errorf("failed nmstate show: %w, %s", err, logsAsString)
 	}
-	return stdout.String(), nil
-
-}
-
-func nmstatectl(arguments []string) (string, error) {
-	return nmstatectlWithInput(arguments, "")
-}
-
-func Show(arguments ...string) (string, error) {
-	return nmstatectl([]string{"show"})
+	return string(*state), nil
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
+
+	desiredStateJson, err := yaml.YAMLToJSON(desiredState.Raw)
+	if err != nil {
+		return "", fmt.Errorf("failed converting yaml desired state to json: %w, %s", err, desiredState)
+	}
+
 	var setDoneCh = make(chan struct{})
 	go setUnavailableUp(setDoneCh)
 	defer close(setDoneCh)
 
-	setOutput, err := nmstatectlWithInput([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))}, string(desiredState.Raw))
-	return setOutput, err
+	c, err := ionmstate.NewConnection()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed connecting to varlink to call nmstate set")
+	}
+	defer c.Close()
+	arguments := map[string]json.RawMessage{
+		"desired_state":    json.RawMessage(desiredStateJson),
+		"commit":           json.RawMessage("false"),
+		"rollback_timeout": json.RawMessage(strconv.Itoa(int(timeout.Seconds()))),
+	}
+	logs, err := ionmstate.Apply().Call(context.Background(), c, arguments)
+	logsAsString := ionmstate.ConvertLogsToString(logs)
+	if err != nil {
+		return logsAsString, fmt.Errorf("failed nmstate set arguments(%s): %w, %s", arguments, err, logsAsString)
+	}
+	return logsAsString, nil
 }
 
 func Commit() (string, error) {
-	return nmstatectl([]string{"commit"})
+	c, err := ionmstate.NewConnection()
+	if err != nil {
+		return "", errors.Wrapf(err, "failed connecting to varlink nmstate commit")
+	}
+	defer c.Close()
+
+	logs, err := ionmstate.Commit().Call(context.Background(), c, nil)
+	logsAsString := ionmstate.ConvertLogsToString(logs)
+	if err != nil {
+		return "", fmt.Errorf("failed nmstate commit: %w, %s", err, logsAsString)
+	}
+	return logsAsString, err
 }
 
 func Rollback() error {
-	_, err := nmstatectl([]string{"rollback"})
+	c, err := ionmstate.NewConnection()
 	if err != nil {
-		return errors.Wrapf(err, "failed calling nmstatectl rollback")
+		return errors.Wrapf(err, "failed connecting to varlink to call nmstate rollback")
 	}
-	return nil
+	defer c.Close()
+
+	logs, err := ionmstate.Rollback().Call(context.Background(), c, nil)
+	logsAsString := ionmstate.ConvertLogsToString(logs)
+	if err != nil {
+		return fmt.Errorf("failed nmstate rollback: %w, %s", err, logsAsString)
+	}
+	return err
 }

@@ -118,6 +118,21 @@ spec:
       tolerations: {{ toYaml .HandlerTolerations | nindent 8 }}
       affinity: {{ toYaml .HandlerAffinity | nindent 8 }}
       containers:
+        - name: nmstatectl
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+            - nmstatectl
+          args:
+            - varlink
+            - /varlink/nmstate.so
+          volumeMounts:
+            - name: varlink
+              mountPath: /varlink/
+            - name: dbus-socket
+              mountPath: /run/dbus/system_bus_socket
+          securityContext:
+            privileged: true
         - name: nmstate-handler
           args:
           - --v=production
@@ -150,11 +165,15 @@ spec:
               value: "6060"
             - name: NMSTATE_INSTANCE_NODE_LOCK_FILE
               value: "/var/k8s_nmstate/handler_lock"
+            - name: NMSTATE_VARLINK_SOCKET
+              value: unix:/varlink/nmstate.so
           volumeMounts:
-            - name: dbus-socket
-              mountPath: /run/dbus/system_bus_socket
+            - name: varlink
+              mountPath: /varlink/
             - name: nmstate-lock
               mountPath: /var/k8s_nmstate
+            - name: dbus-socket
+              mountPath: /run/dbus/system_bus_socket
           securityContext:
             privileged: true
       volumes:
@@ -165,6 +184,9 @@ spec:
         - name: nmstate-lock
           hostPath:
             path: /var/k8s_nmstate
+        - name: varlink
+          emptyDir:
+            medium: Memory
 ---
 apiVersion: v1
 kind: ConfigMap
