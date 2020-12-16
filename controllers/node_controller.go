@@ -19,7 +19,7 @@ package controllers
 
 import (
 	"context"
-	"time"
+	"regexp"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -32,22 +32,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Added for test purposes
-type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey) error
+type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedStateRaw string) error
+type NmstatectlShow func() (string, error)
 
 var (
-	nodeRefresh    = 5 * time.Second
-	nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+	gcTimerRexp = regexp.MustCompile(` *gc-timer: *[0-9]*\n`)
 )
 
 // NodeReconciler reconciles a Node object
 type NodeReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	lastState      string
+	nmstateUpdater NmstateUpdater
+	nmstatectlShow NmstatectlShow
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -56,12 +61,22 @@ type NodeReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("node", request.NamespacedName)
+	currentState, err := r.nmstatectlShow()
+	if err != nil {
+		// We cannot call nmstatectl show let's reconcile again
+		return ctrl.Result{}, err
+	}
+
+	// Reduce apiserver hits by checking node's network state with last one
+	if r.lastState != "" && !r.networkStateChanged(currentState) {
+		return ctrl.Result{RequeueAfter: node.NetworkStateRefresh}, err
+	} else {
+		r.Log.Info("Network configuration changed, updating NodeNetworkState")
+	}
 
 	// Fetch the Node instance
 	instance := &corev1.Node{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -72,14 +87,22 @@ func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-	err = nmstateUpdater(r.Client, instance, request.NamespacedName)
+	err = r.nmstateUpdater(r.Client, instance, request.NamespacedName, currentState)
 	if err != nil {
 		err = errors.Wrap(err, "error at node reconcile creating NodeNetworkState")
+		return ctrl.Result{}, err
 	}
-	return ctrl.Result{RequeueAfter: nodeRefresh}, err
+
+	// Cache currentState after successfully storing it at NodeNetworkState
+	r.lastState = currentState
+
+	return ctrl.Result{RequeueAfter: node.NetworkStateRefresh}, nil
 }
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+	r.nmstatectlShow = nmstatectl.Show
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
@@ -102,4 +125,13 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&corev1.Node{}).
 		WithEventFilter(onCreationForThisNode).
 		Complete(r)
+}
+
+func (r *NodeReconciler) networkStateChanged(currentState string) bool {
+	return removeDynamicAttributes(r.lastState) != removeDynamicAttributes(currentState)
+}
+
+func removeDynamicAttributes(state string) string {
+	// Remove attributes that make network state always different
+	return gcTimerRexp.ReplaceAllLiteralString(state, "")
 }

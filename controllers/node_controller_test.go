@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 
@@ -19,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
 var _ = Describe("Node controller reconcile", func() {
@@ -39,6 +42,7 @@ var _ = Describe("Node controller reconcile", func() {
 		}
 	)
 	BeforeEach(func() {
+		reconciler = NodeReconciler{}
 		s := scheme.Scheme
 		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 			&nmstatev1beta1.NodeNetworkState{},
@@ -52,7 +56,43 @@ var _ = Describe("Node controller reconcile", func() {
 		reconciler.Client = cl
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("Node")
 		reconciler.Scheme = s
-		nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+		reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+		reconciler.nmstatectlShow = nmstatectl.Show
+		reconciler.lastState = "lastState"
+		reconciler.nmstatectlShow = func() (string, error) {
+			return "currentState", nil
+		}
+	})
+	Context("and nmstatectl show is failing", func() {
+		var (
+			request reconcile.Request
+		)
+		BeforeEach(func() {
+			reconciler.nmstatectlShow = func() (string, error) {
+				return "", fmt.Errorf("forced failure at unit test")
+			}
+		})
+		It("should return the error from nmstatectl", func() {
+			_, err := reconciler.Reconcile(request)
+			Expect(err).To(MatchError("forced failure at unit test"))
+		})
+	})
+	Context("and network state didn't change", func() {
+		var (
+			request reconcile.Request
+		)
+		BeforeEach(func() {
+			reconciler.lastState = "currentState"
+			reconciler.nmstateUpdater = func(client.Client, *corev1.Node,
+				client.ObjectKey, string) error {
+				return fmt.Errorf("we are not suppose to catch this error")
+			}
+		})
+		It("should return a Result with RequeueAfter set", func() {
+			result, err := reconciler.Reconcile(request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(reconcile.Result{RequeueAfter: nmstatenode.NetworkStateRefresh}))
+		})
 	})
 	Context("when node is not found", func() {
 		var (
@@ -76,17 +116,17 @@ var _ = Describe("Node controller reconcile", func() {
 		})
 		Context("and nodenetworkstate is there too", func() {
 			AfterEach(func() {
-				nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
+				reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 			})
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
 				// Mocking nmstatectl.Show
-				nmstateUpdater = func(client client.Client, node *corev1.Node,
-					namespace client.ObjectKey) error {
+				reconciler.nmstateUpdater = func(client client.Client, node *corev1.Node,
+					namespace client.ObjectKey, observedStateRaw string) error {
 					return nil
 				}
 				result, err := reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nodeRefresh}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nmstatenode.NetworkStateRefresh}))
 			})
 		})
 		Context("and nodenetworkstate is not there", func() {
@@ -112,7 +152,7 @@ var _ = Describe("Node controller reconcile", func() {
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
 				result, err := reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nodeRefresh}))
+				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nmstatenode.NetworkStateRefresh}))
 			})
 		})
 	})
