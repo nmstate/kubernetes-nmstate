@@ -52,7 +52,7 @@ func nmstatectl(arguments []string) (string, error) {
 	return nmstatectlWithInput(arguments, "")
 }
 
-func Show(arguments ...string) (string, error) {
+func Show() (string, error) {
 	return nmstatectl([]string{"show"})
 }
 

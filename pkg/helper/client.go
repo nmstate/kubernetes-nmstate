@@ -72,7 +72,7 @@ func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1beta1.
 	return nodeNetworkState, err
 }
 
-func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
+func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
 	nodeNetworkState := nmstatev1beta1.NodeNetworkState{
@@ -85,35 +85,34 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
 
 	err := client.Create(context.TODO(), &nodeNetworkState)
 	if err != nil {
-		return fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
+		return nil, fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
 	}
 
-	return nil
+	return &nodeNetworkState, nil
 }
 
-func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey) error {
+func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedStateRaw string) error {
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
 	err := client.Get(context.TODO(), namespace, nnsInstance)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return errors.Wrap(err, "Failed to get nmstate")
 		} else {
-			return InitializeNodeNetworkState(client, node)
+			nnsInstance, err = InitializeNodeNetworkState(client, node)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	return UpdateCurrentState(client, nnsInstance)
+	return UpdateCurrentState(client, nnsInstance, observedStateRaw)
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState) error {
-	observedStateRaw, err := nmstatectl.Show()
-	if err != nil {
-		return errors.Wrap(err, "error running nmstatectl show")
-	}
+func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedStateRaw string) error {
 	observedState := nmstate.State{Raw: []byte(observedStateRaw)}
 
 	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
 	if err != nil {
-		fmt.Printf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
+		log.Error(err, "failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob")
 		stateToReport = observedState
 	}
 
