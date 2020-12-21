@@ -35,11 +35,11 @@ func bondUp(bondName string) nmstate.State {
     state: up
     link-aggregation:
       mode: active-backup
-      port:
+      %s:
         - %s
       options:
         miimon: 120
-`, bondName, firstSecondaryNic))
+`, bondName, portFieldName, firstSecondaryNic))
 }
 
 func brWithBondUp(bridgeName string, bondName string) nmstate.State {
@@ -49,7 +49,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstate.State {
     state: up
     link-aggregation:
       mode: active-backup
-      port:
+      %s:
         - %s
       options:
         miimon: 120
@@ -62,7 +62,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstate.State {
           enabled: false
       port:
         - name: %s
-`, bondName, firstSecondaryNic, bridgeName, bondName))
+`, bondName, portFieldName, firstSecondaryNic, bridgeName, bondName))
 }
 
 func bondUpWithEth1AndEth2(bondName string) nmstate.State {
@@ -79,10 +79,10 @@ func bondUpWithEth1AndEth2(bondName string) nmstate.State {
     mode: balance-rr
     options:
       miimon: 140
-    port:
+    %s:
     - %s
     - %s
-`, bondName, firstSecondaryNic, secondSecondaryNic))
+`, bondName, portFieldName, firstSecondaryNic, secondSecondaryNic))
 }
 
 func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
@@ -99,7 +99,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
     mode: balance-rr
     options:
       miimon: 140
-    port:
+    %s:
     - %s
     - %s
 - name: %s.102
@@ -113,7 +113,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   vlan:
     base-iface: %s
     id: 102
-`, bondName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
+`, bondName, portFieldName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
 }
 
 var _ = Describe("NodeNetworkState", func() {

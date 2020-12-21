@@ -24,9 +24,9 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
       options:
         miimon: 140
         primary: %s
-      port:
+      %s:
         - %s
-`, bondName, primaryNic, primaryNic))
+`, bondName, primaryNic, portFieldName, primaryNic))
 }
 
 func bondAbsentWithPrimaryUp(bondName string) nmstate.State {
