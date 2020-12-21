@@ -29,6 +29,7 @@ var _ = Describe("[user-guide] Introduction", func() {
 		waitForAvailableTestPolicy()
 		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
 		waitForAvailableTestPolicy()
+		deletePolicy(TestPolicy)
 	}
 
 	runTroubleshooting := func() {
