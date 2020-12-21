@@ -19,7 +19,6 @@ package controllers
 
 import (
 	"context"
-	"regexp"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -34,16 +33,13 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
+	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Added for test purposes
 type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedStateRaw string) error
 type NmstatectlShow func() (string, error)
-
-var (
-	gcTimerRexp = regexp.MustCompile(` *gc-timer: *[0-9]*\n`)
-)
 
 // NodeReconciler reconciles a Node object
 type NodeReconciler struct {
@@ -128,10 +124,5 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *NodeReconciler) networkStateChanged(currentState string) bool {
-	return removeDynamicAttributes(r.lastState) != removeDynamicAttributes(currentState)
-}
-
-func removeDynamicAttributes(state string) string {
-	// Remove attributes that make network state always different
-	return gcTimerRexp.ReplaceAllLiteralString(state, "")
+	return state.RemoveDynamicAttributes(r.lastState) != state.RemoveDynamicAttributes(currentState)
 }
