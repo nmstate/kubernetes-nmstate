@@ -5,11 +5,13 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
+	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 )
 
 var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
@@ -32,7 +34,11 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 
 				Consistently(func() shared.NodeNetworkStateStatus {
 					return nodeNetworkState(key).Status
-				}, timeout, time.Second).Should(Equal(originalNNS.Status))
+				}, timeout, time.Second).Should(MatchAllFields(Fields{
+					"CurrentState":             WithTransform(state.RemoveDynamicAttributesFromStruct, Equal(state.RemoveDynamicAttributes(originalNNS.Status.CurrentState.String()))),
+					"LastSuccessfulUpdateTime": Equal(originalNNS.Status.LastSuccessfulUpdateTime),
+					"Conditions":               Equal(originalNNS.Status.Conditions),
+				}))
 			}
 		})
 	})
