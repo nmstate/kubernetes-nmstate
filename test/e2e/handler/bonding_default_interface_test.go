@@ -22,11 +22,11 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
     link-aggregation:
       mode: active-backup
       options:
-        miimon: 140
+        miimon: %s
         primary: %s
       %s:
         - %s
-`, bondName, primaryNic, portFieldName, primaryNic))
+`, bondName, fmt.Sprintf(miimonFormat, 140), primaryNic, portFieldName, primaryNic))
 }
 
 func bondAbsentWithPrimaryUp(bondName string) nmstate.State {

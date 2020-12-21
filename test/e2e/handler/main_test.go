@@ -36,6 +36,7 @@ var (
 	firstSecondaryNic    string
 	secondSecondaryNic   string
 	portFieldName        string
+	miimonFormat         string
 	nodesInterfacesState = make(map[string][]byte)
 	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
 )
@@ -55,8 +56,10 @@ var _ = BeforeSuite(func() {
 
 	if version.IsNmstate(">= 1.0.0") {
 		portFieldName = "port"
+		miimonFormat = "%d"
 	} else {
 		portFieldName = "slaves"
+		miimonFormat = "'%d'"
 	}
 
 	By("Getting worker node list from cluster")

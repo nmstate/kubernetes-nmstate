@@ -38,8 +38,8 @@ func bondUp(bondName string) nmstate.State {
       %s:
         - %s
       options:
-        miimon: 120
-`, bondName, portFieldName, firstSecondaryNic))
+        miimon: %s
+`, bondName, portFieldName, firstSecondaryNic, fmt.Sprintf(miimonFormat, 120)))
 }
 
 func brWithBondUp(bridgeName string, bondName string) nmstate.State {
@@ -52,7 +52,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstate.State {
       %s:
         - %s
       options:
-        miimon: 120
+        miimon: %s
   - name: %s
     type: linux-bridge
     state: up
@@ -62,7 +62,7 @@ func brWithBondUp(bridgeName string, bondName string) nmstate.State {
           enabled: false
       port:
         - name: %s
-`, bondName, portFieldName, firstSecondaryNic, bridgeName, bondName))
+`, bondName, portFieldName, firstSecondaryNic, fmt.Sprintf(miimonFormat, 120), bridgeName, bondName))
 }
 
 func bondUpWithEth1AndEth2(bondName string) nmstate.State {
@@ -78,11 +78,11 @@ func bondUpWithEth1AndEth2(bondName string) nmstate.State {
   link-aggregation:
     mode: balance-rr
     options:
-      miimon: 140
+      miimon: %s
     %s:
     - %s
     - %s
-`, bondName, portFieldName, firstSecondaryNic, secondSecondaryNic))
+`, bondName, fmt.Sprintf(miimonFormat, 140), portFieldName, firstSecondaryNic, secondSecondaryNic))
 }
 
 func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
@@ -98,7 +98,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   link-aggregation:
     mode: balance-rr
     options:
-      miimon: 140
+      miimon: %s
     %s:
     - %s
     - %s
@@ -113,7 +113,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   vlan:
     base-iface: %s
     id: 102
-`, bondName, portFieldName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
+`, bondName, fmt.Sprintf(miimonFormat, 140), portFieldName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
 }
 
 var _ = Describe("NodeNetworkState", func() {
