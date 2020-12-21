@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -32,7 +33,11 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 
 				Consistently(func() shared.NodeNetworkStateStatus {
 					return nodeNetworkState(key).Status
-				}, timeout, time.Second).Should(Equal(originalNNS.Status))
+				}, timeout, time.Second).Should(MatchAllFields(Fields{
+					"CurrentState":             WithTransform(shared.State.String, Equal(originalNNS.Status.CurrentState.String())),
+					"LastSuccessfulUpdateTime": Equal(originalNNS.Status.LastSuccessfulUpdateTime),
+					"Conditions":               Equal(originalNNS.Status.Conditions),
+				}))
 			}
 		})
 	})
