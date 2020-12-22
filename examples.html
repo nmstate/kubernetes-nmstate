@@ -338,6 +338,7 @@
               <ul class="toc__menu">
   <li><a href="#linux-bonding">Linux bonding</a></li>
   <li><a href="#linux-bonding-with-vlan">Linux bonding with VLAN</a></li>
+  <li><a href="#detach-bridge-port-and-restore-eth-configuration">Detach bridge port and restore eth configuration</a></li>
   <li><a href="#dhcp">DHCP</a></li>
   <li><a href="#dns">DNS</a></li>
   <li><a href="#ethernet">Ethernet</a></li>
@@ -409,6 +410,27 @@
       <span class="na">vlan</span><span class="pi">:</span>
         <span class="na">base-iface</span><span class="pi">:</span> <span class="s">bond0</span>
         <span class="na">id</span><span class="pi">:</span> <span class="m">102</span>
+
+</code></pre></div></div>
+
+<h2 id="detach-bridge-port-and-restore-eth-configuration">Detach bridge port and restore eth configuration</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">detach-bridge-port-and-restore-eth</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">br1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">linux-bridge</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">absent</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
 
 </code></pre></div></div>
 
