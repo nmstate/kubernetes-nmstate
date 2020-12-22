@@ -18,6 +18,12 @@ toc_sticky: true
 {% include_absolute 'examples/bond-vlan.yaml' %}
 ```
 
+## Detach bridge port and restore eth configuration
+
+```yaml
+{% include_absolute 'examples/detach-bridge-port-and-restore-eth.yaml' %}
+```
+
 ## DHCP
 
 ```yaml
