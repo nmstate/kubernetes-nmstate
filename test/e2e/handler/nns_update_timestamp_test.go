@@ -5,10 +5,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/andreyvit/diff"
+
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
@@ -27,18 +27,15 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	})
 	Context("when network configuration hasn't change", func() {
 		It("should not be updated", func() {
+			By("Give enough time for the NNS Reconcile to happend (3 interval times)")
+			time.Sleep(3 * nmstatenode.NetworkStateRefresh)
 			for node, originalNNS := range originalNNSs {
-				// Give enough time for the NNS to be updated (3 interval times)
-				timeout := 3 * nmstatenode.NetworkStateRefresh
-				key := types.NamespacedName{Name: node}
-
-				Consistently(func() shared.NodeNetworkStateStatus {
-					return nodeNetworkState(key).Status
-				}, timeout, time.Second).Should(MatchAllFields(Fields{
-					"CurrentState":             WithTransform(state.RemoveDynamicAttributesFromStruct, Equal(state.RemoveDynamicAttributes(originalNNS.Status.CurrentState.String()))),
-					"LastSuccessfulUpdateTime": Equal(originalNNS.Status.LastSuccessfulUpdateTime),
-					"Conditions":               Equal(originalNNS.Status.Conditions),
-				}))
+				obtainedNNSStatus := nodeNetworkState(types.NamespacedName{Name: node}).Status
+				obtainedState := state.RemoveDynamicAttributesFromStruct(obtainedNNSStatus.CurrentState)
+				originalState := state.RemoveDynamicAttributesFromStruct(originalNNS.Status.CurrentState)
+				Expect(obtainedState).To(Equal(originalState), "should report same state, diff :%s", diff.LineDiff(originalState, obtainedState))
+				Expect(obtainedNNSStatus.LastSuccessfulUpdateTime).To(Equal(originalNNS.Status.LastSuccessfulUpdateTime))
+				Expect(obtainedNNSStatus.Conditions).To(Equal(originalNNS.Status.Conditions))
 			}
 		})
 	})
