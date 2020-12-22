@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -17,30 +18,43 @@ import (
 var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	var (
 		originalNNSs map[string]nmstatev1beta1.NodeNetworkState
-	)
-	BeforeEach(func() {
-		originalNNSs = map[string]nmstatev1beta1.NodeNetworkState{}
-		for _, node := range allNodes {
-			key := types.NamespacedName{Name: node}
-			originalNNSs[node] = nodeNetworkState(key)
+		nnsByNode    = func() map[string]nmstatev1beta1.NodeNetworkState {
+			nnss := map[string]nmstatev1beta1.NodeNetworkState{}
+			for _, node := range allNodes {
+				key := types.NamespacedName{Name: node}
+				nnss[node] = nodeNetworkState(key)
+			}
+			return nnss
 		}
-	})
+	)
 	Context("when network configuration hasn't change", func() {
 		It("should not be updated", func() {
-			By("Give enough time for the NNS Reconcile to happend (3 interval times)")
-			time.Sleep(3 * nmstatenode.NetworkStateRefresh)
-			for node, originalNNS := range originalNNSs {
-				obtainedNNSStatus := nodeNetworkState(types.NamespacedName{Name: node}).Status
-				obtainedState := state.RemoveDynamicAttributesFromStruct(obtainedNNSStatus.CurrentState)
-				originalState := state.RemoveDynamicAttributesFromStruct(originalNNS.Status.CurrentState)
-				Expect(obtainedState).To(Equal(originalState), "should report same state, diff :%s", diff.LineDiff(originalState, obtainedState))
-				Expect(obtainedNNSStatus.LastSuccessfulUpdateTime).To(Equal(originalNNS.Status.LastSuccessfulUpdateTime))
-				Expect(obtainedNNSStatus.Conditions).To(Equal(originalNNS.Status.Conditions))
-			}
+			Eventually(func() error {
+				originalNNSs = nnsByNode()
+				By("Give enough time for the NNS Reconcile to happen (3 interval times)")
+				time.Sleep(2 * nmstatenode.NetworkStateRefresh)
+				for node, originalNNS := range originalNNSs {
+					obtainedNNSStatus := nodeNetworkState(types.NamespacedName{Name: node}).Status
+
+					obtainedState := state.RemoveDynamicAttributesFromStruct(obtainedNNSStatus.CurrentState)
+					originalState := state.RemoveDynamicAttributesFromStruct(originalNNS.Status.CurrentState)
+					if obtainedState != originalState {
+						return fmt.Errorf("should report same state, diff :%s", diff.LineDiff(originalState, obtainedState))
+					}
+
+					obtainedTimestamp := obtainedNNSStatus.LastSuccessfulUpdateTime
+					originalTimestamp := originalNNS.Status.LastSuccessfulUpdateTime
+					if obtainedTimestamp != originalTimestamp {
+						return fmt.Errorf("should report same LastSuccessfulUpdateTime, diff :%s", diff.LineDiff(originalTimestamp.String(), obtainedTimestamp.String()))
+					}
+				}
+				return nil
+			}, nmstatenode.NetworkStateRefresh*4, nmstatenode.NetworkStateRefresh*2).ShouldNot(HaveOccurred())
 		})
 	})
 	Context("when network configuration changed", func() {
 		BeforeEach(func() {
+			originalNNSs = nnsByNode()
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUp(bridge1))
 			waitForAvailableTestPolicy()
 		})
@@ -54,7 +68,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 		It("should be updated", func() {
 			for node, originalNNS := range originalNNSs {
 				// Give enough time for the NNS to be updated (3 interval times)
-				timeout := 3 * nmstatenode.NetworkStateRefresh
+				timeout := 2 * nmstatenode.NetworkStateRefresh
 				key := types.NamespacedName{Name: node}
 
 				Eventually(func() time.Time {
