@@ -343,7 +343,7 @@ kubectl apply -f eth1-eth2_up.yaml
 Wait for the Policy to get applied:
 
 ```shell
-kubectl wait nncp eth1 eth2 --for condition=Available --timeout 2m
+kubectl wait nncp eth1-eth2 --for condition=Available --timeout 2m
 ```
 
 Both NICs are now back up and with assigned IPs:

@@ -2,7 +2,7 @@
 apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-  name: eth1
+  name: eth1-eth2
 spec:
   desiredState:
     interfaces:
@@ -12,14 +12,6 @@ spec:
       ipv4:
         dhcp: true
         enabled: true
----
-apiVersion: nmstate.io/v1beta1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: eth2
-spec:
-  desiredState:
-    interfaces:
     - name: eth2
       type: ethernet
       state: up
