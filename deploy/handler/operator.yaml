@@ -172,7 +172,7 @@ metadata:
   name: {{template "handlerPrefix" .}}nmstate-config
   namespace: {{ .HandlerNamespace }}
 data:
-  interfaces_filter: "veth*"
+  interfaces_filter: "{veth*,cali*}"
 ---
 apiVersion: v1
 kind: Service
