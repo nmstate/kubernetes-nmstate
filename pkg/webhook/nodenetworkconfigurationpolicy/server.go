@@ -26,6 +26,7 @@ func Add(mgr manager.Manager, o certificate.Options) error {
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook()),
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook()),
 		webhookserver.WithHook("/nodenetworkconfigurationpolicies-timestamp-mutate", setTimestampAnnotationHook()),
+		webhookserver.WithHook("/nodenetworkconfigurationpolicies-progress-validate", validatePolicyUpdateHook(mgr.GetClient())),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed creating new webhook server")

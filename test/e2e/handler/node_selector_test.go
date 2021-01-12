@@ -21,7 +21,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 	Context("when policy is set with node selector not matching any nodes", func() {
 		BeforeEach(func() {
 			By(fmt.Sprintf("Set policy %s with not matching node selector", bridge1))
-			setDesiredStateWithPolicyAndNodeSelector(bridge1, linuxBrUp(bridge1), testNodeSelector)
+			setDesiredStateWithPolicyAndNodeSelectorEventually(bridge1, linuxBrUp(bridge1), testNodeSelector)
 			waitForAvailablePolicy(bridge1)
 		})
 
