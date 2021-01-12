@@ -207,8 +207,8 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 	By(fmt.Sprintf("Delete bridge %s", bridgeName))
 	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
 	for _, portName := range ports {
-		_, slaveErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
-		errs = append(errs, slaveErrors...)
+		_, portErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
+		errs = append(errs, portErrors...)
 	}
 	return errs
 }

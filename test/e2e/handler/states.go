@@ -210,7 +210,7 @@ func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 		HaveKeyWithValue("state", expectedBond["state"]),
 		HaveKeyWithValue("link-aggregation", SatisfyAll(
 			HaveKeyWithValue("mode", expectedLinkAggregation["mode"]),
-			HaveKeyWithValue("slaves", ConsistOf(expectedLinkAggregation["slaves"])),
+			HaveKeyWithValue(portFieldName, ConsistOf(expectedLinkAggregation[portFieldName])),
 			HaveKeyWithValue("options", HaveKeyWithValue("miimon", expectedOptions["miimon"])),
 		)),
 	)
