@@ -22,8 +22,8 @@ var (
 	log = logf.Log.WithName("policyconditions")
 )
 
-func setPolicyProgressing(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicyProgressing")
+func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicyProgressing")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionUnknown,
@@ -38,8 +38,8 @@ func setPolicyProgressing(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func setPolicySuccess(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicySuccess")
+func SetPolicySuccess(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicySuccess")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
@@ -54,8 +54,8 @@ func setPolicySuccess(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func setPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicyNotMatching")
+func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicyNotMatching")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
@@ -70,8 +70,8 @@ func setPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func setPolicyFailedToConfigure(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicyFailedToConfigure")
+func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicyFailedToConfigure")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionTrue,
@@ -147,20 +147,20 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 
 		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
 		if numberOfFinishedEnactments < numberOfNmstateNodes {
-			setPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
+			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
 		} else {
 			if enactmentsCount.Matching() == 0 {
 				message := "Policy does not match any node"
-				setPolicyNotMatching(&policy.Status.Conditions, message)
+				SetPolicyNotMatching(&policy.Status.Conditions, message)
 			} else if enactmentsCount.Failed() > 0 || enactmentsCount.Aborted() > 0 {
 				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), enactmentsCount.Matching())
 				if enactmentsCount.Aborted() > 0 {
 					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCount.Aborted())
 				}
-				setPolicyFailedToConfigure(&policy.Status.Conditions, message)
+				SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
 			} else {
 				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), enactmentsCount.Available())
-				setPolicySuccess(&policy.Status.Conditions, message)
+				SetPolicySuccess(&policy.Status.Conditions, message)
 			}
 		}
 

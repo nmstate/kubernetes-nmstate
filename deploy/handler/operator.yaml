@@ -229,6 +229,17 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
+  - name: nodenetworkconfigurationpolicies-progress-validate.nmstate.io
+    clientConfig:
+      service:
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
+        path: "/nodenetworkconfigurationpolicies-progress-validate"
+    rules:
+      - operations: ["UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1","v1beta1"]
+        resources: ["nodenetworkconfigurationpolicies"]
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget

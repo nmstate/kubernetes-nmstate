@@ -61,22 +61,30 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	return dummy
 }
 
-func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) {
+func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
 	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
-	Eventually(func() error {
-		err := testenv.Client.Get(context.TODO(), key, &policy)
-		policy.Spec.DesiredState = desiredState
-		policy.Spec.NodeSelector = nodeSelector
-		policy.Spec.Parallel = parallelRollout
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return testenv.Client.Create(context.TODO(), &policy)
-			}
-			return err
+	err := testenv.Client.Get(context.TODO(), key, &policy)
+	policy.Spec.DesiredState = desiredState
+	policy.Spec.NodeSelector = nodeSelector
+	policy.Spec.Parallel = parallelRollout
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return testenv.Client.Create(context.TODO(), &policy)
 		}
-		return testenv.Client.Update(context.TODO(), &policy)
+		return err
+	}
+	err = testenv.Client.Update(context.TODO(), &policy)
+	if err != nil {
+		fmt.Println("Update error: " + err.Error())
+	}
+	return err
+}
+
+func setDesiredStateWithPolicyAndNodeSelectorEventually(name string, desiredState nmstate.State, nodeSelector map[string]string) {
+	Eventually(func() error {
+		return setDesiredStateWithPolicyAndNodeSelector(name, desiredState, nodeSelector)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
 	//FIXME: until we don't have webhook we have to wait for reconcile
 	//       to start so we are sure that conditions are reset and we can
@@ -85,12 +93,12 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 }
 
 func setDesiredStateWithPolicyWithoutNodeSelector(name string, desiredState nmstate.State) {
-	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, map[string]string{})
+	setDesiredStateWithPolicyAndNodeSelectorEventually(name, desiredState, map[string]string{})
 }
 
 func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
-	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, runAtWorkers)
+	setDesiredStateWithPolicyAndNodeSelectorEventually(name, desiredState, runAtWorkers)
 }
 
 func updateDesiredState(desiredState nmstate.State) {
@@ -104,7 +112,7 @@ func updateDesiredStateAndWait(desiredState nmstate.State) {
 
 func updateDesiredStateAtNode(node string, desiredState nmstate.State) {
 	nodeSelector := map[string]string{"kubernetes.io/hostname": node}
-	setDesiredStateWithPolicyAndNodeSelector(TestPolicy, desiredState, nodeSelector)
+	setDesiredStateWithPolicyAndNodeSelectorEventually(TestPolicy, desiredState, nodeSelector)
 }
 
 func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
