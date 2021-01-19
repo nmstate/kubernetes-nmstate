@@ -3,6 +3,7 @@ module github.com/nmstate/kubernetes-nmstate
 go 1.15
 
 require (
+	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/github-release/github-release v0.8.1
 	github.com/go-logr/logr v0.1.0

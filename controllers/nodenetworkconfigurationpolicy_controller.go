@@ -281,6 +281,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 	enactmentConditions.NotifySuccess()
 
+	r.forceNNSRefresh(nodeName)
+
 	return ctrl.Result{}, nil
 }
 
@@ -324,6 +326,26 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening Node events")
 	}
 	return nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) {
+	log := r.Log.WithName("forceNNSRefresh").WithValues("node", name)
+	log.Info("forcing NodeNetworkState refresh after NNCP applied")
+	nns := &nmstatev1beta1.NodeNetworkState{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: name}, nns)
+	if err != nil {
+		log.WithValues("error", err).Info("WARNING: failed retrieving NodeNetworkState to force refresh, it will be refreshed after regular period")
+		return
+	}
+	if nns.Labels == nil {
+		nns.Labels = map[string]string{}
+	}
+	nns.Labels[forceRefreshLabel] = fmt.Sprintf("%d", time.Now().UnixNano())
+
+	err = r.Client.Update(context.Background(), nns)
+	if err != nil {
+		log.WithValues("error", err).Info("WARNING: failed forcing NNS refresh, it will be refreshed after regular period")
+	}
 }
 
 func desiredState(object runtime.Object) (nmstateapi.State, error) {
