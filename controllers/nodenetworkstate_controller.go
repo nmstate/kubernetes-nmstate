@@ -30,9 +30,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -63,9 +65,14 @@ func (r *NodeNetworkStateReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := nmstatectl.Show()
+	currentStateRaw, err := nmstatectl.Show()
 	if err != nil {
 		// We cannot call nmstatectl show let's reconcile again
+		return ctrl.Result{}, err
+	}
+
+	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -89,8 +96,9 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
 			return nmstate.EventIsForThisNode(deleteEvent.Meta)
 		},
-		UpdateFunc: func(event.UpdateEvent) bool {
-			return false
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			return nmstate.EventIsForThisNode(updateEvent.MetaNew) &&
+				shouldForceRefresh(updateEvent)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -101,4 +109,16 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&nmstatev1beta1.NodeNetworkState{}).
 		WithEventFilter(onDeleteForThisNode).
 		Complete(r)
+}
+
+func shouldForceRefresh(updateEvent event.UpdateEvent) bool {
+	newForceRefresh, hasForceRefreshNow := updateEvent.MetaNew.GetLabels()[forceRefreshLabel]
+	if !hasForceRefreshNow {
+		return false
+	}
+	oldForceRefresh, hasForceRefreshLabelPreviously := updateEvent.MetaOld.GetLabels()[forceRefreshLabel]
+	if !hasForceRefreshLabelPreviously {
+		return true
+	}
+	return oldForceRefresh != newForceRefresh
 }

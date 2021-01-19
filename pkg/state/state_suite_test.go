@@ -1,4 +1,4 @@
-package helper
+package state
 
 import (
 	"testing"
@@ -11,6 +11,6 @@ import (
 
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("junit.helper-helper_suite_test.xml")
+	junitReporter := reporters.NewJUnitReporter("junit.state-state_suite_test.xml")
 	RunSpecsWithDefaultAndCustomReporters(t, "Helper Test Suite", []Reporter{junitReporter})
 }

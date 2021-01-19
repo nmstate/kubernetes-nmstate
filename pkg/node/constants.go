@@ -5,5 +5,5 @@ import (
 )
 
 const (
-	NetworkStateRefresh = 5 * time.Second
+	NetworkStateRefresh = time.Minute
 )
