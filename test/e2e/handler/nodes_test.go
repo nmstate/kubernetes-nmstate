@@ -1,8 +1,12 @@
 package handler
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component][nns]Nodes", func() {
@@ -41,8 +45,10 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				}
 			})
 			It("[test_id:3794]should update node network state with it", func() {
-				for _, node := range nodes {
-					interfacesNameForNodeEventually(node).Should(ContainElement(expectedDummyName))
+				for _, nodeName := range nodes {
+					Eventually(func() []string {
+						return interfacesNameForNode(nodeName)
+					}, node.NetworkStateRefresh, time.Second).Should(ContainElement(expectedDummyName))
 				}
 			})
 		})

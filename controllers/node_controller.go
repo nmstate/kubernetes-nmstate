@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -38,7 +39,7 @@ import (
 )
 
 // Added for test purposes
-type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedStateRaw string) error
+type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedState shared.State) error
 type NmstatectlShow func() (string, error)
 
 // NodeReconciler reconciles a Node object
@@ -46,7 +47,7 @@ type NodeReconciler struct {
 	client.Client
 	Log            logr.Logger
 	Scheme         *runtime.Scheme
-	lastState      string
+	lastState      shared.State
 	nmstateUpdater NmstateUpdater
 	nmstatectlShow NmstatectlShow
 }
@@ -57,14 +58,19 @@ type NodeReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	currentState, err := r.nmstatectlShow()
+	currentStateRaw, err := r.nmstatectlShow()
 	if err != nil {
 		// We cannot call nmstatectl show let's reconcile again
 		return ctrl.Result{}, err
 	}
 
+	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Reduce apiserver hits by checking node's network state with last one
-	if r.lastState != "" && !r.networkStateChanged(currentState) {
+	if r.lastState.String() == currentState.String() {
 		return ctrl.Result{RequeueAfter: node.NetworkStateRefresh}, err
 	} else {
 		r.Log.Info("Network configuration changed, updating NodeNetworkState")
@@ -121,8 +127,4 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&corev1.Node{}).
 		WithEventFilter(onCreationForThisNode).
 		Complete(r)
-}
-
-func (r *NodeReconciler) networkStateChanged(currentState string) bool {
-	return state.RemoveDynamicAttributes(r.lastState) != state.RemoveDynamicAttributes(currentState)
 }
