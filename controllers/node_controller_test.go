@@ -44,6 +44,9 @@ var _ = Describe("Node controller reconcile", func() {
 				Name: existingNodeName,
 			},
 		}
+		expectRequeueAfterIsSetWithNetworkStateRefresh = func(result ctrl.Result) {
+			ExpectWithOffset(1, result.RequeueAfter).To(BeNumerically("~", nmstatenode.NetworkStateRefresh, float64(nmstatenode.NetworkStateRefresh)*nmstatenode.NetworkStateRefreshMaxFactor))
+		}
 	)
 	BeforeEach(func() {
 		reconciler = NodeReconciler{}
@@ -109,7 +112,7 @@ routes:
 		It("should not call nmstateUpdater and return a Result with RequeueAfter set", func() {
 			result, err := reconciler.Reconcile(request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(reconcile.Result{RequeueAfter: nmstatenode.NetworkStateRefresh}))
+			expectRequeueAfterIsSetWithNetworkStateRefresh(result)
 		})
 	})
 	Context("when node is not found", func() {
@@ -161,7 +164,7 @@ routes:
 			It("should call nmstateUpdater and return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
 				result, err := reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nmstatenode.NetworkStateRefresh}))
+				expectRequeueAfterIsSetWithNetworkStateRefresh(result)
 				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
 				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 				Expect(err).ToNot(HaveOccurred())
@@ -193,7 +196,7 @@ routes:
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
 				result, err := reconciler.Reconcile(request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(reconcile.Result{RequeueAfter: nmstatenode.NetworkStateRefresh}))
+				expectRequeueAfterIsSetWithNetworkStateRefresh(result)
 			})
 		})
 	})
