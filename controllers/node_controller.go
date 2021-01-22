@@ -71,7 +71,7 @@ func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 
 	// Reduce apiserver hits by checking node's network state with last one
 	if r.lastState.String() == currentState.String() {
-		return ctrl.Result{RequeueAfter: node.NetworkStateRefresh}, err
+		return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, err
 	} else {
 		r.Log.Info("Network configuration changed, updating NodeNetworkState")
 	}
@@ -98,7 +98,7 @@ func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// Cache currentState after successfully storing it at NodeNetworkState
 	r.lastState = currentState
 
-	return ctrl.Result{RequeueAfter: node.NetworkStateRefresh}, nil
+	return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 }
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
