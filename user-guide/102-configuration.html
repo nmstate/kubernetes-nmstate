@@ -337,14 +337,18 @@ routing on cluster nodes. The configuration is driven by two main object types,
 <code class="language-plaintext highlighter-rouge">NodeNetworkConfigurationEnactment</code> (Enactment).</p>
 
 <p>A Policy describes what is the desired network configuration on cluster nodes.
-It is created by users and applies cluster-wide. User needs to ensure that only one policy is in progress
-at a time. Creating a new policy before existing one finishes has undefined behaviour.
-An Enactment, on the other hand, is a read-only object that carries execution state of a Policy per each Node.</p>
+It is created by users and applies cluster-wide.
+An Enactment, on the other hand, is a read-only object that carries execution
+state of a Policy per each Node.</p>
+
+<p>Multiple policies can be created at a time, but users need to avoid
+inter-policy dependencies. If two policies need to be applied in specific
+order, they should form a single policy.</p>
 
 <p>Policies are applied on a node via NetworkManager. Thanks to this, the
 configuration is persistent on the node and survives reboots.</p>
 
-<p><img class="emoji" title=":warning:" alt=":warning:" raw="⚠️" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" style="vertical-align: middle; display: inline; max-width: 1em; visibility: hidden;" onload="this.style.visibility='visible'" onerror="this.replaceWith(this.getAttribute('raw'))">Only one policy can be in progress at a time.</p>
+<p><img class="emoji" title=":warning:" alt=":warning:" raw="⚠️" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" style="vertical-align: middle; display: inline; max-width: 1em; visibility: hidden;" onload="this.style.visibility='visible'" onerror="this.replaceWith(this.getAttribute('raw'))">Changing a policy that is in progress has undefined behaviour.</p>
 
 <h2 id="creating-interfaces">Creating interfaces</h2>
 
