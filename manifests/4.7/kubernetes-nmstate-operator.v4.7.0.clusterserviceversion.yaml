@@ -10,7 +10,9 @@ metadata:
           "name": "nmstate"
         },
         "spec": {
-          "nodeSelector": "beta.kubernetes.io/arch=amd64"
+          "nodeSelector": {
+            "beta.kubernetes.io/arch": "amd64"
+          }
         }
       }]
     capabilities: Basic Install
