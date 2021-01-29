@@ -41,6 +41,7 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/controllers"
+	"github.com/nmstate/kubernetes-nmstate/pkg/cache"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
@@ -93,6 +94,11 @@ func main() {
 	if environment.IsWebhook() {
 		ctrlOptions.LeaderElection = true
 		ctrlOptions.LeaderElectionID = "5d2e944a.nmstate.io"
+	} else if environment.IsHandler() {
+		ctrlOptions.NewCache = cache.Builder(cache.Options{FieldSelectorByResource: map[string]string{
+			"nodes":             fmt.Sprintf("metadata.name=%s", environment.NodeName()),
+			"nodenetworkstates": fmt.Sprintf("metadata.name=%s", environment.NodeName()),
+		}})
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
@@ -156,9 +162,10 @@ func main() {
 			os.Exit(1)
 		}
 		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
-			Scheme: mgr.GetScheme(),
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
+			Scheme:    mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 			os.Exit(1)

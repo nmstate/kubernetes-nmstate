@@ -94,11 +94,11 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return false
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nmstate.EventIsForThisNode(deleteEvent.Meta)
+			return true
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.EventIsForThisNode(updateEvent.MetaNew) &&
-				shouldForceRefresh(updateEvent)
+			return shouldForceRefresh(updateEvent)
+
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false

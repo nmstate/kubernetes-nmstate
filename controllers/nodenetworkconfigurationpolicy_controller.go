@@ -78,8 +78,7 @@ var (
 			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			labelsChanged := !reflect.DeepEqual(updateEvent.MetaOld.GetLabels(), updateEvent.MetaNew.GetLabels())
-			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.MetaNew)
+			return !reflect.DeepEqual(updateEvent.MetaOld.GetLabels(), updateEvent.MetaNew.GetLabels())
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -101,8 +100,9 @@ func init() {
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
 type NodeNetworkConfigurationPolicyReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	APIReader client.Reader
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
@@ -230,7 +230,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
-	defer policyconditions.Update(r.Client, request.NamespacedName)
+	defer policyconditions.Update(r.Client, r.APIReader, request.NamespacedName)
 
 	policySelectors := selectors.NewFromPolicy(r.Client, *instance)
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)

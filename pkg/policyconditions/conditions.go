@@ -86,7 +86,7 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 	)
 }
 
-func nodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
+func nodesRunningNmstate(cli client.Reader) ([]corev1.Node, error) {
 	nodes := corev1.NodeList{}
 	err := cli.List(context.TODO(), &nodes)
 	if err != nil {
@@ -112,7 +112,7 @@ func nodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
 	return filteredNodes, nil
 }
 
-func Update(cli client.Client, policyKey types.NamespacedName) error {
+func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
 	// conflict can denote that the calculated policy conditions
@@ -133,8 +133,10 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 
 		// Count only nodes that runs nmstate handler, could be that
 		// users don't want to run knmstate at master for example so
-		// they don't want to change net config there.
-		nmstateNodes, err := nodesRunningNmstate(cli)
+		// they don't want to change net config there. use api reader
+		// to bypass the cache since the cache is already filtered and
+		// returns only the node running this pod.
+		nmstateNodes, err := nodesRunningNmstate(apiReader)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}

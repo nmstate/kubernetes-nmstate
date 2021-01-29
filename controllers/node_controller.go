@@ -110,7 +110,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// but we only want to watch create/delete for current node.
 	onCreationForThisNode := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nmstate.EventIsForThisNode(createEvent.Meta)
+			return true
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
 			return false
