@@ -25,6 +25,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -45,6 +46,7 @@ type NmstatectlShow func() (string, error)
 // NodeReconciler reconciles a Node object
 type NodeReconciler struct {
 	client.Client
+	Config         *rest.Config
 	Log            logr.Logger
 	Scheme         *runtime.Scheme
 	lastState      shared.State
@@ -58,7 +60,8 @@ type NodeReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	currentStateRaw, err := r.nmstatectlShow()
+	//currentStateRaw, err := r.nmstatectlShow()
+	currentStateRaw, err := nmstatectl.ShowAtNode(r.Config, request.Name)
 	if err != nil {
 		// We cannot call nmstatectl show let's reconcile again
 		return ctrl.Result{}, err
@@ -108,9 +111,9 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
-	onCreationForThisNode := predicate.Funcs{
+	onCreation := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nmstate.EventIsForThisNode(createEvent.Meta)
+			return true
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
 			return false
@@ -125,6 +128,6 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
-		WithEventFilter(onCreationForThisNode).
+		WithEventFilter(onCreation).
 		Complete(r)
 }

@@ -25,6 +25,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -41,6 +42,7 @@ import (
 // NodeNetworkStateReconciler reconciles a NodeNetworkState object
 type NodeNetworkStateReconciler struct {
 	client.Client
+	Config *rest.Config
 	Log    logr.Logger
 	Scheme *runtime.Scheme
 }
@@ -65,7 +67,8 @@ func (r *NodeNetworkStateReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return ctrl.Result{}, err
 	}
 
-	currentStateRaw, err := nmstatectl.Show()
+	//currentStateRaw, err := nmstatectl.Show()
+	currentStateRaw, err := nmstatectl.ShowAtNode(r.Config, request.Name)
 	if err != nil {
 		// We cannot call nmstatectl show let's reconcile again
 		return ctrl.Result{}, err
@@ -89,16 +92,15 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch delete for current node.
-	onDeleteForThisNode := predicate.Funcs{
+	onDeleteOrForceRefresh := predicate.Funcs{
 		CreateFunc: func(event.CreateEvent) bool {
 			return false
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nmstate.EventIsForThisNode(deleteEvent.Meta)
+			return true
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.EventIsForThisNode(updateEvent.MetaNew) &&
-				shouldForceRefresh(updateEvent)
+			return shouldForceRefresh(updateEvent)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -107,7 +109,7 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkState{}).
-		WithEventFilter(onDeleteForThisNode).
+		WithEventFilter(onDeleteOrForceRefresh).
 		Complete(r)
 }
 

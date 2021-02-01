@@ -15,7 +15,7 @@ var (
 )
 
 func init() {
-	if !environment.IsHandler() {
+	if !environment.IsHandler() && !environment.IsMonitor() {
 		return
 	}
 	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")

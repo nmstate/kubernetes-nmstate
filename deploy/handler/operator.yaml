@@ -86,6 +86,82 @@ spec:
             secretName: {{template "handlerPrefix" .}}nmstate-webhook
 ---
 apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-monitor
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
+    component: kubernetes-nmstate-monitor
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{template "handlerPrefix" .}}nmstate-monitor
+  template:
+    metadata:
+      labels:
+        app: kubernetes-nmstate
+        component: kubernetes-nmstate-monitor
+        name: {{template "handlerPrefix" .}}nmstate-monitor
+      annotations:
+        description: kubernetes-nmstate-monitor presents node networking, reconciling reports with NNS
+    spec:
+      # Needed to force vlan filtering config with iproute commands until
+      # future nmstate/NM is in place.
+      # https://github.com/nmstate/nmstate/pull/440
+      hostNetwork: true
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
+      nodeSelector: {{ toYaml .WebhookNodeSelector| nindent 8 }}
+      tolerations: {{ toYaml .WebhookTolerations| nindent 8 }}
+      affinity: {{ toYaml .WebhookAffinity| nindent 8 }}
+      containers:
+        - name: nmstate-monitor
+          args:
+          - --v=production
+          # Replace this with the built image name
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+            - manager
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: RUN_MONITOR
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "{{template "handlerPrefix" .}}nmstate"
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: INTERFACES_FILTER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{template "handlerPrefix" .}}nmstate-config
+                  key: interfaces_filter
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
+          volumeMounts:
+            - name: dbus-socket
+              mountPath: /run/dbus/system_bus_socket
+          securityContext:
+            privileged: true
+      volumes:
+        - name: dbus-socket
+          hostPath:
+            path: /run/dbus/system_bus_socket
+            type: Socket
+---
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-handler

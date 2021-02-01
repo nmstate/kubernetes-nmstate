@@ -20,8 +20,14 @@ func IsWebhook() bool {
 }
 
 // IsHandler returns true if it's not the operator or webhook server
+func IsMonitor() bool {
+	_, runOperator := os.LookupEnv("RUN_MONITOR")
+	return runOperator
+}
+
+// IsHandler returns true if it's not the operator or webhook server
 func IsHandler() bool {
-	return !IsWebhook() && !IsOperator()
+	return !IsWebhook() && !IsOperator() && !IsMonitor()
 }
 
 // Returns node name runnig the pod

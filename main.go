@@ -141,8 +141,9 @@ func main() {
 			setupLog.Error(err, "unable to create NMState controller", "controller", "NMState")
 			os.Exit(1)
 		}
-	} else if environment.IsHandler() {
+	} else if environment.IsMonitor() {
 		if err = (&controllers.NodeReconciler{
+			Config: mgr.GetConfig(),
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("Node"),
 			Scheme: mgr.GetScheme(),
@@ -150,20 +151,22 @@ func main() {
 			setupLog.Error(err, "unable to create Node controller", "controller", "NMState")
 			os.Exit(1)
 		}
+		if err = (&controllers.NodeNetworkStateReconciler{
+			Config: mgr.GetConfig(),
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkState"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create NodeNetworkState controller", "controller", "NMState")
+			os.Exit(1)
+		}
+	} else if environment.IsHandler() {
 		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
 			Client: mgr.GetClient(),
 			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
-			os.Exit(1)
-		}
-		if err = (&controllers.NodeNetworkStateReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkState"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create NodeNetworkState controller", "controller", "NMState")
 			os.Exit(1)
 		}
 	}
