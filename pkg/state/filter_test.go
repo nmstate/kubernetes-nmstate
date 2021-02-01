@@ -307,4 +307,28 @@ routes:
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
+	Context("when there is a linux bridge without 'bridge' options because is down", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`
+interfaces:
+- name: br1
+  type: linux-bridge
+  state: down
+`)
+
+			filteredState = nmstate.NewState(`
+interfaces:
+- name: br1
+  type: linux-bridge
+  state: down
+`)
+			interfacesFilterGlob = glob.MustCompile("")
+		})
+		It("should keep the bridge as it is", func() {
+			returnedState, err := filterOut(state, interfacesFilterGlob)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
+
 })
