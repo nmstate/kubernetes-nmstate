@@ -30,7 +30,16 @@ func FilterOut(currentState shared.State) (shared.State, error) {
 }
 
 func filterOutRoutes(kind string, state map[string]interface{}, interfacesFilterGlob glob.Glob) {
-	routes := state["routes"].(map[string]interface{})
+	routesRaw, hasRoutes := state["routes"]
+	if !hasRoutes {
+		return
+	}
+
+	routes, ok := routesRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+
 	routesByKind := routes[kind].([]interface{})
 
 	if routesByKind == nil {
@@ -58,9 +67,24 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 		return
 	}
 
-	bridge := iface["bridge"].(map[string]interface{})
+	bridgeRaw, hasBridge := iface["bridge"]
+	if !hasBridge {
+		return
+	}
+	bridge, ok := bridgeRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
 
-	options := bridge["options"].(map[string]interface{})
+	optionsRaw, hasOptions := bridge["options"]
+	if !hasOptions {
+		return
+	}
+	options, ok := optionsRaw.(map[string]interface{})
+	if !ok {
+		return
+	}
+
 	delete(options, "gc-timer")
 	delete(options, "hello-timer")
 }
