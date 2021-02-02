@@ -35,6 +35,7 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -42,9 +43,72 @@ import (
 // NodeNetworkStateReconciler reconciles a NodeNetworkState object
 type NodeNetworkStateReconciler struct {
 	client.Client
-	Config *rest.Config
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Config          *rest.Config
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	lastStateByNode map[string]shared.State
+}
+
+type CurrentStateReconciler struct {
+	client.Client
+	Config          *rest.Config
+	Log             logr.Logger
+	Scheme          *runtime.Scheme
+	lastStateByNode map[string]shared.State
+}
+
+// Reconcile reads that state of the cluster for a NodeNetworkState object and makes changes based on the state read
+// and what is in the NodeNetworkState.Spec
+// Note:
+// The Controller will requeue the Request to be processed again if the returned error is non-nil or
+// Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
+func (r *CurrentStateReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+
+	//currentStateRaw, err := r.nmstatectlShow()
+	currentStateRaw, err := nmstatectl.ShowAtNode(r.Config, request.Name)
+	if err != nil {
+		// We cannot call nmstatectl show let's reconcile again
+		return ctrl.Result{}, err
+	}
+
+	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	lastState, hasLastState := r.lastStateByNode[request.Name]
+
+	// Reduce apiserver hits by checking node's network state with last one
+	if hasLastState && lastState.String() == currentState.String() {
+		return ctrl.Result{RequeueAfter: nmstatenode.NetworkStateRefreshWithJitter()}, err
+	} else {
+		r.Log.Info("Network configuration changed, updating NodeNetworkState")
+	}
+
+	// Fetch the Node instance
+	node := &corev1.Node{}
+	err = r.Client.Get(context.TODO(), request.NamespacedName, node)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Node is gone the NodeNetworkState delete event has being
+			// triggered by k8s garbage collector we don't need to
+			// re-create the NodeNetworkState
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
+
+	nmstate.CreateOrUpdateNodeNetworkState(r.Client, node, request.NamespacedName, currentState)
+	if err != nil {
+		err = errors.Wrap(err, "error at node reconcile creating NodeNetworkStateNetworkState")
+		return ctrl.Result{}, err
+	}
+
+	// Cache currentState after successfully storing it at NodeNetworkState
+	r.lastStateByNode[request.Name] = currentState
+
+	return ctrl.Result{RequeueAfter: nmstatenode.NetworkStateRefreshWithJitter()}, nil
 }
 
 // Reconcile reads that state of the cluster for a NodeNetworkState object and makes changes based on the state read
@@ -53,7 +117,7 @@ type NodeNetworkStateReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *NodeNetworkStateReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// Fetch the Node instance
+
 	node := &corev1.Node{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, node)
 	if err != nil {
@@ -67,7 +131,7 @@ func (r *NodeNetworkStateReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 		return ctrl.Result{}, err
 	}
 
-	//currentStateRaw, err := nmstatectl.Show()
+	//currentStateRaw, err := r.nmstatectlShow()
 	currentStateRaw, err := nmstatectl.ShowAtNode(r.Config, request.Name)
 	if err != nil {
 		// We cannot call nmstatectl show let's reconcile again
@@ -90,14 +154,35 @@ func (r *NodeNetworkStateReconciler) Reconcile(request ctrl.Request) (ctrl.Resul
 
 func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	// By default all this functors return true so controller watch all events,
-	// but we only want to watch delete for current node.
-	onDeleteOrForceRefresh := predicate.Funcs{
+	csReconciler := &CurrentStateReconciler{
+		Client:          r.Client,
+		Config:          r.Config,
+		Log:             r.Log,
+		Scheme:          r.Scheme,
+		lastStateByNode: map[string]shared.State{},
+	}
+
+	onDelete := predicate.Funcs{
 		CreateFunc: func(event.CreateEvent) bool {
 			return false
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
 			return true
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			return false
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+	}
+
+	onCreateOrForceRefresh := predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return true
+		},
+		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			return shouldForceRefresh(updateEvent)
@@ -107,10 +192,23 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkState{}).
-		WithEventFilter(onDeleteOrForceRefresh).
+		WithEventFilter(onDelete).
 		Complete(r)
+	if err != nil {
+		return err
+	}
+
+	err = ctrl.NewControllerManagedBy(mgr).
+		For(&nmstatev1beta1.NodeNetworkState{}).
+		WithEventFilter(onCreateOrForceRefresh).
+		Complete(csReconciler)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func shouldForceRefresh(updateEvent event.UpdateEvent) bool {

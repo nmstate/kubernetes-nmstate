@@ -61,7 +61,8 @@ var (
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
 			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
-			return generationIsDifferent
+			labelsChanged := !reflect.DeepEqual(updateEvent.MetaOld.GetLabels(), updateEvent.MetaNew.GetLabels())
+			return generationIsDifferent || labelsChanged
 		},
 	}
 

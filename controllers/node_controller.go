@@ -38,7 +38,6 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
-	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -50,12 +49,9 @@ type NmstatectlShow func() (string, error)
 // NodeReconciler reconciles a Node object
 type NodeReconciler struct {
 	client.Client
-	Config         *rest.Config
-	Log            logr.Logger
-	Scheme         *runtime.Scheme
-	lastState      shared.State
-	nmstateUpdater NmstateUpdater
-	nmstatectlShow NmstatectlShow
+	Config *rest.Config
+	Log    logr.Logger
+	Scheme *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -64,6 +60,19 @@ type NodeReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+	// Fetch the Node instance
+	instance := &corev1.Node{}
+	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			// Request object not found, could have been deleted after reconcile request.
+			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
+			// Return and don't requeue
+			return ctrl.Result{}, nil
+		}
+		// Error reading the object - requeue the request.
+		return ctrl.Result{}, err
+	}
 	//currentStateRaw, err := r.nmstatectlShow()
 	currentStateRaw, err := nmstatectl.ShowAtNode(r.Config, request.Name)
 	if err != nil {
@@ -75,45 +84,18 @@ func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-
-	// Reduce apiserver hits by checking node's network state with last one
-	if r.lastState.String() == currentState.String() {
-		return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, err
-	} else {
-		r.Log.Info("Network configuration changed, updating NodeNetworkState")
-	}
-
-	// Fetch the Node instance
-	instance := &corev1.Node{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{}, nil
-		}
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
-	}
-	err = r.nmstateUpdater(r.Client, instance, request.NamespacedName, currentState)
+	err = nmstate.CreateOrUpdateNodeNetworkState(r.Client, instance, request.NamespacedName, currentState)
 	if err != nil {
 		err = errors.Wrap(err, "error at node reconcile creating NodeNetworkState")
 		return ctrl.Result{}, err
 	}
 
-	// Cache currentState after successfully storing it at NodeNetworkState
-	r.lastState = currentState
+	r.forceNNCPSRefresh()
 
-	r.forceNNCPRefreshLabel()
-
-	return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
-	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
-	r.nmstatectlShow = nmstatectl.Show
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
