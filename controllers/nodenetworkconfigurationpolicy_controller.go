@@ -29,15 +29,10 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	builder "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -287,45 +282,11 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
-	allPolicies := handler.ToRequestsFunc(
-		func(handler.MapObject) []reconcile.Request {
-			log := r.Log.WithName("allPolicies")
-			allPoliciesAsRequest := []reconcile.Request{}
-			policyList := nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
-			err := r.Client.List(context.TODO(), &policyList)
-			if err != nil {
-				log.Error(err, "failed listing all NodeNetworkConfigurationPolicies to re-reconcile them after node created or updated")
-				return []reconcile.Request{}
-			}
-			for _, policy := range policyList.Items {
-				allPoliciesAsRequest = append(allPoliciesAsRequest, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: policy.Name,
-					}})
-			}
-			return allPoliciesAsRequest
-		})
-
 	// Reconcile NNCP if they are created or updated
-	err := ctrl.NewControllerManagedBy(mgr).
+	return ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkConfigurationPolicy{}).
 		WithEventFilter(onCreateOrUpdateWithDifferentGeneration).
 		Complete(r)
-	if err != nil {
-		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening NNCP events")
-	}
-
-	// Reconcile all NNCPs if Node is updated (for example labels are changed), node creation event
-	// is not needed since all NNCPs are going to be Reconcile at node startup.
-	err = ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Node{}).
-		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: allPolicies}, builder.WithPredicates(onLabelsUpdatedForThisNode)).
-		Complete(r)
-	if err != nil {
-		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening Node events")
-	}
-	return nil
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) {
@@ -340,7 +301,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) 
 	if nns.Labels == nil {
 		nns.Labels = map[string]string{}
 	}
-	nns.Labels[forceRefreshLabel] = fmt.Sprintf("%d", time.Now().UnixNano())
+	nns.Labels[forceNNSRefreshLabel] = fmt.Sprintf("%d", time.Now().UnixNano())
 
 	err = r.Client.Update(context.Background(), nns)
 	if err != nil {

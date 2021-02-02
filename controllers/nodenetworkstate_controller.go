@@ -114,11 +114,11 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func shouldForceRefresh(updateEvent event.UpdateEvent) bool {
-	newForceRefresh, hasForceRefreshNow := updateEvent.MetaNew.GetLabels()[forceRefreshLabel]
+	newForceRefresh, hasForceRefreshNow := updateEvent.MetaNew.GetLabels()[forceNNSRefreshLabel]
 	if !hasForceRefreshNow {
 		return false
 	}
-	oldForceRefresh, hasForceRefreshLabelPreviously := updateEvent.MetaOld.GetLabels()[forceRefreshLabel]
+	oldForceRefresh, hasForceRefreshLabelPreviously := updateEvent.MetaOld.GetLabels()[forceNNSRefreshLabel]
 	if !hasForceRefreshLabelPreviously {
 		return true
 	}

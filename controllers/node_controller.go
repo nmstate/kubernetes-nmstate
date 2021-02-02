@@ -19,6 +19,9 @@ package controllers
 
 import (
 	"context"
+	"fmt"
+	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -32,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -101,6 +105,8 @@ func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	// Cache currentState after successfully storing it at NodeNetworkState
 	r.lastState = currentState
 
+	r.forceNNCPRefreshLabel()
+
 	return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 }
 
@@ -111,15 +117,15 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
-	onCreation := predicate.Funcs{
+	onCreationOrLabelsUpdate := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
 			return true
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
 			return false
 		},
-		UpdateFunc: func(event.UpdateEvent) bool {
-			return false
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			return !reflect.DeepEqual(updateEvent.MetaOld.GetLabels(), updateEvent.MetaNew.GetLabels())
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -128,6 +134,30 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
-		WithEventFilter(onCreation).
+		WithEventFilter(onCreationOrLabelsUpdate).
 		Complete(r)
+}
+
+func (r *NodeReconciler) forceNNCPSRefresh() {
+	log := r.Log.WithName("forceNNCPSRefresh")
+	log.Info("forcing NodeNetworkState refresh after NNCP applied")
+	nncpList := &nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
+	err := r.Client.List(context.TODO(), nncpList)
+	if err != nil {
+		log.WithValues("error", err).Info("WARNING: failed retrieving NodeNetworkConfigurationPolicyList to force refresh")
+		//TODO: Do we retry ? this is not like NNS there is no refresh time
+		return
+	}
+	for _, nncp := range nncpList.Items {
+		if nncp.Labels == nil {
+			nncp.Labels = map[string]string{}
+		}
+		nncp.Labels[forceNNCPRefreshLabel] = fmt.Sprintf("%d", time.Now().UnixNano())
+
+		//TODO: Retry on conflict
+		err = r.Client.Update(context.Background(), &nncp)
+		if err != nil {
+			log.WithValues("error", err).Info("WARNING: failed forcing NNCP refresh")
+		}
+	}
 }

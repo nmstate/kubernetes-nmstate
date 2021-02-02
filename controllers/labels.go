@@ -1,5 +1,6 @@
 package controllers
 
 const (
-	forceRefreshLabel = "nmstate.io/force-nns-refresh"
+	forceNNSRefreshLabel  = "nmstate.io/force-nns-refresh"
+	forceNNCPRefreshLabel = "nmstate.io/force-nncp-refresh"
 )
