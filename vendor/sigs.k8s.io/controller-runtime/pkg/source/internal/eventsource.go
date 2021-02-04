@@ -44,6 +44,7 @@ type EventHandler struct {
 
 // OnAdd creates CreateEvent and calls Create on EventHandler
 func (e EventHandler) OnAdd(obj interface{}) {
+	logger := log.WithName("OnAdd")
 	c := event.CreateEvent{}
 
 	// Pull metav1.Object out of the object
@@ -64,6 +65,8 @@ func (e EventHandler) OnAdd(obj interface{}) {
 		return
 	}
 
+	logger.WithValues("name", c.Meta.GetName(), "kind", c.Object.GetObjectKind()).Info("event received")
+
 	for _, p := range e.Predicates {
 		if !p.Create(c) {
 			return
@@ -76,6 +79,7 @@ func (e EventHandler) OnAdd(obj interface{}) {
 
 // OnUpdate creates UpdateEvent and calls Update on EventHandler
 func (e EventHandler) OnUpdate(oldObj, newObj interface{}) {
+	logger := log.WithName("OnUpdate")
 	u := event.UpdateEvent{}
 
 	// Pull metav1.Object out of the object
@@ -114,6 +118,7 @@ func (e EventHandler) OnUpdate(oldObj, newObj interface{}) {
 		return
 	}
 
+	logger.WithValues("name", u.MetaNew.GetName(), "kind", u.ObjectNew.GetObjectKind()).Info("event received")
 	for _, p := range e.Predicates {
 		if !p.Update(u) {
 			return
@@ -126,6 +131,7 @@ func (e EventHandler) OnUpdate(oldObj, newObj interface{}) {
 
 // OnDelete creates DeleteEvent and calls Delete on EventHandler
 func (e EventHandler) OnDelete(obj interface{}) {
+	logger := log.WithName("OnDelete")
 	d := event.DeleteEvent{}
 
 	// Deal with tombstone events by pulling the object out.  Tombstone events wrap the object in a
@@ -166,6 +172,7 @@ func (e EventHandler) OnDelete(obj interface{}) {
 		return
 	}
 
+	logger.WithValues("name", d.Meta.GetName(), "kind", d.Object.GetObjectKind()).Info("event received")
 	for _, p := range e.Predicates {
 		if !p.Delete(d) {
 			return
