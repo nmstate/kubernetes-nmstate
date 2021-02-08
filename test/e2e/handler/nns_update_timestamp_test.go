@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -34,15 +35,15 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 				timeout := 3 * nmstatenode.NetworkStateRefresh
 				key := types.NamespacedName{Name: node}
 
-				obtainedStatus := shared.NodeNetworkStateStatus{}
 				Consistently(func() shared.NodeNetworkStateStatus {
-					obtainedStatus = nodeNetworkState(key).Status
-					return obtainedStatus
+					return nodeNetworkState(key).Status
 				}, timeout, time.Second).Should(MatchAllFields(Fields{
 					"CurrentState":             WithTransform(shared.State.String, Equal(originalNNS.Status.CurrentState.String())),
 					"LastSuccessfulUpdateTime": Equal(originalNNS.Status.LastSuccessfulUpdateTime),
 					"Conditions":               Equal(originalNNS.Status.Conditions),
-				}), "currentState diff: ", diff.LineDiff(originalNNS.Status.CurrentState.String(), obtainedStatus.CurrentState.String()))
+				}), func() string {
+					return fmt.Sprintf("currentState diff: \n%s", diff.LineDiff(originalNNS.Status.CurrentState.String(), nodeNetworkState(key).Status.CurrentState.String()))
+				})
 			}
 		})
 	})
