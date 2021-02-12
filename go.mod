@@ -18,7 +18,7 @@ require (
 	github.com/operator-framework/operator-sdk v1.2.0
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/qinqon/kube-admission-webhook v0.12.0
+	github.com/qinqon/kube-admission-webhook v0.12.1-0.20210212133111-d5a57d738ffe
 	github.com/tidwall/gjson v1.6.1
 	k8s.io/api v0.18.9
 	k8s.io/apimachinery v0.18.9

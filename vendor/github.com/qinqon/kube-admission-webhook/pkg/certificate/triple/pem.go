@@ -188,6 +188,19 @@ func ParseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
+func AddCertToPEM(cert *x509.Certificate, pemCerts []byte) ([]byte, error) {
+	certs := []*x509.Certificate{}
+	if len(pemCerts) > 0 {
+		var err error
+		certs, err = ParseCertsPEM(pemCerts)
+		if err != nil {
+			return nil, fmt.Errorf("failed parsing current certs PEM: %w", err)
+		}
+	}
+	certs = append(certs, cert)
+	return EncodeCertsPEM(certs), nil
+}
+
 // parseRSAPublicKey parses a single RSA public key from the provided data
 func parseRSAPublicKey(data []byte) (*rsa.PublicKey, error) {
 	var err error

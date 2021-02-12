@@ -36,6 +36,10 @@ type Options struct {
 	// the the webhook configuration is referencing different services all
 	// of them will share the same duration
 	CertRotateInterval time.Duration
+
+	// CertOverlapInterval the duration of service certificates at bundle if
+	// not set it will default to CertRotateInterval
+	CertOverlapInterval time.Duration
 }
 
 func (o *Options) validate() error {
@@ -52,6 +56,10 @@ func (o *Options) validate() error {
 
 	if o.CertRotateInterval > o.CARotateInterval {
 		return fmt.Errorf("failed validating certificate options, 'CertRotateInterval' has to be <= 'CARotateInterval'")
+	}
+
+	if o.CertOverlapInterval > o.CertRotateInterval {
+		return fmt.Errorf("failed validating certificate options, 'CertOverlapInterval' has to be <= 'CertRotateInterval'")
 	}
 
 	if o.WebhookType != MutatingWebhook && o.WebhookType != ValidatingWebhook {
@@ -78,6 +86,10 @@ func (o Options) withDefaults() Options {
 
 	if o.CertRotateInterval == 0 {
 		withDefaultsOptions.CertRotateInterval = withDefaultsOptions.CARotateInterval
+	}
+
+	if o.CertOverlapInterval == 0 {
+		withDefaultsOptions.CertOverlapInterval = withDefaultsOptions.CertRotateInterval
 	}
 	return withDefaultsOptions
 }
