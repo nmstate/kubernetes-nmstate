@@ -59,9 +59,11 @@ spec:
             - name: CA_ROTATE_INTERVAL
               value: {{ .CARotateInterval | default "8760h0m0s" }}
             - name: CA_OVERLAP_INTERVAL
-              value: {{ .CAOverlapInterval | default "8760h0m0s" }}
+              value: {{ .CAOverlapInterval | default "24h0m0s" }}
             - name: CERT_ROTATE_INTERVAL
               value: {{ .CertRotateInterval | default "4380h0m0s" }}
+            - name: CERT_OVERLAP_INTERVAL
+              value: {{ .CertOverlapInterval | default "24h0m0s" }}
           ports:
           - containerPort: 8443
             name: webhook-server
