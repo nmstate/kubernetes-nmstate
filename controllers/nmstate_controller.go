@@ -173,6 +173,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	data.Data["CARotateInterval"] = ""
 	data.Data["CAOverlapInterval"] = ""
 	data.Data["CertRotateInterval"] = ""
+	data.Data["CertOverlapInterval"] = ""
 	return r.renderAndApply(instance, data, "handler", true)
 }
 

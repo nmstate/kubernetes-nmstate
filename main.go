@@ -127,6 +127,11 @@ func main() {
 			setupLog.Error(err, "Failed retrieving cert rotate interval")
 			os.Exit(1)
 		}
+		webhookOpts.CertOverlapInterval, err = environment.LookupAsDuration("CERT_OVERLAP_INTERVAL")
+		if err != nil {
+			setupLog.Error(err, "Failed retrieving cert overlap interval")
+			os.Exit(1)
+		}
 
 		if err := webhook.AddToManager(mgr, webhookOpts); err != nil {
 			setupLog.Error(err, "Cannot initialize webhook")
