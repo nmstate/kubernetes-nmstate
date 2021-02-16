@@ -246,7 +246,7 @@ status:
 ```
 
 As seen in the output, the configuration is indeed applied and there is a bond
-available with two NICs used as its slaves.
+available with two NICs used as its ports.
 
 ## Removing interfaces
 
@@ -294,10 +294,10 @@ kubectl delete nncp bond0-eth1-eth2
 
 Another maybe surprising behavior is, that by removing an interface, original
 configuration of the node interfaces is not restored. In case of the bonding it
-means that after it is deleted, its slave NICs won't come back up, even if they
-had previously configured IP address. The operator is not owning the interfaces
-and does not want to do anything that is not explicitly specified, that's up to
-the user.
+means that after it is deleted, its ports won't come back up as standalone
+ports, even if they had previously configured IP address. The operator is not
+owning the interfaces and does not want to do anything that is not explicitly
+specified, that's up to the user.
 
 `NodeNetworkState` shows that both of the NICs are now down and without any IP
 configuration.
@@ -330,7 +330,7 @@ status:
       type: ethernet
 ```
 
-In order to configure IP on previously enslaved NICs, apply a new Policy:
+In order to configure IP on previously attached NICs, apply a new Policy:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
