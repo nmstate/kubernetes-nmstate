@@ -576,7 +576,7 @@ the node (<code class="language-plaintext highlighter-rouge">Progressing</code>)
 </code></pre></div></div>
 
 <p>As seen in the output, the configuration is indeed applied and there is a bond
-available with two NICs used as its slaves.</p>
+available with two NICs used as its ports.</p>
 
 <h2 id="removing-interfaces">Removing interfaces</h2>
 
@@ -632,10 +632,10 @@ interface to <code class="language-plaintext highlighter-rouge">state: absent</c
 
 <p>Another maybe surprising behavior is, that by removing an interface, original
 configuration of the node interfaces is not restored. In case of the bonding it
-means that after it is deleted, its slave NICs won’t come back up, even if they
-had previously configured IP address. The operator is not owning the interfaces
-and does not want to do anything that is not explicitly specified, that’s up to
-the user.</p>
+means that after it is deleted, its ports won’t come back up as standalone
+ports, even if they had previously configured IP address. The operator is not
+owning the interfaces and does not want to do anything that is not explicitly
+specified, that’s up to the user.</p>
 
 <p><code class="language-plaintext highlighter-rouge">NodeNetworkState</code> shows that both of the NICs are now down and without any IP
 configuration.</p>
@@ -666,7 +666,7 @@ configuration.</p>
       <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
 </code></pre></div></div>
 
-<p>In order to configure IP on previously enslaved NICs, apply a new Policy:</p>
+<p>In order to configure IP on previously attached NICs, apply a new Policy:</p>
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
