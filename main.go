@@ -17,11 +17,13 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"os/exec"
 	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,6 +46,8 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
+
+const unmanagedVethCommand = "unmanaged-veth"
 
 type ProfilerConfig struct {
 	EnableProfiler bool   `envconfig:"ENABLE_PROFILER"`
@@ -81,6 +85,8 @@ func main() {
 		}
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
+
+		setVethInterfacesAsUnmanaged()
 	}
 
 	ctrlOptions := ctrl.Options{
@@ -213,4 +219,14 @@ func lockHandler() (lockfile.Lockfile, error) {
 		return true, nil
 	})
 	return handlerLock, err
+}
+
+func setVethInterfacesAsUnmanaged() {
+	cmd := exec.Command(unmanagedVethCommand)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		setupLog.Info(fmt.Sprintf("failed to execute %s: '%v', '%s', '%s'", unmanagedVethCommand, err, stdout.String(), stderr.String()))
+	}
 }
