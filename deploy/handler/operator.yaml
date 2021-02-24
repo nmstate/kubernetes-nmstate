@@ -56,6 +56,75 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+          ports:
+          - containerPort: 443
+            name: webhook-server
+            protocol: TCP
+          volumeMounts:
+          - name: tls-key-pair
+            readOnly: true
+            mountPath: /tmp/k8s-webhook-server/serving-certs/
+      volumes:
+        - name: tls-key-pair
+          secret:
+            secretName: {{template "handlerPrefix" .}}nmstate-webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-cert-manager
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
+    component: kubernetes-nmstate-cert-manager
+spec:
+  replicas: 2
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{template "handlerPrefix" .}}nmstate-cert-manager
+  template:
+    metadata:
+      labels:
+        app: kubernetes-nmstate
+        component: kubernetes-nmstate-cert-manager
+        name: {{template "handlerPrefix" .}}nmstate-cert-manager
+      annotations:
+        description: kubernetes-nmstate-webhook rotate webhook certs
+    spec:
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
+      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      containers:
+        - name: nmstate-cert-manager
+          args:
+          - --v=production
+          # Replace this with the built image name
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+          - manager
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RUN_CERT_MANAGER
+              value: ""
+            - name: OPERATOR_NAME
+              value: "{{template "handlerPrefix" .}}nmstate"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
             - name: CA_ROTATE_INTERVAL
               value: {{ .CARotateInterval | default "8760h0m0s" }}
             - name: CA_OVERLAP_INTERVAL
@@ -64,29 +133,8 @@ spec:
               value: {{ .CertRotateInterval | default "4380h0m0s" }}
             - name: CERT_OVERLAP_INTERVAL
               value: {{ .CertOverlapInterval | default "24h0m0s" }}
-          ports:
-          - containerPort: 8443
-            name: webhook-server
-            protocol: TCP
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: webhook-server
-              scheme: HTTPS
-              httpHeaders:
-              - name: Content-Type
-                value: application/json
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          volumeMounts:
-          - name: tls-key-pair
-            readOnly: true
-            mountPath: /etc/webhook/certs
-      volumes:
-        - name: tls-key-pair
-          secret:
-            secretName: {{template "handlerPrefix" .}}nmstate-webhook
 ---
+
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -187,7 +235,7 @@ spec:
   publishNotReadyAddresses: true
   ports:
     - port: 443
-      targetPort: 8443
+      targetPort: 443
   selector:
     name: {{template "handlerPrefix" .}}nmstate-webhook
 ---
@@ -198,50 +246,51 @@ metadata:
   labels:
     app: kubernetes-nmstate
 webhooks:
-  - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
+  - name: mutate-nmstate-io-v1alpha1-nodenetworkconfigurationpolicy.nmstate.io
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
         namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-mutate"
+        path: "/mutate-nmstate-io-v1alpha1-nodenetworkconfigurationpolicy"
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
+        apiVersions: ["v1alpha1"]
         resources: ["nodenetworkconfigurationpolicies"]
-  - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
+  - name: mutate-nmstate-io-v1beta1-nodenetworkconfigurationpolicy.nmstate.io
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
         namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-status-mutate"
+        path: "/mutate-nmstate-io-v1beta1-nodenetworkconfigurationpolicy"
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
-        resources: ["nodenetworkconfigurationpolicies/status"]
-  - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
+        apiVersions: ["v1beta1"]
+        resources: ["nodenetworkconfigurationpolicies"]
+  - name: validate-nmstate-io-v1alpha1-nodenetworkconfigurationpolicy.nmstate.io
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
         namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-timestamp-mutate"
-    rules:
-      - operations: ["CREATE", "UPDATE"]
-        apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
-        resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
-  - name: nodenetworkconfigurationpolicies-progress-validate.nmstate.io
-    clientConfig:
-      service:
-        name: {{template "handlerPrefix" .}}nmstate-webhook
-        namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-progress-validate"
+        path: "/validate-nmstate-io-v1alpha1-nodenetworkconfigurationpolicy"
     rules:
       - operations: ["UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
+        apiVersions: ["v1alpha1"]
         resources: ["nodenetworkconfigurationpolicies"]
+  - name: validate-nmstate-io-v1beta-nodenetworkconfigurationpolicy.nmstate.io
+    clientConfig:
+      service:
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
+        path: "/validate-nmstate-io-v1beta1-nodenetworkconfigurationpolicy"
+    rules:
+      - operations: ["UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1beta1"]
+        resources: ["nodenetworkconfigurationpolicies"]
+
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -253,13 +302,3 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{template "handlerPrefix" .}}nmstate-webhook
-  namespace: {{ .HandlerNamespace }}
-type: kubernetes.io/tls
-data:
-  tls.crt: YmFkIGNlcnRpZmljYXRlCg==
-  tls.key: YmFkIGtleQo=

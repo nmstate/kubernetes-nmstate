@@ -19,9 +19,14 @@ func IsWebhook() bool {
 	return runOperator
 }
 
+func IsCertManager() bool {
+	_, runOperator := os.LookupEnv("RUN_CERT_MANAGER")
+	return runOperator
+}
+
 // IsHandler returns true if it's not the operator or webhook server
 func IsHandler() bool {
-	return !IsWebhook() && !IsOperator()
+	return !IsWebhook() && !IsOperator() && !IsCertManager()
 }
 
 // Returns node name runnig the pod

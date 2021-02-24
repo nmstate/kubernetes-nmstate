@@ -10,12 +10,14 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
 )
 
 // We just check the labe at CREATE/UPDATE events since mutated data is already
 // check at unit test.
 var _ = Describe("Mutating Admission Webhook", func() {
+	var (
+		timestampLabelKey = "nmstate.io/webhook-mutating-timestamp"
+	)
 	Context("when policy is created", func() {
 		BeforeEach(func() {
 			// Make sure test policy is not there so
@@ -30,7 +32,7 @@ var _ = Describe("Mutating Admission Webhook", func() {
 
 		It("should have an annotation with mutation timestamp", func() {
 			policy := nodeNetworkConfigurationPolicy(TestPolicy)
-			Expect(policy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
+			Expect(policy.ObjectMeta.Annotations).To(HaveKey(timestampLabelKey))
 		})
 		Context("and we updated it", func() {
 			var (
@@ -42,12 +44,12 @@ var _ = Describe("Mutating Admission Webhook", func() {
 			})
 			It("should have an annotation with newer mutation timestamp", func() {
 				newPolicy := nodeNetworkConfigurationPolicy(TestPolicy)
-				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
+				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(timestampLabelKey))
 
-				oldAnnotation := oldPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
+				oldAnnotation := oldPolicy.ObjectMeta.Annotations[timestampLabelKey]
 				oldConditionsMutation, err := strconv.ParseInt(oldAnnotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
-				newAnnotation := newPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
+				newAnnotation := newPolicy.ObjectMeta.Annotations[timestampLabelKey]
 				newConditionsMutation, err := strconv.ParseInt(newAnnotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -73,7 +75,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return setDesiredStateWithPolicyAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), map[string]string{})
 			})
-			Expect(err).To(MatchError("admission webhook \"nodenetworkconfigurationpolicies-progress-validate.nmstate.io\" denied the request: failed to admit NodeNetworkConfigurationPolicy test-policy: message: policy test-policy is still in progress. "))
+			Expect(err).To(MatchError("admission webhook \"validate-nmstate-io-v1beta-nodenetworkconfigurationpolicy.nmstate.io\" denied the request: policy test-policy is still in progress"))
 		})
 	})
 })
