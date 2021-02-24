@@ -38,6 +38,7 @@ WHAT ?= ./pkg ./controllers ./api
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
+export KUBEVIRT_PROVIDER ?= k8s-1.20
 export KUBEVIRT_NUM_NODES ?= 2 # 1 master, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
