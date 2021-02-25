@@ -153,8 +153,6 @@ spec:
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
-            - name: networkmanager-config
-              mountPath: /host/etc/NetworkManager/conf.d
             - name: nmstate-lock
               mountPath: /var/k8s_nmstate
           securityContext:
@@ -164,10 +162,6 @@ spec:
           hostPath:
             path: /run/dbus/system_bus_socket
             type: Socket
-        - name: networkmanager-config
-          hostPath:
-            path: /etc/NetworkManager/conf.d
-            type: Directory
         - name: nmstate-lock
           hostPath:
             path: /var/k8s_nmstate
