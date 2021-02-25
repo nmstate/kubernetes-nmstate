@@ -1,6 +1,0 @@
-#!/bin/bash -xe
-
-echo '[keyfile]
-unmanaged-devices=interface-name:veth*
-' > /host/etc/NetworkManager/conf.d/001-cnv-unmanaged-veth.conf
-dbus-send --system --dest=org.freedesktop.systemd1 --type=method_call  /org/freedesktop/systemd1 --print-reply org.freedesktop.systemd1.Manager.ReloadUnit string:NetworkManager.service string:replace
