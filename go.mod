@@ -11,14 +11,14 @@ require (
 	github.com/gobwas/glob v0.2.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nightlyone/lockfile v1.0.0
-	github.com/onsi/ginkgo v1.14.0
-	github.com/onsi/gomega v1.10.1
+	github.com/onsi/ginkgo v1.15.0
+	github.com/onsi/gomega v1.10.5
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.14.3
 	github.com/operator-framework/operator-sdk v1.2.0
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/qinqon/kube-admission-webhook v0.12.0
+	github.com/qinqon/kube-admission-webhook v0.13.0
 	github.com/tidwall/gjson v1.6.1
 	k8s.io/api v0.18.9
 	k8s.io/apimachinery v0.18.9

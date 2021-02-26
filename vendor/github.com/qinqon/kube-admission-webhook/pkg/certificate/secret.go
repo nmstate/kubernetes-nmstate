@@ -3,6 +3,7 @@ package certificate
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/x509"
 	"reflect"
 
 	"github.com/pkg/errors"
@@ -22,7 +23,7 @@ const (
 	CAPrivateKeyKey            = "ca.key"
 )
 
-func populateCASecret(secret corev1.Secret, keyPair *triple.KeyPair) *corev1.Secret {
+func populateCASecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
 	if secret.Annotations == nil {
 		secret.Annotations = map[string]string{}
 	}
@@ -31,23 +32,65 @@ func populateCASecret(secret corev1.Secret, keyPair *triple.KeyPair) *corev1.Sec
 		CACertKey:       triple.EncodeCertPEM(keyPair.Cert),
 		CAPrivateKeyKey: triple.EncodePrivateKeyPEM(keyPair.Key),
 	}
-	return &secret
+	return &secret, nil
 }
 
-func populateTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) *corev1.Secret {
+func addTLSCertificate(data map[string][]byte, cert *x509.Certificate) error {
+
+	certsPEM, hasCerts := data[corev1.TLSCertKey]
+	if hasCerts {
+		certsPEMBytes, err := triple.AddCertToPEM(cert, []byte(certsPEM))
+		if err != nil {
+			return err
+		}
+		certsPEM = certsPEMBytes
+	} else {
+		certsPEM = triple.EncodeCertPEM(cert)
+	}
+	data[corev1.TLSCertKey] = certsPEM
+	return nil
+}
+
+func setAnnotation(secret *corev1.Secret) {
 	if secret.Annotations == nil {
 		secret.Annotations = map[string]string{}
 	}
 	secret.Annotations[secretManagedAnnotatoinKey] = ""
-	secret.Data = map[string][]byte{
-		corev1.TLSCertKey:       triple.EncodeCertPEM(keyPair.Cert),
-		corev1.TLSPrivateKeyKey: triple.EncodePrivateKeyPEM(keyPair.Key),
-	}
-	return &secret
 }
 
-func (m *Manager) applyTLSSecret(secret types.NamespacedName, keyPair *triple.KeyPair) error {
-	return m.applySecret(secret, corev1.SecretTypeTLS, keyPair, populateTLSSecret)
+func resetTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
+	setAnnotation(&secret)
+
+	secret.Data = map[string][]byte{
+		corev1.TLSPrivateKeyKey: triple.EncodePrivateKeyPEM(keyPair.Key),
+		corev1.TLSCertKey:       triple.EncodeCertPEM(keyPair.Cert),
+	}
+	return &secret, nil
+}
+
+func appendTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
+	setAnnotation(&secret)
+
+	if secret.Data == nil {
+		secret.Data = map[string][]byte{}
+	}
+
+	err := addTLSCertificate(secret.Data, keyPair.Cert)
+	if err != nil {
+		return nil, err
+	}
+
+	secret.Data[corev1.TLSPrivateKeyKey] = triple.EncodePrivateKeyPEM(keyPair.Key)
+
+	return &secret, nil
+}
+
+func (m *Manager) resetAndApplyTLSSecret(secret types.NamespacedName, keyPair *triple.KeyPair) error {
+	return m.applySecret(secret, corev1.SecretTypeTLS, keyPair, resetTLSSecret)
+}
+
+func (m *Manager) appendAndApplyTLSSecret(secret types.NamespacedName, keyPair *triple.KeyPair) error {
+	return m.applySecret(secret, corev1.SecretTypeTLS, keyPair, appendTLSSecret)
 }
 
 func (m *Manager) applyCASecret(keyPair *triple.KeyPair) error {
@@ -55,7 +98,7 @@ func (m *Manager) applyCASecret(keyPair *triple.KeyPair) error {
 }
 
 func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.SecretType, keyPair *triple.KeyPair,
-	populateSecretFn func(corev1.Secret, *triple.KeyPair) *corev1.Secret) error {
+	populateSecretFn func(corev1.Secret, *triple.KeyPair) (*corev1.Secret, error)) error {
 	secret := corev1.Secret{}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -70,7 +113,11 @@ func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.
 					},
 					Type: secretType,
 				}
-				err = m.client.Create(context.TODO(), populateSecretFn(newSecret, keyPair))
+				populatedSecret, err := populateSecretFn(newSecret, keyPair)
+				if err != nil {
+					return errors.Wrap(err, "failed populating secret")
+				}
+				err = m.client.Create(context.TODO(), populatedSecret)
 				if err != nil {
 					return errors.Wrap(err, "failed creating secret")
 				}
@@ -79,7 +126,11 @@ func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.
 				return err
 			}
 		}
-		err = m.client.Update(context.TODO(), populateSecretFn(secret, keyPair))
+		populatedSecret, err := populateSecretFn(secret, keyPair)
+		if err != nil {
+			return errors.Wrap(err, "failed populating secret")
+		}
+		err = m.client.Update(context.TODO(), populatedSecret)
 		if err != nil {
 			return errors.Wrap(err, "failed updating secret")
 		}
@@ -115,7 +166,7 @@ func (m *Manager) verifyTLSSecret(secretKey types.NamespacedName, caKeyPair *tri
 		return errors.New("CA bundle has no certificates")
 	}
 
-	lastCertFromCABundle := certsFromCABundle[len(certsFromCABundle)-1]
+	lastCertFromCABundle := getLastCert(certsFromCABundle)
 
 	if !reflect.DeepEqual(*lastCertFromCABundle, *caKeyPair.Cert) {
 		return errors.New("CA bundle and CA secret certificate are different")
@@ -184,10 +235,41 @@ func (m *Manager) getTLSKeyPair(secretKey types.NamespacedName) (*triple.KeyPair
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed parsing TLS private key PEM at secret %s", secretKey)
 	}
-	return &triple.KeyPair{Key: privateKey.(*rsa.PrivateKey), Cert: certs[0]}, nil
+
+	lastAppendedCert := getLastCert(certs)
+
+	return &triple.KeyPair{Key: privateKey.(*rsa.PrivateKey), Cert: lastAppendedCert}, nil
+}
+
+func (m *Manager) getTLSCerts(secretKey types.NamespacedName) ([]*x509.Certificate, error) {
+	secret := corev1.Secret{}
+	err := m.get(secretKey, &secret)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed reading ca secret %s", secretKey)
+	}
+
+	certPEM, found := secret.Data[corev1.TLSCertKey]
+	if !found {
+		return nil, errors.Wrapf(err, "TLS cert not found at secret %s", secretKey)
+	}
+
+	certs, err := triple.ParseCertsPEM(certPEM)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed parsing TLS cert PEM at secret %s", secretKey)
+	}
+	return certs, nil
 }
 
 //FIXME: Is this default/webhookname good key for ca secret
 func (m *Manager) caSecretKey() types.NamespacedName {
 	return types.NamespacedName{Namespace: m.namespace, Name: m.webhookName + "-ca"}
+}
+
+// Certs are appended to implement overlap so we take the last one
+// it will match with the key
+func getLastCert(certs []*x509.Certificate) *x509.Certificate {
+	if len(certs) == 0 {
+		return nil
+	}
+	return certs[len(certs)-1]
 }

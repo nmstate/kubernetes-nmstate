@@ -83,16 +83,7 @@ func (m *Manager) readyWebhookConfiguration() (runtime.Object, error) {
 func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 	m.log.Info("Reset CA bundle with one cert for webhook")
 	_, err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
-		cas := []*x509.Certificate{}
-		if len(currentCABundle) > 0 {
-			var err error
-			cas, err = triple.ParseCertsPEM(currentCABundle)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed parsing current CA bundle")
-			}
-		}
-		cas = append(cas, caCert)
-		return triple.EncodeCertsPEM(cas), nil
+		return triple.AddCertToPEM(caCert, currentCABundle)
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to update webhook CABundle")
@@ -151,7 +142,6 @@ func (m *Manager) CABundle() ([]byte, error) {
 // passing the url hostname at map value
 func (m *Manager) getServicesFromConfiguration(configuration runtime.Object) (map[types.NamespacedName][]string, error) {
 
-	logger := m.log.WithName("getServicesFromConfiguration")
 	services := map[types.NamespacedName][]string{}
 
 	for _, clientConfig := range m.clientConfigList(configuration) {
@@ -160,11 +150,9 @@ func (m *Manager) getServicesFromConfiguration(configuration runtime.Object) (ma
 		hostnames := []string{}
 
 		if clientConfig.Service != nil {
-			logger.Info("Composing service name and namespace from ServiceRef", "serviceRef", clientConfig.Service)
 			service.Name = clientConfig.Service.Name
 			service.Namespace = clientConfig.Service.Namespace
 		} else if clientConfig.URL != nil {
-			logger.Info("Composing service name and namespace from URL", "URL", clientConfig.URL)
 			service.Name = m.webhookName
 			service.Namespace = m.namespace
 			u, err := url.Parse(*clientConfig.URL)
