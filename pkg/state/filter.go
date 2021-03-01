@@ -7,11 +7,14 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	yaml "sigs.k8s.io/yaml"
 )
 
 var (
 	interfacesFilterGlobFromEnv glob.Glob
+
+	log = logf.Log.WithName("state-filter")
 )
 
 func init() {
@@ -93,10 +96,25 @@ func filterOutInterfaces(state map[string]interface{}, interfacesFilterGlob glob
 	interfaces := state["interfaces"]
 	filteredInterfaces := []interface{}{}
 
-	for _, iface := range interfaces.([]interface{}) {
-		name := iface.(map[string]interface{})["name"]
-		if !interfacesFilterGlob.Match(name.(string)) {
-			filterOutDynamicAttributes(iface.(map[string]interface{}))
+	ifaces, ok := interfaces.([]interface{})
+	if !ok {
+		log.Info("Unable to extract the interfaces from the state")
+		return
+	}
+
+	for _, iface := range ifaces {
+		ifaceState, ok := iface.(map[string]interface{})
+		if !ok {
+			log.Info("Unable to extract the interface from the state")
+			return
+		}
+		name := ifaceState["name"]
+		nameVal, ok := name.(string)
+		if !ok {
+			log.Info("Unable to interpret interface name from the state", "name", nameVal)
+			filteredInterfaces = append(filteredInterfaces, iface)
+		} else if !interfacesFilterGlob.Match(nameVal) {
+			filterOutDynamicAttributes(ifaceState)
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}

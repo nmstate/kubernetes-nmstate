@@ -331,4 +331,51 @@ interfaces:
 		})
 	})
 
+	Context("when the interfaces have (only) numeric characters", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`
+interfaces:
+- name: eth1
+- name: 1
+- name: 1101011
+`)
+			filteredState = nmstate.NewState(`
+interfaces:
+- name: eth1
+- name: 1
+- name: 1101011
+`)
+			interfacesFilterGlob = glob.MustCompile("1*")
+		})
+
+		It("they are not filtered out", func() {
+			returnedState, err := filterOut(state, interfacesFilterGlob)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
+
+	Context("when the interfaces have (only) special numeric characters", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`
+interfaces:
+- name: eth1
+- name: 1.0
+- name: 0xff
+`)
+			filteredState = nmstate.NewState(`
+interfaces:
+- name: eth1
+- name: 1
+- name: 255
+`)
+			interfacesFilterGlob = glob.MustCompile("has-no-effect")
+		})
+
+		It("they are not interpreted correctly", func() {
+			returnedState, err := filterOut(state, interfacesFilterGlob)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
 })
