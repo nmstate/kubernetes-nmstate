@@ -73,12 +73,11 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 	delete(options, "hello-timer")
 }
 
-func filterOutInterfaces(ifaces []interface{}, interfacesFilterGlob glob.Glob) []interface{} {
-	filteredInterfaces := []interface{}{}
-	for _, iface := range ifaces {
-		name := iface.(map[string]interface{})["name"]
-		if !interfacesFilterGlob.Match(name.(string)) {
-			filterOutDynamicAttributes(iface.(map[string]interface{}))
+func filterOutInterfaces(ifacesState []interfaceState, interfacesFilterGlob glob.Glob) []interfaceState {
+	filteredInterfaces := []interfaceState{}
+	for _, iface := range ifacesState {
+		if !interfacesFilterGlob.Match(iface.Name) {
+			filterOutDynamicAttributes(iface.Data)
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}
@@ -87,8 +86,7 @@ func filterOutInterfaces(ifaces []interface{}, interfacesFilterGlob glob.Glob) [
 
 func filterOut(currentState shared.State, interfacesFilterGlob glob.Glob) (shared.State, error) {
 	var state rootState
-	err := yaml.Unmarshal(currentState.Raw, &state)
-	if err != nil {
+	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
 
