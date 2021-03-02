@@ -29,32 +29,16 @@ func FilterOut(currentState shared.State) (shared.State, error) {
 	return filterOut(currentState, interfacesFilterGlobFromEnv)
 }
 
-func filterOutRoutes(kind string, state map[string]interface{}, interfacesFilterGlob glob.Glob) {
-	routesRaw, hasRoutes := state["routes"]
-	if !hasRoutes {
-		return
-	}
-
-	routes, ok := routesRaw.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	routesByKind := routes[kind].([]interface{})
-
-	if routesByKind == nil {
-		return
-	}
-
+func filterOutRoutes(routes []interface{}, interfacesFilterGlob glob.Glob) []interface{} {
 	filteredRoutes := []interface{}{}
-	for _, route := range routesByKind {
+	for _, route := range routes {
 		name := route.(map[string]interface{})["next-hop-interface"]
 		if !interfacesFilterGlob.Match(name.(string)) {
 			filteredRoutes = append(filteredRoutes, route)
 		}
 	}
 
-	state["routes"].(map[string]interface{})[kind] = filteredRoutes
+	return filteredRoutes
 }
 
 func filterOutDynamicAttributes(iface map[string]interface{}) {
@@ -89,31 +73,30 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 	delete(options, "hello-timer")
 }
 
-func filterOutInterfaces(state map[string]interface{}, interfacesFilterGlob glob.Glob) {
-	interfaces := state["interfaces"]
+func filterOutInterfaces(ifaces []interface{}, interfacesFilterGlob glob.Glob) []interface{} {
 	filteredInterfaces := []interface{}{}
-
-	for _, iface := range interfaces.([]interface{}) {
+	for _, iface := range ifaces {
 		name := iface.(map[string]interface{})["name"]
 		if !interfacesFilterGlob.Match(name.(string)) {
 			filterOutDynamicAttributes(iface.(map[string]interface{}))
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}
-	state["interfaces"] = filteredInterfaces
+	return filteredInterfaces
 }
 
 func filterOut(currentState shared.State, interfacesFilterGlob glob.Glob) (shared.State, error) {
-	var state map[string]interface{}
+	var state rootState
 	err := yaml.Unmarshal(currentState.Raw, &state)
 	if err != nil {
 		return currentState, err
 	}
 
-	filterOutInterfaces(state, interfacesFilterGlob)
-	filterOutRoutes("running", state, interfacesFilterGlob)
-	filterOutRoutes("config", state, interfacesFilterGlob)
-
+	state.Interfaces = filterOutInterfaces(state.Interfaces, interfacesFilterGlob)
+	if state.Routes != nil {
+		state.Routes.Running = filterOutRoutes(state.Routes.Running, interfacesFilterGlob)
+		state.Routes.Config = filterOutRoutes(state.Routes.Config, interfacesFilterGlob)
+	}
 	filteredState, err := yaml.Marshal(state)
 	if err != nil {
 		return currentState, err
