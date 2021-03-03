@@ -372,8 +372,7 @@ interfaces:
 			filteredState = nmstate.NewState(`
 interfaces:
 - name: eth0
-- name: "1000"
-- name: "6000"
+- name: "60e+02"
 `)
 			interfacesFilterGlob = glob.MustCompile("10e*")
 		})

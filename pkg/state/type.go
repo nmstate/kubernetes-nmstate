@@ -3,28 +3,27 @@ package state
 import (
 	"encoding/json"
 	"fmt"
-
 	"sigs.k8s.io/yaml"
 )
 
 type rootState struct {
-	Interfaces []interfaceState `json:"interfaces"`
-	Routes     *routesState     `json:"routes,omitempty"`
+	Interfaces []interfaceState `json:"interfaces" yaml:"interfaces"`
+	Routes     *routesState     `json:"routes,omitempty" yaml:"routes,omitempty"`
 }
 
 type routesState struct {
-	Config  []interface{} `json:"config"`
-	Running []interface{} `json:"running"`
+	Config  []interface{} `json:"config" yaml:"config"`
+	Running []interface{} `json:"running" yaml:"running"`
 }
 
 type interfaceState struct {
-	interfaceFields
-	Data map[string]interface{}
+	interfaceFields `yaml:",inline"`
+	Data            map[string]interface{}
 }
 
 // interfaceFields allows unmarshaling directly into the defined fields
 type interfaceFields struct {
-	Name string `json:"name"`
+	Name string `json:"name" yaml:"name"`
 }
 
 func (i interfaceState) MarshalJSON() (output []byte, err error) {
@@ -42,6 +41,6 @@ func (i *interfaceState) UnmarshalJSON(b []byte) error {
 		return fmt.Errorf("failed Unmarshaling raw: %w", err)
 	}
 	i.Data["name"] = ifaceFields.Name
-	i.Name = ifaceFields.Name
+	i.interfaceFields = ifaceFields
 	return nil
 }
