@@ -7,6 +7,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
+	goyaml "gopkg.in/yaml.v2"
 	yaml "sigs.k8s.io/yaml"
 )
 
@@ -29,32 +30,16 @@ func FilterOut(currentState shared.State) (shared.State, error) {
 	return filterOut(currentState, interfacesFilterGlobFromEnv)
 }
 
-func filterOutRoutes(kind string, state map[string]interface{}, interfacesFilterGlob glob.Glob) {
-	routesRaw, hasRoutes := state["routes"]
-	if !hasRoutes {
-		return
-	}
-
-	routes, ok := routesRaw.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	routesByKind := routes[kind].([]interface{})
-
-	if routesByKind == nil {
-		return
-	}
-
+func filterOutRoutes(routes []interface{}, interfacesFilterGlob glob.Glob) []interface{} {
 	filteredRoutes := []interface{}{}
-	for _, route := range routesByKind {
+	for _, route := range routes {
 		name := route.(map[string]interface{})["next-hop-interface"]
 		if !interfacesFilterGlob.Match(name.(string)) {
 			filteredRoutes = append(filteredRoutes, route)
 		}
 	}
 
-	state["routes"].(map[string]interface{})[kind] = filteredRoutes
+	return filteredRoutes
 }
 
 func filterOutDynamicAttributes(iface map[string]interface{}) {
@@ -89,35 +74,49 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 	delete(options, "hello-timer")
 }
 
-func filterOutInterfaces(state map[string]interface{}, interfacesFilterGlob glob.Glob) {
-	interfaces := state["interfaces"]
-	filteredInterfaces := []interface{}{}
-
-	for _, iface := range interfaces.([]interface{}) {
-		name := iface.(map[string]interface{})["name"]
-		if !interfacesFilterGlob.Match(name.(string)) {
-			filterOutDynamicAttributes(iface.(map[string]interface{}))
+func filterOutInterfaces(ifacesState []interfaceState, interfacesFilterGlob glob.Glob) []interfaceState {
+	filteredInterfaces := []interfaceState{}
+	for _, iface := range ifacesState {
+		if !interfacesFilterGlob.Match(iface.Name) {
+			filterOutDynamicAttributes(iface.Data)
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
 	}
-	state["interfaces"] = filteredInterfaces
+	return filteredInterfaces
 }
 
 func filterOut(currentState shared.State, interfacesFilterGlob glob.Glob) (shared.State, error) {
-	var state map[string]interface{}
-	err := yaml.Unmarshal(currentState.Raw, &state)
-	if err != nil {
+	var state rootState
+	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
 
-	filterOutInterfaces(state, interfacesFilterGlob)
-	filterOutRoutes("running", state, interfacesFilterGlob)
-	filterOutRoutes("config", state, interfacesFilterGlob)
+	if err := normalizeInterfacesNames(currentState.Raw, &state); err != nil {
+		return currentState, err
+	}
 
+	state.Interfaces = filterOutInterfaces(state.Interfaces, interfacesFilterGlob)
+	if state.Routes != nil {
+		state.Routes.Running = filterOutRoutes(state.Routes.Running, interfacesFilterGlob)
+		state.Routes.Config = filterOutRoutes(state.Routes.Config, interfacesFilterGlob)
+	}
 	filteredState, err := yaml.Marshal(state)
 	if err != nil {
 		return currentState, err
 	}
 
 	return shared.NewState(string(filteredState)), nil
+}
+
+// normalizeInterfacesNames fixes the unmarshal of numeric values in the interfaces names
+// Numeric values, including the ones with a base prefix (e.g. 0x123) should be stringify.
+func normalizeInterfacesNames(rawState []byte, state *rootState) error {
+	var stateForNormalization rootState
+	if err := goyaml.Unmarshal(rawState, &stateForNormalization); err != nil {
+		return err
+	}
+	for i, iface := range stateForNormalization.Interfaces {
+		state.Interfaces[i].Name = iface.Name
+	}
+	return nil
 }
