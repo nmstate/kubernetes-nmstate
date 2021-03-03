@@ -52,12 +52,12 @@ var _ = Describe("NMState operator", func() {
 			Expect(err).ToNot(HaveOccurred(), "List daemon sets in namespace nmstate succeeds")
 			Expect(ds.Items).To(HaveLen(1), "and has only one item")
 		})
-		Context("and the CR is created with a wrong name", func() {
+		Context("and another CR is created with a different name", func() {
 			var nmstate = defaultNMState
-			nmstate.Name = "wrong-name"
+			nmstate.Name = "different-name"
 			BeforeEach(func() {
 				err := testenv.Client.Create(context.TODO(), &nmstate)
-				Expect(err).ToNot(HaveOccurred(), "NMState CR with incorrect name is created without error")
+				Expect(err).ToNot(HaveOccurred(), "NMState CR with different name is ignored")
 			})
 			AfterEach(func() {
 				err := testenv.Client.Delete(context.TODO(), &nmstate, &client.DeleteOptions{})
