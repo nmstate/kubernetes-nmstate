@@ -331,4 +331,32 @@ interfaces:
 		})
 	})
 
+	Context("when the interfaces has numeric characters quoted", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`
+interfaces:
+- name: eth0
+- name: '0'
+- name: '1101010'
+- name: '0.0'
+- name: '1.0'
+- name: '0xfe'
+- name: '60.e+02'
+`)
+			filteredState = nmstate.NewState(`
+interfaces:
+- name: eth0
+- name: '1101010'
+- name: '1.0'
+- name: '60.e+02'
+`)
+			interfacesFilterGlob = glob.MustCompile("0*")
+		})
+
+		It("should filter out interfaces correctly", func() {
+			returnedState, err := filterOut(state, interfacesFilterGlob)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
 })
