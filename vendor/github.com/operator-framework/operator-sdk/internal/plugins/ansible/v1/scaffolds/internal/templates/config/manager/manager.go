@@ -20,7 +20,7 @@ package manager
 import (
 	"path/filepath"
 
-	"sigs.k8s.io/kubebuilder/pkg/model/file"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/file"
 )
 
 var _ file.Template = &Manager{}
@@ -78,5 +78,17 @@ spec:
             - name: ANSIBLE_GATHERING
               value: explicit
           image: {{ .Image }}
+          livenessProbe:
+            httpGet:
+              path: /readyz
+              port: 6789
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 6789
+            initialDelaySeconds: 5
+            periodSeconds: 10
       terminationGracePeriodSeconds: 10
 `

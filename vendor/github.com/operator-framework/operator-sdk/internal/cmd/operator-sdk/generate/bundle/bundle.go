@@ -25,13 +25,13 @@ import (
 
 	"github.com/operator-framework/api/pkg/apis/scorecard/v1alpha3"
 	"github.com/operator-framework/operator-registry/pkg/lib/bundle"
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
 	"sigs.k8s.io/yaml"
 
 	metricsannotations "github.com/operator-framework/operator-sdk/internal/annotations/metrics"
 	scorecardannotations "github.com/operator-framework/operator-sdk/internal/annotations/scorecard"
 	genutil "github.com/operator-framework/operator-sdk/internal/cmd/operator-sdk/generate/internal"
 	gencsv "github.com/operator-framework/operator-sdk/internal/generate/clusterserviceversion"
+	"github.com/operator-framework/operator-sdk/internal/generate/clusterserviceversion/bases"
 	"github.com/operator-framework/operator-sdk/internal/generate/collector"
 	"github.com/operator-framework/operator-sdk/internal/registry"
 	"github.com/operator-framework/operator-sdk/internal/scorecard"
@@ -57,7 +57,7 @@ https://github.com/operator-framework/operator-registry/#manifest-format
 	examples = `
   # Generate bundle files and build your bundle image with these 'make' recipes:
   $ make bundle
-  $ export USERNAME=<your registry username>
+  $ export USERNAME=<quay-namespace>
   $ export BUNDLE_IMG=quay.io/$USERNAME/memcached-operator-bundle:v0.0.1
   $ make bundle-build BUNDLE_IMG=$BUNDLE_IMG
 
@@ -105,15 +105,15 @@ https://github.com/operator-framework/operator-registry/#manifest-format
 const defaultRootDir = "bundle"
 
 // setDefaults sets defaults useful to all modes of this subcommand.
-func (c *bundleCmd) setDefaults(cfg *config.Config) (err error) {
-	if c.projectName, err = genutil.GetOperatorName(cfg); err != nil {
+func (c *bundleCmd) setDefaults() (err error) {
+	if c.packageName, c.layout, err = genutil.GetPackageNameAndLayout(c.packageName); err != nil {
 		return err
 	}
 	return nil
 }
 
 // validateManifests validates c for bundle manifests generation.
-func (c bundleCmd) validateManifests(*config.Config) (err error) {
+func (c bundleCmd) validateManifests() (err error) {
 	if c.version != "" {
 		if err := genutil.ValidateVersion(c.version); err != nil {
 			return err
@@ -143,7 +143,7 @@ func (c bundleCmd) validateManifests(*config.Config) (err error) {
 }
 
 // runManifests generates bundle manifests.
-func (c bundleCmd) runManifests(cfg *config.Config) (err error) {
+func (c bundleCmd) runManifests() (err error) {
 
 	if !c.quiet && !c.stdout {
 		if c.version == "" {
@@ -174,26 +174,33 @@ func (c bundleCmd) runManifests(cfg *config.Config) (err error) {
 		}
 	}
 
-	csvGen := gencsv.Generator{
-		OperatorName: c.projectName,
-		OperatorType: projutil.PluginKeyToOperatorType(cfg.Layout),
-		Version:      c.version,
-		Collector:    col,
+	// If no CSV is passed via stdin, an on-disk base is expected at basePath.
+	if len(col.ClusterServiceVersions) == 0 {
+		basePath := filepath.Join(c.kustomizeDir, "bases", c.packageName+".clusterserviceversion.yaml")
+		if genutil.IsExist(basePath) {
+			base, err := bases.ClusterServiceVersion{BasePath: basePath}.GetBase()
+			if err != nil {
+				return fmt.Errorf("error reading CSV base: %v", err)
+			}
+			col.ClusterServiceVersions = append(col.ClusterServiceVersions, *base)
+		}
 	}
 
+	var opts []gencsv.Option
 	stdout := genutil.NewMultiManifestWriter(os.Stdout)
-	opts := []gencsv.Option{
-		// By not passing apisDir and turning interactive prompts on, we forcibly rely on the kustomize base
-		// for UI metadata and uninferrable data.
-		gencsv.WithBase(c.kustomizeDir, "", projutil.InteractiveHardOff),
-	}
 	if c.stdout {
 		opts = append(opts, gencsv.WithWriter(stdout))
 	} else {
 		opts = append(opts, gencsv.WithBundleWriter(c.outputDir))
 	}
 
-	if err := csvGen.Generate(cfg, opts...); err != nil {
+	csvGen := gencsv.Generator{
+		OperatorName: c.packageName,
+		Version:      c.version,
+		Collector:    col,
+		Annotations:  metricsannotations.MakeBundleObjectAnnotations(c.layout),
+	}
+	if err := csvGen.Generate(opts...); err != nil {
 		return fmt.Errorf("error generating ClusterServiceVersion: %v", err)
 	}
 
@@ -240,13 +247,8 @@ func writeScorecardConfig(dir string, cfg v1alpha3.Configuration) error {
 	return ioutil.WriteFile(scorecardConfigPath, b, 0666)
 }
 
-// validateMetadata validates c for bundle metadata generation.
-func (c bundleCmd) validateMetadata(*config.Config) (err error) {
-	return nil
-}
-
 // runMetadata generates a bundle.Dockerfile and bundle metadata.
-func (c bundleCmd) runMetadata(cfg *config.Config) error {
+func (c bundleCmd) runMetadata() error {
 
 	directory := c.inputDir
 	if directory == "" {
@@ -266,14 +268,14 @@ func (c bundleCmd) runMetadata(cfg *config.Config) error {
 		outputDir = ""
 	}
 
-	return c.generateMetadata(cfg, directory, outputDir)
+	return c.generateMetadata(directory, outputDir)
 }
 
 // generateMetadata wraps the operator-registry bundle Dockerfile/metadata generator.
-func (c bundleCmd) generateMetadata(cfg *config.Config, manifestsDir, outputDir string) error {
+func (c bundleCmd) generateMetadata(manifestsDir, outputDir string) error {
 
 	metadataExists := isMetatdataExist(outputDir, manifestsDir)
-	err := bundle.GenerateFunc(manifestsDir, outputDir, c.projectName, c.channels, c.defaultChannel, c.overwrite)
+	err := bundle.GenerateFunc(manifestsDir, outputDir, c.packageName, c.channels, c.defaultChannel, c.overwrite)
 	if err != nil {
 		return fmt.Errorf("error generating bundle metadata: %v", err)
 	}
@@ -285,7 +287,7 @@ func (c bundleCmd) generateMetadata(cfg *config.Config, manifestsDir, outputDir 
 			bundleRoot = filepath.Dir(manifestsDir)
 		}
 
-		if err = updateMetadata(cfg, bundleRoot); err != nil {
+		if err = updateMetadata(c.layout, bundleRoot); err != nil {
 			return err
 		}
 	}
@@ -294,8 +296,8 @@ func (c bundleCmd) generateMetadata(cfg *config.Config, manifestsDir, outputDir 
 
 // TODO(estroz): these updates need to be atomic because the bundle's Dockerfile and annotations.yaml
 // cannot be out-of-sync.
-func updateMetadata(cfg *config.Config, bundleRoot string) error {
-	bundleLabels := metricsannotations.MakeBundleMetadataLabels(cfg)
+func updateMetadata(layout, bundleRoot string) error {
+	bundleLabels := metricsannotations.MakeBundleMetadataLabels(layout)
 	for key, value := range scorecardannotations.MakeBundleMetadataLabels(scorecard.DefaultConfigDir) {
 		if _, hasKey := bundleLabels[key]; hasKey {
 			return fmt.Errorf("internal error: duplicate bundle annotation key %s", key)
@@ -325,7 +327,7 @@ func updateMetadata(cfg *config.Config, bundleRoot string) error {
 // writeDockerfileCOPYScorecardConfig checks if bundle.Dockerfile and scorecard config exists in
 // the operator project. If it does, it injects the scorecard configuration into bundle image.
 func writeDockerfileCOPYScorecardConfig(dockerfileName, localConfigDir string) error {
-	if isExist(bundle.DockerFile) && isExist(localConfigDir) {
+	if genutil.IsExist(bundle.DockerFile) && genutil.IsExist(localConfigDir) {
 		scorecardFileContent := fmt.Sprintf("COPY %s %s\n", localConfigDir, "/"+scorecard.DefaultConfigDir)
 		return projutil.RewriteFileContents(dockerfileName, "COPY", scorecardFileContent)
 	}
@@ -384,10 +386,4 @@ func rewriteAnnotations(bundleRoot string, kvs map[string]string) error {
 		mode = info.Mode()
 	}
 	return ioutil.WriteFile(annotationsPath, b, mode)
-}
-
-// isExist returns true if path exists.
-func isExist(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil || os.IsExist(err)
 }

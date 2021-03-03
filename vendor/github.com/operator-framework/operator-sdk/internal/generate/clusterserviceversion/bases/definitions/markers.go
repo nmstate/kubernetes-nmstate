@@ -16,6 +16,7 @@ package definitions
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"unicode"
@@ -36,17 +37,20 @@ const (
 	crdMarkerName = csvPrefix + ":customresourcedefinitions"
 )
 
-// +operator-sdk:csv:customresourcedefinitions:displayName="string",resources={ {kind,version,name} , ... }
-var typeDefinition = markers.Must(markers.MakeDefinition(crdMarkerName, markers.DescribesType, Description{}))
-
-// +operator-sdk:csv:customresourcedefinitions:type=<spec|status>,displayName="name",xDescriptors="ui:elements:foo:bar"
-var fieldDefinition = markers.Must(markers.MakeDefinition(crdMarkerName, markers.DescribesField, Descriptor{}))
-
-// See https://github.com/kubernetes-sigs/controller-tools/blob/92e95c1/pkg/crd/markers/crd.go#L40
-var crdResourceDefinition = markers.Must(markers.MakeDefinition("kubebuilder:resource", markers.DescribesType, crdmarkers.Resource{}))
+var (
+	// +operator-sdk:csv:customresourcedefinitions:displayName="string",resources={ {kind,version,name} , ... }
+	typeDefinition = markers.Must(markers.MakeDefinition(crdMarkerName, markers.DescribesType, Description{}))
+	// +operator-sdk:csv:customresourcedefinitions:type=<spec|status>,displayName="name",xDescriptors="ui:elements:foo:bar"
+	fieldDefinition = markers.Must(markers.MakeDefinition(crdMarkerName, markers.DescribesField, Descriptor{}))
+)
 
 // registerMarkers adds type and field marker definitions to a registry.
 func registerMarkers(into *markers.Registry) error {
+	// External definitions.
+	if err := crdmarkers.Register(into); err != nil {
+		return fmt.Errorf("error registering external marker definition: %v", err)
+	}
+
 	if err := into.Register(typeDefinition); err != nil {
 		return fmt.Errorf("error registering type definition: %v", err)
 	}
@@ -56,11 +60,6 @@ func registerMarkers(into *markers.Registry) error {
 	}
 	into.AddHelp(fieldDefinition, Descriptor{}.Help())
 
-	// External definitions.
-	if err := into.Register(crdResourceDefinition); err != nil {
-		return fmt.Errorf("error registering CRD resource definition: %v", err)
-	}
-	into.AddHelp(crdResourceDefinition, crdmarkers.Resource{}.Help())
 	return nil
 }
 
@@ -79,6 +78,11 @@ type Description struct {
 	Resources Resources `marker:",optional"`
 	// DisplayName is the displayName of a CRD description.
 	DisplayName string `marker:",optional"`
+	// Order determines which position in the list this description will take.
+	// Markers with Order omitted have the highest Order, i.e. at the end of the list.
+	// If more than one marker has the same Order, the corresponding descriptions
+	// will be sorted alphabetically and placed above others with higher Orders.
+	Order *int `marker:",optional"`
 }
 
 // +controllertools:marker:generateHelp:category=Descriptor
@@ -92,6 +96,11 @@ type Descriptor struct {
 	// XDescriptors is a list of UI path strings. The marker format is:
 	// "ui:element:foo,ui:element:bar"
 	XDescriptors []string `marker:",optional"`
+	// Order determines which position in the list this descriptor will take.
+	// Markers with Order omitted have the highest Order, i.e. at the end of the list.
+	// If more than one marker has the same Order, the corresponding descriptors
+	// will be sorted alphabetically and placed above others with higher Orders.
+	Order *int `marker:",optional"`
 }
 
 // toResourceReferences transforms Resources into a apiResourceReference slice.
@@ -118,39 +127,31 @@ type fieldInfo struct {
 	pathSegments []string
 }
 
-// descType is a string identifying a descriptor type.
-type descType string
-
 const (
-	specDescType   descType = "spec"
-	statusDescType descType = "status"
+	spec   = "spec"
+	status = "status"
 )
 
-// toStatusDescriptor transforms a fieldInfo into a specDescriptor.
-func (fi fieldInfo) toSpecDescriptor() (descriptor v1alpha1.SpecDescriptor, include bool) {
-	include = fi.setDescriptorFields(&descriptor, specDescType)
-	return
-}
-
-// toStatusDescriptor transforms a fieldInfo into a statusDescriptor.
-func (fi fieldInfo) toStatusDescriptor() (descriptor v1alpha1.StatusDescriptor, include bool) {
-	include = fi.setDescriptorFields(&descriptor, statusDescType)
-	return
-}
-
 // setDescriptorFields sets a struct with Description, Path, DisplayName, and XDescriptors fields by reflection.
-func (fi fieldInfo) setDescriptorFields(d interface{}, typ descType) bool {
+func (fi fieldInfo) setDescriptorFields(v reflect.Value, descType string) (int, bool) {
 	path, include := makePath(fi.pathSegments)
 	if !include {
-		return false
+		return 0, false
 	}
 
-	seenDescType := false
-	displayName, xDescriptors := "", []string{}
+	var (
+		seenDescType bool
+		displayName  string
+		xDescriptors []string
+		orderPtr     *int
+	)
 	for _, markers := range fi.Markers {
 		for _, marker := range markers {
 			d, isDescriptor := marker.(Descriptor)
-			if isDescriptor && d.Type == string(typ) {
+			if isDescriptor && d.Type == descType {
+				if d.Order != nil {
+					orderPtr = d.Order
+				}
 				if d.DisplayName != "" && displayName == "" {
 					displayName = d.DisplayName
 				}
@@ -163,13 +164,17 @@ func (fi fieldInfo) setDescriptorFields(d interface{}, typ descType) bool {
 		displayName = k8sutil.GetDisplayName(fi.Name)
 	}
 
-	v := reflect.ValueOf(d)
 	v.Elem().FieldByName("Description").SetString(fi.Doc)
 	v.Elem().FieldByName("Path").SetString(path)
 	v.Elem().FieldByName("DisplayName").SetString(displayName)
 	v.Elem().FieldByName("XDescriptors").Set(reflect.ValueOf(xDescriptors))
 
-	return seenDescType
+	order := math.MaxInt64
+	if orderPtr != nil {
+		order = *orderPtr
+	}
+
+	return order, seenDescType
 }
 
 // makePath creates a path string from raw path segments. These segments can encode extra information

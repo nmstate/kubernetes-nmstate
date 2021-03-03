@@ -20,13 +20,12 @@ import (
 	"os"
 	"path/filepath"
 
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
-
+	metricsannotations "github.com/operator-framework/operator-sdk/internal/annotations/metrics"
 	genutil "github.com/operator-framework/operator-sdk/internal/cmd/operator-sdk/generate/internal"
 	gencsv "github.com/operator-framework/operator-sdk/internal/generate/clusterserviceversion"
+	"github.com/operator-framework/operator-sdk/internal/generate/clusterserviceversion/bases"
 	"github.com/operator-framework/operator-sdk/internal/generate/collector"
 	genpkg "github.com/operator-framework/operator-sdk/internal/generate/packagemanifest"
-	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 )
 
 const (
@@ -78,8 +77,8 @@ https://github.com/operator-framework/operator-registry/#manifest-format
 const defaultRootDir = "packagemanifests"
 
 // setDefaults sets command defaults.
-func (c *packagemanifestsCmd) setDefaults(cfg *config.Config) (err error) {
-	if c.projectName, err = genutil.GetOperatorName(cfg); err != nil {
+func (c *packagemanifestsCmd) setDefaults() (err error) {
+	if c.packageName, c.layout, err = genutil.GetPackageNameAndLayout(c.packageName); err != nil {
 		return err
 	}
 
@@ -91,6 +90,8 @@ func (c *packagemanifestsCmd) setDefaults(cfg *config.Config) (err error) {
 			c.outputDir = defaultRootDir
 		}
 	}
+	c.generator = genpkg.NewGenerator()
+
 	return nil
 }
 
@@ -141,7 +142,7 @@ func (c packagemanifestsCmd) validate() error {
 }
 
 // run generates package manifests.
-func (c packagemanifestsCmd) run(cfg *config.Config) error {
+func (c packagemanifestsCmd) run() error {
 
 	if !c.quiet && !c.stdout {
 		fmt.Println("Generating package manifests version", c.version)
@@ -163,27 +164,34 @@ func (c packagemanifestsCmd) run(cfg *config.Config) error {
 		}
 	}
 
-	csvGen := gencsv.Generator{
-		OperatorName: c.projectName,
-		OperatorType: projutil.PluginKeyToOperatorType(cfg.Layout),
-		Version:      c.version,
-		FromVersion:  c.fromVersion,
-		Collector:    col,
+	// If no CSV is passed via stdin, an on-disk base is expected at basePath.
+	if len(col.ClusterServiceVersions) == 0 {
+		basePath := filepath.Join(c.kustomizeDir, "bases", c.packageName+".clusterserviceversion.yaml")
+		if genutil.IsExist(basePath) {
+			base, err := bases.ClusterServiceVersion{BasePath: basePath}.GetBase()
+			if err != nil {
+				return fmt.Errorf("error reading CSV base: %v", err)
+			}
+			col.ClusterServiceVersions = append(col.ClusterServiceVersions, *base)
+		}
 	}
 
+	var opts []gencsv.Option
 	stdout := genutil.NewMultiManifestWriter(os.Stdout)
-	opts := []gencsv.Option{
-		// By not passing apisDir and turning interactive prompts on, we forcibly rely on the kustomize base
-		// for UI metadata and uninferrable data.
-		gencsv.WithBase(c.kustomizeDir, "", projutil.InteractiveHardOff),
-	}
 	if c.stdout {
 		opts = append(opts, gencsv.WithWriter(stdout))
 	} else {
 		opts = append(opts, gencsv.WithPackageWriter(c.outputDir))
 	}
 
-	if err := csvGen.Generate(cfg, opts...); err != nil {
+	csvGen := gencsv.Generator{
+		OperatorName: c.packageName,
+		Version:      c.version,
+		FromVersion:  c.fromVersion,
+		Collector:    col,
+		Annotations:  metricsannotations.MakeBundleObjectAnnotations(c.layout),
+	}
+	if err := csvGen.Generate(opts...); err != nil {
 		return fmt.Errorf("error generating ClusterServiceVersion: %v", err)
 	}
 
@@ -209,17 +217,19 @@ func (c packagemanifestsCmd) run(cfg *config.Config) error {
 }
 
 func (c packagemanifestsCmd) generatePackageManifest() error {
-	pkgGen := genpkg.Generator{
-		OperatorName:     c.projectName,
-		Version:          c.version,
+	//copy of genpkg withfilewriter()
+	//move out of internal util pkg?
+	if err := os.MkdirAll(c.outputDir, 0755); err != nil {
+		return err
+	}
+
+	opts := genpkg.Options{
+		BaseDir:          c.inputDir,
 		ChannelName:      c.channelName,
 		IsDefaultChannel: c.isDefaultChannel,
 	}
-	opts := []genpkg.Option{
-		genpkg.WithBase(c.inputDir),
-		genpkg.WithFileWriter(c.outputDir),
-	}
-	if err := pkgGen.Generate(opts...); err != nil {
+
+	if err := c.generator.Generate(c.packageName, c.version, c.outputDir, opts); err != nil {
 		return err
 	}
 	return nil

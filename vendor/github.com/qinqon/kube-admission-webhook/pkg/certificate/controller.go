@@ -1,14 +1,15 @@
 package certificate
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -33,28 +34,28 @@ func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return errors.Wrap(err, "failed instanciating certificate controller")
 	}
 
-	isAnnotatedResource := func(meta metav1.Object) bool {
-		_, foundAnnotation := meta.GetAnnotations()[secretManagedAnnotatoinKey]
+	isAnnotatedResource := func(object client.Object) bool {
+		_, foundAnnotation := object.GetAnnotations()[secretManagedAnnotatoinKey]
 		return foundAnnotation
 	}
 
-	isWebhookConfig := func(meta metav1.Object) bool {
-		return meta.GetName() == m.webhookName
+	isWebhookConfig := func(object client.Object) bool {
+		return object.GetName() == m.webhookName
 	}
 
 	// Watch only events for selected m.webhookName
 	onEventForThisWebhook := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return isWebhookConfig(createEvent.Meta) || isAnnotatedResource(createEvent.Meta)
+			return isWebhookConfig(createEvent.Object) || isAnnotatedResource(createEvent.Object)
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return isAnnotatedResource(deleteEvent.Meta)
+			return isAnnotatedResource(deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return isWebhookConfig(updateEvent.MetaOld) || isAnnotatedResource(updateEvent.MetaOld)
+			return isWebhookConfig(updateEvent.ObjectOld) || isAnnotatedResource(updateEvent.ObjectOld)
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return isWebhookConfig(genericEvent.Meta) || isAnnotatedResource(genericEvent.Meta)
+			return isWebhookConfig(genericEvent.Object) || isAnnotatedResource(genericEvent.Object)
 		},
 	}
 
@@ -65,13 +66,13 @@ func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	logger.Info("Starting to watch validatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
+	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching ValidatingWebhookConfiguration")
 	}
 
 	logger.Info("Starting to watch mutatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1beta1.MutatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
+	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.MutatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching MutatingWebhookConfiguration")
 	}
@@ -84,7 +85,7 @@ func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (m *Manager) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (m *Manager) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := m.log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name).WithName("Reconcile")
 	reqLogger.Info("Reconciling Certificates")
 

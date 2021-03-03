@@ -25,19 +25,20 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"time"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	olmapiv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	olmmanifests "github.com/operator-framework/operator-sdk/internal/bindata/olm"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	olmresourceclient "github.com/operator-framework/operator-sdk/internal/olm/client"
 )
@@ -46,10 +47,7 @@ const (
 	olmOperatorName     = "olm-operator"
 	catalogOperatorName = "catalog-operator"
 	packageServerName   = "packageserver"
-
-	// These paths are keys to look up internal OLM bindata.
-	olmManifestBindataPath = "olm-manifests/olm.yaml"
-	crdManifestBindataPath = "olm-manifests/crds.yaml"
+	bindataManifestPath = "olm-manifests"
 )
 
 type Client struct {
@@ -177,32 +175,34 @@ func (c Client) GetStatus(ctx context.Context, namespace, version string) (*olmr
 func (c Client) getResources(ctx context.Context, version string) ([]unstructured.Unstructured, error) {
 	log.Infof("Fetching CRDs for version %q", version)
 
-	version = formatVersion(version)
+	resolvedVersion := formatVersion(version)
 
 	var crdResources, olmResources []unstructured.Unstructured
 	var err error
 
 	// If the manifests for the requested version are saved as bindata in SDK, use
-	// them instead of fetching them from
+	// them instead of fetching them from github.
 	if olmmanifests.HasVersion(version) {
-		log.Infof("Using locally stored resource manifests for resolved version %q", version)
+		log.Infof("Using locally stored resource manifests")
+		crdManifestBindataPath := filepath.Join(bindataManifestPath, version+"-crds.yaml")
 		crdResources, err = getPackagedManifests(crdManifestBindataPath)
 		if err != nil {
 			return nil, err
 		}
 
+		olmManifestBindataPath := filepath.Join(bindataManifestPath, version+"-olm.yaml")
 		olmResources, err = getPackagedManifests(olmManifestBindataPath)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		log.Infof("Fetching resources for resolved version %q", version)
-		crdResources, err = c.getCRDs(ctx, version)
+		log.Infof("Fetching resources for resolved version %q", resolvedVersion)
+		crdResources, err = c.getCRDs(ctx, resolvedVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch CRDs: %v", err)
 		}
 
-		olmResources, err = c.getOLM(ctx, version)
+		olmResources, err = c.getOLM(ctx, resolvedVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch resources: %v", err)
 		}
@@ -299,7 +299,7 @@ func (c Client) doRequest(ctx context.Context, url string) (*http.Response, erro
 	return resp, nil
 }
 
-func toObjects(us ...unstructured.Unstructured) (objs []runtime.Object) {
+func toObjects(us ...unstructured.Unstructured) (objs []client.Object) {
 	for i := range us {
 		objs = append(objs, &us[i])
 	}

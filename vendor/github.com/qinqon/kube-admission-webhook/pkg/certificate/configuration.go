@@ -10,32 +10,32 @@ import (
 
 	"github.com/pkg/errors"
 
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate/triple"
 )
 
-func mutatingWebhookConfig(webhook runtime.Object) *admissionregistrationv1beta1.MutatingWebhookConfiguration {
-	return webhook.(*admissionregistrationv1beta1.MutatingWebhookConfiguration)
+func mutatingWebhookConfig(webhook client.Object) *admissionregistrationv1.MutatingWebhookConfiguration {
+	return webhook.(*admissionregistrationv1.MutatingWebhookConfiguration)
 }
 
-func validatingWebhookConfig(webhook runtime.Object) *admissionregistrationv1beta1.ValidatingWebhookConfiguration {
-	return webhook.(*admissionregistrationv1beta1.ValidatingWebhookConfiguration)
+func validatingWebhookConfig(webhook client.Object) *admissionregistrationv1.ValidatingWebhookConfiguration {
+	return webhook.(*admissionregistrationv1.ValidatingWebhookConfiguration)
 }
 
 // clientConfigList returns the the list of webhooks's mutation or validating WebhookClientConfig
 //
 // The WebhookClientConfig type is share between mutating or validating so we can have a common function
-// that uses the interface runtime.Object and do some type checking to access it [1].
+// that uses the interface client.Object and do some type checking to access it [1].
 //
 // [1] https://godoc.org/k8s.io/kubernetes/pkg/apis/admissionregistration#WebhookClientConfig
-func (m *Manager) clientConfigList(webhook runtime.Object) []*admissionregistrationv1beta1.WebhookClientConfig {
-	clientConfigList := []*admissionregistrationv1beta1.WebhookClientConfig{}
+func (m *Manager) clientConfigList(webhook client.Object) []*admissionregistrationv1.WebhookClientConfig {
+	clientConfigList := []*admissionregistrationv1.WebhookClientConfig{}
 	if m.webhookType == MutatingWebhook {
 		mutatingWebhookConfig := mutatingWebhookConfig(webhook)
 		for i, _ := range mutatingWebhookConfig.Webhooks {
@@ -52,12 +52,12 @@ func (m *Manager) clientConfigList(webhook runtime.Object) []*admissionregistrat
 	return clientConfigList
 }
 
-func (m *Manager) readyWebhookConfiguration() (runtime.Object, error) {
-	var webhook runtime.Object
+func (m *Manager) readyWebhookConfiguration() (client.Object, error) {
+	var webhook client.Object
 	if m.webhookType == MutatingWebhook {
-		webhook = &admissionregistrationv1beta1.MutatingWebhookConfiguration{}
+		webhook = &admissionregistrationv1.MutatingWebhookConfiguration{}
 	} else if m.webhookType == ValidatingWebhook {
-		webhook = &admissionregistrationv1beta1.ValidatingWebhookConfiguration{}
+		webhook = &admissionregistrationv1.ValidatingWebhookConfiguration{}
 	} else {
 		return nil, fmt.Errorf("Unknown webhook type %s", m.webhookType)
 	}
@@ -91,9 +91,9 @@ func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 	return nil
 }
 
-func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]byte, error)) (runtime.Object, error) {
+func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]byte, error)) (client.Object, error) {
 	m.log.Info("Updating CA bundle for webhook")
-	var webhook runtime.Object
+	var webhook client.Object
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		var err error
 		webhook, err = m.readyWebhookConfiguration()
@@ -140,7 +140,7 @@ func (m *Manager) CABundle() ([]byte, error) {
 // webhook configuration clientConfig and in case there is URL instead of
 // ServiceRef it will reference fake one with webhook name, mgr namespace and
 // passing the url hostname at map value
-func (m *Manager) getServicesFromConfiguration(configuration runtime.Object) (map[types.NamespacedName][]string, error) {
+func (m *Manager) getServicesFromConfiguration(configuration client.Object) (map[types.NamespacedName][]string, error) {
 
 	services := map[types.NamespacedName][]string{}
 

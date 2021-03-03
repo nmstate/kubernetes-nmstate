@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -41,25 +42,42 @@ type Bundle struct {
 	Package      string
 	Channels     []string
 	BundleImage  string
+	version      string
 	csv          *ClusterServiceVersion
 	v1beta1crds  []*apiextensionsv1beta1.CustomResourceDefinition
 	v1crds       []*apiextensionsv1.CustomResourceDefinition
 	Dependencies []*Dependency
 	Properties   []*Property
+	Annotations  *Annotations
 	cacheStale   bool
 }
 
-func NewBundle(name, pkgName string, channels []string, objs ...*unstructured.Unstructured) *Bundle {
-	bundle := &Bundle{Name: name, Package: pkgName, Channels: channels, cacheStale: false}
+func NewBundle(name string, annotations *Annotations, objs ...*unstructured.Unstructured) *Bundle {
+	bundle := &Bundle{
+		Name:        name,
+		Package:     annotations.PackageName,
+		Annotations: annotations,
+	}
 	for _, o := range objs {
 		bundle.Add(o)
 	}
+
+	if annotations == nil {
+		return bundle
+	}
+	bundle.Channels = strings.Split(annotations.Channels, ",")
+
 	return bundle
 }
 
-func NewBundleFromStrings(name, pkgName string, channels []string, objs []string) (*Bundle, error) {
+func NewBundleFromStrings(name, version, pkg, defaultChannel, channels, objs string) (*Bundle, error) {
+	objStrs, err := BundleStringToObjectStrings(objs)
+	if err != nil {
+		return nil, err
+	}
+
 	unstObjs := []*unstructured.Unstructured{}
-	for _, o := range objs {
+	for _, o := range objStrs {
 		dec := yaml.NewYAMLOrJSONDecoder(strings.NewReader(o), 10)
 		unst := &unstructured.Unstructured{}
 		if err := dec.Decode(unst); err != nil {
@@ -67,7 +85,16 @@ func NewBundleFromStrings(name, pkgName string, channels []string, objs []string
 		}
 		unstObjs = append(unstObjs, unst)
 	}
-	return NewBundle(name, pkgName, channels, unstObjs...), nil
+
+	annotations := &Annotations{
+		PackageName:        pkg,
+		Channels:           channels,
+		DefaultChannelName: defaultChannel,
+	}
+	bundle := NewBundle(name, annotations, unstObjs...)
+	bundle.version = version
+
+	return bundle, nil
 }
 
 func (b *Bundle) Size() int {
@@ -86,10 +113,20 @@ func (b *Bundle) ClusterServiceVersion() (*ClusterServiceVersion, error) {
 }
 
 func (b *Bundle) Version() (string, error) {
-	if err := b.cache(); err != nil {
+	if b.version != "" {
+		return b.version, nil
+	}
+
+	var err error
+	if err = b.cache(); err != nil {
 		return "", err
 	}
-	return b.csv.GetVersion()
+
+	if b.csv != nil {
+		b.version, err = b.csv.GetVersion()
+	}
+
+	return b.version, err
 }
 
 func (b *Bundle) SkipRange() (string, error) {
@@ -226,12 +263,12 @@ func (b *Bundle) AllProvidedAPIsInBundle() error {
 	return nil
 }
 
-func (b *Bundle) Serialize() (csvName, bundleImage string, csvBytes []byte, bundleBytes []byte, err error) {
+func (b *Bundle) Serialize() (csvName, bundleImage string, csvBytes []byte, bundleBytes []byte, annotationBytes []byte, err error) {
 	csvCount := 0
 	for _, obj := range b.Objects {
 		objBytes, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
 		if err != nil {
-			return "", "", nil, nil, err
+			return "", "", nil, nil, nil, err
 		}
 		bundleBytes = append(bundleBytes, objBytes...)
 
@@ -239,27 +276,44 @@ func (b *Bundle) Serialize() (csvName, bundleImage string, csvBytes []byte, bund
 			csvName = obj.GetName()
 			csvBytes, err = runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
 			if err != nil {
-				return "", "", nil, nil, err
+				return "", "", nil, nil, nil, err
 			}
 			csvCount += 1
 			if csvCount > 1 {
-				return "", "", nil, nil, fmt.Errorf("two csvs found in one bundle")
+				return "", "", nil, nil, nil, fmt.Errorf("two csvs found in one bundle")
 			}
 		}
 	}
 
-	return csvName, b.BundleImage, csvBytes, bundleBytes, nil
+	if b.Annotations != nil {
+		annotationBytes, err = json.Marshal(b.Annotations)
+	}
+
+	return csvName, b.BundleImage, csvBytes, bundleBytes, annotationBytes, nil
 }
 
 func (b *Bundle) Images() (map[string]struct{}, error) {
+	result := make(map[string]struct{})
+
+	if b.BundleImage != "" {
+		result[b.BundleImage] = struct{}{}
+	}
+
 	csv, err := b.ClusterServiceVersion()
 	if err != nil {
 		return nil, err
 	}
 
+	if csv == nil {
+		return result, nil
+	}
+
 	images, err := csv.GetOperatorImages()
 	if err != nil {
 		return nil, err
+	}
+	for img := range images {
+		result[img] = struct{}{}
 	}
 
 	relatedImages, err := csv.GetRelatedImages()
@@ -267,10 +321,10 @@ func (b *Bundle) Images() (map[string]struct{}, error) {
 		return nil, err
 	}
 	for img := range relatedImages {
-		images[img] = struct{}{}
+		result[img] = struct{}{}
 	}
 
-	return images, nil
+	return result, nil
 }
 
 func (b *Bundle) cache() error {

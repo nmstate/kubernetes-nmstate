@@ -59,7 +59,11 @@ type Query interface {
 	GetDependenciesForBundle(ctx context.Context, name, version, path string) (dependencies []*api.Dependency, err error)
 	// Get the bundle path if it exists
 	GetBundlePathIfExists(ctx context.Context, csvName string) (string, error)
+	// ListRegistryBundles returns a set of registry bundles.
+	ListRegistryBundles(ctx context.Context) ([]*Bundle, error)
 }
+
+//go:generate go run github.com/maxbrunsfeld/counterfeiter/v6 . GraphLoader
 
 // GraphLoader generates a graph
 // GraphLoader supports multiple different loading schemes

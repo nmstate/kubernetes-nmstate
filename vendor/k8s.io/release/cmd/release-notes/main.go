@@ -35,6 +35,7 @@ import (
 	"k8s.io/release/pkg/notes/options"
 	"k8s.io/release/pkg/release"
 	"k8s.io/release/pkg/util"
+	"sigs.k8s.io/mdtoc/pkg/mdtoc"
 )
 
 type releaseNotesOptions struct {
@@ -59,19 +60,35 @@ var (
 )
 
 func init() {
+	// githubBaseURL contains the github base URL.
+	cmd.PersistentFlags().StringVar(
+		&opts.GithubBaseURL,
+		"github-base-url",
+		util.EnvDefault("GITHUB_BASE_URL", ""),
+		"Base URL of github",
+	)
+
+	// githubUploadURL contains the github upload URL.
+	cmd.PersistentFlags().StringVar(
+		&opts.GithubUploadURL,
+		"github-upload-url",
+		util.EnvDefault("GITHUB_UPLOAD_URL", ""),
+		"Upload URL of github",
+	)
+
 	// githubOrg contains name of github organization that holds the repo to scrape.
 	cmd.PersistentFlags().StringVar(
 		&opts.GithubOrg,
-		"github-org",
-		util.EnvDefault("GITHUB_ORG", notes.DefaultOrg),
+		"org",
+		util.EnvDefault("ORG", notes.DefaultOrg),
 		"Name of github organization",
 	)
 
 	// githubRepo contains name of github repository to scrape.
 	cmd.PersistentFlags().StringVar(
 		&opts.GithubRepo,
-		"github-repo",
-		util.EnvDefault("GITHUB_REPO", notes.DefaultRepo),
+		"repo",
+		util.EnvDefault("REPO", notes.DefaultRepo),
 		"Name of github repository",
 	)
 
@@ -88,8 +105,8 @@ func init() {
 	cmd.PersistentFlags().StringVar(
 		&opts.Branch,
 		"branch",
-		util.EnvDefault("BRANCH", git.Master),
-		"Select which branch to scrape. Defaults to `master`",
+		util.EnvDefault("BRANCH", git.DefaultBranch),
+		fmt.Sprintf("Select which branch to scrape. Defaults to `%s`", git.DefaultBranch),
 	)
 
 	// startSHA contains the commit SHA where the release note generation
@@ -134,14 +151,6 @@ func init() {
 		"repo-path",
 		util.EnvDefault("REPO_PATH", filepath.Join(os.TempDir(), "k8s-repo")),
 		"Path to a local Kubernetes repository, used only for tag discovery.",
-	)
-
-	// releaseVersion is the version number you want to tag the notes with.
-	cmd.PersistentFlags().StringVar(
-		&opts.ReleaseVersion,
-		"release-version",
-		util.EnvDefault("RELEASE_VERSION", ""),
-		"Which release version to tag the entries as.",
 	)
 
 	// format is the output format to produce the notes in.
@@ -321,18 +330,22 @@ func WriteReleaseNotes(releaseNotes *notes.ReleaseNotes) (err error) {
 
 		const nl = "\n"
 		if releaseNotesOpts.dependencies {
-			url := git.GetRepoURL(opts.GithubOrg, opts.GithubRepo, false)
-			deps, err := notes.NewDependencies().ChangesForURL(
-				url, opts.StartSHA, opts.EndSHA,
-			)
-			if err != nil {
-				return errors.Wrap(err, "generating dependency report")
+			if opts.StartSHA == opts.EndSHA {
+				logrus.Info("Skipping dependency report because start and end SHA are the same")
+			} else {
+				url := git.GetRepoURL(opts.GithubOrg, opts.GithubRepo, false)
+				deps, err := notes.NewDependencies().ChangesForURL(
+					url, opts.StartSHA, opts.EndSHA,
+				)
+				if err != nil {
+					return errors.Wrap(err, "generating dependency report")
+				}
+				markdown += strings.Repeat(nl, 2) + deps
 			}
-			markdown += strings.Repeat(nl, 2) + deps
 		}
 
 		if releaseNotesOpts.tableOfContents {
-			toc, err := notes.GenerateTOC(markdown)
+			toc, err := mdtoc.GenerateTOC([]byte(markdown))
 			if err != nil {
 				return errors.Wrap(err, "generating table of contents")
 			}

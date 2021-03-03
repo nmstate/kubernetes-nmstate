@@ -157,35 +157,37 @@ func populate(ctx context.Context, loader registry.Load, graphLoader registry.Gr
 				if err != nil {
 					return err
 				}
-				cleanups := make(chan func(), 1)
-				errs := make(chan error, 1)
+				type unpackedImage struct {
+					to      image.Reference
+					from    string
+					cleanup func()
+					err     error
+				}
+				unpacked := make(chan unpackedImage)
 				for bundle := range bundles {
-					if _, ok := overwriteImageMap[img.Bundle.Package]; !ok {
-						overwriteImageMap[img.Bundle.Package] = make(map[image.Reference]string, 0)
-					}
 					// parallelize image pulls
 					go func(bundle registry.BundleKey, img *registry.ImageInput) {
 						if bundle.CsvName != img.Bundle.Name {
 							to, from, cleanup, err := unpackImage(ctx, reg, image.SimpleReference(bundle.BundlePath))
-							if err != nil {
-								errs <- err
-							}
-							cleanups <- cleanup
-							overwriteImageMap[img.Bundle.Package][to] = from
+							unpacked <- unpackedImage{to: to, from: from, cleanup: cleanup, err: err}
 						} else {
-							overwriteImageMap[img.Bundle.Package][to] = from
-							delete(unpackedImageMap, to)
+							unpacked <- unpackedImage{to: to, from: from, cleanup: func() { return }, err: nil}
 						}
 					}(bundle, img)
 				}
-				for i := 0; i < len(bundles)-1; i++ {
-					select {
-					case err := <-errs:
-						return err
-					default:
-						cleanup := <-cleanups
-						defer cleanup()
+				if _, ok := overwriteImageMap[img.Bundle.Package]; !ok {
+					overwriteImageMap[img.Bundle.Package] = make(map[image.Reference]string, 0)
+				}
+				for i := 0; i < len(bundles); i++ {
+					unpack := <-unpacked
+					if unpack.err != nil {
+						return unpack.err
 					}
+					overwriteImageMap[img.Bundle.Package][unpack.to] = unpack.from
+					if _, ok := unpackedImageMap[unpack.to]; ok {
+						delete(unpackedImageMap, unpack.to)
+					}
+					defer unpack.cleanup()
 				}
 			} else {
 				return fmt.Errorf("index add --overwrite-latest is only supported when using bundle images")

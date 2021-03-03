@@ -1,6 +1,8 @@
 package index
 
 import (
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"k8s.io/kubectl/pkg/util/templates"
@@ -14,7 +16,6 @@ var exportLong = templates.LongDesc(`
 
 	This command will take an index image (specified by the --index option), parse it for the given operator(s) (set by 
 	the --package option) and export the operator metadata into an appregistry compliant format (a package.yaml file). 
-	This command requires access to docker or podman to complete successfully.
 
 	Note: the appregistry format is being deprecated in favor of the new index image and image bundle format. 
 	`)
@@ -34,7 +35,6 @@ func newIndexExportCmd() *cobra.Command {
 
 		RunE: runIndexExportCmdFunc,
 	}
-
 	indexCmd.Flags().Bool("debug", false, "enable debug logging")
 	indexCmd.Flags().StringP("index", "i", "", "index to get package from")
 	if err := indexCmd.MarkFlagRequired("index"); err != nil {
@@ -44,6 +44,12 @@ func newIndexExportCmd() *cobra.Command {
 	indexCmd.Flags().StringP("download-folder", "f", "downloaded", "directory where downloaded operator bundle(s) will be stored")
 	indexCmd.Flags().StringP("container-tool", "c", "none", "tool to interact with container images (save, build, etc.). One of: [none, docker, podman]")
 	if err := indexCmd.Flags().MarkHidden("debug"); err != nil {
+		logrus.Panic(err.Error())
+	}
+
+	// Create hidden option so we can provide deprecated shorthand
+	indexCmd.Flags().StringSliceP("xpackage", "o", nil, "deprecated, please use --package option instead")
+	if err := indexCmd.Flags().MarkHidden("xpackage"); err != nil {
 		logrus.Panic(err.Error())
 	}
 
@@ -57,9 +63,29 @@ func runIndexExportCmdFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	pkgFlag := cmd.Flag("package")
+	if pkgFlag == nil {
+		return fmt.Errorf("unable to get the package flag")
+	}
+
+	xPkgFlag := cmd.Flag("xpackage")
+	if xPkgFlag == nil {
+		return fmt.Errorf("unable to get the package flag for deprecated shorthand '-o'")
+	}
+
+	if xPkgFlag.Changed && pkgFlag.Changed {
+		return fmt.Errorf("cannot simultaneously set '-p' and '-o' flags, remove '-o'")
+	}
+
 	packages, err := cmd.Flags().GetStringSlice("package")
 	if err != nil {
 		return err
+	}
+	if xPkgFlag.Changed {
+		// Use the deprecated shorthand
+		if packages, err = cmd.Flags().GetStringSlice("xpackage"); err != nil {
+			return err
+		}
 	}
 
 	downloadPath, err := cmd.Flags().GetString("download-folder")

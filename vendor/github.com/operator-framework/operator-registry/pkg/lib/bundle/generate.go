@@ -327,11 +327,13 @@ func GenerateDockerfile(mediaType, manifests, metadata, copyManifestDir, copyMet
 	if err != nil {
 		return nil, err
 	}
+	relativeManifestDirectory = filepath.ToSlash(relativeManifestDirectory)
 
 	relativeMetadataDirectory, err := filepath.Rel(workingDir, copyMetadataDir)
 	if err != nil {
 		return nil, err
 	}
+	relativeMetadataDirectory = filepath.ToSlash(relativeMetadataDirectory)
 
 	// FROM
 	fileContent += "FROM scratch\n\n"

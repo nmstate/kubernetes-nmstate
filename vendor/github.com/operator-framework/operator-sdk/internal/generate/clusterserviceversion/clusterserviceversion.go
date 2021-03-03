@@ -20,14 +20,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	operatorsv1alpha1 "github.com/operator-framework/api/pkg/operators/v1alpha1"
 	"github.com/operator-framework/operator-registry/pkg/lib/bundle"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
 
-	metricsannotations "github.com/operator-framework/operator-sdk/internal/annotations/metrics"
 	"github.com/operator-framework/operator-sdk/internal/generate/clusterserviceversion/bases"
 	"github.com/operator-framework/operator-sdk/internal/generate/collector"
 	genutil "github.com/operator-framework/operator-sdk/internal/generate/internal"
@@ -41,50 +38,28 @@ const (
 
 var (
 	// Internal errors.
-	noGetBaseError               = genutil.InternalError("getBase must be set")
-	noGetWriterError             = genutil.InternalError("getWriter must be set")
-	baseVersionNotAllowedError   = genutil.InternalError("cannot set version when generating a base")
-	baseCollectorNotAllowedError = genutil.InternalError("cannot set collector when generating a base")
+	noGetWriterError = genutil.InternalError("getWriter must be set")
 )
 
 // ClusterServiceVersion configures ClusterServiceVersion manifest generation.
 type Generator struct {
 	// OperatorName is the operator's name, ex. app-operator.
 	OperatorName string
-	// OperatorType determines what code API types are written in for getBase.
-	OperatorType projutil.OperatorType
 	// Version is the CSV current version.
 	Version string
 	// FromVersion is the version of a previous CSV to upgrade from.
 	FromVersion string
 	// Collector holds all manifests relevant to the Generator.
 	Collector *collector.Manifests
+	// Annotations are applied to the resulting CSV.
+	Annotations map[string]string
 
-	// Project configuration.
-	config *config.Config
-	// Func that returns a base CSV.
-	getBase getBaseFunc
 	// Func that returns the writer the generated CSV's bytes are written to.
 	getWriter func() (io.Writer, error)
-	// If the CSV is destined for a bundle this will be the path of the updated
-	// CSV. Used to bring over data from an existing CSV that is not captured
-	// in a base. Not set if a non-file or base writer is returned by getWriter.
-	bundledPath string
 }
-
-// Type of Generator.getBase.
-type getBaseFunc func() (*operatorsv1alpha1.ClusterServiceVersion, error)
 
 // Option is a function that modifies a Generator.
 type Option func(*Generator) error
-
-// WithBase sets a Generator's base CSV to a kustomize-style base.
-func WithBase(inputDir, apisDir string, ilvl projutil.InteractiveLevel) Option {
-	return func(g *Generator) error {
-		g.getBase = g.makeKustomizeBaseGetter(inputDir, apisDir, ilvl)
-		return nil
-	}
-}
 
 // WithWriter sets a Generator's writer to w.
 func WithWriter(w io.Writer) Option {
@@ -96,31 +71,11 @@ func WithWriter(w io.Writer) Option {
 	}
 }
 
-// WithBaseWriter sets a Generator's writer to a kustomize-style base file
-// under <dir>/bases.
-func WithBaseWriter(dir string) Option {
-	return func(g *Generator) error {
-		fileName := makeCSVFileName(g.OperatorName)
-		g.getWriter = func() (io.Writer, error) {
-			return genutil.Open(filepath.Join(dir, "bases"), fileName)
-		}
-		// Bases should not be updated with a version or manifests.
-		if g.Version != "" {
-			return baseVersionNotAllowedError
-		}
-		if g.Collector != nil {
-			return baseCollectorNotAllowedError
-		}
-		return nil
-	}
-}
-
 // WithBundleWriter sets a Generator's writer to a bundle CSV file under
 // <dir>/manifests.
 func WithBundleWriter(dir string) Option {
 	return func(g *Generator) error {
 		fileName := makeCSVFileName(g.OperatorName)
-		g.bundledPath = filepath.Join(dir, bundle.ManifestsDir, fileName)
 		g.getWriter = func() (io.Writer, error) {
 			return genutil.Open(filepath.Join(dir, bundle.ManifestsDir), fileName)
 		}
@@ -133,9 +88,6 @@ func WithBundleWriter(dir string) Option {
 func WithPackageWriter(dir string) Option {
 	return func(g *Generator) error {
 		fileName := makeCSVFileName(g.OperatorName)
-		if g.FromVersion != "" {
-			g.bundledPath = filepath.Join(dir, g.FromVersion, fileName)
-		}
 		g.getWriter = func() (io.Writer, error) {
 			return genutil.Open(filepath.Join(dir, g.Version), fileName)
 		}
@@ -143,9 +95,8 @@ func WithPackageWriter(dir string) Option {
 	}
 }
 
-// Generate configures the generator with cfg and opts then runs it.
-func (g *Generator) Generate(cfg *config.Config, opts ...Option) (err error) {
-	g.config = cfg
+// Generate configures the generator with col and opts then runs it.
+func (g *Generator) Generate(opts ...Option) (err error) {
 	for _, opt := range opts {
 		if err = opt(g); err != nil {
 			return err
@@ -161,8 +112,8 @@ func (g *Generator) Generate(cfg *config.Config, opts ...Option) (err error) {
 		return err
 	}
 
-	// Add sdk labels to csv
-	g.setSDKAnnotations(csv)
+	// Add extra annotations to csv
+	g.setAnnotations(csv)
 
 	w, err := g.getWriter()
 	if err != nil {
@@ -172,37 +123,48 @@ func (g *Generator) Generate(cfg *config.Config, opts ...Option) (err error) {
 }
 
 // setSDKAnnotations adds SDK metric labels to the base if they do not exist.
-func (g Generator) setSDKAnnotations(csv *v1alpha1.ClusterServiceVersion) {
+func (g Generator) setAnnotations(csv *v1alpha1.ClusterServiceVersion) {
 	annotations := csv.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-
-	for key, value := range metricsannotations.MakeBundleObjectAnnotations(g.config) {
-		annotations[key] = value
+	for k, v := range g.Annotations {
+		annotations[k] = v
 	}
 	csv.SetAnnotations(annotations)
 }
 
 // generate runs a configured Generator.
-func (g *Generator) generate() (*operatorsv1alpha1.ClusterServiceVersion, error) {
-	if g.getBase == nil {
-		return nil, noGetBaseError
+func (g *Generator) generate() (base *operatorsv1alpha1.ClusterServiceVersion, err error) {
+	if g.Collector == nil {
+		return nil, fmt.Errorf("cannot generate CSV without a manifests collection")
 	}
 
-	base, err := g.getBase()
-	if err != nil {
-		return nil, fmt.Errorf("error getting ClusterServiceVersion base: %v", err)
+	// Search for a CSV in the collector with a name matching the package name.
+	csvNamePrefix := g.OperatorName + "."
+	for _, csv := range g.Collector.ClusterServiceVersions {
+		if base == nil && strings.HasPrefix(csv.GetName(), csvNamePrefix) {
+			base = csv.DeepCopy()
+		}
 	}
 
-	if err = g.updateVersions(base); err != nil {
-		return nil, err
+	// Use a default base if none was supplied.
+	if base == nil {
+		base = bases.New(g.OperatorName)
 	}
-
-	if g.Collector != nil {
-		if err := ApplyTo(g.Collector, base); err != nil {
+	if g.Version != "" {
+		// Use the existing version/name unless g.Version is set.
+		base.SetName(genutil.MakeCSVName(g.OperatorName, g.Version))
+		if base.Spec.Version.Version, err = semver.Parse(g.Version); err != nil {
 			return nil, err
 		}
+	}
+	if g.FromVersion != "" {
+		base.Spec.Replaces = genutil.MakeCSVName(g.OperatorName, g.FromVersion)
+	}
+
+	if err := ApplyTo(g.Collector, base); err != nil {
+		return nil, err
 	}
 
 	return base, nil
@@ -213,78 +175,8 @@ func makeCSVFileName(name string) string {
 	return strings.ToLower(name) + csvYamlFileExt
 }
 
-// makeKustomizeBaseGetter returns a function that gets a kustomize-style base.
-func (g Generator) makeKustomizeBaseGetter(inputDir, apisDir string, ilvl projutil.InteractiveLevel) getBaseFunc {
-	basePath := filepath.Join(inputDir, "bases", makeCSVFileName(g.OperatorName))
-	if genutil.IsNotExist(basePath) {
-		basePath = ""
-	}
-
-	return g.makeBaseGetter(basePath, apisDir, requiresInteraction(basePath, ilvl))
-}
-
-// makeBaseGetter returns a function that gets a base from inputDir.
-// apisDir is used by getBaseFunc to populate base fields.
-func (g Generator) makeBaseGetter(basePath, apisDir string, interactive bool) getBaseFunc {
-	gvks := make([]schema.GroupVersionKind, len(g.config.Resources))
-	for i, gvk := range g.config.Resources {
-		gvks[i].Group = fmt.Sprintf("%s.%s", gvk.Group, g.config.Domain)
-		gvks[i].Version = gvk.Version
-		gvks[i].Kind = gvk.Kind
-	}
-
-	return func() (*operatorsv1alpha1.ClusterServiceVersion, error) {
-		b := bases.ClusterServiceVersion{
-			OperatorName: g.OperatorName,
-			OperatorType: g.OperatorType,
-			BasePath:     basePath,
-			APIsDir:      apisDir,
-			GVKs:         gvks,
-			Interactive:  interactive,
-		}
-		return b.GetBase()
-	}
-}
-
 // requiresInteraction checks if the combination of ilvl and basePath existence
 // requires the generator prompt a user interactively.
 func requiresInteraction(basePath string, ilvl projutil.InteractiveLevel) bool {
 	return (ilvl == projutil.InteractiveSoftOff && genutil.IsNotExist(basePath)) || ilvl == projutil.InteractiveOnAll
-}
-
-// updateVersions updates csv's version and data involving the version,
-// ex. ObjectMeta.Name, and place the old version in the `replaces` object,
-// if there is an old version to replace.
-func (g Generator) updateVersions(csv *operatorsv1alpha1.ClusterServiceVersion) (err error) {
-
-	oldVer, newVer := csv.Spec.Version.String(), g.Version
-	newName := genutil.MakeCSVName(g.OperatorName, newVer)
-	oldName := csv.GetName()
-
-	// A bundled CSV may not have a base containing the previous version to use,
-	// so use the current bundled CSV for version information.
-	if genutil.IsExist(g.bundledPath) {
-		existing, err := (bases.ClusterServiceVersion{BasePath: g.bundledPath}).GetBase()
-		if err != nil {
-			return fmt.Errorf("error reading existing ClusterServiceVersion: %v", err)
-		}
-		oldVer = existing.Spec.Version.String()
-		oldName = existing.GetName()
-	}
-
-	// If the new version is empty, either because a CSV is only being updated or
-	// a base was generated, no update is needed.
-	if newVer == "0.0.0" || newVer == "" {
-		return nil
-	}
-
-	// Set replaces by default.
-	// TODO: consider all possible CSV versioning schemes supported  by OLM.
-	if oldVer != "0.0.0" && newVer != oldVer {
-		csv.Spec.Replaces = oldName
-	}
-
-	csv.SetName(newName)
-	csv.Spec.Version.Version, err = semver.Parse(newVer)
-	return err
 }

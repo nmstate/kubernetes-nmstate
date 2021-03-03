@@ -31,7 +31,7 @@ func NewSQLLiteLoader(db *sql.DB, opts ...DbOption) (MigratableLoader, error) {
 		o(options)
 	}
 
-	if _, err := db.Exec("PRAGMA foreign_keys = ON", nil); err != nil {
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return nil, err
 	}
 
@@ -67,6 +67,7 @@ func (s *sqlLoader) AddOperatorBundle(bundle *registry.Bundle) error {
 }
 
 func (s *sqlLoader) addOperatorBundle(tx *sql.Tx, bundle *registry.Bundle) error {
+	// addBundle, err := tx.Prepare("insert into operatorbundle(name, csv, bundle, bundlepath, version, skiprange, replaces, skips, annotations) values(?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	addBundle, err := tx.Prepare("insert into operatorbundle(name, csv, bundle, bundlepath, version, skiprange, replaces, skips) values(?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
@@ -79,7 +80,8 @@ func (s *sqlLoader) addOperatorBundle(tx *sql.Tx, bundle *registry.Bundle) error
 	}
 	defer addImage.Close()
 
-	csvName, bundleImage, csvBytes, bundleBytes, err := bundle.Serialize()
+	// csvName, bundleImage, csvBytes, bundleBytes, annotationBytes, err := bundle.Serialize()
+	csvName, bundleImage, csvBytes, bundleBytes, _, err := bundle.Serialize()
 	if err != nil {
 		return err
 	}
@@ -105,6 +107,7 @@ func (s *sqlLoader) addOperatorBundle(tx *sql.Tx, bundle *registry.Bundle) error
 		return err
 	}
 
+	// if _, err := addBundle.Exec(csvName, csvBytes, bundleBytes, bundleImage, version, skiprange, replaces, strings.Join(skips, ","), annotationBytes); err != nil {
 	if _, err := addBundle.Exec(csvName, csvBytes, bundleBytes, bundleImage, version, skiprange, replaces, strings.Join(skips, ",")); err != nil {
 		return err
 	}
@@ -656,23 +659,72 @@ func (s *sqlLoader) RemovePackage(packageName string) error {
 		return err
 	}
 	for _, csvName := range csvNames {
-		err = s.rmBundle(tx, csvName)
-		if err != nil {
+		if err := s.rmBundle(tx, csvName); err != nil {
 			return err
 		}
+	}
+
+	deletePackage, err := tx.Prepare("DELETE FROM package WHERE package.name=?")
+	if err != nil {
+		return err
+	}
+	defer deletePackage.Close()
+
+	if _, err := deletePackage.Exec(packageName); err != nil {
+		return err
+	}
+
+	deleteChannel, err := tx.Prepare("DELETE FROM channel WHERE package_name = ?")
+	if err != nil {
+		return err
+	}
+	defer deleteChannel.Close()
+
+	if _, err := deleteChannel.Exec(packageName); err != nil {
+		return err
 	}
 
 	return tx.Commit()
 }
 
 func (s *sqlLoader) rmBundle(tx *sql.Tx, csvName string) error {
-	stmt, err := tx.Prepare("DELETE FROM operatorbundle WHERE operatorbundle.name=?")
+	deleteBundle, err := tx.Prepare("DELETE FROM operatorbundle WHERE operatorbundle.name=?")
 	if err != nil {
 		return err
 	}
-	defer stmt.Close()
+	defer deleteBundle.Close()
 
-	if _, err := stmt.Exec(csvName); err != nil {
+	if _, err := deleteBundle.Exec(csvName); err != nil {
+		return err
+	}
+
+	deleteProvider, err := tx.Prepare("DELETE FROM api_provider WHERE api_provider.operatorbundle_name=?")
+	if err != nil {
+		return err
+	}
+	defer deleteProvider.Close()
+
+	if _, err := deleteProvider.Exec(csvName); err != nil {
+		return err
+	}
+
+	deleteRequirer, err := tx.Prepare("DELETE FROM api_requirer WHERE api_requirer.operatorbundle_name=?")
+	if err != nil {
+		return err
+	}
+	defer deleteRequirer.Close()
+
+	if _, err := deleteRequirer.Exec(csvName); err != nil {
+		return err
+	}
+
+	deleteChannelEntries, err := tx.Prepare("DELETE FROM channel_entry WHERE channel_entry.operatorbundle_name=?")
+	if err != nil {
+		return err
+	}
+	defer deleteChannelEntries.Close()
+
+	if _, err := deleteChannelEntries.Exec(csvName); err != nil {
 		return err
 	}
 
@@ -706,8 +758,8 @@ func (s *sqlLoader) AddBundlePackageChannels(manifest registry.PackageManifest, 
 		return err
 	}
 
-	// Delete package and channels (entries will cascade) - they will be recalculated
-	deletePkg, err := tx.Prepare("delete from package where name = ?")
+	// Delete package, channel, and entries - they will be recalculated
+	deletePkg, err := tx.Prepare("DELETE FROM package WHERE name = ?")
 	if err != nil {
 		return err
 	}
@@ -716,12 +768,21 @@ func (s *sqlLoader) AddBundlePackageChannels(manifest registry.PackageManifest, 
 	if err != nil {
 		return err
 	}
-	deleteChan, err := tx.Prepare("delete from channel where package_name = ?")
+	deleteChan, err := tx.Prepare("DELETE FROM channel WHERE package_name = ?")
 	if err != nil {
 		return err
 	}
 	defer deleteChan.Close()
 	_, err = deleteChan.Exec(manifest.PackageName)
+	if err != nil {
+		return err
+	}
+	deleteChannelEntries, err := tx.Prepare("DELETE FROM channel_entry WHERE package_name = ?")
+	if err != nil {
+		return err
+	}
+	defer deleteChannelEntries.Close()
+	_, err = deleteChannelEntries.Exec(manifest.PackageName)
 	if err != nil {
 		return err
 	}
@@ -1019,11 +1080,11 @@ func (s *sqlLoader) DeprecateBundle(path string) error {
 	}
 
 	for _, bundle := range tailBundles {
-		err := s.rmBundle(tx, bundle)
+		err = s.rmChannelEntry(tx, bundle)
 		if err != nil {
 			return err
 		}
-		err = s.rmChannelEntry(tx, bundle)
+		err := s.rmBundle(tx, bundle)
 		if err != nil {
 			return err
 		}
