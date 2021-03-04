@@ -4,7 +4,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 )

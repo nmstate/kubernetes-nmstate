@@ -59,7 +59,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces;statefulsets,verbs="*"
 
-func (r *NMStateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
 

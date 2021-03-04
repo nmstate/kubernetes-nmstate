@@ -50,7 +50,7 @@ type NodeNetworkStateReconciler struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *NodeNetworkStateReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+func (r *NodeNetworkStateReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	// Fetch the Node instance
 	node := &corev1.Node{}
 	err := r.Client.Get(context.TODO(), request.NamespacedName, node)
@@ -94,10 +94,10 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return false
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nmstate.EventIsForThisNode(deleteEvent.Meta)
+			return nmstate.EventIsForThisNode(deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.EventIsForThisNode(updateEvent.MetaNew) &&
+			return nmstate.EventIsForThisNode(updateEvent.ObjectNew) &&
 				shouldForceRefresh(updateEvent)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
@@ -112,11 +112,11 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func shouldForceRefresh(updateEvent event.UpdateEvent) bool {
-	newForceRefresh, hasForceRefreshNow := updateEvent.MetaNew.GetLabels()[forceRefreshLabel]
+	newForceRefresh, hasForceRefreshNow := updateEvent.ObjectNew.GetLabels()[forceRefreshLabel]
 	if !hasForceRefreshNow {
 		return false
 	}
-	oldForceRefresh, hasForceRefreshLabelPreviously := updateEvent.MetaOld.GetLabels()[forceRefreshLabel]
+	oldForceRefresh, hasForceRefreshLabelPreviously := updateEvent.ObjectOld.GetLabels()[forceRefreshLabel]
 	if !hasForceRefreshLabelPreviously {
 		return true
 	}

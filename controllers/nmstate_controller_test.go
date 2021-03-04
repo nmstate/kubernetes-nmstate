@@ -79,7 +79,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = "not-present-node"
 		})
 		It("should return empty result", func() {
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
@@ -92,7 +92,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 		})
 		It("should return a Result", func() {
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
@@ -111,7 +111,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			}
 		})
 		It("should return error", func() {
-			_, err := reconciler.Reconcile(request)
+			_, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -131,7 +131,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			cl = fake.NewFakeClientWithScheme(s, objs...)
 			reconciler.Client = cl
 			request.Name = existingNMStateName
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
