@@ -129,7 +129,7 @@ var _ = Describe("NodeNetworkState", func() {
 				}
 				resetDesiredStateForNodes()
 			})
-			It("should have the linux bridge at currentState with vlan_filtering 1", func() {
+			FIt("should have the linux bridge at currentState with vlan_filtering 1", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 1"))
