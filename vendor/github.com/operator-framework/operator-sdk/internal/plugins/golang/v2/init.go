@@ -15,35 +15,33 @@
 package v2
 
 import (
-	"fmt"
-
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/plugins/envtest"
-	"github.com/operator-framework/operator-sdk/internal/plugins/manifests"
-	"github.com/operator-framework/operator-sdk/internal/plugins/scorecard"
+	manifestsv2 "github.com/operator-framework/operator-sdk/internal/plugins/manifests/v2"
+	scorecardv2 "github.com/operator-framework/operator-sdk/internal/plugins/scorecard/v2"
 )
 
-type initPlugin struct {
-	plugin.Init
+type initSubcommand struct {
+	plugin.InitSubcommand
 
 	config *config.Config
 }
 
-var _ plugin.Init = &initPlugin{}
+var _ plugin.InitSubcommand = &initSubcommand{}
 
-func (p *initPlugin) UpdateContext(ctx *plugin.Context) { p.Init.UpdateContext(ctx) }
-func (p *initPlugin) BindFlags(fs *pflag.FlagSet)       { p.Init.BindFlags(fs) }
+func (p *initSubcommand) UpdateContext(ctx *plugin.Context) { p.InitSubcommand.UpdateContext(ctx) }
+func (p *initSubcommand) BindFlags(fs *pflag.FlagSet)       { p.InitSubcommand.BindFlags(fs) }
 
-func (p *initPlugin) InjectConfig(c *config.Config) {
-	p.Init.InjectConfig(c)
+func (p *initSubcommand) InjectConfig(c *config.Config) {
+	p.InitSubcommand.InjectConfig(c)
 	p.config = c
 }
 
-func (p *initPlugin) Run() error {
-	if err := p.Init.Run(); err != nil {
+func (p *initSubcommand) Run() error {
+	if err := p.InitSubcommand.Run(); err != nil {
 		return err
 	}
 
@@ -52,26 +50,18 @@ func (p *initPlugin) Run() error {
 		return err
 	}
 
-	// Update plugin config section with this plugin's configuration for v3 projects.
-	if p.config.IsV3() {
-		cfg := Config{}
-		if err := p.config.EncodePluginConfig(pluginConfigKey, cfg); err != nil {
-			return fmt.Errorf("error writing plugin config for %s: %v", pluginConfigKey, err)
-		}
-	}
-
 	return nil
 }
 
 // SDK phase 2 plugins.
-func (p *initPlugin) runPhase2() error {
+func (p *initSubcommand) runPhase2() error {
 	if err := envtest.RunInit(p.config); err != nil {
 		return err
 	}
-	if err := manifests.RunInit(p.config); err != nil {
+	if err := manifestsv2.RunInit(p.config); err != nil {
 		return err
 	}
-	if err := scorecard.RunInit(p.config); err != nil {
+	if err := scorecardv2.RunInit(p.config); err != nil {
 		return err
 	}
 	return nil

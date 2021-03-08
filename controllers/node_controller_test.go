@@ -94,7 +94,7 @@ routes:
 			}
 		})
 		It("should return the error from nmstatectl", func() {
-			_, err := reconciler.Reconcile(request)
+			_, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).To(MatchError("forced failure at unit test"))
 		})
 	})
@@ -110,7 +110,7 @@ routes:
 			}
 		})
 		It("should not call nmstateUpdater and return a Result with RequeueAfter set", func() {
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			expectRequeueAfterIsSetWithNetworkStateRefresh(result)
 		})
@@ -123,7 +123,7 @@ routes:
 			request.Name = "not-present-node"
 		})
 		It("should returns empty result", func() {
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(reconcile.Result{}))
 		})
@@ -162,7 +162,7 @@ routes:
 
 			})
 			It("should call nmstateUpdater and return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
-				result, err := reconciler.Reconcile(request)
+				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
 				expectRequeueAfterIsSetWithNetworkStateRefresh(result)
 				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
@@ -180,7 +180,7 @@ routes:
 				Expect(err).ToNot(HaveOccurred())
 			})
 			It("should create a new nodenetworkstate with node as owner reference, making sure the nodenetworkstate will be removed when the node is deleted", func() {
-				_, err := reconciler.Reconcile(request)
+				_, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
 
 				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
@@ -194,7 +194,7 @@ routes:
 				))
 			})
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
-				result, err := reconciler.Reconcile(request)
+				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
 				expectRequeueAfterIsSetWithNetworkStateRefresh(result)
 			})

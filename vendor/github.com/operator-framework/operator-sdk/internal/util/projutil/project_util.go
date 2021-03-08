@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
 )
 
 const (
@@ -104,6 +104,15 @@ func PluginKeyToOperatorType(pluginKey string) OperatorType {
 		return OperatorTypeAnsible
 	}
 	return OperatorTypeUnknown
+}
+
+// GetProjectLayout returns the `layout` field in PROJECT file that is v3.
+// If not, it will return "go" because that was the only project type supported for project versions < v3.
+func GetProjectLayout(cfg *config.Config) string {
+	if cfg == nil || !cfg.IsV3() || cfg.Layout == "" {
+		return "go"
+	}
+	return cfg.Layout
 }
 
 var flagRe = regexp.MustCompile("(.* )?-v(.* )?")

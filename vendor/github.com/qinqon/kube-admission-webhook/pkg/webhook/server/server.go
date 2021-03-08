@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"path"
@@ -14,9 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
@@ -137,7 +138,7 @@ func (s *Server) waitForTLSReadiness() error {
 	})
 }
 
-func (s *Server) Start(stop <-chan struct{}) error {
+func (s *Server) Start(ctx context.Context) error {
 	s.log.Info("Starting nodenetworkconfigurationpolicy webhook server")
 
 	err := s.waitForTLSReadiness()
@@ -145,7 +146,7 @@ func (s *Server) Start(stop <-chan struct{}) error {
 		return errors.Wrap(err, "failed watting for ready TLS key/cert")
 	}
 
-	err = s.webhookServer.Start(stop)
+	err = s.webhookServer.Start(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed starting webhook server")
 	}

@@ -17,6 +17,8 @@ var (
 		Add operator bundles to an index.
 
 		This command will add the given set of bundle images (specified by the --bundles option) to an index image (provided by the --from-index option).
+
+		If multiple bundles are given with '--mode=replaces' (the default), bundles are added to the index by order of ascending (semver) version unless the update graph specified by replaces requires a different input order; e.g. 1.0.0 replaces 1.0.1 would result in [1.0.1, 1.0.0] instead of the [1.0.0, 1.0.1] normally expected of semver. However, for most cases (e.g. 1.0.1 replaces 1.0.0) the bundle with the highest version is used to set the default channel of the related package.
 	`)
 
 	addExample = templates.Examples(`

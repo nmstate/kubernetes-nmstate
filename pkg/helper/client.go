@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"

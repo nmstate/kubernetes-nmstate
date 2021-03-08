@@ -924,19 +924,83 @@ func (s *SQLQuerier) GetCurrentCSVNameForChannel(ctx context.Context, pkgName, c
 	return "", nil
 }
 
-func (s *SQLQuerier) ListBundles(ctx context.Context) ([]*api.Bundle, error) {
-	query := `SELECT DISTINCT channel_entry.entry_id, operatorbundle.bundle, operatorbundle.bundlepath,
-	channel_entry.operatorbundle_name, channel_entry.package_name, channel_entry.channel_name, operatorbundle.replaces, operatorbundle.skips,
-	operatorbundle.version, operatorbundle.skiprange,
-	dependencies.type, dependencies.value,
-	properties.type, properties.value
-	FROM channel_entry
-	INNER JOIN operatorbundle ON operatorbundle.name = channel_entry.operatorbundle_name
-	LEFT OUTER JOIN dependencies ON dependencies.operatorbundle_name = channel_entry.operatorbundle_name
-	LEFT OUTER JOIN properties ON properties.operatorbundle_name = channel_entry.operatorbundle_name
-	INNER JOIN package ON package.name = channel_entry.package_name`
+// Rows in the channel_entry table essentially represent inbound
+// upgrade edges to a bundle. There may be no linear "replaces" chain
+// (for example, when an index is populated using semver-skippatch
+// mode), and there may be multiple inbound "skips" to a single
+// bundle. The ListBundles query determines a single "replaces" value
+// per bundle per channel by recursively following "replaces"
+// references beginning from the entries with minimal depth, which
+// represent channel heads. All other edges are merged into an
+// aggregate "skips" column. The result contains one row per bundle
+// for each channel in which the bundle appears.
+const listBundlesQuery = `
+WITH RECURSIVE
+tip (depth) AS (
+  SELECT min(depth)
+  FROM channel_entry
+), replaces_entry (entry_id, replaces) AS (
+  SELECT entry_id, replaces
+    FROM channel_entry
+      INNER JOIN tip ON channel_entry.depth = tip.depth
+  UNION
+  SELECT channel_entry.entry_id, channel_entry.replaces
+    FROM channel_entry
+      INNER JOIN replaces_entry
+        ON channel_entry.entry_id = replaces_entry.replaces
+), replaces_bundle (entry_id, operatorbundle_name, package_name, channel_name, replaces) AS (
+  SELECT min(all_entry.entry_id), all_entry.operatorbundle_name, all_entry.package_name, all_entry.channel_name, max(replaced_entry.operatorbundle_name)
+    FROM channel_entry AS all_entry
+      LEFT OUTER JOIN replaces_entry
+        ON all_entry.entry_id = replaces_entry.entry_id
+      LEFT OUTER JOIN channel_entry AS replaced_entry
+        ON replaces_entry.replaces = replaced_entry.entry_id
+    GROUP BY all_entry.operatorbundle_name, all_entry.package_name, all_entry.channel_name
+), skips_entry (entry_id, skips) AS (
+  SELECT entry_id, replaces
+    FROM channel_entry
+    WHERE replaces IS NOT NULL
+  EXCEPT
+  SELECT entry_id, replaces
+    FROM replaces_entry
+), skips_bundle (operatorbundle_name, package_name, channel_name, skips) AS (
+  SELECT all_entry.operatorbundle_name, all_entry.package_name, all_entry.channel_name, group_concat(skipped_entry.operatorbundle_name, ",")
+    FROM skips_entry
+      INNER JOIN channel_entry AS all_entry
+        ON skips_entry.entry_id = all_entry.entry_id
+      INNER JOIN channel_entry AS skipped_entry
+        ON skips_entry.skips = skipped_entry.entry_id
+    GROUP BY all_entry.operatorbundle_name, all_entry.package_name, all_entry.channel_name
+)
+SELECT
+    replaces_bundle.entry_id,
+    operatorbundle.bundle,
+    operatorbundle.bundlepath,
+    operatorbundle.name,
+    replaces_bundle.package_name,
+    replaces_bundle.channel_name,
+    replaces_bundle.replaces,
+    skips_bundle.skips,
+    operatorbundle.version,
+    operatorbundle.skiprange,
+    dependencies.type,
+    dependencies.value,
+    properties.type,
+    properties.value
+  FROM replaces_bundle
+    INNER JOIN operatorbundle
+      ON replaces_bundle.operatorbundle_name = operatorbundle.name
+    LEFT OUTER JOIN skips_bundle
+      ON replaces_bundle.operatorbundle_name = skips_bundle.operatorbundle_name
+        AND replaces_bundle.package_name = skips_bundle.package_name
+        AND replaces_bundle.channel_name = skips_bundle.channel_name
+    LEFT OUTER JOIN dependencies
+      ON operatorbundle.name = dependencies.operatorbundle_name
+    LEFT OUTER JOIN properties
+      ON operatorbundle.name = properties.operatorbundle_name`
 
-	rows, err := s.db.QueryContext(ctx, query)
+func (s *SQLQuerier) ListBundles(ctx context.Context) ([]*api.Bundle, error) {
+	rows, err := s.db.QueryContext(ctx, listBundlesQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -1150,6 +1214,8 @@ func (s *SQLQuerier) GetBundlePathIfExists(ctx context.Context, bundleName strin
 	if err != nil {
 		return
 	}
+	defer rows.Close()
+
 	if !rows.Next() {
 		// no bundlepath set
 		err = registry.ErrBundleImageNotInDatabase
@@ -1166,4 +1232,106 @@ func (s *SQLQuerier) GetBundlePathIfExists(ctx context.Context, bundleName strin
 	}
 
 	return
+}
+
+// ListRegistryBundles returns a set of registry bundles.
+// The set can be filtered by package by setting the given context's 'package' key to a desired package name.
+// e.g.
+// ctx := ContextWithPackage(context.TODO(), "etcd")
+// bundles, err := querier.ListRegistryBundles(ctx)
+// // ...
+func (s *SQLQuerier) ListRegistryBundles(ctx context.Context) ([]*registry.Bundle, error) {
+	listBundlesQuery := `
+	SELECT DISTINCT operatorbundle.name, operatorbundle.version, operatorbundle.bundle, channel_entry.package_name
+	FROM operatorbundle
+	LEFT OUTER JOIN channel_entry ON operatorbundle.name = channel_entry.operatorbundle_name`
+
+	var (
+		err  error
+		rows RowScanner
+	)
+	if pkg, ok := registry.PackageFromContext(ctx); ok {
+		listBundlesQuery += " WHERE channel_entry.package_name=?"
+		rows, err = s.db.QueryContext(ctx, listBundlesQuery, pkg)
+	} else {
+		rows, err = s.db.QueryContext(ctx, listBundlesQuery)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var bundles []*registry.Bundle
+	for rows.Next() {
+		var (
+			bundleName    sql.NullString
+			bundleVersion sql.NullString
+			bundle        sql.NullString
+			packageName   sql.NullString
+		)
+		if err := rows.Scan(&bundleName, &bundleVersion, &bundle, &packageName); err != nil {
+			return nil, err
+		}
+
+		switch {
+		case !bundleName.Valid:
+			return nil, fmt.Errorf("bundle name column corrupted")
+		case !bundleVersion.Valid:
+			// Version field is currently nullable
+		case !bundle.Valid:
+			// Bundle field is currently nullable
+		case !packageName.Valid:
+			return nil, fmt.Errorf("package name column corrupted")
+		}
+
+		// Allow the channel_entry table to be authoritative
+		channels, err := s.listBundleChannels(ctx, bundleName.String)
+		if err != nil {
+			return nil, fmt.Errorf("unable to list channels for bundle %s: %s", bundleName.String, err)
+		}
+
+		defaultChannel, err := s.GetDefaultChannelForPackage(ctx, packageName.String)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get default channel for package %s: %s", packageName.String, err)
+		}
+
+		b, err := registry.NewBundleFromStrings(bundleName.String, bundleVersion.String, packageName.String, defaultChannel, strings.Join(channels, ","), bundle.String)
+		if err != nil {
+			return nil, fmt.Errorf("unable to unmarshal bundle %s from database: %s", bundleName.String, err)
+		}
+
+		bundles = append(bundles, b)
+	}
+
+	return bundles, nil
+}
+
+func (s *SQLQuerier) listBundleChannels(ctx context.Context, bundleName string) ([]string, error) {
+	listBundleChannelsQuery := `
+	SELECT DISTINCT channel_entry.channel_name
+	FROM channel_entry
+	INNER JOIN operatorbundle ON channel_entry.operatorbundle_name = operatorbundle.name
+	WHERE operatorbundle.name = ?`
+
+	rows, err := s.db.QueryContext(ctx, listBundleChannelsQuery, bundleName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var channels []string
+	for rows.Next() {
+		var channel sql.NullString
+		if err := rows.Scan(&channel); err != nil {
+			return nil, err
+		}
+
+		if !channel.Valid {
+			return nil, fmt.Errorf("channel name column corrupt for bundle %s", bundleName)
+		}
+
+		channels = append(channels, channel.String)
+	}
+
+	return channels, nil
 }

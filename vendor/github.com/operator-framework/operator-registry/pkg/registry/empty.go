@@ -108,6 +108,10 @@ func (EmptyQuery) GetBundlePathIfExists(ctx context.Context, csvName string) (bu
 	return "", errors.New("empty querier: cannot get bundle path for bundle")
 }
 
+func (EmptyQuery) ListRegistryBundles(ctx context.Context) ([]*Bundle, error) {
+	return nil, errors.New("empty querier: cannot list registry bundles")
+}
+
 var _ Query = &EmptyQuery{}
 
 func NewEmptyQuerier() *EmptyQuery {

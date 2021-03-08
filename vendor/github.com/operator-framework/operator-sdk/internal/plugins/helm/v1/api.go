@@ -19,30 +19,30 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
-	"sigs.k8s.io/kubebuilder/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/pkg/model/resource"
-	"sigs.k8s.io/kubebuilder/pkg/plugin"
-	"sigs.k8s.io/kubebuilder/pkg/plugin/scaffold"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/resource"
+	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/kubebuilder/cmdutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/chartutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/scaffolds"
 	"github.com/operator-framework/operator-sdk/internal/plugins/manifests"
+	manifestsv2 "github.com/operator-framework/operator-sdk/internal/plugins/manifests/v2"
 )
 
-type createAPIPlugin struct {
+type createAPISubcommand struct {
 	config *config.Config
 
 	createOptions chartutil.CreateOptions
 }
 
 var (
-	_ plugin.CreateAPI   = &createAPIPlugin{}
-	_ cmdutil.RunOptions = &createAPIPlugin{}
+	_ plugin.CreateAPISubcommand = &createAPISubcommand{}
+	_ cmdutil.RunOptions         = &createAPISubcommand{}
 )
 
 // UpdateContext define plugin context
-func (p createAPIPlugin) UpdateContext(ctx *plugin.Context) {
+func (p createAPISubcommand) UpdateContext(ctx *plugin.Context) {
 	ctx.Description = `Scaffold a Kubernetes API that is backed by a Helm chart.
 `
 	ctx.Examples = fmt.Sprintf(`  $ %s create api \
@@ -101,7 +101,7 @@ const (
 )
 
 // BindFlags will set the flags for the plugin
-func (p *createAPIPlugin) BindFlags(fs *pflag.FlagSet) {
+func (p *createAPISubcommand) BindFlags(fs *pflag.FlagSet) {
 	p.createOptions = chartutil.CreateOptions{}
 	fs.SortFlags = false
 
@@ -117,12 +117,12 @@ func (p *createAPIPlugin) BindFlags(fs *pflag.FlagSet) {
 }
 
 // InjectConfig will inject the PROJECT file/config in the plugin
-func (p *createAPIPlugin) InjectConfig(c *config.Config) {
+func (p *createAPISubcommand) InjectConfig(c *config.Config) {
 	p.config = c
 }
 
 // Run will call the plugin actions according to the definitions done in RunOptions interface
-func (p *createAPIPlugin) Run() error {
+func (p *createAPISubcommand) Run() error {
 	if err := cmdutil.Run(p); err != nil {
 		return err
 	}
@@ -136,13 +136,29 @@ func (p *createAPIPlugin) Run() error {
 }
 
 // SDK phase 2 plugins.
-func (p *createAPIPlugin) runPhase2() error {
-	gvk := p.createOptions.GVK
-	return manifests.RunCreateAPI(p.config, config.GVK{Group: gvk.Group, Version: gvk.Version, Kind: gvk.Kind})
+func (p *createAPISubcommand) runPhase2() error {
+	ogvk := p.createOptions.GVK
+	gvk := config.GVK{Group: ogvk.Group, Version: ogvk.Version, Kind: ogvk.Kind}
+
+	// Initially the helm/v1 plugin was written to not create a "plugins" config entry
+	// for any phase 2 plugin because they did not have their own keys. Now there are phase 2
+	// plugin keys, so those plugins should be run if keys exist. Otherwise, enact old behavior.
+
+	if manifestsv2.HasPluginConfig(p.config) {
+		if err := manifestsv2.RunCreateAPI(p.config, gvk); err != nil {
+			return err
+		}
+	} else {
+		if err := manifests.RunCreateAPI(p.config, gvk); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Validate perform the required validations for this plugin
-func (p *createAPIPlugin) Validate() error {
+func (p *createAPISubcommand) Validate() error {
 	if p.createOptions.CRDVersion != crdVersionV1 && p.createOptions.CRDVersion != crdVersionV1beta1 {
 		return fmt.Errorf("value of --%s must be either %q or %q", crdVersionFlag, crdVersionV1, crdVersionV1beta1)
 	}
@@ -181,12 +197,12 @@ func (p *createAPIPlugin) Validate() error {
 	return nil
 }
 
-// GetScaffolder returns scaffold.Scaffolder which will be executed due the RunOptions interface implementation
-func (p *createAPIPlugin) GetScaffolder() (scaffold.Scaffolder, error) {
+// GetScaffolder returns cmdutil.Scaffolder which will be executed due the RunOptions interface implementation
+func (p *createAPISubcommand) GetScaffolder() (cmdutil.Scaffolder, error) {
 	return scaffolds.NewAPIScaffolder(p.config, p.createOptions), nil
 }
 
 // PostScaffold runs all actions that should be executed after the default plugin scaffold
-func (p *createAPIPlugin) PostScaffold() error {
+func (p *createAPISubcommand) PostScaffold() error {
 	return nil
 }

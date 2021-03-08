@@ -11,7 +11,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate/triple"
 )

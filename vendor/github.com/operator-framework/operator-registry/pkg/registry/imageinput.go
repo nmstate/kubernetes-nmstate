@@ -115,6 +115,7 @@ func (i *ImageInput) getBundleFromManifests() error {
 	bundle.Dependencies = i.dependenciesFile.GetDependencies()
 
 	bundle.Name = csvName
+	bundle.Annotations = &i.AnnotationsFile.Annotations
 	bundle.Package = i.AnnotationsFile.Annotations.PackageName
 	bundle.Channels = strings.Split(i.AnnotationsFile.Annotations.Channels, ",")
 

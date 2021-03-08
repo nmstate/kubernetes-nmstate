@@ -63,7 +63,7 @@ func serveFunc(cmd *cobra.Command, args []string) error {
 
 	// Ensure there is a default nsswitch config
 	if err := dns.EnsureNsswitch(); err != nil {
-		return err
+		logrus.WithError(err).Warn("unable to write default nsswitch config")
 	}
 
 	dbName, err := cmd.Flags().GetString("database")

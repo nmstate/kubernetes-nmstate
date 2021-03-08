@@ -191,7 +191,7 @@ spec:
   selector:
     name: {{template "handlerPrefix" .}}nmstate-webhook
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{template "handlerPrefix" .}}nmstate
@@ -199,6 +199,8 @@ metadata:
     app: kubernetes-nmstate
 webhooks:
   - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -210,6 +212,8 @@ webhooks:
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies"]
   - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -221,6 +225,8 @@ webhooks:
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies/status"]
   - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -232,6 +238,8 @@ webhooks:
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
   - name: nodenetworkconfigurationpolicies-progress-validate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook

@@ -20,7 +20,7 @@ package manager
 import (
 	"path/filepath"
 
-	"sigs.k8s.io/kubebuilder/pkg/model/file"
+	"sigs.k8s.io/kubebuilder/v2/pkg/model/file"
 )
 
 var _ file.Template = &Manager{}
@@ -75,6 +75,18 @@ spec:
         - "--enable-leader-election"
         - "--leader-election-id={{ .ProjectName }}"
         name: manager
+        livenessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           limits:
             cpu: 100m

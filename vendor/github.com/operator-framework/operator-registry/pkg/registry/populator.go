@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/blang/semver"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
@@ -150,8 +151,7 @@ func (i *DirectoryPopulator) globalSanityCheck(imagesToAdd []*ImageInput) error 
 
 func (i *DirectoryPopulator) loadManifests(imagesToAdd []*ImageInput, imagesToReAdd []*ImageInput, mode Mode) error {
 	// global sanity checks before insertion
-	err := i.globalSanityCheck(imagesToAdd)
-	if err != nil {
+	if err := i.globalSanityCheck(imagesToAdd); err != nil {
 		return err
 	}
 
@@ -165,53 +165,56 @@ func (i *DirectoryPopulator) loadManifests(imagesToAdd []*ImageInput, imagesToRe
 		// Additionally, it would be preferrable if there was a single database transaction
 		// that took the updated graph as a whole as input, rather than inserting bundles of the
 		// same package linearly.
-		var err error
-		var validImagesToAdd []*ImageInput
-
 		for pkg := range i.overwriteDirMap {
 			// TODO: If this succeeds but the add fails there will be a disconnect between
 			// the registry and the index. Loading the bundles in a single transactions as
 			// described above would allow us to do the removable in that same transaction
 			// and ensure that rollback is possible.
-			err := i.loader.RemovePackage(pkg)
-			if err != nil {
+			if err := i.loader.RemovePackage(pkg); err != nil {
 				return err
 			}
 		}
 
-		imagesToAdd = append(imagesToAdd, imagesToReAdd...)
+		var errs []error
+		stream, err := NewReplacesInputStream(i.graphLoader, append(imagesToAdd, imagesToReAdd...))
+		if err != nil {
+			errs = append(errs, fmt.Errorf("Input error: %s", err))
+			// Don't return yet since stream may be partially initialized and still useful
+		}
+		if stream == nil {
+			return utilerrors.NewAggregate(errs)
+		}
 
-		for len(imagesToAdd) > 0 {
-			validImagesToAdd, imagesToAdd, err = i.getNextReplacesImagesToAdd(imagesToAdd)
+		for !stream.Empty() {
+			next, err := stream.Next()
 			if err != nil {
-				return err
+				errs = append(errs, err)
+				break
 			}
-			for _, image := range validImagesToAdd {
-				err := i.loadManifestsReplaces(image.Bundle, image.AnnotationsFile)
-				if err != nil {
-					return err
-				}
+
+			if err = i.loadManifestsReplaces(next.Bundle); err != nil {
+				errs = append(errs, err)
+				break
 			}
+		}
+
+		if len(errs) > 0 {
+			return utilerrors.NewAggregate(errs)
 		}
 	case SemVerMode:
 		for _, image := range imagesToAdd {
-			err := i.loadManifestsSemver(image.Bundle, image.AnnotationsFile, false)
-			if err != nil {
+			if err := i.loadManifestsSemver(image.Bundle, image.AnnotationsFile, false); err != nil {
 				return err
 			}
 		}
 	case SkipPatchMode:
 		for _, image := range imagesToAdd {
-			err := i.loadManifestsSemver(image.Bundle, image.AnnotationsFile, true)
-			if err != nil {
+			if err := i.loadManifestsSemver(image.Bundle, image.AnnotationsFile, true); err != nil {
 				return err
 			}
 		}
 	default:
-		err := fmt.Errorf("Unsupported update mode")
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("Unsupported update mode")
 	}
 
 	// Finally let's delete all the old bundles
@@ -222,81 +225,38 @@ func (i *DirectoryPopulator) loadManifests(imagesToAdd []*ImageInput, imagesToRe
 	return nil
 }
 
-func (i *DirectoryPopulator) loadManifestsReplaces(bundle *Bundle, annotationsFile *AnnotationsFile) error {
-	bcsv, err := bundle.ClusterServiceVersion()
+var packageContextKey = "package"
+
+// ContextWithPackage adds a package value to a context.
+func ContextWithPackage(ctx context.Context, pkg string) context.Context {
+	return context.WithValue(ctx, packageContextKey, pkg)
+}
+
+// PackageFromContext returns the package value of the context if set, returns false if unset.
+func PackageFromContext(ctx context.Context) (string, bool) {
+	pkg, ok := ctx.Value(packageContextKey).(string)
+	return pkg, ok
+}
+
+func (i *DirectoryPopulator) loadManifestsReplaces(bundle *Bundle) error {
+	ctx := ContextWithPackage(context.TODO(), bundle.Package)
+	bundles, err := i.querier.ListRegistryBundles(ctx)
 	if err != nil {
-		return fmt.Errorf("error getting csv from bundle %s: %s", bundle.Name, err)
+		return fmt.Errorf("failed to list registry bundles: %s", err)
 	}
 
-	packageManifest, err := i.translateAnnotationsIntoPackage(annotationsFile, bcsv)
+	// Add the new bundle and get the semver informed package manifest
+	bundles = append(bundles, bundle)
+	packageManifest, err := SemverPackageManifest(bundles)
 	if err != nil {
-		return fmt.Errorf("Could not translate annotations file into packageManifest %s", err)
+		return fmt.Errorf("failed to generate semver informed package manifest: %s", err)
 	}
 
-	if err := i.loadOperatorBundle(packageManifest, bundle); err != nil {
+	if err := i.loadOperatorBundle(*packageManifest, bundle); err != nil {
 		return fmt.Errorf("Error adding package %s", err)
 	}
 
 	return nil
-}
-
-func (i *DirectoryPopulator) getNextReplacesImagesToAdd(imagesToAdd []*ImageInput) ([]*ImageInput, []*ImageInput, error) {
-	remainingImages := make([]*ImageInput, 0)
-	foundImages := make([]*ImageInput, 0)
-
-	var errs []error
-
-	// Separate these image sets per package, since multiple different packages have
-	// separate graph
-	imagesPerPackage := make(map[string][]*ImageInput, 0)
-	for _, image := range imagesToAdd {
-		pkg := image.Bundle.Package
-		if _, ok := imagesPerPackage[pkg]; !ok {
-			newPkgImages := make([]*ImageInput, 0)
-			newPkgImages = append(newPkgImages, image)
-			imagesPerPackage[pkg] = newPkgImages
-		} else {
-			imagesPerPackage[pkg] = append(imagesPerPackage[pkg], image)
-		}
-	}
-
-	for pkg, pkgImages := range imagesPerPackage {
-		// keep a tally of valid and invalid images to ensure at least one
-		// image per package is valid. If not, throw an error
-		pkgRemainingImages := 0
-		pkgFoundImages := 0
-
-		// first, try to pull the existing package graph from the database if it exists
-		graph, err := i.graphLoader.Generate(pkg)
-		if err != nil && !errors.Is(err, ErrPackageNotInDatabase) {
-			return nil, nil, err
-		}
-
-		var pkgErrs []error
-		// then check each image to see if it can be a replacement
-		replacesLoader := ReplacesGraphLoader{}
-		for _, pkgImage := range pkgImages {
-			canAdd, err := replacesLoader.CanAdd(pkgImage.Bundle, graph)
-			if err != nil {
-				pkgErrs = append(pkgErrs, err)
-			}
-			if canAdd {
-				pkgFoundImages++
-				foundImages = append(foundImages, pkgImage)
-			} else {
-				pkgRemainingImages++
-				remainingImages = append(remainingImages, pkgImage)
-			}
-		}
-
-		// no new images can be added, the current iteration aggregates all the
-		// errors that describe invalid bundles
-		if pkgFoundImages == 0 && pkgRemainingImages > 0 {
-			errs = append(errs, pkgErrs...)
-		}
-	}
-
-	return foundImages, remainingImages, utilerrors.NewAggregate(errs)
 }
 
 func (i *DirectoryPopulator) loadManifestsSemver(bundle *Bundle, annotations *AnnotationsFile, skippatch bool) error {
@@ -307,7 +267,7 @@ func (i *DirectoryPopulator) loadManifestsSemver(bundle *Bundle, annotations *An
 
 	// add to the graph
 	bundleLoader := BundleGraphLoader{}
-	updatedGraph, err := bundleLoader.AddBundleToGraph(bundle, graph, annotations.Annotations.DefaultChannelName, skippatch)
+	updatedGraph, err := bundleLoader.AddBundleToGraph(bundle, graph, annotations, skippatch)
 	if err != nil {
 		return err
 	}
@@ -419,58 +379,118 @@ func (i *DirectoryPopulator) loadOperatorBundle(manifest PackageManifest, bundle
 	return nil
 }
 
-// translateAnnotationsIntoPackage attempts to translate the channels.yaml file at the given path into a package.yaml
-func (i *DirectoryPopulator) translateAnnotationsIntoPackage(annotations *AnnotationsFile, csv *ClusterServiceVersion) (PackageManifest, error) {
-	manifest := PackageManifest{}
-	existingChannels := map[string]string{}
+// SemverPackageManifest generates a PackageManifest from a set of bundles, determining channel heads and the default channel using semver.
+// Bundles with the highest version field (according to semver) are chosen as channel heads, and the default channel is taken from the last,
+// highest versioned bundle in the entire set to define it.
+// The given bundles must all belong to the same package or an error is thrown.
+func SemverPackageManifest(bundles []*Bundle) (*PackageManifest, error) {
+	type bundleVersion struct {
+		name    string
+		version semver.Version
 
-	pkgm, err := i.querier.GetPackage(context.TODO(), annotations.GetName())
-	if err == nil {
-		for _, c := range pkgm.Channels {
-			existingChannels[c.Name] = c.CurrentCSVName
+		// Keep track of the number of times we visit each version so we can tell if a head is contested
+		count int
+	}
+	heads := map[string]bundleVersion{}
+
+	var (
+		pkgName        string
+		defaultChannel string
+		maxVersion     bundleVersion
+	)
+
+	for _, bundle := range bundles {
+		if pkgName != "" && pkgName != bundle.Package {
+			return nil, fmt.Errorf("more than one package in input")
 		}
-	}
+		pkgName = bundle.Package
 
-	for _, ch := range annotations.GetChannels() {
-		existingChannels[ch] = csv.GetName()
-	}
-
-	channels := []PackageChannel{}
-	for c, current := range existingChannels {
-		channels = append(channels,
-			PackageChannel{
-				Name:           c,
-				CurrentCSVName: current,
-			})
-	}
-
-	manifest = PackageManifest{
-		PackageName: annotations.GetName(),
-		Channels:    channels,
-	}
-
-	defaultChan := annotations.GetDefaultChannelName()
-	if defaultChan != "" {
-		if _, found := existingChannels[defaultChan]; found {
-			manifest.DefaultChannelName = annotations.GetDefaultChannelName()
-		} else {
-			return manifest, fmt.Errorf("Channel %s is set as default in annotations but not found in existing package channels", defaultChan)
+		rawVersion, err := bundle.Version()
+		if err != nil {
+			return nil, fmt.Errorf("error getting bundle %s version: %s", bundle.Name, err)
 		}
-	} else {
-		// No default channel is provided in annotations. Attempt to infer from package manifest
-		if pkgm != nil {
-			manifest.DefaultChannelName = pkgm.GetDefaultChannel()
-		} else {
-			// Infer default channel if only one channel is provided
-			if len(annotations.GetChannels()) == 1 {
-				manifest.DefaultChannelName = annotations.GetChannels()[0]
-			} else {
-				return manifest, fmt.Errorf("Default channel is missing and can't be inferred")
+		if rawVersion == "" {
+			// If a version isn't provided by the bundle, give it a dummy zero version
+			// The thought is that properly versioned bundles will always be non-zero
+			rawVersion = "0.0.0-z"
+		}
+
+		version, err := semver.Parse(rawVersion)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing bundle %s version %s: %s", bundle.Name, rawVersion, err)
+		}
+		current := bundleVersion{
+			name:    bundle.Name,
+			version: version,
+			count:   1,
+		}
+
+		for _, channel := range bundle.Channels {
+			head, ok := heads[channel]
+			if !ok {
+				heads[channel] = current
+				continue
 			}
+
+			if version.LT(head.version) {
+				continue
+			}
+
+			if version.EQ(head.version) {
+				// We have a duplicate version, add the count
+				current.count += head.count
+			}
+
+			// Current >= head
+			heads[channel] = current
+		}
+
+		// Set max if bundle is greater
+		if version.LT(maxVersion.version) {
+			continue
+		}
+
+		if version.EQ(maxVersion.version) {
+			current.count += maxVersion.count
+		}
+
+		// Current >= maxVersion
+		maxVersion = current
+		if annotations := bundle.Annotations; annotations != nil && annotations.DefaultChannelName != "" {
+			// Take it when you can get it
+			defaultChannel = annotations.DefaultChannelName
 		}
 	}
 
-	return manifest, nil
+	if maxVersion.count > 1 {
+		return nil, fmt.Errorf("more than one bundle with maximum version %s", maxVersion.version)
+	}
+
+	pkg := &PackageManifest{
+		PackageName:        pkgName,
+		DefaultChannelName: defaultChannel,
+	}
+	defaultFound := len(heads) == 1 && defaultChannel == ""
+	for channel, head := range heads {
+		if head.count > 1 {
+			return nil, fmt.Errorf("more than one potential channel head for %s", channel)
+		}
+		if len(heads) == 1 {
+			// Only one possible default channel
+			pkg.DefaultChannelName = channel
+		}
+		defaultFound = defaultFound || channel == defaultChannel
+		pkg.Channels = append(pkg.Channels, PackageChannel{
+			Name:           channel,
+			CurrentCSVName: head.name,
+		})
+	}
+
+	if !defaultFound {
+		return nil, fmt.Errorf("unable to determine default channel among channel heads: %+v", heads)
+	}
+
+	return pkg, nil
 }
 
 // DecodeFile decodes the file at a path into the given interface.

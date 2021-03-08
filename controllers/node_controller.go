@@ -57,7 +57,7 @@ type NodeReconciler struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *NodeReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	currentStateRaw, err := r.nmstatectlShow()
 	if err != nil {
 		// We cannot call nmstatectl show let's reconcile again
@@ -110,7 +110,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// but we only want to watch create/delete for current node.
 	onCreationForThisNode := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nmstate.EventIsForThisNode(createEvent.Meta)
+			return nmstate.EventIsForThisNode(createEvent.Object)
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
 			return false

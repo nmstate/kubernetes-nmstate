@@ -65,7 +65,7 @@ var (
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
-			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
+			generationIsDifferent := updateEvent.ObjectNew.GetGeneration() != updateEvent.ObjectOld.GetGeneration()
 			return generationIsDifferent
 		},
 	}
@@ -78,8 +78,8 @@ var (
 			return false
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			labelsChanged := !reflect.DeepEqual(updateEvent.MetaOld.GetLabels(), updateEvent.MetaNew.GetLabels())
-			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.MetaNew)
+			labelsChanged := !reflect.DeepEqual(updateEvent.ObjectOld.GetLabels(), updateEvent.ObjectNew.GetLabels())
+			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.ObjectNew)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -199,7 +199,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(poli
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	log := r.Log.WithValues("nodenetworkconfigurationpolicy", request.NamespacedName)
 
@@ -288,8 +288,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	allPolicies := handler.ToRequestsFunc(
-		func(handler.MapObject) []reconcile.Request {
+	allPolicies := handler.MapFunc(
+		func(client.Object) []reconcile.Request {
 			log := r.Log.WithName("allPolicies")
 			allPoliciesAsRequest := []reconcile.Request{}
 			policyList := nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
@@ -320,7 +320,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	// is not needed since all NNCPs are going to be Reconcile at node startup.
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
-		Watches(&source.Kind{Type: &corev1.Node{}}, &handler.EnqueueRequestsFromMapFunc{ToRequests: allPolicies}, builder.WithPredicates(onLabelsUpdatedForThisNode)).
+		Watches(&source.Kind{Type: &corev1.Node{}}, handler.EnqueueRequestsFromMapFunc(allPolicies), builder.WithPredicates(onLabelsUpdatedForThisNode)).
 		Complete(r)
 	if err != nil {
 		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening Node events")

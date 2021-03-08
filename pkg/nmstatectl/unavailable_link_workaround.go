@@ -8,7 +8,7 @@ import (
 
 	networkmanager "github.com/phoracek/networkmanager-go/src"
 	"k8s.io/apimachinery/pkg/util/wait"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var (
