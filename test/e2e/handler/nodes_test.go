@@ -27,28 +27,19 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			})
 		})
 		Context("and new interface is configured", func() {
-			var (
-				expectedDummyName = "dummy0"
-			)
+			expectedDummyName := "dummy0"
+
 			BeforeEach(func() {
-				createDummyAtNodes(expectedDummyName)
+				createDummyConnectionAtNodes(expectedDummyName)
 			})
 			AfterEach(func() {
-				deleteConnectionAtNodes(expectedDummyName)
-				By("Make sure the dummy interface gets deleted")
-				for _, node := range nodes {
-					for _, iface := range interfacesNameForNode(node) {
-						if iface == expectedDummyName {
-							deleteDeviceAtNode(node, expectedDummyName)
-						}
-					}
-				}
+				deleteConnectionAndWait(nodes, expectedDummyName)
 			})
 			It("[test_id:3794]should update node network state with it", func() {
 				for _, nodeName := range nodes {
 					Eventually(func() []string {
 						return interfacesNameForNode(nodeName)
-					}, node.NetworkStateRefresh, time.Second).Should(ContainElement(expectedDummyName))
+					}, 2*node.NetworkStateRefresh, time.Second).Should(ContainElement(expectedDummyName))
 				}
 			})
 		})

@@ -21,6 +21,7 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
@@ -221,24 +222,53 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 	return errs
 }
 
-func createDummyAtNodes(dummyName string) []error {
+func createDummyConnection(nodesToModify []string, dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
-	_, errs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
-	_, upErrs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "up", dummyName)
+	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
+	_, upErrs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
 	return errs
 }
 
-func deleteConnectionAtNodes(name string) []error {
+func createDummyConnectionAtNodes(dummyName string) []error {
+	return createDummyConnection(nodes, dummyName)
+}
+
+func createDummyConnectionAtAllNodes(dummyName string) []error {
+	return createDummyConnection(allNodes, dummyName)
+}
+
+func deleteConnection(nodesToModify []string, name string) []error {
 	By(fmt.Sprintf("Delete connection %s", name))
-	_, errs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", name)
+	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "delete", name)
 	return errs
 }
 
-func deleteDeviceAtNode(node string, name string) error {
-	By(fmt.Sprintf("Delete device %s  at node %s", name, node))
-	_, err := runner.RunAtNode(node, "sudo", "nmcli", "device", "delete", name)
-	return err
+func deleteConnectionAtNodes(name string) []error {
+	return deleteConnection(nodes, name)
+}
+func deleteConnectionAtAllNodes(name string) []error {
+	return deleteConnection(allNodes, name)
+}
+
+func deleteDevice(nodesToModify []string, name string) []error {
+	By(fmt.Sprintf("Delete device %s  at nodes %v", name, nodesToModify))
+	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "device", "delete", name)
+	return errs
+}
+
+func waitForInterfaceDeletion(nodesToCheck []string, interfaceName string) {
+	for _, nodeName := range nodesToCheck {
+		Eventually(func() []string {
+			return interfacesNameForNode(nodeName)
+		}, 2*nmstatenode.NetworkStateRefresh, time.Second).ShouldNot(ContainElement(interfaceName))
+	}
+}
+
+func deleteConnectionAndWait(nodesToModify []string, interfaceName string) {
+	deleteConnection(nodesToModify, interfaceName)
+	deleteDevice(nodesToModify, interfaceName)
+	waitForInterfaceDeletion(nodesToModify, interfaceName)
 }
 
 func interfaces(state nmstate.State) []interface{} {

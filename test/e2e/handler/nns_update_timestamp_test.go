@@ -6,13 +6,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gstruct"
-
-	"github.com/andreyvit/diff"
 
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
@@ -28,24 +24,46 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 			originalNNSs[node] = nodeNetworkState(key)
 		}
 	})
-	Context("when network configuration hasn't change", func() {
-		It("should not be updated", func() {
-			for node, originalNNS := range originalNNSs {
-				// Give enough time for the NNS to be updated (3 interval times)
-				timeout := 3 * nmstatenode.NetworkStateRefresh
-				key := types.NamespacedName{Name: node}
+	Context("when network configuration is not changed by a NNCP", func() {
+		It("nns should not be updated after reconcile", func() {
+			// Give enough time for the NNS to be reconcile(2 interval times)
+			interval := 2 * nmstatenode.NetworkStateRefresh
+			timeout := 4 * interval
+			Eventually(func() error {
+				for node, originalNNS := range originalNNSs {
+					key := types.NamespacedName{Name: node}
+					currentStatus := nodeNetworkState(key).Status
+					originalStatus := originalNNS.Status
+					if currentStatus.CurrentState.String() == originalStatus.CurrentState.String() {
+						By(fmt.Sprintf("Check LastSuccessfulUpdateTime changed at %s", node))
+						Expect(currentStatus.LastSuccessfulUpdateTime).To(Equal(originalStatus.LastSuccessfulUpdateTime))
+					} else {
+						return fmt.Errorf("Network configuration changed, sending and error to retry")
+					}
+				}
+				return nil
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+	Context("when network configuration is changed externally", func() {
+		expectedDummyName := "dummy0"
 
-				Consistently(func() shared.NodeNetworkStateStatus {
-					return nodeNetworkState(key).Status
-				}, timeout, time.Second).Should(MatchAllFields(Fields{
-					"CurrentState":             WithTransform(shared.State.String, Equal(originalNNS.Status.CurrentState.String())),
-					"LastSuccessfulUpdateTime": Equal(originalNNS.Status.LastSuccessfulUpdateTime),
-					"Conditions":               Equal(originalNNS.Status.Conditions),
-				}), func() string {
-					return fmt.Sprintf("currentState diff: \n%s", diff.LineDiff(originalNNS.Status.CurrentState.String(), nodeNetworkState(key).Status.CurrentState.String()))
-				})
+		BeforeEach(func() {
+			createDummyConnectionAtAllNodes(expectedDummyName)
+		})
+		AfterEach(func() {
+			deleteConnectionAndWait(allNodes, expectedDummyName)
+		})
+		It("should update it with according to network state refresh duration", func() {
+			for node, originalNNS := range originalNNSs {
+				By(fmt.Sprintf("Checking timestamp against original one %s", originalNNS.Status.LastSuccessfulUpdateTime))
+				Eventually(func() time.Time {
+					currentNNS := nodeNetworkState(types.NamespacedName{Name: node})
+					return currentNNS.Status.LastSuccessfulUpdateTime.Time
+				}, 2*nmstatenode.NetworkStateRefresh, 10*time.Second).Should(BeTemporally(">", originalNNS.Status.LastSuccessfulUpdateTime.Time), "should update it at %s", node)
 			}
 		})
+
 	})
 	Context("when network configuration is changed by a NNCP", func() {
 		BeforeEach(func() {
