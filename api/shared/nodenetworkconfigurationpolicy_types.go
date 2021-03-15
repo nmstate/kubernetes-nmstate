@@ -1,5 +1,7 @@
 package shared
 
+import "k8s.io/apimachinery/pkg/util/intstr"
+
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicySpec struct {
 	// NodeSelector is a selector which must be true for the policy to be applied to the node.
@@ -12,18 +14,20 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`
 
-	// When set to true, changes are applied to all nodes in parallel
+	// MaxUnavailable specifies percentage or number
+	// of machines that can be updating at a time. Default is "50%".
 	// +optional
-	Parallel bool `json:"parallel,omitempty"`
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicyStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 
-	// NodeRunningUpdate field is used for serializing cluster nodes configuration when Parallel flag is false
+	// UnavailableNodeCount represents the total number of potentially unavailable nodes that are
+	// processing a NodeNetworkConfigurationPolicy
 	// +optional
-	NodeRunningUpdate string `json:"nodeRunningUpdate,omitempty" optional:"true"`
+	UnavailableNodeCount int `json:"unavailableNodeCount,omitempty" optional:"true"`
 }
 
 const (

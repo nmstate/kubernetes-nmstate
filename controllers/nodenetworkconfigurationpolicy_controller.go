@@ -20,7 +20,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
 	"time"
 
@@ -40,6 +39,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -48,9 +49,14 @@ import (
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
 	"k8s.io/apimachinery/pkg/types"
+)
+
+const (
+	DEFAULT_MAXUNAVAILABLE = "50%"
 )
 
 var (
@@ -154,7 +160,26 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	})
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountsByPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
+func (r *NodeNetworkConfigurationPolicyReconciler) maxUnavailableNodesCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
+	nmstateNodes, err := node.NodesRunningNmstate(r.Client)
+	if err != nil {
+		return 0, err
+	}
+	intOrPercent := intstr.FromString(DEFAULT_MAXUNAVAILABLE)
+	if policy.Spec.MaxUnavailable != nil {
+		intOrPercent = *policy.Spec.MaxUnavailable
+	}
+	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(&intOrPercent, len(nmstateNodes), true)
+	if err != nil {
+		return 0, err
+	}
+	if maxUnavailable < 1 {
+		maxUnavailable = 1
+	}
+	return maxUnavailable, nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountByPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
 	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
 	err := r.Client.List(context.TODO(), &enactments, policyLabelFilter)
@@ -171,10 +196,14 @@ func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(policy
 	if err != nil {
 		return err
 	}
-	if policy.Status.NodeRunningUpdate != "" {
-		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("Another node is working on configuration"))
+	maxUnavailable, err := r.maxUnavailableNodesCount(policy)
+	if err != nil {
+		return err
 	}
-	policy.Status.NodeRunningUpdate = nodeName
+	if policy.Status.UnavailableNodeCount >= maxUnavailable {
+		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("maximal number of %d nodes are already processing policy configuration, current unavailableNodeCount: %d", maxUnavailable, policy.Status.UnavailableNodeCount))
+	}
+	policy.Status.UnavailableNodeCount += 1
 	err = r.Client.Status().Update(context.TODO(), policy)
 	if err != nil {
 		return err
@@ -182,16 +211,23 @@ func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(policy
 	return nil
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(policyKey types.NamespacedName) {
+func (r *NodeNetworkConfigurationPolicyReconciler) releaseNodeRunningUpdate(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) {
+	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
-	_ = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		err := r.Client.Get(context.TODO(), policyKey, instance)
 		if err != nil {
 			return err
 		}
-		instance.Status.NodeRunningUpdate = ""
+		if instance.Status.UnavailableNodeCount <= 0 {
+			return fmt.Errorf("all nodes already released")
+		}
+		instance.Status.UnavailableNodeCount -= 1
 		return r.Client.Status().Update(context.TODO(), instance)
 	})
+	if err != nil {
+		r.Log.Error(err, "error releasing node")
+	}
 }
 
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
@@ -245,28 +281,27 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	}
 
 	enactmentConditions.NotifyMatching()
-	if !instance.Spec.Parallel {
-		enactmentCount, err := r.enactmentsCountsByPolicy(instance)
-		if err != nil {
-			log.Error(err, "Error getting enactment counts")
-			return ctrl.Result{}, nil
-		}
-		if enactmentCount.Failed() > 0 {
-			err = fmt.Errorf("policy has failing enactments, aborting")
-			log.Error(err, "")
-			enactmentConditions.NotifyAborted(err)
-			return ctrl.Result{}, nil
-		}
-		err = r.claimNodeRunningUpdate(instance)
-		if err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
-			} else {
-				return ctrl.Result{}, err
-			}
-		}
-		defer r.releaseNodeRunningUpdate(request.NamespacedName)
+
+	enactmentCount, err := r.enactmentsCountByPolicy(instance)
+	if err != nil {
+		log.Error(err, "Error getting enactment counts")
+		return ctrl.Result{}, err
 	}
+	if enactmentCount.Failed() > 0 {
+		err = fmt.Errorf("policy has failing enactments, aborting")
+		log.Error(err, "")
+		enactmentConditions.NotifyAborted(err)
+		return ctrl.Result{}, nil
+	}
+
+	err = r.claimNodeRunningUpdate(instance)
+	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
+		}
+		return ctrl.Result{}, err
+	}
+	defer r.releaseNodeRunningUpdate(instance)
 
 	enactmentConditions.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(r.Client, instance.Spec.DesiredState)
