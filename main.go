@@ -93,6 +93,9 @@ func main() {
 	if environment.IsWebhook() {
 		ctrlOptions.LeaderElection = true
 		ctrlOptions.LeaderElectionID = "5d2e944a.nmstate.io"
+	} else if environment.IsCertManager() {
+		ctrlOptions.LeaderElection = true
+		ctrlOptions.LeaderElectionID = "5d2e944b.nmstate.io"
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
@@ -101,39 +104,51 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Runs only webhook controllers if it's specified
-	if environment.IsWebhook() {
-
-		webhookOpts := certificate.Options{
+	if environment.IsCertManager() {
+		certManagerOpts := certificate.Options{
 			Namespace:   os.Getenv("POD_NAMESPACE"),
 			WebhookName: "nmstate",
 			WebhookType: certificate.MutatingWebhook,
 		}
 
-		webhookOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
+		certManagerOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving ca rotate interval")
 			os.Exit(1)
 		}
 
-		webhookOpts.CAOverlapInterval, err = environment.LookupAsDuration("CA_OVERLAP_INTERVAL")
+		certManagerOpts.CAOverlapInterval, err = environment.LookupAsDuration("CA_OVERLAP_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving ca overlap interval")
 			os.Exit(1)
 		}
 
-		webhookOpts.CertRotateInterval, err = environment.LookupAsDuration("CERT_ROTATE_INTERVAL")
+		certManagerOpts.CertRotateInterval, err = environment.LookupAsDuration("CERT_ROTATE_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving cert rotate interval")
 			os.Exit(1)
 		}
-		webhookOpts.CertOverlapInterval, err = environment.LookupAsDuration("CERT_OVERLAP_INTERVAL")
+
+		certManagerOpts.CertOverlapInterval, err = environment.LookupAsDuration("CERT_OVERLAP_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving cert overlap interval")
 			os.Exit(1)
 		}
 
-		if err := webhook.AddToManager(mgr, webhookOpts); err != nil {
+		certManager, err := certificate.NewManager(mgr.GetClient(), certManagerOpts)
+		if err != nil {
+			setupLog.Error(err, "unable to create cert-manager", "controller", "cert-manager")
+			os.Exit(1)
+		}
+
+		err = certManager.Add(mgr)
+		if err != nil {
+			setupLog.Error(err, "unable to add cert-manager to controller-runtime manager", "controller", "cert-manager")
+			os.Exit(1)
+		}
+		// Runs only webhook controllers if it's specified
+	} else if environment.IsWebhook() {
+		if err := webhook.AddToManager(mgr); err != nil {
 			setupLog.Error(err, "Cannot initialize webhook")
 			os.Exit(1)
 		}
