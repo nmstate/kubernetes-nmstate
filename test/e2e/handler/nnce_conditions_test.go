@@ -22,6 +22,28 @@ func invalidConfig(bridgeName string) nmstate.State {
 }
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
+	var abortedEnactmentConditions = []interface{}{
+		shared.Condition{
+			Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
+			Status: corev1.ConditionFalse,
+		},
+		shared.Condition{
+			Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
+			Status: corev1.ConditionFalse,
+		},
+		shared.Condition{
+			Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
+			Status: corev1.ConditionFalse,
+		},
+		shared.Condition{
+			Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
+			Status: corev1.ConditionTrue,
+		},
+		shared.Condition{
+			Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
+			Status: corev1.ConditionTrue,
+		},
+	}
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
 		})
@@ -143,7 +165,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		It("[test_id:3795][parallel] should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				By(fmt.Sprintf("Check %s failing state is reached", node))
-				enactmentConditionsStatusEventually(node).Should(ConsistOf(failingEnactmentConditions...), "should eventually reach failing conditions at enactments")
+				enactmentConditionsStatusEventually(node).Should(
+					SatisfyAny(
+						ConsistOf(failingEnactmentConditions...),
+						ConsistOf(abortedEnactmentConditions...),
+					), "should eventually reach failing or aborted conditions at enactments",
+				)
 			}
 			By("Check policy is at degraded state")
 			waitForDegradedTestPolicy()
@@ -157,35 +184,18 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 					defer wg.Done()
 					defer GinkgoRecover()
 					By(fmt.Sprintf("Check %s failing state is kept", node))
-					enactmentConditionsStatusConsistently(node).Should(ConsistOf(failingEnactmentConditions...), "should consistently keep failing conditions at enactments")
+					enactmentConditionsStatusConsistently(node).Should(
+						SatisfyAny(
+							ConsistOf(failingEnactmentConditions...),
+							ConsistOf(abortedEnactmentConditions...),
+						), "should consistently keep failing or aborted conditions at enactments",
+					)
 				}()
 			}
 			wg.Wait()
 		})
 
 		It("[test_id:3795][sequential] should have one Failing the rest Aborted ConditionType set to true", func() {
-			var abortedEnactmentConditions = []interface{}{
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionFalse,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
-					Status: corev1.ConditionFalse,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
-					Status: corev1.ConditionFalse,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
-					Status: corev1.ConditionTrue,
-				},
-				shared.Condition{
-					Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
-					Status: corev1.ConditionTrue,
-				},
-			}
 			checkEnactmentCounts := func(policy string) {
 				failingConditions := 0
 				abortedConditions := 0

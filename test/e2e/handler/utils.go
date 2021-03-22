@@ -15,6 +15,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	yaml "sigs.k8s.io/yaml"
 
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,9 +35,9 @@ const ReadInterval = 1 * time.Second
 const TestPolicy = "test-policy"
 
 var (
-	bridgeCounter   = 0
-	bondConunter    = 0
-	parallelRollout = environment.GetBoolVarWithDefault("NMSTATE_PARALLEL_ROLLOUT", false)
+	bridgeCounter  = 0
+	bondConunter   = 0
+	maxUnavailable = environment.GetIntVarWithDefault("NMSTATE_MAX_UNAVAILABLE", 1)
 )
 
 func interfacesName(interfaces []interface{}) []string {
@@ -69,7 +70,8 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 	err := testenv.Client.Get(context.TODO(), key, &policy)
 	policy.Spec.DesiredState = desiredState
 	policy.Spec.NodeSelector = nodeSelector
-	policy.Spec.Parallel = parallelRollout
+	maxUnavailableIntOrString := intstr.FromInt(maxUnavailable)
+	policy.Spec.MaxUnavailable = &maxUnavailableIntOrString
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return testenv.Client.Create(context.TODO(), &policy)

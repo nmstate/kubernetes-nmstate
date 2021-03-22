@@ -462,6 +462,38 @@ status:
     type: Matching
 ```
 
+## Configuring multiple nodes concurrently
+
+By default, Policy configuration is applied sequentially, one node at a time.
+This configuration strategy is safe and prevents the entire cluster from being
+temporarily unavailable, if the applied configuration breaks network connectivity.
+
+For big clusters however, it may take too much time for a configuration to finish.
+In such a case, `maxUnavailable` can be used to define portion size of a cluster
+that can apply a policy configuration concurrently.
+MaxUnavailable specifies percentage or a constant number of nodes that
+can be progressing a policy at a time. The default is "50%" of cluster nodes.
+
+The following policy specifies that up to 3 nodes may be progressing concurrently:
+
+```yaml
+{% include_absolute 'user-guide/linux-bridge_maxunavailable.yaml %}
+```
+
+```shell
+kubectl apply -f linux-bridge_maxunavailable.yaml
+```
+
+```
+NAME                                 STATUS
+node01.linux-bridge-maxunavailable   AllSelectorsMatching
+node02.linux-bridge-maxunavailable   ConfigurationProgressing
+node03.linux-bridge-maxunavailable   SuccessfullyConfigured
+node04.linux-bridge-maxunavailable   ConfigurationProgressing
+node05.linux-bridge-maxunavailable   ConfigurationProgressing
+node06.linux-bridge-maxunavailable   AllSelectorsMatching
+```
+
 ## Continue reading
 
 The following tutorial will guide you through troubleshooting of a failed

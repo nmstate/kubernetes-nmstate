@@ -4,7 +4,6 @@ go 1.15
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/andreyvit/diff v0.0.0-20170406064948-c7f18ee00883
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.3.0
@@ -20,6 +19,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.14.0
 	github.com/tidwall/gjson v1.6.8
+	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v12.0.0+incompatible

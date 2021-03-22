@@ -49,6 +49,13 @@ spec:
                 description: The desired configuration of the policy
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              maxUnavailable:
+                anyOf:
+                - type: integer
+                - type: string
+                description: MaxUnavailable specifies percentage or number of machines
+                  that can be updating at a time. Default is "50%".
+                x-kubernetes-int-or-string: true
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -56,10 +63,6 @@ spec:
                   policy to be applied to the node. Selector which must match a node''s
                   labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                 type: object
-              parallel:
-                description: When set to true, changes are applied to all nodes in
-                  parallel
-                type: boolean
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed
@@ -87,10 +90,10 @@ spec:
                   - type
                   type: object
                 type: array
-              nodeRunningUpdate:
-                description: NodeRunningUpdate field is used for serializing cluster
-                  nodes configuration when Parallel flag is false
-                type: string
+              unavailableNodeCount:
+                description: UnavailableNodeCount represents the total number of potentially
+                  unavailable nodes that are processing a NodeNetworkConfigurationPolicy
+                type: integer
             type: object
         type: object
     served: true
@@ -128,6 +131,13 @@ spec:
                 description: The desired configuration of the policy
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              maxUnavailable:
+                anyOf:
+                - type: integer
+                - type: string
+                description: MaxUnavailable specifies percentage or number of machines
+                  that can be updating at a time. Default is "50%".
+                x-kubernetes-int-or-string: true
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -135,10 +145,6 @@ spec:
                   policy to be applied to the node. Selector which must match a node''s
                   labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
                 type: object
-              parallel:
-                description: When set to true, changes are applied to all nodes in
-                  parallel
-                type: boolean
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed
@@ -166,10 +172,10 @@ spec:
                   - type
                   type: object
                 type: array
-              nodeRunningUpdate:
-                description: NodeRunningUpdate field is used for serializing cluster
-                  nodes configuration when Parallel flag is false
-                type: string
+              unavailableNodeCount:
+                description: UnavailableNodeCount represents the total number of potentially
+                  unavailable nodes that are processing a NodeNetworkConfigurationPolicy
+                type: integer
             type: object
         type: object
     served: true

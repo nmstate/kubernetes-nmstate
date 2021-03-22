@@ -16,6 +16,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
 var (
@@ -86,32 +87,6 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 	)
 }
 
-func nodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
-	nodes := corev1.NodeList{}
-	err := cli.List(context.TODO(), &nodes)
-	if err != nil {
-		return []corev1.Node{}, errors.Wrap(err, "getting nodes failed")
-	}
-
-	pods := corev1.PodList{}
-	byApp := client.MatchingLabels{"app": "kubernetes-nmstate"}
-	err = cli.List(context.TODO(), &pods, byApp)
-	if err != nil {
-		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
-	}
-
-	filteredNodes := []corev1.Node{}
-	for _, node := range nodes.Items {
-		for _, pod := range pods.Items {
-			if node.Name == pod.Spec.NodeName {
-				filteredNodes = append(filteredNodes, node)
-				break
-			}
-		}
-	}
-	return filteredNodes, nil
-}
-
 func Update(cli client.Client, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
@@ -134,7 +109,7 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		// Count only nodes that runs nmstate handler, could be that
 		// users don't want to run knmstate at master for example so
 		// they don't want to change net config there.
-		nmstateNodes, err := nodesRunningNmstate(cli)
+		nmstateNodes, err := node.NodesRunningNmstate(cli)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
