@@ -51,13 +51,13 @@ var _ = Describe("NNCP with maxUnavailable", func() {
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
-		It("[parallel] should be progressing on multiple nodes", func() {
+		It("should be progressing on multiple nodes", func() {
 			Eventually(func() int {
 				return enactmentsInProgress(TestPolicy)
 			}, duration, interval).Should(BeNumerically("==", maxUnavailableNodes()))
 			waitForAvailablePolicy(TestPolicy)
 		})
-		It("[parallel] should never exceed maxUnavailable nodes", func() {
+		It("should never exceed maxUnavailable nodes", func() {
 			Consistently(func() int {
 				return enactmentsInProgress(TestPolicy)
 			}, duration, interval).Should(BeNumerically("<=", maxUnavailableNodes()))
