@@ -195,7 +195,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			wg.Wait()
 		})
 
-		It("[test_id:3795] should have one Failing the rest Aborted ConditionType set to true", func() {
+		It("[test_id:3795] should have up to maxUnavailable Failing and the rest Aborted ConditionType set to true", func() {
 			checkEnactmentCounts := func(policy string) {
 				failingConditions := 0
 				abortedConditions := 0
@@ -210,8 +210,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 						abortedConditions++
 					}
 				}
-				Expect(failingConditions).To(Equal(1), "one node only should have failing enactment")
-				Expect(abortedConditions).To(Equal(len(nodes)-1), "other nodes should have aborted enactment")
+				Expect(failingConditions).To(BeNumerically("<=", maxUnavailableNodes()), "one node only should have failing enactment")
+				Expect(abortedConditions).To(Equal(len(nodes)-failingConditions), "other nodes should have aborted enactment")
 			}
 
 			By("Check policy is at degraded state")
