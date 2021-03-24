@@ -40,11 +40,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
@@ -52,11 +53,6 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
-	"k8s.io/apimachinery/pkg/types"
-)
-
-const (
-	DEFAULT_MAXUNAVAILABLE = "50%"
 )
 
 var (
@@ -160,25 +156,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	})
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) maxUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
-	nmstateNodes, err := node.NodesRunningNmstate(r.Client)
-	if err != nil {
-		return 0, err
-	}
-	intOrPercent := intstr.FromString(DEFAULT_MAXUNAVAILABLE)
-	if policy.Spec.MaxUnavailable != nil {
-		intOrPercent = *policy.Spec.MaxUnavailable
-	}
-	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(&intOrPercent, len(nmstateNodes), true)
-	if err != nil {
-		return 0, err
-	}
-	if maxUnavailable < 1 {
-		maxUnavailable = 1
-	}
-	return maxUnavailable, nil
-}
-
 func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountByPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
 	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
@@ -196,7 +173,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	if err != nil {
 		return err
 	}
-	maxUnavailable, err := r.maxUnavailableNodeCount(policy)
+	maxUnavailable, err := node.MaxUnavailableNodeCount(r.Client, policy)
 	if err != nil {
 		return err
 	}
@@ -282,7 +259,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	enactmentConditions.NotifyMatching()
 
-	enactmentCount, err := r.enactmentsCountByPolicy(instance)
+	enactmentCount, err := enactment.CountByPolicy(r.Client, instance)
 	if err != nil {
 		log.Error(err, "Error getting enactment counts")
 		return ctrl.Result{}, err
