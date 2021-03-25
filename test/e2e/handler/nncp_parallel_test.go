@@ -6,13 +6,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
-
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	"github.com/nmstate/kubernetes-nmstate/pkg/node"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func enactmentsInProgress(policy string) int {
@@ -28,17 +23,10 @@ func enactmentsInProgress(policy string) int {
 	return progressingEnactments
 }
 
-func maxUnavailableNodes() int {
-	m, _ := node.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(node.DEFAULT_MAXUNAVAILABLE))
-	return m
-}
-
 var _ = Describe("NNCP with maxUnavailable", func() {
-	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
-	policy.Name = TestPolicy
+	duration := 15 * time.Second
+	interval := 500 * time.Millisecond
 	Context("when applying a policy to matching nodes", func() {
-		duration := 10 * time.Second
-		interval := 1 * time.Second
 		BeforeEach(func() {
 			By("Create a policy")
 			updateDesiredState(linuxBrUp(bridge1))
@@ -51,13 +39,13 @@ var _ = Describe("NNCP with maxUnavailable", func() {
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
-		It("[parallel] should be progressing on multiple nodes", func() {
+		It("should be progressing on multiple nodes", func() {
 			Eventually(func() int {
 				return enactmentsInProgress(TestPolicy)
 			}, duration, interval).Should(BeNumerically("==", maxUnavailableNodes()))
 			waitForAvailablePolicy(TestPolicy)
 		})
-		It("[parallel] should never exceed maxUnavailable nodes", func() {
+		It("should never exceed maxUnavailable nodes", func() {
 			Consistently(func() int {
 				return enactmentsInProgress(TestPolicy)
 			}, duration, interval).Should(BeNumerically("<=", maxUnavailableNodes()))

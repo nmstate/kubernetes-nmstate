@@ -68,7 +68,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			resetDesiredStateForNodes()
 		})
-		It("Should deny updating sequentially rolled out policy when it's in progress", func() {
+		It("Should deny updating rolled out policy when it's in progress", func() {
 			By(fmt.Sprintf("Updating the policy %s", TestPolicy))
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return setDesiredStateWithPolicyAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), map[string]string{})

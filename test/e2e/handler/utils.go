@@ -539,3 +539,8 @@ func skipIfNotKubernetes() {
 		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
 	}
 }
+
+func maxUnavailableNodes() int {
+	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DEFAULT_MAXUNAVAILABLE))
+	return m
+}
