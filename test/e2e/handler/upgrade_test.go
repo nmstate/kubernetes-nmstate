@@ -18,7 +18,7 @@ import (
 var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 	Context("when v1alpha1 is populated", func() {
 		BeforeEach(func() {
-			maxUnavailableIntOrString := intstr.FromInt(maxUnavailable)
+			maxUnavailableIntOrString := intstr.FromString(maxUnavailable)
 			policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: TestPolicy,
