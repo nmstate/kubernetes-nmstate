@@ -56,6 +56,75 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+          ports:
+          - containerPort: 9443
+            name: webhook-server
+            protocol: TCP
+          volumeMounts:
+          - name: tls-key-pair
+            readOnly: true
+            mountPath: /tmp/k8s-webhook-server/serving-certs/
+      volumes:
+        - name: tls-key-pair
+          secret:
+            secretName: {{template "handlerPrefix" .}}nmstate-webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-cert-manager
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
+    component: kubernetes-nmstate-cert-manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{template "handlerPrefix" .}}nmstate-cert-manager
+  template:
+    metadata:
+      labels:
+        app: kubernetes-nmstate
+        component: kubernetes-nmstate-cert-manager
+        name: {{template "handlerPrefix" .}}nmstate-cert-manager
+      annotations:
+        description: kubernetes-nmstate-webhook rotate webhook certs
+    spec:
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
+      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      containers:
+        - name: nmstate-cert-manager
+          args:
+          - --v=production
+          # Replace this with the built image name
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+          - manager
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RUN_CERT_MANAGER
+              value: ""
+            - name: OPERATOR_NAME
+              value: "{{template "handlerPrefix" .}}nmstate"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
             - name: CA_ROTATE_INTERVAL
               value: {{ .CARotateInterval | default "8760h0m0s" }}
             - name: CA_OVERLAP_INTERVAL
@@ -64,28 +133,6 @@ spec:
               value: {{ .CertRotateInterval | default "4380h0m0s" }}
             - name: CERT_OVERLAP_INTERVAL
               value: {{ .CertOverlapInterval | default "24h0m0s" }}
-          ports:
-          - containerPort: 8443
-            name: webhook-server
-            protocol: TCP
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: webhook-server
-              scheme: HTTPS
-              httpHeaders:
-              - name: Content-Type
-                value: application/json
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          volumeMounts:
-          - name: tls-key-pair
-            readOnly: true
-            mountPath: /etc/webhook/certs
-      volumes:
-        - name: tls-key-pair
-          secret:
-            secretName: {{template "handlerPrefix" .}}nmstate-webhook
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -187,7 +234,7 @@ spec:
   publishNotReadyAddresses: true
   ports:
     - port: 443
-      targetPort: 8443
+      targetPort: 9443
   selector:
     name: {{template "handlerPrefix" .}}nmstate-webhook
 ---
@@ -261,13 +308,3 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{template "handlerPrefix" .}}nmstate-webhook
-  namespace: {{ .HandlerNamespace }}
-type: kubernetes.io/tls
-data:
-  tls.crt: YmFkIGNlcnRpZmljYXRlCg==
-  tls.key: YmFkIGtleQo=
