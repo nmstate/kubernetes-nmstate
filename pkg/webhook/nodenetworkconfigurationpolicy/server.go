@@ -1,6 +1,7 @@
 package nodenetworkconfigurationpolicy
 
 import (
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -18,6 +19,7 @@ func Add(mgr manager.Manager) error {
 	// 2.- Since we have delete the condition the status-mutate webhook get called and
 	//     there we set conditions to Unknown this final result will be updated.
 	server := &webhook.Server{}
+	server.Register("/readyz", healthz.CheckHandler{Checker: healthz.Ping})
 	server.Register("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook())
 	server.Register("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook())
 	server.Register("/nodenetworkconfigurationpolicies-timestamp-mutate", setTimestampAnnotationHook())
