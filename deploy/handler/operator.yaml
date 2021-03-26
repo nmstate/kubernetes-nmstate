@@ -60,6 +60,16 @@ spec:
           - containerPort: 9443
             name: webhook-server
             protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: webhook-server
+              scheme: HTTPS
+              httpHeaders:
+              - name: Content-Type
+                value: application/json
+            initialDelaySeconds: 10
+            periodSeconds: 10
           volumeMounts:
           - name: tls-key-pair
             readOnly: true
