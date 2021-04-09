@@ -2,22 +2,17 @@ approvers:
   - phoracek
   - qinqon
   - bcrochet
-  - yboaron
-  - cybertron
-  - celebdor
+  - rhrazdil
 reviewers:
   - phoracek
   - qinqon
-  - oshoval
-  - AlonaKaplan
   - bcrochet
   - yboaron
   - RamLavi
   - rhrazdil
-  - cybertron
-  - celebdor
 
 # Bugzilla info;
 component: Networking
-subcomponent: kubernetes-nmstate-operator,kubernetes-nmstate
+subcomponent: kubernetes-nmstate-operator
+subcomponent: kubernetes-nmstate
 

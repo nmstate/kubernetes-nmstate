@@ -15,13 +15,19 @@ func IsOperator() bool {
 
 // IsWebhook returns true when RUN_WEBHOOK_SERVER env var is present
 func IsWebhook() bool {
-	_, runOperator := os.LookupEnv("RUN_WEBHOOK_SERVER")
-	return runOperator
+	_, runWebhook := os.LookupEnv("RUN_WEBHOOK_SERVER")
+	return runWebhook
+}
+
+// IsCertManager return true when RUN_CERT_MANAGER env var is present
+func IsCertManager() bool {
+	_, runCertManager := os.LookupEnv("RUN_CERT_MANAGER")
+	return runCertManager
 }
 
 // IsHandler returns true if it's not the operator or webhook server
 func IsHandler() bool {
-	return !IsWebhook() && !IsOperator()
+	return !IsWebhook() && !IsOperator() && !IsCertManager()
 }
 
 // Returns node name runnig the pod

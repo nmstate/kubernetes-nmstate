@@ -15,12 +15,14 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	yaml "sigs.k8s.io/yaml"
 
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
@@ -33,8 +35,9 @@ const ReadInterval = 1 * time.Second
 const TestPolicy = "test-policy"
 
 var (
-	bridgeCounter = 0
-	bondConunter  = 0
+	bridgeCounter  = 0
+	bondConunter   = 0
+	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DEFAULT_MAXUNAVAILABLE)
 )
 
 func interfacesName(interfaces []interface{}) []string {
@@ -60,21 +63,31 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	return dummy
 }
 
-func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) {
+func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
 	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
-	Eventually(func() error {
-		err := testenv.Client.Get(context.TODO(), key, &policy)
-		policy.Spec.DesiredState = desiredState
-		policy.Spec.NodeSelector = nodeSelector
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return testenv.Client.Create(context.TODO(), &policy)
-			}
-			return err
+	err := testenv.Client.Get(context.TODO(), key, &policy)
+	policy.Spec.DesiredState = desiredState
+	policy.Spec.NodeSelector = nodeSelector
+	maxUnavailableIntOrString := intstr.FromString(maxUnavailable)
+	policy.Spec.MaxUnavailable = &maxUnavailableIntOrString
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return testenv.Client.Create(context.TODO(), &policy)
 		}
-		return testenv.Client.Update(context.TODO(), &policy)
+		return err
+	}
+	err = testenv.Client.Update(context.TODO(), &policy)
+	if err != nil {
+		fmt.Println("Update error: " + err.Error())
+	}
+	return err
+}
+
+func setDesiredStateWithPolicyAndNodeSelectorEventually(name string, desiredState nmstate.State, nodeSelector map[string]string) {
+	Eventually(func() error {
+		return setDesiredStateWithPolicyAndNodeSelector(name, desiredState, nodeSelector)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
 	//FIXME: until we don't have webhook we have to wait for reconcile
 	//       to start so we are sure that conditions are reset and we can
@@ -82,9 +95,13 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 	time.Sleep(1 * time.Second)
 }
 
+func setDesiredStateWithPolicyWithoutNodeSelector(name string, desiredState nmstate.State) {
+	setDesiredStateWithPolicyAndNodeSelectorEventually(name, desiredState, map[string]string{})
+}
+
 func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
-	setDesiredStateWithPolicyAndNodeSelector(name, desiredState, runAtWorkers)
+	setDesiredStateWithPolicyAndNodeSelectorEventually(name, desiredState, runAtWorkers)
 }
 
 func updateDesiredState(desiredState nmstate.State) {
@@ -98,7 +115,7 @@ func updateDesiredStateAndWait(desiredState nmstate.State) {
 
 func updateDesiredStateAtNode(node string, desiredState nmstate.State) {
 	nodeSelector := map[string]string{"kubernetes.io/hostname": node}
-	setDesiredStateWithPolicyAndNodeSelector(TestPolicy, desiredState, nodeSelector)
+	setDesiredStateWithPolicyAndNodeSelectorEventually(TestPolicy, desiredState, nodeSelector)
 }
 
 func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
@@ -110,26 +127,7 @@ func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
 //       to remove this
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
-	updateDesiredState(nmstate.NewState(fmt.Sprintf(`interfaces:
-  - name: %s
-    type: ethernet
-    state: up
-  - name: %s
-    type: ethernet
-    state: down
-    ipv4:
-      dhcp: false
-    ipv6:
-      dhcp: false
-  - name: %s
-    type: ethernet
-    state: down
-    ipv4:
-      dhcp: false
-    ipv6:
-      dhcp: false
-
-`, primaryNic, firstSecondaryNic, secondSecondaryNic)))
+	updateDesiredState(resetPrimaryAndSecondaryNICs())
 	waitForAvailableTestPolicy()
 	deletePolicy(TestPolicy)
 }
@@ -220,30 +218,59 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 	By(fmt.Sprintf("Delete bridge %s", bridgeName))
 	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
 	for _, portName := range ports {
-		_, slaveErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
-		errs = append(errs, slaveErrors...)
+		_, portErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
+		errs = append(errs, portErrors...)
 	}
 	return errs
 }
 
-func createDummyAtNodes(dummyName string) []error {
+func createDummyConnection(nodesToModify []string, dummyName string) []error {
 	By(fmt.Sprintf("Creating dummy %s", dummyName))
-	_, errs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
-	_, upErrs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "up", dummyName)
+	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
+	_, upErrs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
 	return errs
 }
 
-func deleteConnectionAtNodes(name string) []error {
+func createDummyConnectionAtNodes(dummyName string) []error {
+	return createDummyConnection(nodes, dummyName)
+}
+
+func createDummyConnectionAtAllNodes(dummyName string) []error {
+	return createDummyConnection(allNodes, dummyName)
+}
+
+func deleteConnection(nodesToModify []string, name string) []error {
 	By(fmt.Sprintf("Delete connection %s", name))
-	_, errs := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", name)
+	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "delete", name)
 	return errs
 }
 
-func deleteDeviceAtNode(node string, name string) error {
-	By(fmt.Sprintf("Delete device %s  at node %s", name, node))
-	_, err := runner.RunAtNode(node, "sudo", "nmcli", "device", "delete", name)
-	return err
+func deleteConnectionAtNodes(name string) []error {
+	return deleteConnection(nodes, name)
+}
+func deleteConnectionAtAllNodes(name string) []error {
+	return deleteConnection(allNodes, name)
+}
+
+func deleteDevice(nodesToModify []string, name string) []error {
+	By(fmt.Sprintf("Delete device %s  at nodes %v", name, nodesToModify))
+	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "device", "delete", name)
+	return errs
+}
+
+func waitForInterfaceDeletion(nodesToCheck []string, interfaceName string) {
+	for _, nodeName := range nodesToCheck {
+		Eventually(func() []string {
+			return interfacesNameForNode(nodeName)
+		}, 2*nmstatenode.NetworkStateRefresh, time.Second).ShouldNot(ContainElement(interfaceName))
+	}
+}
+
+func deleteConnectionAndWait(nodesToModify []string, interfaceName string) {
+	deleteConnection(nodesToModify, interfaceName)
+	deleteDevice(nodesToModify, interfaceName)
+	waitForInterfaceDeletion(nodesToModify, interfaceName)
 }
 
 func interfaces(state nmstate.State) []interface{} {
@@ -255,7 +282,7 @@ func interfaces(state nmstate.State) []interface{} {
 }
 
 func currentState(node string, currentStateYaml *nmstate.State) AsyncAssertion {
-	key := types.NamespacedName{Namespace: testenv.OperatorNamespace, Name: node}
+	key := types.NamespacedName{Name: node}
 	return Eventually(func() nmstate.RawState {
 		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
 		return currentStateYaml.Raw
@@ -311,7 +338,7 @@ func interfacesForNode(node string) AsyncAssertion {
 func waitForNodeNetworkStateUpdate(node string) {
 	now := time.Now()
 	EventuallyWithOffset(1, func() time.Time {
-		key := types.NamespacedName{Namespace: testenv.OperatorNamespace, Name: node}
+		key := types.NamespacedName{Name: node}
 		nnsUpdateTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
 		return nnsUpdateTime.Time
 	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Node %s should have a fresh nns)", node))
@@ -511,4 +538,9 @@ func skipIfNotKubernetes() {
 	if !strings.Contains(provider, "k8s") {
 		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
 	}
+}
+
+func maxUnavailableNodes() int {
+	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DEFAULT_MAXUNAVAILABLE))
+	return m
 }

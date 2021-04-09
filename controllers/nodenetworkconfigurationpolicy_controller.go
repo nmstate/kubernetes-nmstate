@@ -20,33 +20,45 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/util/retry"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
+	ctrl "sigs.k8s.io/controller-runtime"
+	builder "sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
-	"k8s.io/apimachinery/pkg/types"
 )
 
 var (
-	nodeName       string
-	watchPredicate = predicate.Funcs{
+	nodeName                                string
+	nodeRunningUpdateRetryTime              = 5 * time.Second
+	onCreateOrUpdateWithDifferentGeneration = predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
 			return true
 		},
@@ -55,8 +67,24 @@ var (
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
-			generationIsDifferent := updateEvent.MetaNew.GetGeneration() != updateEvent.MetaOld.GetGeneration()
+			generationIsDifferent := updateEvent.ObjectNew.GetGeneration() != updateEvent.ObjectOld.GetGeneration()
 			return generationIsDifferent
+		},
+	}
+
+	onLabelsUpdatedForThisNode = predicate.Funcs{
+		CreateFunc: func(createEvent event.CreateEvent) bool {
+			return false
+		},
+		DeleteFunc: func(event.DeleteEvent) bool {
+			return false
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			labelsChanged := !reflect.DeepEqual(updateEvent.ObjectOld.GetLabels(), updateEvent.ObjectNew.GetLabels())
+			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.ObjectNew)
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
 		},
 	}
 )
@@ -128,12 +156,63 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	})
 }
 
+func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountByPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
+	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
+	err := r.Client.List(context.TODO(), &enactments, policyLabelFilter)
+	if err != nil {
+		return nil, errors.Wrap(err, "getting enactment list failed")
+	}
+	enactmentCount := enactmentconditions.Count(enactments, policy.Generation)
+	return enactmentCount, nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
+	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
+	err := r.Client.Get(context.TODO(), policyKey, policy)
+	if err != nil {
+		return err
+	}
+	maxUnavailable, err := node.MaxUnavailableNodeCount(r.Client, policy)
+	if err != nil {
+		return err
+	}
+	if policy.Status.UnavailableNodeCount >= maxUnavailable {
+		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("maximal number of %d nodes are already processing policy configuration", policy.Status.UnavailableNodeCount))
+	}
+	policy.Status.UnavailableNodeCount += 1
+	err = r.Client.Status().Update(context.TODO(), policy)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) {
+	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
+	instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := r.Client.Get(context.TODO(), policyKey, instance)
+		if err != nil {
+			return err
+		}
+		if instance.Status.UnavailableNodeCount <= 0 {
+			return fmt.Errorf("no unavailable nodes")
+		}
+		instance.Status.UnavailableNodeCount -= 1
+		return r.Client.Status().Update(context.TODO(), instance)
+	})
+	if err != nil {
+		r.Log.Error(err, "error decrementing unavailableNodeCount")
+	}
+}
+
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationPolicy object and makes changes based on the state read
 // and what is in the NodeNetworkConfigurationPolicy.Spec
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	log := r.Log.WithValues("nodenetworkconfigurationpolicy", request.NamespacedName)
 
@@ -180,6 +259,27 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 	enactmentConditions.NotifyMatching()
 
+	enactmentCount, err := enactment.CountByPolicy(r.Client, instance)
+	if err != nil {
+		log.Error(err, "Error getting enactment counts")
+		return ctrl.Result{}, err
+	}
+	if enactmentCount.Failed() > 0 {
+		err = fmt.Errorf("policy has failing enactments, aborting")
+		log.Error(err, "")
+		enactmentConditions.NotifyAborted(err)
+		return ctrl.Result{}, nil
+	}
+
+	err = r.incrementUnavailableNodeCount(instance)
+	if err != nil {
+		if apierrors.IsConflict(err) {
+			return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
+		}
+		return ctrl.Result{}, err
+	}
+	defer r.decrementUnavailableNodeCount(instance)
+
 	enactmentConditions.NotifyProgressing()
 	nmstateOutput, err := nmstate.ApplyDesiredState(r.Client, instance.Spec.DesiredState)
 	if err != nil {
@@ -193,14 +293,71 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(request ctrl.Reques
 
 	enactmentConditions.NotifySuccess()
 
+	r.forceNNSRefresh(nodeName)
+
 	return ctrl.Result{}, nil
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+
+	allPolicies := handler.MapFunc(
+		func(client.Object) []reconcile.Request {
+			log := r.Log.WithName("allPolicies")
+			allPoliciesAsRequest := []reconcile.Request{}
+			policyList := nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
+			err := r.Client.List(context.TODO(), &policyList)
+			if err != nil {
+				log.Error(err, "failed listing all NodeNetworkConfigurationPolicies to re-reconcile them after node created or updated")
+				return []reconcile.Request{}
+			}
+			for _, policy := range policyList.Items {
+				allPoliciesAsRequest = append(allPoliciesAsRequest, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: policy.Name,
+					}})
+			}
+			return allPoliciesAsRequest
+		})
+
+	// Reconcile NNCP if they are created or updated
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkConfigurationPolicy{}).
-		WithEventFilter(watchPredicate).
+		WithEventFilter(onCreateOrUpdateWithDifferentGeneration).
 		Complete(r)
+	if err != nil {
+		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening NNCP events")
+	}
+
+	// Reconcile all NNCPs if Node is updated (for example labels are changed), node creation event
+	// is not needed since all NNCPs are going to be Reconcile at node startup.
+	err = ctrl.NewControllerManagedBy(mgr).
+		For(&corev1.Node{}).
+		Watches(&source.Kind{Type: &corev1.Node{}}, handler.EnqueueRequestsFromMapFunc(allPolicies), builder.WithPredicates(onLabelsUpdatedForThisNode)).
+		Complete(r)
+	if err != nil {
+		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening Node events")
+	}
+	return nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) {
+	log := r.Log.WithName("forceNNSRefresh").WithValues("node", name)
+	log.Info("forcing NodeNetworkState refresh after NNCP applied")
+	nns := &nmstatev1beta1.NodeNetworkState{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: name}, nns)
+	if err != nil {
+		log.WithValues("error", err).Info("WARNING: failed retrieving NodeNetworkState to force refresh, it will be refreshed after regular period")
+		return
+	}
+	if nns.Labels == nil {
+		nns.Labels = map[string]string{}
+	}
+	nns.Labels[forceRefreshLabel] = fmt.Sprintf("%d", time.Now().UnixNano())
+
+	err = r.Client.Update(context.Background(), nns)
+	if err != nil {
+		log.WithValues("error", err).Info("WARNING: failed forcing NNS refresh, it will be refreshed after regular period")
+	}
 }
 
 func desiredState(object runtime.Object) (nmstateapi.State, error) {

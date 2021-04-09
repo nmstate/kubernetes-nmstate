@@ -178,6 +178,29 @@ func vlanUpWithStaticIP(iface string, ipAddress string) nmstate.State {
 `, iface, ipAddress))
 }
 
+func resetPrimaryAndSecondaryNICs() nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+  - name: %s
+    type: ethernet
+    state: down
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: %s
+    type: ethernet
+    state: down
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+
+`, primaryNic, firstSecondaryNic, secondSecondaryNic))
+}
+
 func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]interface{})
 	expectedOptions := expectedLinkAggregation["options"].(map[string]interface{})
@@ -187,7 +210,7 @@ func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 		HaveKeyWithValue("state", expectedBond["state"]),
 		HaveKeyWithValue("link-aggregation", SatisfyAll(
 			HaveKeyWithValue("mode", expectedLinkAggregation["mode"]),
-			HaveKeyWithValue("slaves", ConsistOf(expectedLinkAggregation["slaves"])),
+			HaveKeyWithValue(portFieldName, ConsistOf(expectedLinkAggregation[portFieldName])),
 			HaveKeyWithValue("options", HaveKeyWithValue("miimon", expectedOptions["miimon"])),
 		)),
 	)

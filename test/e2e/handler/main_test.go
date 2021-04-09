@@ -15,24 +15,28 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	//knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
+	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
+	"github.com/nmstate/kubernetes-nmstate/test/version"
 )
 
 var (
 	t                    *testing.T
 	nodes                []string
+	allNodes             []string
 	startTime            time.Time
 	bond1                string
 	bridge1              string
 	primaryNic           string
 	firstSecondaryNic    string
 	secondSecondaryNic   string
+	portFieldName        string
+	miimonFormat         string
 	nodesInterfacesState = make(map[string][]byte)
 	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
 )
@@ -47,11 +51,18 @@ var _ = BeforeSuite(func() {
 	primaryNic = environment.GetVarWithDefault("PRIMARY_NIC", "eth0")
 	firstSecondaryNic = environment.GetVarWithDefault("FIRST_SECONDARY_NIC", "eth1")
 	secondSecondaryNic = environment.GetVarWithDefault("SECOND_SECONDARY_NIC", "eth2")
-	testenv.TestMain()
 
 	testenv.Start()
 
-	By("Getting node list from cluster")
+	if version.IsNmstate(">= 1.0.0") {
+		portFieldName = "port"
+		miimonFormat = "%d"
+	} else {
+		portFieldName = "slaves"
+		miimonFormat = "'%d'"
+	}
+
+	By("Getting worker node list from cluster")
 	nodeList := corev1.NodeList{}
 	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
 	err := testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
@@ -60,15 +71,24 @@ var _ = BeforeSuite(func() {
 		nodes = append(nodes, node.Name)
 	}
 
+	By("Getting all node list from cluster")
+	nodeList = corev1.NodeList{}
+	err = testenv.Client.List(context.TODO(), &nodeList)
+	Expect(err).ToNot(HaveOccurred())
+	for _, node := range nodeList.Items {
+		allNodes = append(allNodes, node.Name)
+	}
+
 	resetDesiredStateForNodes()
 })
 
 func TestE2E(t *testing.T) {
+	testenv.TestMain()
 
 	RegisterFailHandler(Fail)
 
 	reporters := make([]Reporter, 0)
-	//reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes))
+	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes))
 	if ginkgoreporters.Polarion.Run {
 		reporters = append(reporters, &ginkgoreporters.Polarion)
 	}
@@ -82,10 +102,13 @@ func TestE2E(t *testing.T) {
 
 var _ = BeforeEach(func() {
 	bond1 = nextBond()
+	By(fmt.Sprintf("Setting bond1=%s", bond1))
 	bridge1 = nextBridge()
+	By(fmt.Sprintf("Setting bridge1=%s", bridge1))
 	startTime = time.Now()
+
 	By("Getting nodes initial state")
-	for _, node := range nodes {
+	for _, node := range allNodes {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		nodesInterfacesState[node] = nodeState
 	}
@@ -93,8 +116,7 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	By("Verifying initial state")
-	for _, node := range nodes {
-
+	for _, node := range allNodes {
 		Eventually(func() []byte {
 			By("Verifying initial state eventually")
 			nodeState := nodeInterfacesState(node, interfacesToIgnore)

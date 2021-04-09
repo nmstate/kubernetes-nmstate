@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"k8s.io/client-go/util/retry"
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
@@ -50,6 +53,27 @@ var _ = Describe("Mutating Admission Webhook", func() {
 
 				Expect(newConditionsMutation).To(BeNumerically(">", oldConditionsMutation), "mutation timestamp not updated")
 			})
+		})
+	})
+})
+
+var _ = Describe("Validation Admission Webhook", func() {
+	Context("When a policy is created and progressing", func() {
+		BeforeEach(func() {
+			By("Creating a policy without waiting for it to be available")
+			updateDesiredState(linuxBrUp(bridge1))
+		})
+		AfterEach(func() {
+			waitForAvailablePolicy(TestPolicy)
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
+			resetDesiredStateForNodes()
+		})
+		It("Should deny updating rolled out policy when it's in progress", func() {
+			By(fmt.Sprintf("Updating the policy %s", TestPolicy))
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return setDesiredStateWithPolicyAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), map[string]string{})
+			})
+			Expect(err).To(MatchError("admission webhook \"nodenetworkconfigurationpolicies-progress-validate.nmstate.io\" denied the request: failed to admit NodeNetworkConfigurationPolicy test-policy: message: policy test-policy is still in progress. "))
 		})
 	})
 })

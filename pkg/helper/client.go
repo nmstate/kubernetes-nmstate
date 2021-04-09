@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"os"
 	"os/exec"
 	"time"
 
@@ -14,13 +13,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	yaml "sigs.k8s.io/yaml"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/gobwas/glob"
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -33,21 +29,6 @@ const vlanFilteringCommand = "vlan-filtering"
 const defaultGwRetrieveTimeout = 120 * time.Second
 const defaultGwProbeTimeout = 120 * time.Second
 const apiServerProbeTimeout = 120 * time.Second
-
-var (
-	interfacesFilterGlob glob.Glob
-)
-
-func init() {
-	if !environment.IsHandler() {
-		return
-	}
-	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
-	if !isSet {
-		panic("INTERFACES_FILTER is mandatory")
-	}
-	interfacesFilterGlob = glob.MustCompile(interfacesFilter)
-}
 
 func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 	command := []string{bridgeName}
@@ -72,7 +53,7 @@ func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1beta1.
 	return nodeNetworkState, err
 }
 
-func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
+func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
 	nodeNetworkState := nmstatev1beta1.NodeNetworkState{
@@ -85,46 +66,44 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) error {
 
 	err := client.Create(context.TODO(), &nodeNetworkState)
 	if err != nil {
-		return fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
+		return nil, fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
 	}
 
-	return nil
+	return &nodeNetworkState, nil
 }
 
-func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey) error {
+func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedState shared.State) error {
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
 	err := client.Get(context.TODO(), namespace, nnsInstance)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return errors.Wrap(err, "Failed to get nmstate")
 		} else {
-			return InitializeNodeNetworkState(client, node)
+			nnsInstance, err = InitializeNodeNetworkState(client, node)
+			if err != nil {
+				return err
+			}
 		}
 	}
-	return UpdateCurrentState(client, nnsInstance)
+	return UpdateCurrentState(client, nnsInstance, observedState)
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState) error {
-	observedStateRaw, err := nmstatectl.Show()
-	if err != nil {
-		return errors.Wrap(err, "error running nmstatectl show")
-	}
-	observedState := nmstate.State{Raw: []byte(observedStateRaw)}
+func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State) error {
 
-	stateToReport, err := filterOut(observedState, interfacesFilterGlob)
-	if err != nil {
-		fmt.Printf("failed filtering out interfaces from NodeNetworkState, keeping orignal content, please fix the glob: %v", err)
-		stateToReport = observedState
+	if observedState.String() == nodeNetworkState.Status.CurrentState.String() {
+		log.Info("Skipping NodeNetworkState update, node network configuration not changed")
+		return nil
 	}
 
-	nodeNetworkState.Status.CurrentState = stateToReport
+	nodeNetworkState.Status.CurrentState = observedState
 	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
 
-	err = client.Status().Update(context.Background(), nodeNetworkState)
+	err := client.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
-		// Request object not found, could have been deleted after reconcile request.
-		if !apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			return errors.Wrap(err, "Request object not found, could have been deleted after reconcile request")
+		} else {
+			return errors.Wrap(err, "Error updating nodeNetworkState")
 		}
 	}
 
@@ -146,7 +125,7 @@ func rollback(client client.Client, probes []probe.Probe, cause error) error {
 	return errors.New(message)
 }
 
-func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string, error) {
+func ApplyDesiredState(client client.Client, desiredState shared.State) (string, error) {
 	if len(string(desiredState.Raw)) == 0 {
 		return "Ignoring empty desired state", nil
 	}
@@ -195,34 +174,4 @@ func ApplyDesiredState(client client.Client, desiredState nmstate.State) (string
 
 	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
 	return commandOutput, nil
-}
-
-func filterOut(currentState nmstate.State, interfacesFilterGlob glob.Glob) (nmstate.State, error) {
-	if interfacesFilterGlob.Match("") {
-		return currentState, nil
-	}
-
-	var state map[string]interface{}
-	err := yaml.Unmarshal(currentState.Raw, &state)
-	if err != nil {
-		return currentState, err
-	}
-
-	interfaces := state["interfaces"]
-	var filteredInterfaces []interface{}
-
-	for _, iface := range interfaces.([]interface{}) {
-		name := iface.(map[string]interface{})["name"]
-		if !interfacesFilterGlob.Match(name.(string)) {
-			filteredInterfaces = append(filteredInterfaces, iface)
-		}
-	}
-
-	state["interfaces"] = filteredInterfaces
-	filteredState, err := yaml.Marshal(state)
-	if err != nil {
-		return currentState, err
-	}
-
-	return nmstate.State{Raw: filteredState}, nil
 }

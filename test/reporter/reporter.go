@@ -10,7 +10,6 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/types"
 )
@@ -110,6 +109,14 @@ func (r *KubernetesNMStateReporter) logDeviceStatus(testName string) {
 func (r *KubernetesNMStateReporter) Cleanup() {
 	// clean up artifacts from previous run
 	if r.artifactsDir != "" {
+		_, err := os.Stat(r.artifactsDir)
+		if err != nil {
+			if os.IsNotExist(err) {
+				return
+			} else {
+				panic(err)
+			}
+		}
 		names, err := ioutil.ReadDir(r.artifactsDir)
 		if err != nil {
 			panic(err)
@@ -128,13 +135,13 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 
 	// Let's print the pods logs to the GinkgoWriter so
 	// we see the failure directly at prow junit output without opening files
-	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime), GinkgoWriter)
+	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime))
 
 	return nil
 }
 
 func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
-	err := os.MkdirAll(r.artifactsDir, 0644)
+	err := os.MkdirAll(r.artifactsDir, 0755)
 	if err != nil {
 		fmt.Println(err)
 		return

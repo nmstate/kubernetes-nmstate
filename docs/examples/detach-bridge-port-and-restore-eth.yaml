@@ -1,0 +1,16 @@
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: detach-bridge-port-and-restore-eth
+spec:
+  desiredState:
+    interfaces:
+    - name: br1
+      type: linux-bridge
+      state: absent
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true

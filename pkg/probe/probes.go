@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	yaml "sigs.k8s.io/yaml"
 
 	"github.com/tidwall/gjson"
@@ -124,10 +124,18 @@ func defaultGw() (string, error) {
 		if err != nil {
 			return false, errors.Wrap(err, "failed retrieving current state to retrieve default gw")
 		}
+		defaultGwGjsonPath := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-address"
 		defaultGw = gjsonCurrentState.
-			Get("routes.running.#(destination==\"0.0.0.0/0\").next-hop-address").String()
+			Get(defaultGwGjsonPath).String()
 		if defaultGw == "" {
-			log.Info("default gw missing", "state", gjsonCurrentState.String())
+			msg := "default gw missing"
+			defaultGwLog := log.WithValues("path", defaultGwGjsonPath)
+			defaultGwLogDebug := defaultGwLog.V(1)
+			if defaultGwLogDebug.Enabled() {
+				defaultGwLogDebug.Info(msg, "state", gjsonCurrentState.String())
+			} else {
+				defaultGwLog.Info(msg)
+			}
 			return false, nil
 		}
 

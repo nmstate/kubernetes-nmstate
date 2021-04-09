@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
@@ -17,12 +18,15 @@ import (
 var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 	Context("when v1alpha1 is populated", func() {
 		BeforeEach(func() {
+			maxUnavailableIntOrString := intstr.FromString(maxUnavailable)
 			policy := nmstatev1alpha1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: TestPolicy,
 				},
 				Spec: nmstate.NodeNetworkConfigurationPolicySpec{
-					DesiredState: linuxBrUp(bridge1),
+					DesiredState:   linuxBrUp(bridge1),
+					NodeSelector:   map[string]string{"node-role.kubernetes.io/worker": ""},
+					MaxUnavailable: &maxUnavailableIntOrString,
 				},
 			}
 			Expect(testenv.Client.Create(context.TODO(), &policy)).To(Succeed(), "should success creating a v1alpha1 nncp")

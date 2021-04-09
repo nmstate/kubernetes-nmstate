@@ -11,19 +11,20 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
 var (
 	log = logf.Log.WithName("policyconditions")
 )
 
-func setPolicyProgressing(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicyProgressing")
+func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicyProgressing")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionUnknown,
@@ -38,8 +39,8 @@ func setPolicyProgressing(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func setPolicySuccess(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicySuccess")
+func SetPolicySuccess(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicySuccess")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
@@ -54,8 +55,8 @@ func setPolicySuccess(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func setPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicyNotMatching")
+func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicyNotMatching")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
@@ -70,8 +71,8 @@ func setPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func setPolicyFailedToConfigure(conditions *nmstate.ConditionList, message string) {
-	log.Info("setPolicyFailedToConfigure")
+func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message string) {
+	log.Info("SetPolicyFailedToConfigure")
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionTrue,
@@ -84,32 +85,6 @@ func setPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 		nmstate.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		"",
 	)
-}
-
-func nodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
-	nodes := corev1.NodeList{}
-	err := cli.List(context.TODO(), &nodes)
-	if err != nil {
-		return []corev1.Node{}, errors.Wrap(err, "getting nodes failed")
-	}
-
-	pods := corev1.PodList{}
-	byApp := client.MatchingLabels{"app": "kubernetes-nmstate"}
-	err = cli.List(context.TODO(), &pods, byApp)
-	if err != nil {
-		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
-	}
-
-	filteredNodes := []corev1.Node{}
-	for _, node := range nodes.Items {
-		for _, pod := range pods.Items {
-			if node.Name == pod.Spec.NodeName {
-				filteredNodes = append(filteredNodes, node)
-				break
-			}
-		}
-	}
-	return filteredNodes, nil
 }
 
 func Update(cli client.Client, policyKey types.NamespacedName) error {
@@ -134,7 +109,7 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		// Count only nodes that runs nmstate handler, could be that
 		// users don't want to run knmstate at master for example so
 		// they don't want to change net config there.
-		nmstateNodes, err := nodesRunningNmstate(cli)
+		nmstateNodes, err := node.NodesRunningNmstate(cli)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
@@ -143,21 +118,24 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		// Let's get conditions with true status count filtered by policy generation
 		enactmentsCount := enactmentconditions.Count(enactments, policy.Generation)
 
-		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching()
+		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching() + enactmentsCount.Aborted()
 
 		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
 		if numberOfFinishedEnactments < numberOfNmstateNodes {
-			setPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
+			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
 		} else {
 			if enactmentsCount.Matching() == 0 {
 				message := "Policy does not match any node"
-				setPolicyNotMatching(&policy.Status.Conditions, message)
-			} else if enactmentsCount.Failed() > 0 {
+				SetPolicyNotMatching(&policy.Status.Conditions, message)
+			} else if enactmentsCount.Failed() > 0 || enactmentsCount.Aborted() > 0 {
 				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), enactmentsCount.Matching())
-				setPolicyFailedToConfigure(&policy.Status.Conditions, message)
+				if enactmentsCount.Aborted() > 0 {
+					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCount.Aborted())
+				}
+				SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
 			} else {
 				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), enactmentsCount.Available())
-				setPolicySuccess(&policy.Status.Conditions, message)
+				SetPolicySuccess(&policy.Status.Conditions, message)
 			}
 		}
 
@@ -186,7 +164,7 @@ func Reset(cli client.Client, policyKey types.NamespacedName) error {
 		err = cli.Status().Update(context.TODO(), policy)
 		if err != nil {
 			if apierrors.IsConflict(err) {
-				logger.Info("conflict reseting policy conditions, retrying")
+				logger.Info("conflict resetting policy conditions, retrying")
 			} else {
 				logger.Error(err, "failed to reset policy conditions")
 			}

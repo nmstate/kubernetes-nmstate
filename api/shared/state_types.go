@@ -7,7 +7,7 @@ type RawState []byte
 // State contains the namestatectl yaml [1] as string instead of golang struct
 // so we don't need to be in sync with the schema.
 //
-// [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml
+// [1] https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml
 // +kubebuilder:validation:Type=object
 type State struct {
 	Raw RawState `json:"-"`

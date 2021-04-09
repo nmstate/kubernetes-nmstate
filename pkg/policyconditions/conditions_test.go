@@ -170,7 +170,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicyProgressing, "Policy is progressing 0/3 nodes finished"),
+			Policy: p(SetPolicyProgressing, "Policy is progressing 0/3 nodes finished"),
 		}),
 		Entry("when all enactments are success then policy is success", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -180,7 +180,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicySuccess, "3/3 nodes successfully configured"),
+			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 		Entry("when not all enactments are created is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -190,7 +190,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(4),
 			Pods:   newNmstatePods(4),
-			Policy: p(setPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
+			Policy: p(SetPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
 		}),
 		Entry("when enactments are progressing/success then policy is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -200,7 +200,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
+			Policy: p(SetPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
 		}),
 		Entry("when enactments are failed/progressing/success then policy is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -211,7 +211,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(4),
 			Pods:   newNmstatePods(4),
-			Policy: p(setPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
+			Policy: p(SetPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
 		}),
 		Entry("when all the enactments are at failing or success policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -221,7 +221,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicyFailedToConfigure, "2/3 nodes failed to configure"),
+			Policy: p(SetPolicyFailedToConfigure, "2/3 nodes failed to configure"),
 		}),
 		Entry("when all the enactments are at failing policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -231,7 +231,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicyFailedToConfigure, "3/3 nodes failed to configure"),
+			Policy: p(SetPolicyFailedToConfigure, "3/3 nodes failed to configure"),
 		}),
 		Entry("when no node matches policy node selector, policy state is not matching", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -241,7 +241,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicyNotMatching, "Policy does not match any node"),
+			Policy: p(SetPolicyNotMatching, "Policy does not match any node"),
 		}),
 		Entry("when some enacments has unknown matching state policy state is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -251,7 +251,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicyProgressing, "Policy is progressing 1/3 nodes finished"),
+			Policy: p(SetPolicyProgressing, "Policy is progressing 1/3 nodes finished"),
 		}),
 		Entry("when some enactments are from different profile it does no affect the profile status", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -263,7 +263,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
-			Policy: p(setPolicySuccess, "3/3 nodes successfully configured"),
+			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 		Entry("when a node does not run nmstate pod ignore it for policy conditions calculations", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
@@ -281,7 +281,7 @@ var _ = Describe("Policy Conditions", func() {
 				newNonNmstatePodAtNode(3),
 				newNonNmstatePodAtNode(4),
 			},
-			Policy: p(setPolicySuccess, "3/3 nodes successfully configured"),
+			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 	)
 })

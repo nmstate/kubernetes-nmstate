@@ -53,6 +53,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		s := scheme.Scheme
 		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 			&nmstatev1beta1.NMState{},
+			&nmstatev1beta1.NMStateList{},
 		)
 		objs := []runtime.Object{&nmstate}
 		// Create a fake client to mock API calls.
@@ -62,7 +63,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
-		os.Setenv("HANDLER_IMAGE", handlerImage)
+		os.Setenv("RELATED_IMAGE_HANDLER_IMAGE", handlerImage)
 		os.Setenv("HANDLER_IMAGE_PULL_POLICY", imagePullPolicy)
 		os.Setenv("HANDLER_PREFIX", handlerPrefix)
 	})
@@ -71,17 +72,25 @@ var _ = Describe("NMState controller reconcile", func() {
 		Expect(err).ToNot(HaveOccurred())
 	})
 
-	Context("when CR is wrong name", func() {
+	Context("when additional CR is created", func() {
 		var (
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			request.Name = "not-present-node"
+			request.Name = "nmstate-two"
 		})
 		It("should return empty result", func() {
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("and should delete the second one", func() {
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			nmstateList := &nmstatev1beta1.NMStateList{}
+			err = cl.List(context.TODO(), nmstateList, &client.ListOptions{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(nmstateList.Items)).To(Equal(1))
 		})
 	})
 	Context("when an nmstate is found", func() {
@@ -92,7 +101,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 		})
 		It("should return a Result", func() {
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
@@ -111,7 +120,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			}
 		})
 		It("should return error", func() {
-			_, err := reconciler.Reconcile(request)
+			_, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).To(HaveOccurred())
 		})
 	})
@@ -131,7 +140,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			cl = fake.NewFakeClientWithScheme(s, objs...)
 			reconciler.Client = cl
 			request.Name = existingNMStateName
-			result, err := reconciler.Reconcile(request)
+			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})

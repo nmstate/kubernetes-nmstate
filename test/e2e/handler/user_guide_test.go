@@ -6,31 +6,35 @@ import (
 	. "github.com/onsi/ginkgo"
 )
 
-var _ = Describe("Introduction", func() {
+var _ = Describe("[user-guide] Introduction", func() {
 	runConfiguration := func() {
 		kubectlAndCheck("apply", "-f", "docs/user-guide/bond0-eth1-eth2_up.yaml")
-		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "2m")
+		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "4m")
 		kubectlAndCheck("apply", "-f", "docs/user-guide/bond0-eth1-eth2_absent.yaml")
-		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "2m")
+		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "4m")
 		kubectlAndCheck("delete", "nncp", "bond0-eth1-eth2")
 
 		kubectlAndCheck("apply", "-f", "docs/user-guide/eth1-eth2_up.yaml")
-		kubectlAndCheck("wait", "nncp", "eth1", "eth2", "--for", "condition=Available", "--timeout", "2m")
+		kubectlAndCheck("wait", "nncp", "eth1", "eth2", "--for", "condition=Available", "--timeout", "4m")
 		kubectlAndCheck("delete", "nncp", "eth1", "eth2")
 
 		kubectlAndCheck("apply", "-f", "docs/user-guide/vlan100_node01_up.yaml")
-		kubectlAndCheck("wait", "nncp", "vlan100", "--for", "condition=Available", "--timeout", "2m")
+		kubectlAndCheck("wait", "nncp", "vlan100", "--for", "condition=Available", "--timeout", "4m")
 	}
 
 	// Policies are not deleted as a part of the tutorial, so we need additional function here
 	cleanupConfiguration := func() {
 		deletePolicy("vlan100")
-		updateDesiredStateAndWait(interfaceAbsent("eth1.100"))
+		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, interfaceAbsent("eth1.100"))
+		waitForAvailableTestPolicy()
+		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
+		waitForAvailableTestPolicy()
+		deletePolicy(TestPolicy)
 	}
 
 	runTroubleshooting := func() {
 		kubectlAndCheck("apply", "-f", "docs/user-guide/eth666_up.yaml")
-		kubectlAndCheck("wait", "nncp", "eth666", "--for", "condition=Degraded", "--timeout", "2m")
+		kubectlAndCheck("wait", "nncp", "eth666", "--for", "condition=Degraded", "--timeout", "4m")
 		kubectlAndCheck("delete", "nncp", "eth666")
 	}
 
@@ -41,7 +45,6 @@ var _ = Describe("Introduction", func() {
 	Context("Configuration tutorial", func() {
 		AfterEach(func() {
 			cleanupConfiguration()
-			resetDesiredStateForNodes()
 		})
 
 		It("should succeed executing all the commands", func() {
@@ -58,7 +61,6 @@ var _ = Describe("Introduction", func() {
 	Context("All tutorials in a row", func() {
 		AfterEach(func() {
 			cleanupConfiguration()
-			resetDesiredStateForNodes()
 		})
 
 		It("should succeed executing all the commands", func() {

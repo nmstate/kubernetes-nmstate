@@ -1,5 +1,7 @@
 package shared
 
+import "k8s.io/apimachinery/pkg/util/intstr"
+
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicySpec struct {
 	// NodeSelector is a selector which must be true for the policy to be applied to the node.
@@ -11,11 +13,21 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`
+
+	// MaxUnavailable specifies percentage or number
+	// of machines that can be updating at a time. Default is "50%".
+	// +optional
+	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicyStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
+
+	// UnavailableNodeCount represents the total number of potentially unavailable nodes that are
+	// processing a NodeNetworkConfigurationPolicy
+	// +optional
+	UnavailableNodeCount int `json:"unavailableNodeCount,omitempty" optional:"true"`
 }
 
 const (

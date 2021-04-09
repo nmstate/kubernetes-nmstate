@@ -10,6 +10,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
+// TODO: When https://bugzilla.redhat.com/show_bug.cgi?id=1906307 is resolved, add firstSecondaryNic to the bond again
 func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
@@ -21,12 +22,11 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
     link-aggregation:
       mode: active-backup
       options:
-        miimon: '140'
+        miimon: %s
         primary: %s
-      slaves:
+      %s:
         - %s
-        - %s
-`, bondName, primaryNic, primaryNic, firstSecondaryNic))
+`, bondName, fmt.Sprintf(miimonFormat, 140), primaryNic, portFieldName, primaryNic))
 }
 
 func bondAbsentWithPrimaryUp(bondName string) nmstate.State {

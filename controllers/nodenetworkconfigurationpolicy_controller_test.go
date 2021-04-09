@@ -20,34 +20,31 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	}
 	DescribeTable("testing predicates",
 		func(c predicateCase) {
-			oldNodeNetworkConfigurationPolicyMeta := metav1.ObjectMeta{
-				Generation: c.GenerationOld,
+			oldNNCP := nmstatev1beta1.NodeNetworkConfigurationPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: c.GenerationOld,
+				},
+			}
+			newNNCP := nmstatev1beta1.NodeNetworkConfigurationPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Generation: c.GenerationNew,
+				},
 			}
 
-			newNodeNetworkConfigurationPolicyMeta := metav1.ObjectMeta{
-				Generation: c.GenerationNew,
-			}
-
-			nodeNetworkConfigurationPolicy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
-
-			predicate := watchPredicate
+			predicate := onCreateOrUpdateWithDifferentGeneration
 
 			Expect(predicate.
 				CreateFunc(event.CreateEvent{
-					Meta:   &newNodeNetworkConfigurationPolicyMeta,
-					Object: &nodeNetworkConfigurationPolicy,
+					Object: &newNNCP,
 				})).To(Equal(c.ReconcileCreate))
 			Expect(predicate.
 				UpdateFunc(event.UpdateEvent{
-					MetaOld:   &oldNodeNetworkConfigurationPolicyMeta,
-					ObjectOld: &nodeNetworkConfigurationPolicy,
-					MetaNew:   &newNodeNetworkConfigurationPolicyMeta,
-					ObjectNew: &nodeNetworkConfigurationPolicy,
+					ObjectOld: &oldNNCP,
+					ObjectNew: &newNNCP,
 				})).To(Equal(c.ReconcileUpdate))
 			Expect(predicate.
 				DeleteFunc(event.DeleteEvent{
-					Meta:   &newNodeNetworkConfigurationPolicyMeta,
-					Object: &nodeNetworkConfigurationPolicy,
+					Object: &newNNCP,
 				})).To(BeFalse())
 		},
 		Entry("generation remains the same",
