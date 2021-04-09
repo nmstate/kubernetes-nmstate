@@ -216,6 +216,14 @@ spec:
               mountPath: /var/k8s_nmstate
           securityContext:
             privileged: true
+          readinessProbe:
+            exec:
+              command:
+              - nmstatectl
+              - show
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
       volumes:
         - name: dbus-socket
           hostPath:
