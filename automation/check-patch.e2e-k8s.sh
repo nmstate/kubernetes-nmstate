@@ -16,8 +16,7 @@ teardown() {
 }
 
 main() {
-    export KUBEVIRT_PROVIDER='k8s-1.19'
-    export KUBEVIRT_NUM_NODES=3 # 1 master, 2 workers
+    export KUBEVIRT_NUM_NODES=5 # 1 master, 4 workers
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
 
@@ -31,7 +30,10 @@ main() {
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
-    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-noColor" E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml" test-e2e-handler
+
+    export E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml"
+
+    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-noColor" test-e2e-handler
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"

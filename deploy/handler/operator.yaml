@@ -56,14 +56,8 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
-            - name: CA_ROTATE_INTERVAL
-              value: {{ .CARotateInterval | default "8760h0m0s" }}
-            - name: CA_OVERLAP_INTERVAL
-              value: {{ .CAOverlapInterval | default "8760h0m0s" }}
-            - name: CERT_ROTATE_INTERVAL
-              value: {{ .CertRotateInterval | default "4380h0m0s" }}
           ports:
-          - containerPort: 8443
+          - containerPort: 9443
             name: webhook-server
             protocol: TCP
           readinessProbe:
@@ -79,11 +73,76 @@ spec:
           volumeMounts:
           - name: tls-key-pair
             readOnly: true
-            mountPath: /etc/webhook/certs
+            mountPath: /tmp/k8s-webhook-server/serving-certs/
       volumes:
         - name: tls-key-pair
           secret:
             secretName: {{template "handlerPrefix" .}}nmstate-webhook
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-cert-manager
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    app: kubernetes-nmstate
+    component: kubernetes-nmstate-cert-manager
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{template "handlerPrefix" .}}nmstate-cert-manager
+  template:
+    metadata:
+      labels:
+        app: kubernetes-nmstate
+        component: kubernetes-nmstate-cert-manager
+        name: {{template "handlerPrefix" .}}nmstate-cert-manager
+      annotations:
+        description: kubernetes-nmstate-webhook rotate webhook certs
+    spec:
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
+      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      containers:
+        - name: nmstate-cert-manager
+          args:
+          - --v=production
+          # Replace this with the built image name
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+          - manager
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RUN_CERT_MANAGER
+              value: ""
+            - name: OPERATOR_NAME
+              value: "{{template "handlerPrefix" .}}nmstate"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
+            - name: CA_ROTATE_INTERVAL
+              value: {{ .CARotateInterval | default "8760h0m0s" }}
+            - name: CA_OVERLAP_INTERVAL
+              value: {{ .CAOverlapInterval | default "24h0m0s" }}
+            - name: CERT_ROTATE_INTERVAL
+              value: {{ .CertRotateInterval | default "4380h0m0s" }}
+            - name: CERT_OVERLAP_INTERVAL
+              value: {{ .CertOverlapInterval | default "24h0m0s" }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -172,7 +231,7 @@ metadata:
   name: {{template "handlerPrefix" .}}nmstate-config
   namespace: {{ .HandlerNamespace }}
 data:
-  interfaces_filter: "veth*"
+  interfaces_filter: "{veth*,cali*}"
 ---
 apiVersion: v1
 kind: Service
@@ -185,11 +244,11 @@ spec:
   publishNotReadyAddresses: true
   ports:
     - port: 443
-      targetPort: 8443
+      targetPort: 9443
   selector:
     name: {{template "handlerPrefix" .}}nmstate-webhook
 ---
-apiVersion: admissionregistration.k8s.io/v1beta1
+apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{template "handlerPrefix" .}}nmstate
@@ -197,6 +256,8 @@ metadata:
     app: kubernetes-nmstate
 webhooks:
   - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -208,6 +269,8 @@ webhooks:
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies"]
   - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -219,6 +282,8 @@ webhooks:
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies/status"]
   - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -229,6 +294,19 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
+  - name: nodenetworkconfigurationpolicies-progress-validate.nmstate.io
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
+    clientConfig:
+      service:
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
+        path: "/nodenetworkconfigurationpolicies-progress-validate"
+    rules:
+      - operations: ["UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1","v1beta1"]
+        resources: ["nodenetworkconfigurationpolicies"]
 ---
 apiVersion: policy/v1beta1
 kind: PodDisruptionBudget
@@ -240,13 +318,3 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {{template "handlerPrefix" .}}nmstate-webhook
-  namespace: {{ .HandlerNamespace }}
-type: kubernetes.io/tls
-data:
-  tls.crt: YmFkIGNlcnRpZmljYXRlCg==
-  tls.key: YmFkIGtleQo=

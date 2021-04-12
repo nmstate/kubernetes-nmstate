@@ -17,7 +17,7 @@ type exampleSpec struct {
 // It only checks the top level API, hence it does not verify that the
 // configuration is indeed applied on nodes. That should be tested by dedicated
 // test suites for each feature.
-var _ = Describe("Examples", func() {
+var _ = Describe("[user-guide] Examples", func() {
 	beforeTestIfaceExample := func(fileName string) {
 		kubectlAndCheck("apply", "-f", fmt.Sprintf("docs/examples/%s", fileName))
 	}
@@ -47,6 +47,12 @@ var _ = Describe("Examples", func() {
 			name:       "Linux bridge",
 			fileName:   "linux-bridge.yaml",
 			policyName: "linux-bridge",
+			ifaceNames: []string{"br1"},
+		},
+		exampleSpec{
+			name:       "Detach bridge port and restore its configuration",
+			fileName:   "detach-bridge-port-and-restore-eth.yaml",
+			policyName: "detach-bridge-port-and-restore-eth",
 			ifaceNames: []string{"br1"},
 		},
 		exampleSpec{

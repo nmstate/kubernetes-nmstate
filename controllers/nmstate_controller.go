@@ -59,19 +59,18 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces;statefulsets,verbs="*"
 
-func (r *NMStateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
+func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
 
-	// We won't create more than one kubernetes-nmstate handler
-	if req.Name != names.NMStateResourceName {
-		r.Log.Info("Ignoring NMState.nmstate.io without default name")
-		return ctrl.Result{}, nil
-	}
-
 	// Fetch the NMState instance
+	instanceList := &nmstatev1beta1.NMStateList{}
+	err := r.Client.List(context.TODO(), instanceList, &client.ListOptions{})
+	if err != nil {
+		return ctrl.Result{}, errors.Wrap(err, "failed listing all NMState instances")
+	}
 	instance := &nmstatev1beta1.NMState{}
-	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err = r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile req.
@@ -81,6 +80,13 @@ func (r *NMStateReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		// Error reading the object - requeue the req.
 		return ctrl.Result{}, err
+	}
+
+	// We only want one instance of NMState. Ignore anything after that.
+	if len(instanceList.Items) > 0 && instanceList.Items[0].Name != req.Name {
+		r.Log.Info("Ignoring NMState.nmstate.io because one already exists and does not match existing name")
+		err = r.Client.Delete(context.TODO(), instance, &client.DeleteOptions{})
+		return ctrl.Result{}, nil
 	}
 
 	err = r.applyCRDs(instance)
@@ -173,6 +179,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	data.Data["CARotateInterval"] = ""
 	data.Data["CAOverlapInterval"] = ""
 	data.Data["CertRotateInterval"] = ""
+	data.Data["CertOverlapInterval"] = ""
 	return r.renderAndApply(instance, data, "handler", true)
 }
 

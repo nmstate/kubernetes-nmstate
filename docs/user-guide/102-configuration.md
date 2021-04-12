@@ -9,11 +9,18 @@ routing on cluster nodes. The configuration is driven by two main object types,
 `NodeNetworkConfigurationEnactment` (Enactment).
 
 A Policy describes what is the desired network configuration on cluster nodes.
-It is created by used and applies cluster-wide. On the other hand, an Enactment
-is a read-only object that carries execution state of a Policy per each Node.
+It is created by users and applies cluster-wide.
+An Enactment, on the other hand, is a read-only object that carries execution
+state of a Policy per each Node.
 
-Policies are applied on node via NetworkManager. Thanks to this, the
+Multiple policies can be created at a time, but users need to avoid
+inter-policy dependencies. If two policies need to be applied in specific
+order, they should form a single policy.
+
+Policies are applied on a node via NetworkManager. Thanks to this, the
 configuration is persistent on the node and survives reboots.
+
+:warning: Changing a policy that is in progress has undefined behaviour.
 
 ## Creating interfaces
 
@@ -239,7 +246,7 @@ status:
 ```
 
 As seen in the output, the configuration is indeed applied and there is a bond
-available with two NICs used as its slaves.
+available with two NICs used as its ports.
 
 ## Removing interfaces
 
@@ -287,10 +294,10 @@ kubectl delete nncp bond0-eth1-eth2
 
 Another maybe surprising behavior is, that by removing an interface, original
 configuration of the node interfaces is not restored. In case of the bonding it
-means that after it is deleted, its slave NICs won't come back up, even if they
-had previously configured IP address. The operator is not owning the interfaces
-and does not want to do anything that is not explicitly specified, that's up to
-the user.
+means that after it is deleted, its ports won't come back up as standalone
+ports, even if they had previously configured IP address. The operator is not
+owning the interfaces and does not want to do anything that is not explicitly
+specified, that's up to the user.
 
 `NodeNetworkState` shows that both of the NICs are now down and without any IP
 configuration.
@@ -323,7 +330,7 @@ status:
       type: ethernet
 ```
 
-In order to configure IP on previously enslaved NICs, apply a new Policy:
+In order to configure IP on previously attached NICs, apply a new Policy:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
@@ -453,6 +460,38 @@ status:
     reason: NodeSelectorNotMatching
     status: "False"
     type: Matching
+```
+
+## Configuring multiple nodes concurrently
+
+By default, Policy configuration is applied sequentially, one node at a time.
+This configuration strategy is safe and prevents the entire cluster from being
+temporarily unavailable, if the applied configuration breaks network connectivity.
+
+For big clusters however, it may take too much time for a configuration to finish.
+In such a case, `maxUnavailable` can be used to define portion size of a cluster
+that can apply a policy configuration concurrently.
+MaxUnavailable specifies percentage or a constant number of nodes that
+can be progressing a policy at a time. The default is "50%" of cluster nodes.
+
+The following policy specifies that up to 3 nodes may be progressing concurrently:
+
+```yaml
+{% include_absolute 'user-guide/linux-bridge_maxunavailable.yaml %}
+```
+
+```shell
+kubectl apply -f linux-bridge_maxunavailable.yaml
+```
+
+```
+NAME                                 STATUS
+node01.linux-bridge-maxunavailable   AllSelectorsMatching
+node02.linux-bridge-maxunavailable   ConfigurationProgressing
+node03.linux-bridge-maxunavailable   SuccessfullyConfigured
+node04.linux-bridge-maxunavailable   ConfigurationProgressing
+node05.linux-bridge-maxunavailable   ConfigurationProgressing
+node06.linux-bridge-maxunavailable   AllSelectorsMatching
 ```
 
 ## Continue reading

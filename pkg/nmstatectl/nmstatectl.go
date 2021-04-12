@@ -11,7 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
@@ -52,7 +52,7 @@ func nmstatectl(arguments []string) (string, error) {
 	return nmstatectlWithInput(arguments, "")
 }
 
-func Show(arguments ...string) (string, error) {
+func Show() (string, error) {
 	return nmstatectl([]string{"show"})
 }
 

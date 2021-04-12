@@ -46,6 +46,9 @@ func (c ConditionCount) available() CountByConditionStatus {
 func (c ConditionCount) matching() CountByConditionStatus {
 	return c[nmstate.NodeNetworkConfigurationEnactmentConditionMatching]
 }
+func (c ConditionCount) aborted() CountByConditionStatus {
+	return c[nmstate.NodeNetworkConfigurationEnactmentConditionAborted]
+}
 
 func (c CountByConditionStatus) true() int {
 	return c[corev1.ConditionTrue]
@@ -83,9 +86,15 @@ func (c ConditionCount) Matching() int {
 func (c ConditionCount) NotMatching() int {
 	return c.matching().false()
 }
+func (c ConditionCount) Aborted() int {
+	return c.aborted().true()
+}
+func (c ConditionCount) NotAborted() int {
+	return c.aborted().false()
+}
 
 func (c ConditionCount) String() string {
-	return fmt.Sprintf("{failed: %s, progressing: %s, available: %s, matching: %s}", c.failed(), c.progressing(), c.available(), c.matching())
+	return fmt.Sprintf("{failed: %s, progressing: %s, available: %s, matching: %s, aborted: %s}", c.failed(), c.progressing(), c.available(), c.matching(), c.aborted())
 }
 
 func (c CountByConditionStatus) String() string {
