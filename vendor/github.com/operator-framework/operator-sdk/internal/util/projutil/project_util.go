@@ -22,7 +22,12 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"github.com/spf13/afero"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	yamlstore "sigs.k8s.io/kubebuilder/v3/pkg/config/store/yaml"
+	_ "sigs.k8s.io/kubebuilder/v3/pkg/config/v2" // Register config/v2 for `config.New`
+	_ "sigs.k8s.io/kubebuilder/v3/pkg/config/v3" // Register config/v3 for `config.New`
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
 )
 
 const (
@@ -80,39 +85,34 @@ func HasProjectFile() bool {
 
 // ReadConfig returns a configuration if a file containing one exists at the
 // default path (project root).
-func ReadConfig() (*config.Config, error) {
-	b, err := ioutil.ReadFile(configFile)
-	if err != nil {
+func ReadConfig() (config.Config, error) {
+	store := yamlstore.New(machinery.Filesystem{FS: afero.NewOsFs()})
+	if err := store.Load(); err != nil {
 		return nil, err
 	}
-	c := &config.Config{}
-	if err = c.Unmarshal(b); err != nil {
-		return nil, err
-	}
-	return c, nil
+
+	return store.Config(), nil
 }
 
-// PluginKeyToOperatorType converts a plugin key string to an operator project type.
+// PluginChainToOperatorType converts a plugin chain to an operator project type.
 // TODO(estroz): this can probably be made more robust by checking known plugin keys directly.
-func PluginKeyToOperatorType(pluginKey string) OperatorType {
-	switch {
-	case strings.HasPrefix(pluginKey, "go"):
-		return OperatorTypeGo
-	case strings.HasPrefix(pluginKey, "helm"):
-		return OperatorTypeHelm
-	case strings.HasPrefix(pluginKey, "ansible"):
-		return OperatorTypeAnsible
+func PluginChainToOperatorType(pluginKeys []string) OperatorType {
+	for _, pluginKey := range pluginKeys {
+		switch {
+		case strings.HasPrefix(pluginKey, "go"):
+			return OperatorTypeGo
+		case strings.HasPrefix(pluginKey, "helm"):
+			return OperatorTypeHelm
+		case strings.HasPrefix(pluginKey, "ansible"):
+			return OperatorTypeAnsible
+		}
 	}
 	return OperatorTypeUnknown
 }
 
-// GetProjectLayout returns the `layout` field in PROJECT file that is v3.
-// If not, it will return "go" because that was the only project type supported for project versions < v3.
-func GetProjectLayout(cfg *config.Config) string {
-	if cfg == nil || !cfg.IsV3() || cfg.Layout == "" {
-		return "go"
-	}
-	return cfg.Layout
+// GetProjectLayout returns the `layout` field as a comma separated list.
+func GetProjectLayout(cfg config.Config) string {
+	return strings.Join(cfg.GetPluginChain(), ",")
 }
 
 var flagRe = regexp.MustCompile("(.* )?-v(.* )?")

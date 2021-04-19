@@ -19,10 +19,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/operator-framework/api/pkg/operators/v1alpha1"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
+	gofunk "github.com/thoas/go-funk"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,6 +35,15 @@ import (
 	"github.com/operator-framework/operator-sdk/internal/olm/operator"
 	"github.com/operator-framework/operator-sdk/internal/olm/operator/registry/index"
 	registryutil "github.com/operator-framework/operator-sdk/internal/registry"
+)
+
+const (
+	// defaultIndexImageBase is the base for defaultIndexImage. It is necessary to separate
+	// them for string comparison when defaulting bundle add mode.
+	defaultIndexImageBase = "quay.io/operator-framework/upstream-opm-builder:"
+	// DefaultIndexImage is the index base image used if none is specified. It contains no bundles.
+	// TODO(v2.0.0): pin this image tag to a specific version.
+	DefaultIndexImage = defaultIndexImageBase + "latest"
 )
 
 // Internal CatalogSource annotations.
@@ -51,6 +63,8 @@ type IndexImageCatalogCreator struct {
 	IndexImage    string
 	BundleImage   string
 	BundleAddMode index.BundleAddMode
+	SecretName    string
+	CASecretName  string
 
 	cfg *operator.Configuration
 }
@@ -64,18 +78,31 @@ func NewIndexImageCatalogCreator(cfg *operator.Configuration) *IndexImageCatalog
 	}
 }
 
-func (c IndexImageCatalogCreator) CreateCatalog(ctx context.Context, name string) (*v1alpha1.CatalogSource, error) {
-	// create a basic catalog source type
-	cs := newCatalogSource(name, c.cfg.Namespace,
-		withSDKPublisher(c.PackageName))
+func (c *IndexImageCatalogCreator) BindFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&c.SecretName, "pull-secret-name", "",
+		"Name of image pull secret (\"type: kubernetes.io/dockerconfigjson\") required "+
+			"to pull bundle images. This secret *must* be both in the namespace and an "+
+			"imagePullSecret of the service account that this command is configured to run in")
+	fs.StringVar(&c.CASecretName, "ca-secret-name", "",
+		"Name of a generic secret containing a PEM root certificate file required to pull bundle images. "+
+			"This secret *must* be in the namespace that this command is configured to run in, "+
+			"and the file *must* be encoded under the key \"cert.pem\"")
+}
 
-	// create catalog source resource
+func (c IndexImageCatalogCreator) CreateCatalog(ctx context.Context, name string) (*v1alpha1.CatalogSource, error) {
+	// Create a CatalogSource with displaName, publisher, and any secrets.
+	cs := newCatalogSource(name, c.cfg.Namespace,
+		withSDKPublisher(c.PackageName),
+		withSecrets(c.SecretName),
+	)
 	if err := c.cfg.Client.Create(ctx, cs); err != nil {
 		return nil, fmt.Errorf("error creating catalog source: %v", err)
 	}
 
+	c.setAddMode()
+
 	newItems := []index.BundleItem{{ImageTag: c.BundleImage, AddMode: c.BundleAddMode}}
-	if err := c.createAnnotatedRegistry(ctx, cs, newItems, updateFieldsNoOp); err != nil {
+	if err := c.createAnnotatedRegistry(ctx, cs, newItems); err != nil {
 		return nil, fmt.Errorf("error creating registry pod: %v", err)
 	}
 
@@ -108,55 +135,69 @@ func (c IndexImageCatalogCreator) UpdateCatalog(ctx context.Context, cs *v1alpha
 		c.IndexImage = cs.Spec.Image
 	}
 
-	// Default add mode here since it depends on an existing annotation.
-	if c.BundleAddMode == "" {
-		if c.IndexImage == index.DefaultIndexImage {
-			c.BundleAddMode = index.SemverBundleAddMode
-		} else {
-			c.BundleAddMode = index.ReplacesBundleAddMode
-		}
-	}
+	c.setAddMode()
 
 	newItem := index.BundleItem{ImageTag: c.BundleImage, AddMode: c.BundleAddMode}
 	existingItems = append(existingItems, newItem)
 
-	updateFields := func(cs *v1alpha1.CatalogSource) {
-		// set `spec.Image` field to empty as we set the address in
-		// catalog source to registry pod IP
-		cs.Spec.Image = ""
-
+	opts := []func(*v1alpha1.CatalogSource){
+		// set `spec.Image` field to empty as we set the address in CatalogSource to registry pod IP
+		func(cs *v1alpha1.CatalogSource) { cs.Spec.Image = "" },
 	}
 
-	if err := c.createAnnotatedRegistry(ctx, cs, existingItems, updateFields); err != nil {
-		return fmt.Errorf("error creating registry pod: %v", err)
+	// Add non-present secrets to the CatalogSource so private bundle images can be pulled.
+	if !gofunk.ContainsString(cs.Spec.Secrets, c.SecretName) {
+		opts = append(opts, withSecrets(c.SecretName))
+	}
+
+	if err := c.createAnnotatedRegistry(ctx, cs, existingItems, opts...); err != nil {
+		return fmt.Errorf("error creating registry: %v", err)
 	}
 
 	log.Infof("Updated catalog source %s with address and annotations", cs.GetName())
 
 	if prevRegistryPodName != "" {
 		if err = c.deleteRegistryPod(ctx, prevRegistryPodName); err != nil {
-			return fmt.Errorf("error cleaning up previous registry pod: %v", err)
+			return fmt.Errorf("error cleaning up previous registry: %v", err)
 		}
 	}
 
 	return nil
 }
 
+// Default add mode here since it depends on an existing annotation.
+// TODO(v2.0.0): this should default to semver mode.
+func (c *IndexImageCatalogCreator) setAddMode() {
+	if c.BundleAddMode == "" {
+		if strings.HasPrefix(c.IndexImage, defaultIndexImageBase) {
+			c.BundleAddMode = index.SemverBundleAddMode
+		} else {
+			c.BundleAddMode = index.ReplacesBundleAddMode
+		}
+	}
+}
+
 // createAnnotatedRegistry creates a registry pod and updates cs with annotations constructed
 // from items and that pod, then applies updateFields.
 func (c IndexImageCatalogCreator) createAnnotatedRegistry(ctx context.Context, cs *v1alpha1.CatalogSource,
-	items []index.BundleItem, updateFields func(*v1alpha1.CatalogSource)) (err error) {
+	items []index.BundleItem, updates ...func(*v1alpha1.CatalogSource)) (err error) {
+
+	if c.IndexImage == "" {
+		c.IndexImage = DefaultIndexImage
+	}
 	// Initialize and create registry pod
 	registryPod := index.RegistryPod{
-		BundleItems: items,
-		IndexImage:  c.IndexImage,
+		BundleItems:  items,
+		IndexImage:   c.IndexImage,
+		SecretName:   c.SecretName,
+		CASecretName: c.CASecretName,
 	}
 	if registryPod.DBPath, err = c.getDBPath(ctx); err != nil {
 		return fmt.Errorf("get database path: %v", err)
 	}
 	pod, err := registryPod.Create(ctx, c.cfg, cs)
 	if err != nil {
-		return fmt.Errorf("error creating registry pod: %v", err)
+		return err
 	}
 
 	// JSON marshal injected bundles
@@ -176,23 +217,19 @@ func (c IndexImageCatalogCreator) createAnnotatedRegistry(ctx context.Context, c
 	key := types.NamespacedName{Namespace: cs.GetNamespace(), Name: cs.GetName()}
 	if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		if err := c.cfg.Client.Get(ctx, key, cs); err != nil {
-			return fmt.Errorf("error getting catalog source: %w", err)
+			return err
 		}
 		updateCatalogSourceFields(cs, pod, updatedAnnotations)
-		updateFields(cs)
-		if err := c.cfg.Client.Update(ctx, cs); err != nil {
-			return fmt.Errorf("error updating catalog source: %w", err)
+		for _, update := range updates {
+			update(cs)
 		}
-		return nil
+		return c.cfg.Client.Update(ctx, cs)
 	}); err != nil {
-		return err
+		return fmt.Errorf("error updating catalog source: %w", err)
 	}
 
 	return nil
 }
-
-// Use if no extra updates need to be made to an annotated CatalogSource.
-func updateFieldsNoOp(*v1alpha1.CatalogSource) {}
 
 // getDBPath returns the database path from the index image's labels.
 func (c IndexImageCatalogCreator) getDBPath(ctx context.Context) (string, error) {

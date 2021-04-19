@@ -15,59 +15,52 @@
 package crd
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
 	"github.com/kr/text"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/file"
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
 )
 
-var _ file.Template = &CRD{}
+var _ machinery.Template = &CRD{}
 
 // CRD scaffolds a manifest for CRD sample.
 type CRD struct {
-	file.TemplateMixin
-	file.ResourceMixin
-
-	CRDVersion string
+	machinery.TemplateMixin
+	machinery.ResourceMixin
 }
 
-// SetTemplateDefaults implements input.Template
+// SetTemplateDefaults implements machinery.Template
 func (f *CRD) SetTemplateDefaults() error {
 	if f.Path == "" {
-		f.Path = filepath.Join("config", "crd", "bases", fmt.Sprintf("%s_%%[plural].yaml", f.Resource.Domain))
+		f.Path = filepath.Join("config", "crd", "bases", fmt.Sprintf("%s_%%[plural].yaml", f.Resource.QualifiedGroup()))
 	}
 	f.Path = f.Resource.Replacer().Replace(f.Path)
 
-	f.IfExistsAction = file.Error
+	f.IfExistsAction = machinery.Error
 
-	if f.CRDVersion == "" {
-		f.CRDVersion = "v1"
-	} else if f.CRDVersion != "v1" && f.CRDVersion != "v1beta1" {
-		return errors.New("the CRD version value must be either 'v1' or 'v1beta1'")
-	}
 	f.TemplateBody = fmt.Sprintf(crdTemplate,
 		text.Indent(openAPIV3SchemaTemplate, "    "),
 		text.Indent(openAPIV3SchemaTemplate, "      "),
 	)
+
 	return nil
 }
 
 const crdTemplate = `---
-apiVersion: apiextensions.k8s.io/{{ .CRDVersion }}
+apiVersion: apiextensions.k8s.io/{{ .Resource.API.CRDVersion }}
 kind: CustomResourceDefinition
 metadata:
-  name: {{ .Resource.Plural }}.{{ .Resource.Domain }}
+  name: {{ .Resource.Plural }}.{{ .Resource.QualifiedGroup }}
 spec:
-  group: {{ .Resource.Domain }}
+  group: {{ .Resource.QualifiedGroup }}
   names:
     kind: {{ .Resource.Kind }}
     listKind: {{ .Resource.Kind }}List
     plural: {{ .Resource.Plural }}
     singular: {{ .Resource.Kind | lower }}
   scope: Namespaced
-{{- if eq .CRDVersion "v1beta1" }}
+{{- if eq .Resource.API.CRDVersion "v1beta1" }}
   subresources:
     status: {}
   validation:
@@ -75,13 +68,13 @@ spec:
 {{- end }}
   versions:
   - name: {{ .Resource.Version }}
-{{- if eq .CRDVersion "v1" }}
+{{- if eq .Resource.API.CRDVersion "v1" }}
     schema:
 %s
 {{- end }}
     served: true
     storage: true
-{{- if eq .CRDVersion "v1" }}
+{{- if eq .Resource.API.CRDVersion "v1" }}
     subresources:
       status: {}
 {{- end }}

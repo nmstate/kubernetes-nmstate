@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/github-release/github-release v0.10.0
-	github.com/go-logr/logr v0.3.0
+	github.com/go-logr/logr v0.4.0
 	github.com/gobwas/glob v0.2.3
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nightlyone/lockfile v1.0.0
@@ -14,20 +14,20 @@ require (
 	github.com/onsi/gomega v1.10.5
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.15.3
-	github.com/operator-framework/operator-sdk v1.4.2
+	github.com/operator-framework/operator-sdk v1.6.1
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.14.0
-	github.com/tidwall/gjson v1.6.8
+	github.com/tidwall/gjson v1.7.4
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.20.2
 	k8s.io/apimachinery v0.20.2
 	k8s.io/client-go v12.0.0+incompatible
-	k8s.io/kubectl v0.20.1
+	k8s.io/kubectl v0.20.2
 	k8s.io/release v0.7.0
 	kubevirt.io/qe-tools v0.1.7
 	sigs.k8s.io/controller-runtime v0.8.2
-	sigs.k8s.io/controller-tools v0.4.1
+	sigs.k8s.io/controller-tools v0.5.0
 	sigs.k8s.io/yaml v1.2.0
 )
 
@@ -39,7 +39,8 @@ replace (
 	github.com/containerd/containerd => github.com/containerd/containerd v1.4.3
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.10.0
 	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
-	k8s.io/client-go => k8s.io/client-go v0.20.1
+	k8s.io/client-go => k8s.io/client-go v0.20.2
+	sigs.k8s.io/controller-runtime => github.com/qinqon/controller-runtime v0.4.1-0.20210419102910-fa8d09b55d29
 )
 
 exclude github.com/spf13/viper v1.3.2 // Required to fix CVE-2018-1098

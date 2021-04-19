@@ -36,9 +36,6 @@ import (
 )
 
 const (
-	// DefaultIndexImage is the index base image used if none is specified. It contains no bundles.
-	DefaultIndexImage = "quay.io/operator-framework/upstream-opm-builder:latest"
-
 	// defaultGRPCPort is the default grpc container port that the registry pod exposes
 	defaultGRPCPort = 50051
 	defaultDBPath   = "/database/index.db"
@@ -71,6 +68,15 @@ type RegistryPod struct {
 	// GRPCPort is the container grpc port
 	GRPCPort int32
 
+	// SecretName holds the name of an image pull secret to mount into the Pod so `opm registry add`
+	// can pull bundle images from a private registry.
+	SecretName string
+
+	// SecretName holds the name of a secret for a CA cert file containing root certificates.
+	// This file is transiently added to the registry Pod's cert pool via `opm registry add --ca-file`.
+	// The secret's key for this file must be "cert.pem".
+	CASecretName string
+
 	// pod represents a kubernetes *corev1.pod that will be created on a cluster using an index image
 	pod *corev1.Pod
 
@@ -84,9 +90,6 @@ func (rp *RegistryPod) init(cfg *operator.Configuration) error {
 	}
 	if rp.DBPath == "" {
 		rp.DBPath = defaultDBPath
-	}
-	if rp.IndexImage == "" {
-		rp.IndexImage = DefaultIndexImage
 	}
 	rp.cfg = cfg
 
@@ -115,11 +118,11 @@ func (rp *RegistryPod) Create(ctx context.Context, cfg *operator.Configuration, 
 
 	// make catalog source the owner of registry pod object
 	if err := controllerutil.SetOwnerReference(cs, rp.pod, rp.cfg.Scheme); err != nil {
-		return nil, fmt.Errorf("set registry pod owner reference: %v", err)
+		return nil, fmt.Errorf("error setting owner reference: %w", err)
 	}
 
 	if err := rp.cfg.Client.Create(ctx, rp.pod); err != nil {
-		return nil, fmt.Errorf("create registry pod: %v", err)
+		return nil, fmt.Errorf("error creating pod: %w", err)
 	}
 
 	// get registry pod key
@@ -171,6 +174,10 @@ func (rp *RegistryPod) validate() error {
 		}
 	}
 
+	if rp.IndexImage == "" {
+		return errors.New("index image cannot be empty")
+	}
+
 	return nil
 }
 
@@ -218,15 +225,84 @@ func (rp *RegistryPod) podForBundleRegistry() (*corev1.Pod, error) {
 					},
 				},
 			},
+			ServiceAccountName: rp.cfg.ServiceAccount,
 		},
 	}
+
+	addImagePullSecret(rp.pod, rp.SecretName)
+	addCertSecret(rp.pod, rp.CASecretName)
 
 	return rp.pod, nil
 }
 
-const containerCommand = `/bin/mkdir -p {{ .DBPath | dirname }} && \
+// addImagePullSecret creates a docker config volume for secretName
+// and a volumeMount for that secret in each container in pod.
+func addImagePullSecret(pod *corev1.Pod, secretName string) {
+	if secretName == "" {
+		return
+	}
+
+	// Require a non-legacy docker config secret.
+	volume := makeSecretVolume(secretName, corev1.KeyToPath{Key: ".dockerconfigjson", Path: ".docker/config.json"})
+	pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
+
+	addVolumeMountForSecret(pod, volume.Name, "/root")
+}
+
+// addCertSecret creates and mounts a volume containing a CA root certificate
+// to pass to `opm registry add`.
+func addCertSecret(pod *corev1.Pod, secretName string) {
+	if secretName == "" {
+		return
+	}
+
+	// Ensure the secret contains a key "cert.pem".
+	volume := makeSecretVolume(secretName, corev1.KeyToPath{Key: "cert.pem", Path: "cert.pem"})
+	pod.Spec.Volumes = append(pod.Spec.Volumes, volume)
+
+	addVolumeMountForSecret(pod, volume.Name, "/certs")
+}
+
+func makeSecretVolume(secretName string, items ...corev1.KeyToPath) corev1.Volume {
+	return corev1.Volume{
+		Name: secretName,
+		VolumeSource: corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  secretName,
+				DefaultMode: newInt32(0400),
+				Optional:    newBool(false),
+				Items:       items,
+			},
+		},
+	}
+}
+
+func addVolumeMountForSecret(pod *corev1.Pod, secretName, mountPath string) {
+	volumeMount := corev1.VolumeMount{
+		Name:      secretName,
+		ReadOnly:  true,
+		MountPath: mountPath,
+	}
+	for i := range pod.Spec.Containers {
+		pod.Spec.Containers[i].VolumeMounts = append(pod.Spec.Containers[i].VolumeMounts, volumeMount)
+	}
+}
+
+func newInt32(i int32) *int32 {
+	ip := new(int32)
+	*ip = i
+	return ip
+}
+
+func newBool(b bool) *bool {
+	bp := new(bool)
+	*bp = b
+	return bp
+}
+
+const cmdTemplate = `/bin/mkdir -p {{ dirname .DBPath }} && \
 {{- range $i, $item := .BundleItems }}
-/bin/opm registry add -d {{ $.DBPath }} -b {{ $item.ImageTag }} --mode={{ $item.AddMode }} && \
+/bin/opm registry add -d {{ $.DBPath }} -b {{ $item.ImageTag }} --mode={{ $item.AddMode }}{{ if $.CASecretName }} --ca-file=/certs/cert.pem{{ end }} && \
 {{- end }}
 /bin/opm registry serve -d {{ .DBPath }} -p {{ .GRPCPort }}
 `
@@ -241,13 +317,13 @@ func (rp *RegistryPod) getContainerCmd() (string, error) {
 	}
 
 	// add the custom dirname template function to the
-	// template's FuncMap and parse the containerCommand
-	tmp := template.Must(template.New("cmd").Funcs(funcMap).Parse(containerCommand))
+	// template's FuncMap and parse the cmdTemplate
+	t := template.Must(template.New("cmd").Funcs(funcMap).Parse(cmdTemplate))
 
-	// execute the command by applying the parsed tmp to command
+	// execute the command by applying the parsed t to command
 	// and write command output to out
 	out := &bytes.Buffer{}
-	if err := tmp.Execute(out, rp); err != nil {
+	if err := t.Execute(out, rp); err != nil {
 		return "", fmt.Errorf("parse container command: %w", err)
 	}
 

@@ -1,0 +1,23 @@
+.idea/
+.vscode/
+
+# don't check in the build output of the book
+docs/book/book/
+
+# Editor temp files
+*~
+\#*#
+
+# Skip bazel dirs
+/bazel-*
+
+# skip bin dirs
+**/bin
+**/testbin
+
+# skip .out files (coverage tests)
+*.out
+
+# skip testdata go.sum, since it may have
+# different result depending on go version
+/testdata/**/go.sum

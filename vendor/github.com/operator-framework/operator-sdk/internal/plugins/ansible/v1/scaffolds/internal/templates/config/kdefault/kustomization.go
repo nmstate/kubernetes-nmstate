@@ -20,26 +20,28 @@ package kdefault
 import (
 	"path/filepath"
 
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/file"
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
 )
 
-var _ file.Template = &Kustomize{}
+var _ machinery.Template = &Kustomization{}
 
-// Kustomize scaffolds the Kustomization file for the default overlay
-type Kustomize struct {
-	file.TemplateMixin
-	file.ProjectNameMixin
+// Kustomization scaffolds the kustomization file for the default overlay
+type Kustomization struct {
+	machinery.TemplateMixin
+	machinery.ProjectNameMixin
 }
 
-// SetTemplateDefaults implements input.Template
-func (f *Kustomize) SetTemplateDefaults() error {
+// SetTemplateDefaults implements machinery.Template
+func (f *Kustomization) SetTemplateDefaults() error {
 	if f.Path == "" {
 		f.Path = filepath.Join("config", "default", "kustomization.yaml")
 	}
 
 	f.TemplateBody = kustomizeTemplate
 
-	f.IfExistsAction = file.Error
+	// For Anible/Helm is no supported webhooks then, we customize
+	// it in the init
+	f.IfExistsAction = machinery.OverwriteFile
 
 	return nil
 }
@@ -66,8 +68,8 @@ bases:
 #- ../prometheus
 
 patchesStrategicMerge:
-  # Protect the /metrics endpoint by putting it behind auth.
-  # If you want your controller-manager to expose the /metrics
-  # endpoint w/o any authn/z, please comment the following line.
+# Protect the /metrics endpoint by putting it behind auth.
+# If you want your controller-manager to expose the /metrics
+# endpoint w/o any authn/z, please comment the following line.
 - manager_auth_proxy_patch.yaml
 `

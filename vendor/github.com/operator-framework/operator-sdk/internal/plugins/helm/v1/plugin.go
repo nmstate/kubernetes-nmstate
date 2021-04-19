@@ -15,17 +15,18 @@
 package v1
 
 import (
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	cfgv3 "sigs.k8s.io/kubebuilder/v3/pkg/config/v3"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/plugins"
 )
 
-const pluginName = "helm" + plugins.DefaultNameQualifier
+const pluginName = "base.helm" + plugins.DefaultNameQualifier
 
 var (
-	supportedProjectVersions = []string{config.Version3Alpha}
 	pluginVersion            = plugin.Version{Number: 1}
+	supportedProjectVersions = []config.Version{cfgv3.Version}
 	pluginKey                = plugin.KeyFor(Plugin{})
 )
 
@@ -42,6 +43,6 @@ type Plugin struct {
 
 func (Plugin) Name() string                                         { return pluginName }
 func (Plugin) Version() plugin.Version                              { return pluginVersion }
-func (Plugin) SupportedProjectVersions() []string                   { return supportedProjectVersions }
+func (Plugin) SupportedProjectVersions() []config.Version           { return supportedProjectVersions }
 func (p Plugin) GetInitSubcommand() plugin.InitSubcommand           { return &p.initSubcommand }
 func (p Plugin) GetCreateAPISubcommand() plugin.CreateAPISubcommand { return &p.createAPISubcommand }

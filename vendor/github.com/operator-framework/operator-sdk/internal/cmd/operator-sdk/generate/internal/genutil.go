@@ -28,6 +28,7 @@ import (
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apiextv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	cfgv2 "sigs.k8s.io/kubebuilder/v3/pkg/config/v2"
 	"sigs.k8s.io/yaml"
 )
 
@@ -72,19 +73,30 @@ func WriteObjectsToFiles(dir string, objs ...client.Object) error {
 	}
 
 	seenFiles := make(map[string]struct{})
+	// Use the number of dupliates in file names so users can debug duplicate file behavior.
+	dupCount := 0
 	for _, obj := range objs {
 		var fileName string
 		switch t := obj.(type) {
 		case *apiextv1.CustomResourceDefinition:
-			fileName = makeCRDFileName(t.Spec.Group, t.Spec.Names.Plural)
+			if t.Spec.Group != "" && t.Spec.Names.Plural != "" {
+				fileName = makeCRDFileName(t.Spec.Group, t.Spec.Names.Plural)
+			} else {
+				fileName = makeObjectFileName(t)
+			}
 		case *apiextv1beta1.CustomResourceDefinition:
-			fileName = makeCRDFileName(t.Spec.Group, t.Spec.Names.Plural)
+			if t.Spec.Group != "" && t.Spec.Names.Plural != "" {
+				fileName = makeCRDFileName(t.Spec.Group, t.Spec.Names.Plural)
+			} else {
+				fileName = makeObjectFileName(t)
+			}
 		default:
 			fileName = makeObjectFileName(t)
 		}
 
 		if _, hasFile := seenFiles[fileName]; hasFile {
-			return fmt.Errorf("duplicate file cannot be written: %s", fileName)
+			fileName = fmt.Sprintf("dup%d_%s", dupCount, fileName)
+			dupCount++
 		}
 		if err := writeObjectToFile(dir, obj, fileName); err != nil {
 			return err
@@ -171,17 +183,17 @@ func GetPackageNameAndLayout(defaultPackageName string) (packageName string, lay
 		}
 		if packageName == "" {
 			switch {
-			case cfg.IsV2():
+			case cfg.GetVersion().Compare(cfgv2.Version) == 0:
 				wd, err := os.Getwd()
 				if err != nil {
 					return "", "", err
 				}
 				packageName = strings.ToLower(filepath.Base(wd))
 			default:
-				if cfg.ProjectName == "" {
+				packageName = cfg.GetProjectName()
+				if packageName == "" {
 					return "", "", errors.New("--package-name must be set if \"projectName\" is not set in the PROJECT config file")
 				}
-				packageName = cfg.ProjectName
 			}
 		}
 		layout = projutil.GetProjectLayout(cfg)

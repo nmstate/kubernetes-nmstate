@@ -24,11 +24,14 @@ import (
 	"os"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 
@@ -96,6 +99,17 @@ func main() {
 	} else if environment.IsCertManager() {
 		ctrlOptions.LeaderElection = true
 		ctrlOptions.LeaderElectionID = "5d2e944b.nmstate.io"
+	} else if environment.IsHandler() {
+		ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: cache.SelectorsByObject{
+				&corev1.Node{}: {
+					client.MatchingFields{"metadata.name": environment.NodeName()},
+				},
+				&nmstatev1beta1.NodeNetworkState{}: {
+					client.MatchingFields{"metadata.name": environment.NodeName()},
+				},
+			},
+		})
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)

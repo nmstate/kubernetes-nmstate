@@ -1,4 +1,4 @@
-// Copyright 2020 The Operator-SDK Authors
+// Copyright 2021 The Operator-SDK Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,56 +15,37 @@
 package v2
 
 import (
-	"fmt"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	cfgv2 "sigs.k8s.io/kubebuilder/v3/pkg/config/v2"
+	cfgv3 "sigs.k8s.io/kubebuilder/v3/pkg/config/v3"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugin"
 
 	"github.com/operator-framework/operator-sdk/internal/plugins"
-	"github.com/operator-framework/operator-sdk/internal/plugins/manifests"
-
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/plugin"
 )
 
-const (
-	pluginName = "manifests" + plugins.DefaultNameQualifier
+const pluginName = "manifests" + plugins.DefaultNameQualifier
+
+var (
+	pluginVersion            = plugin.Version{Number: 2}
+	supportedProjectVersions = []config.Version{cfgv2.Version, cfgv3.Version}
+	pluginKey                = plugin.KeyFor(Plugin{})
 )
 
 var (
-	pluginVersion   = plugin.Version{Number: 2}
-	pluginConfigKey = plugin.Key(pluginName, pluginVersion.String())
+	_ plugin.Plugin    = Plugin{}
+	_ plugin.Init      = Plugin{}
+	_ plugin.CreateAPI = Plugin{}
 )
 
-// Config configures this plugin, and is saved in the project config file.
+type Plugin struct {
+	initSubcommand
+	createAPISubcommand
+}
+
+func (Plugin) Name() string                                         { return pluginName }
+func (Plugin) Version() plugin.Version                              { return pluginVersion }
+func (Plugin) SupportedProjectVersions() []config.Version           { return supportedProjectVersions }
+func (p Plugin) GetInitSubcommand() plugin.InitSubcommand           { return &p.initSubcommand }
+func (p Plugin) GetCreateAPISubcommand() plugin.CreateAPISubcommand { return &p.createAPISubcommand }
+
 type Config struct{}
-
-// HasPluginConfig returns true if cfg.Plugins contains an exact match for this plugin's key.
-func HasPluginConfig(cfg *config.Config) bool {
-	if !cfg.IsV3() || len(cfg.Plugins) == 0 {
-		return false
-	}
-	_, hasKey := cfg.Plugins[pluginConfigKey]
-	return hasKey
-}
-
-// RunInit modifies the project scaffolded by kubebuilder's Init plugin.
-func RunInit(cfg *config.Config) error {
-	// Only run these if project version is v3.
-	if err := manifests.RunInit(cfg); err != nil {
-		return err
-	}
-
-	// Update the plugin config section with this plugin's configuration.
-	mCfg := Config{}
-	if err := cfg.EncodePluginConfig(pluginConfigKey, mCfg); err != nil {
-		return fmt.Errorf("error writing plugin config for %s: %v", pluginConfigKey, err)
-	}
-
-	return nil
-}
-
-// RunCreateAPI runs the manifests SDK phase 2 plugin.
-func RunCreateAPI(cfg *config.Config, gvk config.GVK) error {
-	if !HasPluginConfig(cfg) {
-		return nil
-	}
-	return manifests.RunCreateAPI(cfg, gvk)
-}

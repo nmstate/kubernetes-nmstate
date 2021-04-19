@@ -24,7 +24,6 @@ import (
 
 	"github.com/operator-framework/operator-sdk/internal/olm/operator"
 	"github.com/operator-framework/operator-sdk/internal/olm/operator/registry"
-	"github.com/operator-framework/operator-sdk/internal/olm/operator/registry/index"
 )
 
 type Upgrade struct {
@@ -50,6 +49,8 @@ func (u *Upgrade) BindFlags(fs *pflag.FlagSet) {
 	// --mode is hidden so only users who know what they're doing can alter add mode.
 	fs.StringVar((*string)(&u.BundleAddMode), "mode", "", "mode to use for adding new bundle version to index")
 	_ = fs.MarkHidden("mode")
+
+	u.IndexImageCatalogCreator.BindFlags(fs)
 }
 
 func (u Upgrade) Run(ctx context.Context) (*v1alpha1.ClusterServiceVersion, error) {
@@ -84,7 +85,7 @@ func (u *Upgrade) setup(ctx context.Context) error {
 	// defer defaulting the bundle add mode to after the existing CatalogSource is retrieved.
 	u.IndexImageCatalogCreator.PackageName = u.OperatorInstaller.PackageName
 	u.IndexImageCatalogCreator.BundleImage = u.BundleImage
-	u.IndexImageCatalogCreator.IndexImage = index.DefaultIndexImage
+	u.IndexImageCatalogCreator.IndexImage = registry.DefaultIndexImage
 
 	return nil
 }

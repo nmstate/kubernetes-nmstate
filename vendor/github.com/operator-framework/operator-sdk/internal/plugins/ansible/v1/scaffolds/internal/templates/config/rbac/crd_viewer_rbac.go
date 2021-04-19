@@ -19,18 +19,18 @@ package rbac
 import (
 	"path/filepath"
 
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/file"
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
 )
 
-var _ file.Template = &CRDViewerRole{}
+var _ machinery.Template = &CRDViewerRole{}
 
 // CRDViewerRole scaffolds the config/rbac/<kind>_viewer_role.yaml
 type CRDViewerRole struct {
-	file.TemplateMixin
-	file.ResourceMixin
+	machinery.TemplateMixin
+	machinery.ResourceMixin
 }
 
-// SetTemplateDefaults implements input.Template
+// SetTemplateDefaults implements machinery.Template
 func (f *CRDViewerRole) SetTemplateDefaults() error {
 	if f.Path == "" {
 		f.Path = filepath.Join("config", "rbac", "%[kind]_viewer_role.yaml")
@@ -49,7 +49,7 @@ metadata:
   name: {{ lower .Resource.Kind }}-viewer-role
 rules:
 - apiGroups:
-  - {{ .Resource.Domain }}
+  - {{ .Resource.QualifiedGroup }}
   resources:
   - {{ .Resource.Plural }}
   verbs:
@@ -57,7 +57,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - {{ .Resource.Domain }}
+  - {{ .Resource.QualifiedGroup }}
   resources:
   - {{ .Resource.Plural }}/status
   verbs:

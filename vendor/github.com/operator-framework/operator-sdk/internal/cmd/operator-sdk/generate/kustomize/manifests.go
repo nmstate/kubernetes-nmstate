@@ -15,6 +15,7 @@
 package kustomize
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -22,16 +23,19 @@ import (
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	cfgv2 "sigs.k8s.io/kubebuilder/v3/pkg/config/v2"
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
 	"sigs.k8s.io/yaml"
 
 	genutil "github.com/operator-framework/operator-sdk/internal/cmd/operator-sdk/generate/internal"
 	"github.com/operator-framework/operator-sdk/internal/generate/clusterserviceversion/bases"
-	"github.com/operator-framework/operator-sdk/internal/plugins/util/kustomize"
+	"github.com/operator-framework/operator-sdk/internal/plugins/manifests/v2/templates/config/manifests"
 	"github.com/operator-framework/operator-sdk/internal/util/k8sutil"
 	"github.com/operator-framework/operator-sdk/internal/util/projutil"
 )
@@ -138,9 +142,9 @@ func (c *manifestsCmd) addFlagsTo(fs *pflag.FlagSet) {
 var defaultDir = filepath.Join("config", "manifests")
 
 // setDefaults sets command defaults.
-func (c *manifestsCmd) setDefaults(cfg *config.Config) error {
+func (c *manifestsCmd) setDefaults(cfg config.Config) error {
 	if c.packageName == "" {
-		c.packageName = cfg.ProjectName
+		c.packageName = cfg.GetProjectName()
 	}
 
 	if c.inputDir == "" {
@@ -151,7 +155,7 @@ func (c *manifestsCmd) setDefaults(cfg *config.Config) error {
 	}
 
 	if c.apisDir == "" {
-		if cfg.MultiGroup {
+		if cfg.IsMultiGroup() {
 			c.apisDir = "apis"
 		} else {
 			c.apisDir = "api"
@@ -160,16 +164,8 @@ func (c *manifestsCmd) setDefaults(cfg *config.Config) error {
 	return nil
 }
 
-// kustomization.yaml file contents for manifests. this should always be written to
-// config/manifests/kustomization.yaml since it only references files in config.
-const manifestsKustomization = `resources:
-- ../default
-- ../samples
-- ../scorecard
-`
-
 // run generates kustomize bundle bases and a kustomization.yaml if one does not exist.
-func (c manifestsCmd) run(cfg *config.Config) error {
+func (c manifestsCmd) run(cfg config.Config) error {
 
 	if !c.quiet {
 		fmt.Println("Generating kustomize files in", c.outputDir)
@@ -187,14 +183,19 @@ func (c manifestsCmd) run(cfg *config.Config) error {
 		}
 	}
 
+	operatorType := projutil.PluginChainToOperatorType(cfg.GetPluginChain())
 	relBasePath := filepath.Join("bases", c.packageName+".clusterserviceversion.yaml")
 	basePath := filepath.Join(c.inputDir, relBasePath)
+	gvks, err := getGVKs(cfg)
+	if err != nil {
+		return err
+	}
 	base := bases.ClusterServiceVersion{
 		OperatorName: c.packageName,
-		OperatorType: projutil.PluginKeyToOperatorType(cfg.Layout),
+		OperatorType: operatorType,
 		APIsDir:      c.apisDir,
 		Interactive:  requiresInteraction(basePath, c.interactiveLevel),
-		GVKs:         getGVKs(cfg),
+		GVKs:         gvks,
 	}
 	// Set BasePath only if it exists. If it doesn't, a new base will be generated
 	// if BasePath is empty.
@@ -210,6 +211,11 @@ func (c manifestsCmd) run(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("error marshaling CSV base: %v", err)
 	}
+
+	// todo: remove it when the OLM starts to support https://github.com/operator-framework/api/pull/100
+	const cleanup = "cleanup:\n    enabled: false\n  "
+	csvBytes = bytes.ReplaceAll(csvBytes, []byte(cleanup), []byte(""))
+
 	if err = os.MkdirAll(filepath.Join(c.outputDir, "bases"), 0755); err != nil {
 		return err
 	}
@@ -219,8 +225,12 @@ func (c manifestsCmd) run(cfg *config.Config) error {
 	}
 
 	// Write a kustomization.yaml to outputDir if one does not exist.
-	if err := kustomize.WriteIfNotExist(c.outputDir, manifestsKustomization); err != nil {
-		return fmt.Errorf("error writing kustomization.yaml: %v", err)
+	kustomization := manifests.Kustomization{SupportsWebhooks: operatorType == projutil.OperatorTypeGo}
+	err = machinery.NewScaffold(machinery.Filesystem{FS: afero.NewOsFs()}, machinery.WithConfig(cfg)).Execute(
+		&kustomization,
+	)
+	if err != nil {
+		return fmt.Errorf("error scaffolding manifests: %v", err)
 	}
 
 	if !c.quiet {
@@ -236,12 +246,21 @@ func requiresInteraction(basePath string, ilvl projutil.InteractiveLevel) bool {
 	return (ilvl == projutil.InteractiveSoftOff && genutil.IsNotExist(basePath)) || ilvl == projutil.InteractiveOnAll
 }
 
-func getGVKs(cfg *config.Config) []schema.GroupVersionKind {
-	gvks := make([]schema.GroupVersionKind, len(cfg.Resources))
-	for i, gvk := range cfg.Resources {
-		gvks[i].Group = fmt.Sprintf("%s.%s", gvk.Group, cfg.Domain)
+func getGVKs(cfg config.Config) ([]schema.GroupVersionKind, error) {
+	resources, err := cfg.GetResources()
+	if err != nil {
+		return nil, err
+	}
+	gvks := make([]schema.GroupVersionKind, len(resources))
+	for i, gvk := range resources {
+		// check if the resource has an specific domain
+		// otherwise use the config.Domain.
+		if cfg.GetVersion().Compare(cfgv2.Version) == 0 {
+			gvk.Domain = cfg.GetDomain()
+		}
+		gvks[i].Group = gvk.QualifiedGroup()
 		gvks[i].Version = gvk.Version
 		gvks[i].Kind = gvk.Kind
 	}
-	return gvks
+	return gvks, nil
 }

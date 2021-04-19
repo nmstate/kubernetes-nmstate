@@ -18,17 +18,15 @@ limitations under the License.
 package scaffolds
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
-	"sigs.k8s.io/kubebuilder/v2/pkg/model"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/config"
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/resource"
+	"helm.sh/helm/v3/pkg/chart"
+	"sigs.k8s.io/kubebuilder/v3/pkg/config"
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
+	"sigs.k8s.io/kubebuilder/v3/pkg/model/resource"
+	"sigs.k8s.io/kubebuilder/v3/pkg/plugins"
 
-	"github.com/operator-framework/operator-sdk/internal/kubebuilder/cmdutil"
-	"github.com/operator-framework/operator-sdk/internal/kubebuilder/machinery"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/chartutil"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/scaffolds/internal/templates"
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/scaffolds/internal/templates/config/crd"
@@ -36,69 +34,71 @@ import (
 	"github.com/operator-framework/operator-sdk/internal/plugins/helm/v1/scaffolds/internal/templates/config/samples"
 )
 
-var _ cmdutil.Scaffolder = &apiScaffolder{}
+var _ plugins.Scaffolder = &apiScaffolder{}
 
 // apiScaffolder contains configuration for generating scaffolding for Go type
 // representing the API and controller that implements the behavior for the API.
 type apiScaffolder struct {
-	config *config.Config
-	opts   chartutil.CreateOptions
+	fs machinery.Filesystem
+
+	config   config.Config
+	resource resource.Resource
+	chrt     *chart.Chart
 }
 
-// NewAPIScaffolder returns a new Scaffolder for API/controller creation operations
-func NewAPIScaffolder(config *config.Config, opts chartutil.CreateOptions) cmdutil.Scaffolder {
+// NewAPIScaffolder returns a new plugins.Scaffolder for API/controller creation operations
+func NewAPIScaffolder(cfg config.Config, res resource.Resource, chrt *chart.Chart) plugins.Scaffolder {
 	return &apiScaffolder{
-		config: config,
-		opts:   opts,
+		config:   cfg,
+		resource: res,
+		chrt:     chrt,
 	}
 }
 
-// Scaffold implements Scaffolder
+// InjectFS implements plugins.Scaffolder
+func (s *apiScaffolder) InjectFS(fs machinery.Filesystem) {
+	s.fs = fs
+}
+
+// Scaffold implements plugins.Scaffolder
 func (s *apiScaffolder) Scaffold() error {
-	return s.scaffold()
-}
+	if err := s.config.UpdateResource(s.resource); err != nil {
+		return err
+	}
 
-func (s *apiScaffolder) newUniverse(r *resource.Resource) *model.Universe {
-	return model.NewUniverse(
-		model.WithConfig(s.config),
-		model.WithResource(r),
-	)
-}
-
-func (s *apiScaffolder) scaffold() error {
+	// Get current directory
 	projectDir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	r, chrt, err := chartutil.CreateChart(projectDir, s.opts)
+
+	// Save the loaded chart.Chart
+	var chartPath string
+	s.chrt, chartPath, err = chartutil.ScaffoldChart(s.chrt, projectDir)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("Created %s\n", chartPath)
 
-	// Check that resource doesn't exist
-	if s.config.HasResource(r.GVK()) {
-		return errors.New("the API resource already exists")
-	}
-	// Check that the provided group can be added to the project
-	if !s.config.MultiGroup && len(s.config.Resources) != 0 && !s.config.HasGroup(r.Group) {
-		return errors.New("multiple groups are not allowed by default, to enable multi-group set 'multigroup: true' in your PROJECT file")
-	}
+	// Initialize the machinery.Scaffold that will write the files to disk
+	scaffold := machinery.NewScaffold(s.fs,
+		// NOTE: kubebuilder's default permissions are only for root users
+		machinery.WithDirectoryPermissions(0755),
+		machinery.WithFilePermissions(0644),
+		machinery.WithConfig(s.config),
+		machinery.WithResource(&s.resource),
+	)
 
-	res := r.NewResource(s.config, true)
-	s.config.UpdateResources(res.GVK())
-
-	chartPath := filepath.Join(chartutil.HelmChartsDir, chrt.Metadata.Name)
-	if err := machinery.NewScaffold().Execute(
-		s.newUniverse(res),
+	if err := scaffold.Execute(
 		&templates.WatchesUpdater{ChartPath: chartPath},
-		&crd.CRD{CRDVersion: s.opts.CRDVersion},
+		&crd.CRD{},
 		&crd.Kustomization{},
 		&rbac.CRDEditorRole{},
 		&rbac.CRDViewerRole{},
-		&rbac.ManagerRoleUpdater{Chart: chrt},
-		&samples.CRDSample{ChartPath: chartPath, Chart: chrt},
+		&rbac.ManagerRoleUpdater{Chart: s.chrt},
+		&samples.CRDSample{ChartPath: chartPath, Chart: s.chrt},
 	); err != nil {
-		return fmt.Errorf("error scaffolding APIs: %v", err)
+		return fmt.Errorf("error scaffolding APIs: %w", err)
 	}
 
 	return nil

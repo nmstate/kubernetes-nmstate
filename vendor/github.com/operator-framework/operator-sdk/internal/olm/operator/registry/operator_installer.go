@@ -291,10 +291,7 @@ func (o OperatorInstaller) createSubscription(ctx context.Context, csName string
 }
 
 func (o OperatorInstaller) getInstalledCSV(ctx context.Context) (*v1alpha1.ClusterServiceVersion, error) {
-	c, err := olmclient.NewClientForConfig(o.cfg.RESTConfig)
-	if err != nil {
-		return nil, err
-	}
+	c := olmclient.Client{KubeClient: o.cfg.Client}
 
 	// BUG(estroz): if namespace is not contained in targetNamespaces,
 	// DoCSVWait will fail because the CSV is not deployed in namespace.
@@ -303,13 +300,13 @@ func (o OperatorInstaller) getInstalledCSV(ctx context.Context) (*v1alpha1.Clust
 		Namespace: o.cfg.Namespace,
 	}
 	log.Infof("Waiting for ClusterServiceVersion %q to reach 'Succeeded' phase", nn)
-	if err = c.DoCSVWait(ctx, nn); err != nil {
+	if err := c.DoCSVWait(ctx, nn); err != nil {
 		return nil, fmt.Errorf("error waiting for CSV to install: %w", err)
 	}
 
 	// TODO: check status of all resources in the desired bundle/package.
 	csv := &v1alpha1.ClusterServiceVersion{}
-	if err = o.cfg.Client.Get(ctx, nn, csv); err != nil {
+	if err := o.cfg.Client.Get(ctx, nn, csv); err != nil {
 		return nil, fmt.Errorf("error getting installed CSV: %w", err)
 	}
 	return csv, nil
@@ -331,10 +328,7 @@ func (o OperatorInstaller) approveInstallPlan(ctx context.Context, sub *v1alpha1
 		}
 		// approve the install plan by setting Approved to true
 		ip.Spec.Approved = true
-		if err := o.cfg.Client.Update(ctx, &ip); err != nil {
-			return fmt.Errorf("error approving install plan: %w", err)
-		}
-		return nil
+		return o.cfg.Client.Update(ctx, &ip)
 	}); err != nil {
 		return err
 	}
@@ -374,6 +368,9 @@ func (o *OperatorInstaller) getTargetNamespaces(supported sets.String) ([]string
 	case supported.Has(string(v1alpha1.InstallModeTypeOwnNamespace)):
 		return []string{o.cfg.Namespace}, nil
 	case supported.Has(string(v1alpha1.InstallModeTypeSingleNamespace)):
+		return o.InstallMode.TargetNamespaces, nil
+	case supported.Has(string(v1alpha1.InstallModeTypeMultiNamespace)):
+		log.Warn("The selected install mode MultiNamespace may cause tenancy issues and is not recommended")
 		return o.InstallMode.TargetNamespaces, nil
 	default:
 		return nil, fmt.Errorf("no supported install modes")

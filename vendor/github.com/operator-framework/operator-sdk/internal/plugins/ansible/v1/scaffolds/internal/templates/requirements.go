@@ -15,12 +15,14 @@
 package templates
 
 import (
-	"sigs.k8s.io/kubebuilder/v2/pkg/model/file"
+	"sigs.k8s.io/kubebuilder/v3/pkg/machinery"
 )
+
+var _ machinery.Template = &RequirementsYml{}
 
 // RequirementsYml - A requirements file for Ansible collection dependencies
 type RequirementsYml struct {
-	file.TemplateMixin
+	machinery.TemplateMixin
 }
 
 func (f *RequirementsYml) SetTemplateDefaults() error {
@@ -34,6 +36,7 @@ func (f *RequirementsYml) SetTemplateDefaults() error {
 const requirementsYmlTmpl = `---
 collections:
   - name: community.kubernetes
-    version: "<1.0.0"
-  - operator_sdk.util
+    version: "1.2.1"
+  - name: operator_sdk.util
+    version: "0.2.0"
 `
