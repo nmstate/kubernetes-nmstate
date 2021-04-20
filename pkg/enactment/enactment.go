@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func CountByPolicy(cli client.Client, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, enactmentconditions.ConditionCount, error) {
+func CountByPolicy(cli client.Reader, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, enactmentconditions.ConditionCount, error) {
 	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
 	err := cli.List(context.TODO(), &enactments, policyLabelFilter)

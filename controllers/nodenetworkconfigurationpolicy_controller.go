@@ -93,8 +93,11 @@ var (
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
 type NodeNetworkConfigurationPolicyReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	// APIClient controller-runtime client without cache, it will be used at
+	// places were whole cluster resources need to be retrieved but not cached.
+	APIClient client.Client
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
 }
 
 func init() {
@@ -137,7 +140,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
-	defer policyconditions.Update(r.Client, request.NamespacedName)
+	defer policyconditions.Update(r.Client, r.APIClient, request.NamespacedName)
 
 	policySelectors := selectors.NewFromPolicy(r.Client, *instance)
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)
@@ -157,9 +160,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 		log.Error(err, "Error initializing enactment")
 	}
 
-	enactmentConditions := enactmentconditions.New(r.Client, nmstateapi.EnactmentKey(nodeName, instance.Name))
+	enactmentConditions := enactmentconditions.New(r.APIClient, nmstateapi.EnactmentKey(nodeName, instance.Name))
 
-	_, enactmentCountByCondition, err := enactment.CountByPolicy(r.Client, instance)
+	_, enactmentCountByCondition, err := enactment.CountByPolicy(r.APIClient, instance)
 	if err != nil {
 		log.Error(err, "Error getting enactment counts")
 		return ctrl.Result{}, err
@@ -184,7 +187,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	defer r.decrementUnavailableNodeCount(instance)
 
 	enactmentConditions.NotifyProgressing()
-	nmstateOutput, err := nmstate.ApplyDesiredState(r.Client, instance.Spec.DesiredState)
+	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, instance.Spec.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
@@ -247,14 +250,14 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	log := r.Log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
 	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-	err := r.Client.Get(context.TODO(), enactmentKey, &enactment)
+	err := r.APIClient.Get(context.TODO(), enactmentKey, &enactment)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, errors.Wrap(err, "failed getting enactment ")
 	}
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("creating enactment")
 		enactment = nmstatev1beta1.NewEnactment(nodeName, policy)
-		err = r.Client.Create(context.TODO(), &enactment)
+		err = r.APIClient.Create(context.TODO(), &enactment)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error creating NodeNetworkConfigurationEnactment: %+v", enactment)
 		}
@@ -263,11 +266,11 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 			return nil, errors.Wrapf(err, "error waitting for NodeNetworkConfigurationEnactment: %+v", enactment)
 		}
 	} else {
-		enactmentConditions := enactmentconditions.New(r.Client, enactmentKey)
+		enactmentConditions := enactmentconditions.New(r.APIClient, enactmentKey)
 		enactmentConditions.Reset()
 	}
 
-	return &enactment.Status.Conditions, enactmentstatus.Update(r.Client, enactmentKey, func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
+	return &enactment.Status.Conditions, enactmentstatus.Update(r.APIClient, enactmentKey, func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
 		status.DesiredState = policy.Spec.DesiredState
 		status.PolicyGeneration = policy.Generation
 	})
@@ -276,7 +279,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
 	var enactment nmstatev1beta1.NodeNetworkConfigurationEnactment
 	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
-		err := r.Client.Get(context.TODO(), enactmentKey, &enactment)
+		err := r.APIClient.Get(context.TODO(), enactmentKey, &enactment)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				// Let's retry after a while, sometimes it takes some time
@@ -298,7 +301,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(poli
 			Name: enactmentKey.Name,
 		},
 	}
-	err := r.Client.Delete(context.TODO(), &enactment)
+	err := r.APIClient.Delete(context.TODO(), &enactment)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return errors.Wrap(err, "failed deleting enactment")
 	}
@@ -315,7 +318,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	if err != nil {
 		return err
 	}
-	maxUnavailable, err := node.MaxUnavailableNodeCount(r.Client, policy)
+	maxUnavailable, err := node.MaxUnavailableNodeCount(r.APIClient, policy)
 	if err != nil {
 		return err
 	}

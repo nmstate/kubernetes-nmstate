@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -43,15 +42,6 @@ func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
 		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", vlanFilteringCommand, err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
-}
-
-func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1beta1.NodeNetworkState, error) {
-	var nodeNetworkState nmstatev1beta1.NodeNetworkState
-	nodeNetworkStateKey := types.NamespacedName{
-		Name: nodeName,
-	}
-	err := client.Get(context.TODO(), nodeNetworkStateKey, &nodeNetworkState)
-	return nodeNetworkState, err
 }
 
 func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
