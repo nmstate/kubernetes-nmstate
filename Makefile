@@ -245,4 +245,5 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build
+	bundle-build \
+	manifests
