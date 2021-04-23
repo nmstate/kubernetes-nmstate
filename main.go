@@ -42,6 +42,8 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/controllers"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
 
@@ -185,6 +187,25 @@ func main() {
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkState controller", "controller", "NMState")
 			os.Exit(1)
+		}
+
+		// Check that nmstatectl is working
+		_, err := nmstatectl.Show()
+		if err != nil {
+			os.Exit(1)
+			setupLog.Error(err, "failed checking nmstatectl health")
+		}
+
+		// Handler runs with host networking so opening ports is problematic
+		// they will collide with node ports so to ensure that we reach this
+		// point (we have the handler lock and nmstatectl show is working) a
+		// file is touched and the file is checked at readinessProbe field.
+		healthyFile := "/tmp/healthy"
+		setupLog.Info("Marking handler as healthy touching healthy file", "healthyFile", healthyFile)
+		err = file.Touch(healthyFile)
+		if err != nil {
+			os.Exit(1)
+			setupLog.Error(err, "failed marking handler as healthy")
 		}
 	}
 
