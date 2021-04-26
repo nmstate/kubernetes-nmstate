@@ -8,8 +8,9 @@ require (
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.3.0
 	github.com/gobwas/glob v0.2.3
+	github.com/gofrs/flock v0.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/nightlyone/lockfile v1.0.0
+	github.com/nightlyone/lockfile v1.0.0 // indirect
 	github.com/onsi/ginkgo v1.15.0
 	github.com/onsi/gomega v1.10.5
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0

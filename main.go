@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 
+	"github.com/gofrs/flock"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nightlyone/lockfile"
 	"github.com/pkg/errors"
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -214,23 +214,20 @@ func setProfiler() {
 	}
 }
 
-func lockHandler() (lockfile.Lockfile, error) {
+func lockHandler() (*flock.Flock, error) {
 	lockFilePath, ok := os.LookupEnv("NMSTATE_INSTANCE_NODE_LOCK_FILE")
 	if !ok {
-		return "", errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
+		return nil, errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
 	}
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
-	handlerLock, err := lockfile.New(lockFilePath)
-	if err != nil {
-		return handlerLock, errors.Wrapf(err, "failed to create lockFile for %s", lockFilePath)
-	}
-	err = wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
-		err = handlerLock.TryLock()
+	handlerLock := flock.New(lockFilePath)
+	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
+		locked, err := handlerLock.TryLock()
 		if err != nil {
 			setupLog.Error(err, "retrying to lock handler")
 			return false, nil // Don't return the error here, it will not re-poll if we do
 		}
-		return true, nil
+		return locked, nil
 	})
 	return handlerLock, err
 }
