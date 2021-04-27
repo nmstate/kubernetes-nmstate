@@ -192,8 +192,8 @@ func main() {
 		// Check that nmstatectl is working
 		_, err := nmstatectl.Show()
 		if err != nil {
-			os.Exit(1)
 			setupLog.Error(err, "failed checking nmstatectl health")
+			os.Exit(1)
 		}
 
 		// Handler runs with host networking so opening ports is problematic
@@ -204,8 +204,8 @@ func main() {
 		setupLog.Info("Marking handler as healthy touching healthy file", "healthyFile", healthyFile)
 		err = file.Touch(healthyFile)
 		if err != nil {
-			os.Exit(1)
 			setupLog.Error(err, "failed marking handler as healthy")
+			os.Exit(1)
 		}
 	}
 
