@@ -288,17 +288,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmen
 	return pollErr
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) enactmentsCountByPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (enactmentconditions.ConditionCount, error) {
-	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
-	policyLabelFilter := client.MatchingLabels{nmstateapi.EnactmentPolicyLabel: policy.GetName()}
-	err := r.Client.List(context.TODO(), &enactments, policyLabelFilter)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting enactment list failed")
-	}
-	enactmentCount := enactmentconditions.Count(enactments, policy.Generation)
-	return enactmentCount, nil
-}
-
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	err := r.Client.Get(context.TODO(), policyKey, policy)
