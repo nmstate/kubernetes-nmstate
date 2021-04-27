@@ -219,8 +219,8 @@ spec:
           readinessProbe:
             exec:
               command:
-              - nmstatectl
-              - show
+              - cat
+              - /tmp/healthy
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 1

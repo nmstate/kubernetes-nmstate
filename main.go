@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 
+	"github.com/gofrs/flock"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/nightlyone/lockfile"
 	"github.com/pkg/errors"
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -42,6 +42,8 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/controllers"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
 
@@ -186,6 +188,25 @@ func main() {
 			setupLog.Error(err, "unable to create NodeNetworkState controller", "controller", "NMState")
 			os.Exit(1)
 		}
+
+		// Check that nmstatectl is working
+		_, err := nmstatectl.Show()
+		if err != nil {
+			os.Exit(1)
+			setupLog.Error(err, "failed checking nmstatectl health")
+		}
+
+		// Handler runs with host networking so opening ports is problematic
+		// they will collide with node ports so to ensure that we reach this
+		// point (we have the handler lock and nmstatectl show is working) a
+		// file is touched and the file is checked at readinessProbe field.
+		healthyFile := "/tmp/healthy"
+		setupLog.Info("Marking handler as healthy touching healthy file", "healthyFile", healthyFile)
+		err = file.Touch(healthyFile)
+		if err != nil {
+			os.Exit(1)
+			setupLog.Error(err, "failed marking handler as healthy")
+		}
 	}
 
 	setProfiler()
@@ -214,23 +235,20 @@ func setProfiler() {
 	}
 }
 
-func lockHandler() (lockfile.Lockfile, error) {
+func lockHandler() (*flock.Flock, error) {
 	lockFilePath, ok := os.LookupEnv("NMSTATE_INSTANCE_NODE_LOCK_FILE")
 	if !ok {
-		return "", errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
+		return nil, errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
 	}
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
-	handlerLock, err := lockfile.New(lockFilePath)
-	if err != nil {
-		return handlerLock, errors.Wrapf(err, "failed to create lockFile for %s", lockFilePath)
-	}
-	err = wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
-		err = handlerLock.TryLock()
+	handlerLock := flock.New(lockFilePath)
+	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
+		locked, err := handlerLock.TryLock()
 		if err != nil {
 			setupLog.Error(err, "retrying to lock handler")
 			return false, nil // Don't return the error here, it will not re-poll if we do
 		}
-		return true, nil
+		return locked, nil
 	})
 	return handlerLock, err
 }
