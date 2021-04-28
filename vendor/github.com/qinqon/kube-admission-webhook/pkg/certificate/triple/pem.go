@@ -197,7 +197,9 @@ func AddCertToPEM(cert *x509.Certificate, pemCerts []byte) ([]byte, error) {
 			return nil, fmt.Errorf("failed parsing current certs PEM: %w", err)
 		}
 	}
-	certs = append(certs, cert)
+	// Prepend cert since it's what TLS expects [1]
+	// [1] https://github.com/golang/go/blob/master/src/crypto/tls/tls.go#L292-L294
+	certs = append([]*x509.Certificate{cert}, certs...)
 	return EncodeCertsPEM(certs), nil
 }
 
