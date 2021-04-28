@@ -120,7 +120,7 @@ func (m *Manager) getCACertsFromCABundle() ([]*x509.Certificate, error) {
 	return cas, nil
 }
 
-func (m *Manager) getLastAppendedCACertFromCABundle() (*x509.Certificate, error) {
+func (m *Manager) getLastPrependedCACertFromCABundle() (*x509.Certificate, error) {
 	cas, err := m.getCACertsFromCABundle()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting CA certificates from CA bundle")
@@ -128,7 +128,7 @@ func (m *Manager) getLastAppendedCACertFromCABundle() (*x509.Certificate, error)
 	if len(cas) == 0 {
 		return nil, nil
 	}
-	return cas[len(cas)-1], nil
+	return cas[0], nil
 }
 
 func (m *Manager) rotateAll() error {
@@ -262,7 +262,7 @@ func (m *Manager) nextRotationDeadlineForCA() time.Time {
 
 	// Last rotated CA cert at CABundle is the last at the slice so this
 	// calculate deadline from it.
-	caCert, err := m.getLastAppendedCACertFromCABundle()
+	caCert, err := m.getLastPrependedCACertFromCABundle()
 	if err != nil {
 		m.log.Info("Failed reading last CA cert from CABundle, forcing rotation", "err", err)
 		return m.now()

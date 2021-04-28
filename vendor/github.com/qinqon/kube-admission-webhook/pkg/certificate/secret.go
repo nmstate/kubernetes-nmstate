@@ -166,7 +166,7 @@ func (m *Manager) verifyTLSSecret(secretKey types.NamespacedName, caKeyPair *tri
 		return errors.New("CA bundle has no certificates")
 	}
 
-	lastCertFromCABundle := getLastCert(certsFromCABundle)
+	lastCertFromCABundle := getFirstCert(certsFromCABundle)
 
 	if !reflect.DeepEqual(*lastCertFromCABundle, *caKeyPair.Cert) {
 		return errors.New("CA bundle and CA secret certificate are different")
@@ -236,9 +236,9 @@ func (m *Manager) getTLSKeyPair(secretKey types.NamespacedName) (*triple.KeyPair
 		return nil, errors.Wrapf(err, "failed parsing TLS private key PEM at secret %s", secretKey)
 	}
 
-	lastAppendedCert := getLastCert(certs)
+	lastPrependedCert := getFirstCert(certs)
 
-	return &triple.KeyPair{Key: privateKey.(*rsa.PrivateKey), Cert: lastAppendedCert}, nil
+	return &triple.KeyPair{Key: privateKey.(*rsa.PrivateKey), Cert: lastPrependedCert}, nil
 }
 
 func (m *Manager) getTLSCerts(secretKey types.NamespacedName) ([]*x509.Certificate, error) {
@@ -265,11 +265,11 @@ func (m *Manager) caSecretKey() types.NamespacedName {
 	return types.NamespacedName{Namespace: m.namespace, Name: m.webhookName + "-ca"}
 }
 
-// Certs are appended to implement overlap so we take the last one
+// Certs are prepended to implement overlap so we take the first one
 // it will match with the key
-func getLastCert(certs []*x509.Certificate) *x509.Certificate {
+func getFirstCert(certs []*x509.Certificate) *x509.Certificate {
 	if len(certs) == 0 {
 		return nil
 	}
-	return certs[len(certs)-1]
+	return certs[0]
 }
