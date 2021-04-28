@@ -16,7 +16,7 @@ const (
 	DEFAULT_MAXUNAVAILABLE = "50%"
 )
 
-func NodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
+func NodesRunningNmstate(cli client.Reader) ([]corev1.Node, error) {
 	nodes := corev1.NodeList{}
 	err := cli.List(context.TODO(), &nodes)
 	if err != nil {
@@ -42,7 +42,7 @@ func NodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
 	return filteredNodes, nil
 }
 
-func MaxUnavailableNodeCount(cli client.Client, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
+func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
 	enactmentsCount, err := enactment.CountByPolicy(cli, policy)
 	if err != nil {
 		return 0, err

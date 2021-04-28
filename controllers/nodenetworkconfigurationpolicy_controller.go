@@ -103,8 +103,9 @@ func init() {
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
 type NodeNetworkConfigurationPolicyReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	APIReader client.Reader
+	Log       logr.Logger
+	Scheme    *runtime.Scheme
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
@@ -173,7 +174,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	if err != nil {
 		return err
 	}
-	maxUnavailable, err := node.MaxUnavailableNodeCount(r.Client, policy)
+	maxUnavailable, err := node.MaxUnavailableNodeCount(r.APIReader, policy)
 	if err != nil {
 		return err
 	}
@@ -243,7 +244,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
-	defer policyconditions.Update(r.Client, request.NamespacedName)
+	defer policyconditions.Update(r.Client, r.APIReader, request.NamespacedName)
 
 	policySelectors := selectors.NewFromPolicy(r.Client, *instance)
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)

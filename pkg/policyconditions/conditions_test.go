@@ -156,7 +156,7 @@ var _ = Describe("Policy Conditions", func() {
 
 			client := fake.NewFakeClientWithScheme(s, objs...)
 			key := types.NamespacedName{Name: updatedPolicy.Name}
-			err := Update(client, key)
+			err := Update(client, client, key)
 			Expect(err).ToNot(HaveOccurred())
 			err = client.Get(context.TODO(), key, updatedPolicy)
 			Expect(err).ToNot(HaveOccurred())

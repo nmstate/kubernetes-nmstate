@@ -24,11 +24,14 @@ import (
 	"os"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 
@@ -98,6 +101,17 @@ func main() {
 	} else if environment.IsCertManager() {
 		ctrlOptions.LeaderElection = true
 		ctrlOptions.LeaderElectionID = "5d2e944b.nmstate.io"
+	} else if environment.IsHandler() {
+		ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: cache.SelectorsByObject{
+				&corev1.Node{}: {
+					Field: fields.Set{"metadata.name": environment.NodeName()}.AsSelector(),
+				},
+				&nmstatev1beta1.NodeNetworkState{}: {
+					Field: fields.Set{"metadata.name": environment.NodeName()}.AsSelector(),
+				},
+			},
+		})
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
@@ -173,9 +187,10 @@ func main() {
 			os.Exit(1)
 		}
 		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
-			Scheme: mgr.GetScheme(),
+			Client:    mgr.GetClient(),
+			APIReader: mgr.GetAPIReader(),
+			Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
+			Scheme:    mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 			os.Exit(1)
