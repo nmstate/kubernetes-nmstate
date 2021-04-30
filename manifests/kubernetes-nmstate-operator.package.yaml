@@ -1,4 +1,0 @@
-packageName: kubernetes-nmstate-operator
-channels:
-  - name: "4.7"
-    currentCSV: kubernetes-nmstate-operator.v4.7.0

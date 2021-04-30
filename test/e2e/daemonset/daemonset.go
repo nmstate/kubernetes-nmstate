@@ -21,6 +21,14 @@ func GetEventually(daemonSetKey types.NamespacedName) AsyncAssertion {
 	}, 180*time.Second, 1*time.Second)
 }
 
+func GetConsistently(daemonSetKey types.NamespacedName) AsyncAssertion {
+	return Consistently(func() (appsv1.DaemonSet, error) {
+		daemonSet := appsv1.DaemonSet{}
+		err := testenv.Client.Get(context.TODO(), daemonSetKey, &daemonSet)
+		return daemonSet, err
+	}, 15*time.Second, 1*time.Second)
+}
+
 // GetDaemonSetList returns a DaemonSetList matching the labels passed
 func GetList(filteringLabels map[string]string) (appsv1.DaemonSetList, error) {
 	ds := appsv1.DaemonSetList{}

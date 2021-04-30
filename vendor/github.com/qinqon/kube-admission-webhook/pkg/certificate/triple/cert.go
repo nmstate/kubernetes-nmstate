@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	cryptorand "crypto/rand"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -175,6 +176,11 @@ func VerifyTLS(certsPEM, keyPEM, caBundle []byte) error {
 
 	if _, err := certs[0].Verify(opts); err != nil {
 		return errors.Wrap(err, "failed to verify certificate")
+	}
+
+	_, err = tls.X509KeyPair(certsPEM, keyPEM)
+	if err != nil {
+		return errors.Wrap(err, "failed parsing TLS public/private key")
 	}
 
 	logger.Info("TLS certificates chain verified")
