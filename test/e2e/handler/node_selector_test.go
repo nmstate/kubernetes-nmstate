@@ -13,11 +13,20 @@ import (
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]NodeSelector", func() {
-	testNodeSelector := map[string]string{"testKey": "testValue"}
+	var (
+		testNodeSelector            = map[string]string{"testKey": "testValue"}
+		numberOfEnactmentsForPolicy = func(policyName string) int {
+			nncp := nodeNetworkConfigurationPolicy(policyName)
+			numberOfMatchingEnactments, _, err := enactment.CountByPolicy(testenv.Client, &nncp)
+			ExpectWithOffset(1, err).ToNot(HaveOccurred())
+			return numberOfMatchingEnactments
+		}
+	)
 	Context("when policy is set with node selector not matching any nodes", func() {
 		BeforeEach(func() {
 			By(fmt.Sprintf("Set policy %s with not matching node selector", bridge1))
@@ -38,17 +47,11 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			removeLabelsFromNode(nodes[0], testNodeSelector)
 		})
 
-		It("[test_id:3813]should not update any nodes and have false Matching state", func() {
-			for _, node := range allNodes {
-				enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
-					nmstate.Condition{
-						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
-						Status: corev1.ConditionFalse,
-					}))
-			}
+		It("[test_id:3813]should not update any nodes and have not enactments", func() {
 			for _, node := range allNodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
+			Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(0), "should not create any enactment")
 		})
 
 		Context("and we remove the node selector", func() {
@@ -60,15 +63,9 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 			It("should update all nodes and have Matching enactment state", func() {
 				for _, node := range allNodes {
-					enactmentConditionsStatusForPolicyEventually(node, bridge1).Should(ContainElement(
-						nmstate.Condition{
-							Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
-							Status: corev1.ConditionTrue,
-						}))
-				}
-				for _, node := range allNodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 				}
+				Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(len(allNodes)), "should create all the enactments")
 
 			})
 
@@ -77,17 +74,25 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			BeforeEach(func() {
 				By("Add test label to node")
 				addLabelsToNode(nodes[0], testNodeSelector)
-			})
-			It("should apply the policy", func() {
-				enactmentConditionsStatusForPolicyEventually(nodes[0], bridge1).Should(ContainElement(
-					nmstate.Condition{
-						Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
-						Status: corev1.ConditionTrue,
-					}))
 				//TODO: Remove this when webhook retest policy status when node labels are changed
 				time.Sleep(3 * time.Second)
 				waitForAvailablePolicy(bridge1)
+			})
+			It("should apply the policy", func() {
+				By("Check that NNCE is created")
+				nodeNetworkConfigurationEnactment(shared.EnactmentKey(nodes[0], bridge1))
 				interfacesNameForNodeEventually(nodes[0]).Should(ContainElement(bridge1))
+			})
+			Context("and remove the label again", func() {
+				BeforeEach(func() {
+					removeLabelsFromNode(nodes[0], testNodeSelector)
+					//TODO: Remove this when webhook retest policy status when node labels are changed
+					time.Sleep(3 * time.Second)
+					waitForAvailablePolicy(bridge1)
+				})
+				It("should remove the not matching enactment", func() {
+					Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(0), "should remove the not matching enactment")
+				})
 			})
 		})
 	})
