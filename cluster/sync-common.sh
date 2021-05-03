@@ -1,5 +1,5 @@
 function eventually {
-    timeout=$(( $KUBEVIRT_NUM_NODES * 10 ))
+    timeout=$(( $KUBEVIRT_NUM_NODES * 30 ))
     interval=5
     cmd=$@
     echo "Checking eventually $cmd"
