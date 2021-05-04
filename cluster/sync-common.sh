@@ -4,11 +4,11 @@ function eventually {
     cmd=$@
     echo "Checking eventually $cmd"
     while ! $cmd; do
-        sleep $interval
-        timeout=$(( $timeout - $interval ))
         if [ $timeout -le 0 ]; then
             return 1
         fi
+        sleep $interval
+        timeout=$(( $timeout - $interval ))
     done
 }
 
@@ -18,11 +18,11 @@ function consistently {
     cmd=$@
     echo "Checking consistently $cmd"
     while $cmd; do
-        sleep $interval
-        timeout=$(( $timeout - $interval ))
         if [ $timeout -le 0 ]; then
             return 0
         fi
+        sleep $interval
+        timeout=$(( $timeout - $interval ))
     done
     return 1
 }
