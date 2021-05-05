@@ -38,6 +38,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -133,13 +134,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	policyconditions.Reset(r.Client, request.NamespacedName)
 
-	err = r.initializeEnactment(*instance)
-	if err != nil {
-		log.Error(err, "Error initializing enactment")
-	}
-
-	enactmentConditions := enactmentconditions.New(r.Client, nmstateapi.EnactmentKey(nodeName, instance.Name))
-
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
@@ -149,22 +143,28 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)
 	if err != nil {
 		log.Error(err, "failed checking node selectors")
-		enactmentConditions.NotifyNodeSelectorFailure(err)
+		return ctrl.Result{}, err
 	}
+
 	if len(unmatchingNodeLabels) > 0 {
-		log.Info("Policy node selectors does not match node")
-		enactmentConditions.NotifyNodeSelectorNotMatching(unmatchingNodeLabels)
-		return ctrl.Result{}, nil
+		log.Info("Policy node selectors does not match node, removing previous enactments if any")
+		err = r.deleteEnactmentForPolicy(instance)
+		return ctrl.Result{}, err
 	}
 
-	enactmentConditions.NotifyMatching()
+	err = r.initializeEnactment(*instance)
+	if err != nil {
+		log.Error(err, "Error initializing enactment")
+	}
 
-	enactmentCount, err := enactment.CountByPolicy(r.Client, instance)
+	enactmentConditions := enactmentconditions.New(r.Client, nmstateapi.EnactmentKey(nodeName, instance.Name))
+
+	_, enactmentCountByCondition, err := enactment.CountByPolicy(r.Client, instance)
 	if err != nil {
 		log.Error(err, "Error getting enactment counts")
 		return ctrl.Result{}, err
 	}
-	if enactmentCount.Failed() > 0 {
+	if enactmentCountByCondition.Failed() > 0 {
 		err = fmt.Errorf("policy has failing enactments, aborting")
 		log.Error(err, "")
 		enactmentConditions.NotifyAborted(err)
@@ -286,6 +286,20 @@ func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmen
 	})
 
 	return pollErr
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
+	enactmentKey := nmstateapi.EnactmentKey(nodeName, policy.Name)
+	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: enactmentKey.Name,
+		},
+	}
+	err := r.Client.Delete(context.TODO(), &enactment)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return errors.Wrap(err, "failed deleting enactment")
+	}
+	return nil
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {

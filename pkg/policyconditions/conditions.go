@@ -106,35 +106,36 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 			return errors.Wrap(err, "getting enactments failed")
 		}
 
-		// Count only nodes that runs nmstate handler, could be that
-		// users don't want to run knmstate at master for example so
-		// they don't want to change net config there.
-		nmstateNodes, err := node.NodesRunningNmstate(cli)
+		// Count only nodes that runs nmstate handler and match the policy
+		// nodeSelector, could be that users don't want to run knmstate at master for example
+		// so they don't want to change net config there.
+		nmstateMatchingNodes, err := node.NodesRunningNmstate(cli, policy.Spec.NodeSelector)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
-		numberOfNmstateNodes := len(nmstateNodes)
+		numberOfNmstateMatchingNodes := len(nmstateMatchingNodes)
 
 		// Let's get conditions with true status count filtered by policy generation
-		enactmentsCount := enactmentconditions.Count(enactments, policy.Generation)
+		enactmentsCountByCondition := enactmentconditions.Count(enactments, policy.Generation)
 
-		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching() + enactmentsCount.Aborted()
+		numberOfFinishedEnactments := enactmentsCountByCondition.Available() + enactmentsCountByCondition.Failed() + enactmentsCountByCondition.Aborted()
 
-		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
-		if numberOfFinishedEnactments < numberOfNmstateNodes {
-			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
+		logger.Info(fmt.Sprintf("numberOfNmstateMatchingNodes: %d, enactments count: %s", numberOfNmstateMatchingNodes, enactmentsCountByCondition))
+
+		if numberOfNmstateMatchingNodes == 0 {
+			message := "Policy does not match any node"
+			SetPolicyNotMatching(&policy.Status.Conditions, message)
+		} else if numberOfFinishedEnactments < numberOfNmstateMatchingNodes {
+			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateMatchingNodes))
 		} else {
-			if enactmentsCount.Matching() == 0 {
-				message := "Policy does not match any node"
-				SetPolicyNotMatching(&policy.Status.Conditions, message)
-			} else if enactmentsCount.Failed() > 0 || enactmentsCount.Aborted() > 0 {
-				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), enactmentsCount.Matching())
-				if enactmentsCount.Aborted() > 0 {
-					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCount.Aborted())
+			if enactmentsCountByCondition.Failed() > 0 || enactmentsCountByCondition.Aborted() > 0 {
+				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCountByCondition.Failed(), numberOfNmstateMatchingNodes)
+				if enactmentsCountByCondition.Aborted() > 0 {
+					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCountByCondition.Aborted())
 				}
 				SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
 			} else {
-				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), enactmentsCount.Available())
+				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCountByCondition.Available(), enactmentsCountByCondition.Available())
 				SetPolicySuccess(&policy.Status.Conditions, message)
 			}
 		}

@@ -36,10 +36,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			Status: corev1.ConditionFalse,
 		},
 		shared.Condition{
-			Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
-			Status: corev1.ConditionTrue,
-		},
-		shared.Condition{
 			Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
 			Status: corev1.ConditionTrue,
 		},
@@ -69,10 +65,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 					Status: corev1.ConditionUnknown,
 				},
 				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
-					Status: corev1.ConditionTrue,
-				},
-				nmstate.Condition{
 					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 					Status: corev1.ConditionFalse,
 				},
@@ -89,10 +81,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				nmstate.Condition{
 					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 					Status: corev1.ConditionFalse,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
-					Status: corev1.ConditionTrue,
 				},
 				nmstate.Condition{
 					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
@@ -140,10 +128,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			shared.Condition{
 				Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
 				Status: corev1.ConditionFalse,
-			},
-			shared.Condition{
-				Type:   shared.NodeNetworkConfigurationEnactmentConditionMatching,
-				Status: corev1.ConditionTrue,
 			},
 			shared.Condition{
 				Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
