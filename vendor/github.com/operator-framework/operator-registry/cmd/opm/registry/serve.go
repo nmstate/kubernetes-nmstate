@@ -85,7 +85,7 @@ func serveFunc(cmd *cobra.Command, args []string) error {
 	}
 	defer os.Remove(tmpdb)
 
-	db, err := sql.Open("sqlite3", tmpdb)
+	db, err := sqlite.Open(tmpdb)
 	if err != nil {
 		return err
 	}

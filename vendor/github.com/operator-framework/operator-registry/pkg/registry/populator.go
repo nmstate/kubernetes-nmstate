@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 
 	"github.com/operator-framework/operator-registry/pkg/image"
+	libsemver "github.com/operator-framework/operator-registry/pkg/lib/semver"
 )
 
 type Dependencies struct {
@@ -157,14 +158,6 @@ func (i *DirectoryPopulator) loadManifests(imagesToAdd []*ImageInput, imagesToRe
 
 	switch mode {
 	case ReplacesMode:
-		// TODO: This is relatively inefficient. Ideally, we should be able to use a replaces
-		// graph loader to construct what the graph would look like with a set of new bundles
-		// and use that to return an error if it's not valid, rather than insert one at a time
-		// and reinspect the database.
-		//
-		// Additionally, it would be preferrable if there was a single database transaction
-		// that took the updated graph as a whole as input, rather than inserting bundles of the
-		// same package linearly.
 		for pkg := range i.overwriteDirMap {
 			// TODO: If this succeeds but the add fails there will be a disconnect between
 			// the registry and the index. Loading the bundles in a single transactions as
@@ -175,32 +168,7 @@ func (i *DirectoryPopulator) loadManifests(imagesToAdd []*ImageInput, imagesToRe
 			}
 		}
 
-		var errs []error
-		stream, err := NewReplacesInputStream(i.graphLoader, append(imagesToAdd, imagesToReAdd...))
-		if err != nil {
-			errs = append(errs, fmt.Errorf("Input error: %s", err))
-			// Don't return yet since stream may be partially initialized and still useful
-		}
-		if stream == nil {
-			return utilerrors.NewAggregate(errs)
-		}
-
-		for !stream.Empty() {
-			next, err := stream.Next()
-			if err != nil {
-				errs = append(errs, err)
-				break
-			}
-
-			if err = i.loadManifestsReplaces(next.Bundle); err != nil {
-				errs = append(errs, err)
-				break
-			}
-		}
-
-		if len(errs) > 0 {
-			return utilerrors.NewAggregate(errs)
-		}
+		return i.loadManifestsReplaces(append(imagesToAdd, imagesToReAdd...))
 	case SemVerMode:
 		for _, image := range imagesToAdd {
 			if err := i.loadManifestsSemver(image.Bundle, image.AnnotationsFile, false); err != nil {
@@ -238,25 +206,41 @@ func PackageFromContext(ctx context.Context) (string, bool) {
 	return pkg, ok
 }
 
-func (i *DirectoryPopulator) loadManifestsReplaces(bundle *Bundle) error {
-	ctx := ContextWithPackage(context.TODO(), bundle.Package)
-	bundles, err := i.querier.ListRegistryBundles(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to list registry bundles: %s", err)
+func (i *DirectoryPopulator) loadManifestsReplaces(images []*ImageInput) error {
+	packages := map[string][]*Bundle{}
+	var errs []error
+	for _, img := range images {
+		// Add the bundle directly to the store
+		if err := i.loader.AddOperatorBundle(img.Bundle); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		packages[img.Bundle.Package] = append(packages[img.Bundle.Package], img.Bundle)
 	}
 
-	// Add the new bundle and get the semver informed package manifest
-	bundles = append(bundles, bundle)
-	packageManifest, err := SemverPackageManifest(bundles)
-	if err != nil {
-		return fmt.Errorf("failed to generate semver informed package manifest: %s", err)
+	// Regenerate the upgrade graphs for each package
+	for pkg, bundles := range packages {
+		// Add any existing bundles into the mix
+		ctx := ContextWithPackage(context.TODO(), pkg)
+		existing, err := i.querier.ListRegistryBundles(ctx)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		packageManifest, err := SemverPackageManifest(append(existing, bundles...))
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		if err = i.loader.AddPackageChannels(*packageManifest); err != nil {
+			errs = append(errs, err)
+		}
 	}
 
-	if err := i.loadOperatorBundle(*packageManifest, bundle); err != nil {
-		return fmt.Errorf("Error adding package %s", err)
-	}
-
-	return nil
+	return utilerrors.NewAggregate(errs)
 }
 
 func (i *DirectoryPopulator) loadManifestsSemver(bundle *Bundle, annotations *AnnotationsFile, skippatch bool) error {
@@ -379,18 +363,25 @@ func (i *DirectoryPopulator) loadOperatorBundle(manifest PackageManifest, bundle
 	return nil
 }
 
+type bundleVersion struct {
+	name    string
+	version semver.Version
+
+	// Keep track of the number of times we visit each version so we can tell if a head is contested
+	count int
+}
+
+// compare returns a value less than one if the receiver arg is less smaller the given version, greater than one if it is larger, and zero if they are equal.
+// This comparison follows typical semver precedence rules, with one addition: whenever two versions are equal with the exception of their build-ids, the build-ids are compared using prerelease precedence rules. Further, versions with no build-id are always less than versions with build-ids; e.g. 1.0.0 < 1.0.0+1.
+func (b bundleVersion) compare(v bundleVersion) (int, error) {
+	return libsemver.BuildIdCompare(b.version, v.version)
+}
+
 // SemverPackageManifest generates a PackageManifest from a set of bundles, determining channel heads and the default channel using semver.
 // Bundles with the highest version field (according to semver) are chosen as channel heads, and the default channel is taken from the last,
 // highest versioned bundle in the entire set to define it.
 // The given bundles must all belong to the same package or an error is thrown.
 func SemverPackageManifest(bundles []*Bundle) (*PackageManifest, error) {
-	type bundleVersion struct {
-		name    string
-		version semver.Version
-
-		// Keep track of the number of times we visit each version so we can tell if a head is contested
-		count int
-	}
 	heads := map[string]bundleVersion{}
 
 	var (
@@ -432,11 +423,11 @@ func SemverPackageManifest(bundles []*Bundle) (*PackageManifest, error) {
 				continue
 			}
 
-			if version.LT(head.version) {
+			if c, err := current.compare(head); err != nil {
+				return nil, err
+			} else if c < 0 {
 				continue
-			}
-
-			if version.EQ(head.version) {
+			} else if c == 0 {
 				// We have a duplicate version, add the count
 				current.count += head.count
 			}
@@ -446,11 +437,11 @@ func SemverPackageManifest(bundles []*Bundle) (*PackageManifest, error) {
 		}
 
 		// Set max if bundle is greater
-		if version.LT(maxVersion.version) {
+		if c, err := current.compare(maxVersion); err != nil {
+			return nil, err
+		} else if c < 0 {
 			continue
-		}
-
-		if version.EQ(maxVersion.version) {
+		} else if c == 0 {
 			current.count += maxVersion.count
 		}
 

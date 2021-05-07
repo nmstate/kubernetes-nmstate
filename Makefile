@@ -138,8 +138,8 @@ $(CONTROLLER_GEN): go.mod
 	$(MAKE) tools
 $(OPM): go.mod
 	$(MAKE) tools
-$(OPERATOR_SDK): go.mod
-	$(MAKE) tools
+$(OPERATOR_SDK):
+	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
 gen-k8s: $(CONTROLLER_GEN)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -214,7 +214,7 @@ vendor: $(GO)
 	$(GO) mod tidy
 	$(GO) mod vendor
 
-tools: $(GO)
+tools: $(GO) $(OPERATOR_SDK)
 	./hack/install-tools.sh
 
 # Generate bundle manifests and metadata, then validate generated files.

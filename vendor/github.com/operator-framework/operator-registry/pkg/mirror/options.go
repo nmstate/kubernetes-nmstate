@@ -50,8 +50,8 @@ func (c *IndexImageMirrorerOptions) Apply(options []ImageIndexMirrorOption) {
 	}
 }
 
-// ToOption converts an AppregistryBuildOptions object into a function that applies
-// its current configuration to another AppregistryBuildOptions instance
+// ToOption converts an IndexImageMirrorerOptions object into a function that applies
+// its current configuration to another IndexImageMirrorerOptions instance
 func (c *IndexImageMirrorerOptions) ToOption() ImageIndexMirrorOption {
 	return func(o *IndexImageMirrorerOptions) {
 		if c.ImageMirrorer != nil {
