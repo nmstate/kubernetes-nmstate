@@ -17,7 +17,7 @@ var (
     state: up
     link-aggregation:
       mode: active-backup
-      slaves:
+      port:
         - eth1
       options:
         miimon: '120'

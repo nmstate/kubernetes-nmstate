@@ -22,7 +22,6 @@ import (
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
-	"github.com/nmstate/kubernetes-nmstate/test/version"
 )
 
 var (
@@ -54,13 +53,8 @@ var _ = BeforeSuite(func() {
 
 	testenv.Start()
 
-	if version.IsNmstate(">= 1.0.0") {
-		portFieldName = "port"
-		miimonFormat = "%d"
-	} else {
-		portFieldName = "slaves"
-		miimonFormat = "'%d'"
-	}
+	portFieldName = "port"
+	miimonFormat = "%d"
 
 	By("Getting worker node list from cluster")
 	nodeList := corev1.NodeList{}
