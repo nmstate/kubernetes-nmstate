@@ -7,6 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -89,11 +90,18 @@ var _ = Describe("NMState operator", func() {
 			installOperator("nmstate")
 		})
 		It("should wait on the old one to be deleted", func() {
+			newDaemonSetKey := types.NamespacedName{Namespace: operatorNamespace, Name: "nmstate-handler"}
+			Eventually(func() error {
+				daemonSet := appsv1.DaemonSet{}
+				err := testenv.Client.Get(context.TODO(), newDaemonSetKey, &daemonSet)
+				return err
+			}, 180*time.Second, 1*time.Second).Should(SatisfyAny(Succeed(), WithTransform(apierrors.IsNotFound, BeFalse())))
+
 			By("Checking handler is locked")
-			daemonset.GetConsistently(types.NamespacedName{Namespace: operatorNamespace, Name: "nmstate-handler"}).ShouldNot(daemonset.BeReady())
+			daemonset.GetConsistently(newDaemonSetKey).ShouldNot(daemonset.BeReady())
 			uninstallOperator("nmstate")
 			By("Checking handler is unlocked after deleting old one")
-			daemonset.GetEventually(types.NamespacedName{Namespace: operatorNamespace, Name: "nmstate-handler"}).Should(daemonset.BeReady())
+			daemonset.GetEventually(newDaemonSetKey).Should(daemonset.BeReady())
 		})
 	})
 })
