@@ -71,6 +71,14 @@ func (ec *EnactmentConditions) NotifySuccess() {
 	}
 }
 
+func (ec *EnactmentConditions) NotifyPending() {
+	ec.logger.Info("NotifyPending")
+	err := ec.updateEnactmentConditions(SetPending, "Max unavailable node limit reached")
+	if err != nil {
+		ec.logger.Error(err, "Error notifying state Pending")
+	}
+}
+
 func (ec *EnactmentConditions) Reset() {
 	ec.logger.Info("Reset")
 	err := ec.updateEnactmentConditions(func(conditionList *nmstate.ConditionList, message string) {
@@ -115,6 +123,12 @@ func SetFailed(conditions *nmstate.ConditionList, reason nmstate.ConditionReason
 		"",
 	)
 	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
@@ -141,6 +155,12 @@ func SetAborted(conditions *nmstate.ConditionList, reason nmstate.ConditionReaso
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
 		corev1.ConditionFalse,
 		reason,
 		"",
@@ -173,6 +193,12 @@ func SetSuccess(conditions *nmstate.ConditionList, message string) {
 		"",
 	)
 	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		"",
+	)
+	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
@@ -200,9 +226,48 @@ func SetProgressing(conditions *nmstate.ConditionList, message string) {
 		"",
 	)
 	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		"",
+	)
+	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		"",
+	)
+}
+
+func SetPending(conditions *nmstate.ConditionList, message string) {
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionTrue,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		message,
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		message,
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
 		"",
 	)
 }

@@ -7,10 +7,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
 func invalidConfig(bridgeName string) nmstate.State {
@@ -22,24 +20,6 @@ func invalidConfig(bridgeName string) nmstate.State {
 }
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
-	var abortedEnactmentConditions = []interface{}{
-		shared.Condition{
-			Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
-			Status: corev1.ConditionFalse,
-		},
-		shared.Condition{
-			Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
-			Status: corev1.ConditionFalse,
-		},
-		shared.Condition{
-			Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
-			Status: corev1.ConditionFalse,
-		},
-		shared.Condition{
-			Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
-			Status: corev1.ConditionTrue,
-		},
-	}
 	Context("when applying valid config", func() {
 		BeforeEach(func() {
 		})
@@ -51,42 +31,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			resetDesiredStateForNodes()
 		})
 		It("[test_id:3796]should go from Progressing to Available", func() {
-			progressConditions := []nmstate.Condition{
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
-					Status: corev1.ConditionTrue,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
-					Status: corev1.ConditionUnknown,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionUnknown,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
-					Status: corev1.ConditionFalse,
-				},
-			}
-			availableConditions := []nmstate.Condition{
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
-					Status: corev1.ConditionFalse,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
-					Status: corev1.ConditionTrue,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
-					Status: corev1.ConditionFalse,
-				},
-				nmstate.Condition{
-					Type:   nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
-					Status: corev1.ConditionFalse,
-				},
-			}
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
 			for i, _ := range nodes {
@@ -94,14 +38,9 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					By(fmt.Sprintf("Check %s progressing state is reached", node))
-					enactmentConditionsStatusEventually(node).Should(ConsistOf(progressConditions))
-
-					By(fmt.Sprintf("Check %s available state is the next condition", node))
-					enactmentConditionsStatusEventually(node).Should(ConsistOf(availableConditions))
-
-					By(fmt.Sprintf("Check %s available state is kept", node))
-					enactmentConditionsStatusConsistently(node).Should(ConsistOf(availableConditions))
+					enactmentConditionsStatusEventually(node).Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
+					enactmentConditionsStatusEventually(node).Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
+					enactmentConditionsStatusConsistently(node).Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
 				}()
 			}
 			// Run the policy after we set the nnce conditions assert so we
@@ -116,25 +55,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 	})
 
 	Context("when applying invalid configuration", func() {
-		var failingEnactmentConditions = []interface{}{
-			shared.Condition{
-				Type:   shared.NodeNetworkConfigurationEnactmentConditionFailing,
-				Status: corev1.ConditionTrue,
-			},
-			shared.Condition{
-				Type:   shared.NodeNetworkConfigurationEnactmentConditionAvailable,
-				Status: corev1.ConditionFalse,
-			},
-			shared.Condition{
-				Type:   shared.NodeNetworkConfigurationEnactmentConditionProgressing,
-				Status: corev1.ConditionFalse,
-			},
-			shared.Condition{
-				Type:   shared.NodeNetworkConfigurationEnactmentConditionAborted,
-				Status: corev1.ConditionFalse,
-			},
-		}
-
 		BeforeEach(func() {
 			updateDesiredState(invalidConfig(bridge1))
 		})
@@ -151,8 +71,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				By(fmt.Sprintf("Check %s failing state is reached", node))
 				enactmentConditionsStatusEventually(node).Should(
 					SatisfyAny(
-						ConsistOf(failingEnactmentConditions...),
-						ConsistOf(abortedEnactmentConditions...),
+						matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+						matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 					), "should eventually reach failing or aborted conditions at enactments",
 				)
 			}
@@ -170,8 +90,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 					By(fmt.Sprintf("Check %s failing state is kept", node))
 					enactmentConditionsStatusConsistently(node).Should(
 						SatisfyAny(
-							ConsistOf(failingEnactmentConditions...),
-							ConsistOf(abortedEnactmentConditions...),
+							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+							matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 						), "should consistently keep failing or aborted conditions at enactments",
 					)
 				}()
@@ -185,11 +105,11 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				abortedConditions := 0
 				for _, node := range nodes {
 					conditionList := enactmentConditionsStatus(node, TestPolicy)
-					success, _ := ConsistOf(conditionList).Match(failingEnactmentConditions)
+					success, _ := matchConditionsFrom(enactmentconditions.SetFailedToConfigure).Match(conditionList)
 					if success {
 						failingConditions++
 					}
-					success, _ = ConsistOf(conditionList).Match(abortedEnactmentConditions)
+					success, _ = matchConditionsFrom(enactmentconditions.SetConfigurationAborted).Match(conditionList)
 					if success {
 						abortedConditions++
 					}
@@ -215,8 +135,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 					By(fmt.Sprintf("Check %s failing state is kept", node))
 					enactmentConditionsStatusConsistently(node).Should(
 						SatisfyAny(
-							ConsistOf(failingEnactmentConditions...),
-							ConsistOf(abortedEnactmentConditions...),
+							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+							matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 						), "should consistently keep failing or aborted conditions at enactments")
 				}()
 			}

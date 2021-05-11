@@ -174,6 +174,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	err = r.incrementUnavailableNodeCount(instance)
 	if err != nil {
 		if apierrors.IsConflict(err) {
+			enactmentConditions.NotifyPending()
 			return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, err
 		}
 		return ctrl.Result{}, err

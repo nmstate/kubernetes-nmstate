@@ -15,6 +15,7 @@ const (
 	failing     = nmstate.NodeNetworkConfigurationEnactmentConditionFailing
 	available   = nmstate.NodeNetworkConfigurationEnactmentConditionAvailable
 	progressing = nmstate.NodeNetworkConfigurationEnactmentConditionProgressing
+	pending     = nmstate.NodeNetworkConfigurationEnactmentConditionPending
 	aborted     = nmstate.NodeNetworkConfigurationEnactmentConditionAborted
 	t           = corev1.ConditionTrue
 	f           = corev1.ConditionFalse
@@ -62,6 +63,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
 				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				progressing: CountByConditionStatus{t: 0, f: 0, u: 2},
+				pending:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				aborted:     CountByConditionStatus{t: 0, f: 0, u: 2},
 			},
 		}),
@@ -75,6 +77,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 1, f: 0, u: 1},
 				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
@@ -88,6 +91,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 1, f: 0, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
@@ -101,6 +105,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
 				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				progressing: CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
@@ -114,6 +119,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 2, f: 0, u: 0},
 				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
@@ -127,6 +133,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
 				failing:     CountByConditionStatus{t: 2, f: 0, u: 0},
 				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
@@ -140,6 +147,63 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
 				failing:     CountByConditionStatus{t: 1, f: 1, u: 0},
 				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
+				aborted:     CountByConditionStatus{t: 1, f: 1, u: 0},
+			},
+		}),
+		Entry("e(Pending), e(Progressing)", EnactmentCounterCase{
+			policyGeneration: 1,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(1, SetProgressing),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
+				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
+				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
+			},
+		}),
+		Entry("e(Pending), e(Success)", EnactmentCounterCase{
+			policyGeneration: 1,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(1, SetSuccess),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 1, f: 1, u: 0},
+				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
+				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
+			},
+		}),
+		Entry("e(Pending), e(Failed)", EnactmentCounterCase{
+			policyGeneration: 1,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(1, SetFailedToConfigure),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
+				failing:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
+			},
+		}),
+		Entry("e(Pending), e(Aborted)", EnactmentCounterCase{
+			policyGeneration: 1,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(1, SetConfigurationAborted),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
+				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
+				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
 				aborted:     CountByConditionStatus{t: 1, f: 1, u: 0},
 			},
 		}),
@@ -153,6 +217,21 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
 				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				progressing: CountByConditionStatus{t: 1, f: 0, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
+				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
+			},
+		}),
+		Entry("p(2), e(1,Pending), e(2,Pending)", EnactmentCounterCase{
+			policyGeneration: 2,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(2, SetPending),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
+				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
+				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
+				pending:     CountByConditionStatus{t: 1, f: 0, u: 1},
 				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
 			},
 		}),
@@ -166,6 +245,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 1, f: 0, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
 			},
 		}),
@@ -179,6 +259,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 1, f: 0, u: 1},
 				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
 			},
 		}),
@@ -192,6 +273,7 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 1, f: 0, u: 1},
 			},
 		}),
