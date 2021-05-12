@@ -166,7 +166,7 @@ status:
         enabled: true
       link-aggregation:
         mode: balance-rr
-        slaves:
+        port:
         - eth1
         - eth2
       name: bond0
@@ -211,7 +211,7 @@ status:
       link-aggregation:
         mode: balance-rr
         options: {}
-        slaves:
+        port:
         - eth2
         - eth1
       mac-address: 52:55:00:D1:56:01
