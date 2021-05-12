@@ -60,7 +60,7 @@ kubectl get nodenetworkconfigurationpolicies
 
 ```
 NAME              STATUS
-bond0-eth1-eth2   SuccessfullyConfigured
+bond0-eth1-eth2   Available
 ```
 
 We can also use short name `nncp` to reach the same effect:
@@ -71,7 +71,7 @@ kubectl get nncp
 
 ```
 NAME              STATUS
-bond0-eth1-eth2   SuccessfullyConfigured
+bond0-eth1-eth2   Available
 ```
 
 By using `-o yaml` we obtain the full Policy with its current state:
@@ -111,8 +111,8 @@ kubectl get nodenetworkconfigurationenactments
 
 ```
 NAME                     STATUS
-node01.bond0-eth1-eth2   SuccessfullyConfigured
-node02.bond0-eth1-eth2   SuccessfullyConfigured
+node01.bond0-eth1-eth2   Available
+node02.bond0-eth1-eth2   Available
 ```
 
 We can also use short name `nnce` to reach the same effect:
@@ -123,8 +123,8 @@ kubectl get nnce
 
 ```
 NAME                     STATUS
-node01.bond0-eth1-eth2   SuccessfullyConfigured
-node02.bond0-eth1-eth2   SuccessfullyConfigured
+node01.bond0-eth1-eth2   Available
+node02.bond0-eth1-eth2   Available
 ```
 
 By using `-o yaml` we obtain the full status of given Enactment:
@@ -155,10 +155,9 @@ status:
     type: Progressing
   - lastHearbeatTime: "2020-02-07T10:27:04Z"
     lastTransitionTime: "2020-02-07T10:27:04Z"
-    message: All policy selectors are matching the node
-    reason: AllSelectorsMatching
-    status: "True"
-    type: Matching
+    reason: SuccessfullyConfigured
+    status: "False"
+    type: Pending
   desiredState:
     interfaces:
     - ipv4:
@@ -176,9 +175,10 @@ status:
 
 The output contains the `desiredState` applied by the Policy for the given Node.
 It also contains a list of conditions. This list is more detailed than the one
-in Policy. It shows whether the Policy matched given Node
-(`AllSelectorsMatching`), if the `desiredState` is currently being applied on
-the node (`Progressing`), if the configuration failed (`Failing`) or succeeded
+in Policy. It shows whether the limit of unavailable nods was reached so the
+node has to wait for other nodes to finish applying network configuration
+(`Pending`), if the `desiredState` is currently being applied on the node
+(`Progressing`), if the configuration failed (`Failing`) or succeeded
 (`Available`).
 
 <!-- TODO: Once we have an article about node selectors, link it here -->
@@ -426,8 +426,8 @@ Wait for the Policy to get applied:
 kubectl wait nncp vlan100 --for condition=Available --timeout 2m
 ```
 
-The list of Enactments then shows that the Policy has been applied only on
-Node `node01`, while `node02` is reporting `NodeSelectorNotMatching`:
+The list of Enactments then shows that the 'vlan100' Policy has been applied only on
+Node `node01`
 
 ```shell
 kubectl get nnce
@@ -435,32 +435,15 @@ kubectl get nnce
 
 ```
 NAME             STATUS
-node01.eth1      SuccessfullyConfigured
-node01.eth2      SuccessfullyConfigured
-node01.vlan100   SuccessfullyConfigured
-node02.eth1      SuccessfullyConfigured
-node02.eth2      SuccessfullyConfigured
-node02.vlan100   NodeSelectorNotMatching
+node01.eth1      Available
+node01.eth2      Available
+node01.vlan100   Available
+node02.eth1      Available
+node02.eth2      Available
 ```
 
-After a closer observation, we can see that it was indeed caused by not-matching
-selectors:
-
-```shell
-kubectl get nnce node02.vlan100 -o yaml
-```
-
-```yaml
-# output truncated
-status:
-  conditions:
-  - lastHearbeatTime: "2020-02-07T15:34:26Z"
-    lastTransitionTime: "2020-02-07T15:34:26Z"
-    message: 'Unmatching labels: map[kubernetes.io/hostname:node01]'
-    reason: NodeSelectorNotMatching
-    status: "False"
-    type: Matching
-```
+After a closer observation, we can see that there is no node02.vlan100
+enactment.
 
 ## Configuring multiple nodes concurrently
 
@@ -486,12 +469,12 @@ kubectl apply -f linux-bridge_maxunavailable.yaml
 
 ```
 NAME                                 STATUS
-node01.linux-bridge-maxunavailable   AllSelectorsMatching
-node02.linux-bridge-maxunavailable   ConfigurationProgressing
-node03.linux-bridge-maxunavailable   SuccessfullyConfigured
-node04.linux-bridge-maxunavailable   ConfigurationProgressing
-node05.linux-bridge-maxunavailable   ConfigurationProgressing
-node06.linux-bridge-maxunavailable   AllSelectorsMatching
+node01.linux-bridge-maxunavailable   Pending
+node02.linux-bridge-maxunavailable   Progressing
+node03.linux-bridge-maxunavailable   Available
+node04.linux-bridge-maxunavailable   Progressing
+node05.linux-bridge-maxunavailable   Progressing
+node06.linux-bridge-maxunavailable   Pending
 ```
 
 ## Continue reading
