@@ -464,15 +464,14 @@ status:
 
 ## Configuring multiple nodes concurrently
 
-By default, Policy configuration is applied sequentially, one node at a time.
-This configuration strategy is safe and prevents the entire cluster from being
+By default, Policy configuration is applied in parallel on 50% of nmstate enabled nodes.
+This configuration strategy is considered safe enough and prevents the entire cluster from being
 temporarily unavailable, if the applied configuration breaks network connectivity.
 
-For big clusters however, it may take too much time for a configuration to finish.
-In such a case, `maxUnavailable` can be used to define portion size of a cluster
-that can apply a policy configuration concurrently.
+User may change this behaviour per policy by setting `maxUnavailable` field to define
+portion size of a cluster that can apply a policy configuration in parallel.
 MaxUnavailable specifies percentage or a constant number of nodes that
-can be progressing a policy at a time. The default is "50%" of cluster nodes.
+can be applying a policy at a time.
 
 The following policy specifies that up to 3 nodes may be progressing concurrently:
 
