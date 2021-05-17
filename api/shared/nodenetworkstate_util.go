@@ -4,7 +4,7 @@
 // The yaml parser we use here first convert yaml to json and then manage
 // the data with the standard golang json package.
 //
-// [1] https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml
+// [1] https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml
 
 package shared
 

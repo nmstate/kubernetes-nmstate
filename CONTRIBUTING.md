@@ -3,7 +3,7 @@
 The system is implemented as an k8s operator using the
 [operator-sdk](https://github.com/operator-framework/operator-sdk) but is
 deployed as a DaemonSet instead of Deployment with
-[filtering](https://github.com/operator-framework/operator-sdk/blob/master/doc/user/event-filtering.md)
+[filtering](https://sdk.operatorframework.io/docs/building-operators/golang/references/event-filtering/)
 only events for the DaemonSet pod node.
 
 
@@ -14,7 +14,7 @@ implies following dependency requirements:
 
 | kubernetes-nmstate version | NetworkManager version |
 | ---                        | ---                    |
-| master, `> 0.15.0`         | `>= 1.22`              |
+| main, `> 0.15.0`         | `>= 1.22`              |
 | `<= 0.15.0`                | `>= 1.20`              |
 
 
@@ -158,7 +158,7 @@ So the step would be:
  - Prepare a release calling `make prepare-(patch|minor|major)`
  - Edit version/description to set a description and order commits
  - Create a PR to review it
- - Merge it to master
+ - Merge it to main
  - Wait for Prow to do the release.
 
 The environment variable `GITHUB_TOKEN` is needed to publish at GitHub and it must

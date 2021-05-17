@@ -67,7 +67,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	})
 	Context("when network configuration is changed by a NNCP", func() {
 		BeforeEach(func() {
-			// We want to test all the NNS so we apply policies to masters and workers
+			// We want to test all the NNS so we apply policies to control-plane and workers
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUp(bridge1))
 			waitForAvailableTestPolicy()
 		})

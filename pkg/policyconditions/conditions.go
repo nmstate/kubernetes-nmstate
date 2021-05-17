@@ -107,7 +107,7 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 		}
 
 		// Count only nodes that runs nmstate handler and match the policy
-		// nodeSelector, could be that users don't want to run knmstate at master for example
+		// nodeSelector, could be that users don't want to run knmstate at control-plane for example
 		// so they don't want to change net config there.
 		nmstateMatchingNodes, err := node.NodesRunningNmstate(cli, policy.Spec.NodeSelector)
 		if err != nil {
