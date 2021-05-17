@@ -20,7 +20,7 @@ spec:
   versions:
   - additionalPrinterColumns:
     - description: Status
-      jsonPath: .status.conditions[?(@.type=="Available")].reason
+      jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
     name: v1alpha1
@@ -85,7 +85,7 @@ spec:
       status: {}
   - additionalPrinterColumns:
     - description: Status
-      jsonPath: .status.conditions[?(@.type=="Available")].reason
+      jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
     name: v1beta1
