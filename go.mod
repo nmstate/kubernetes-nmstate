@@ -3,15 +3,14 @@ module github.com/nmstate/kubernetes-nmstate
 go 1.15
 
 require (
-	github.com/Masterminds/semver v1.5.0
 	github.com/evanphx/json-patch v4.9.0+incompatible
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.3.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/onsi/ginkgo v1.15.0
-	github.com/onsi/gomega v1.10.5
+	github.com/onsi/ginkgo v1.16.2
+	github.com/onsi/gomega v1.12.0
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.15.3
 	github.com/operator-framework/operator-sdk v1.4.2
