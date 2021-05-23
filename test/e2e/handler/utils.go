@@ -44,7 +44,7 @@ func interfacesName(interfaces []interface{}) []string {
 	var names []string
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
+		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml")
 		names = append(names, name.(string))
 	}
 	return names
@@ -54,7 +54,7 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	var dummy map[string]interface{}
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
+		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml")
 		if name == searchedName {
 			return iface.(map[string]interface{})
 		}
@@ -494,7 +494,7 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	ifacesState := make(map[string]string)
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/master/libnmstate/schemas/operational-state.yaml")
+		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml")
 		if ifaceInSlice(name.(string), exclude) {
 			continue
 		}
