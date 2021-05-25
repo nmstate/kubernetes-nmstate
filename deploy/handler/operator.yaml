@@ -199,10 +199,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: INTERFACES_FILTER
-              valueFrom:
-                configMapKeyRef:
-                  name: {{template "handlerPrefix" .}}nmstate-config
-                  key: interfaces_filter
+              value: "{veth*,cali*}"
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
@@ -232,14 +229,6 @@ spec:
         - name: nmstate-lock
           hostPath:
             path: /var/k8s_nmstate
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{template "handlerPrefix" .}}nmstate-config
-  namespace: {{ .HandlerNamespace }}
-data:
-  interfaces_filter: "{veth*,cali*}"
 ---
 apiVersion: v1
 kind: Service
