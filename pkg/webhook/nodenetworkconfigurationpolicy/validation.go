@@ -3,8 +3,10 @@ package nodenetworkconfigurationpolicy
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -31,6 +33,33 @@ func validatePolicyNotInProgressHook(policy nmstatev1beta1.NodeNetworkConfigurat
 	return causes
 }
 
+func validatePolicyNodeSelector(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+	causes := []metav1.StatusCause{}
+	nodeSelector := policy.Spec.NodeSelector
+	if nodeSelector == nil {
+		return causes
+	}
+	for labelKey, labelValue := range nodeSelector {
+		validationErrors := validation.IsQualifiedName(labelKey)
+		if len(validationErrors) > 0 {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: fmt.Sprintf("invalid label key: %q: %s", labelKey, strings.Join(validationErrors, "; ")),
+				Field:   "spec.nodeSelector",
+			})
+		}
+		validationErrors = validation.IsValidLabelValue(labelValue)
+		if len(validationErrors) > 0 {
+			causes = append(causes, metav1.StatusCause{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: fmt.Sprintf("invalid label value: %q: at key: %q: %s", labelValue, labelKey, strings.Join(validationErrors, "; ")),
+				Field:   "spec.nodeSelector",
+			})
+		}
+	}
+	return causes
+}
+
 func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 	return &webhook.Admission{
 		Handler: admission.HandlerFunc(
@@ -38,6 +67,7 @@ func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 				cli,
 				onPolicySpecChange,
 				validatePolicyNotInProgressHook,
+				validatePolicyNodeSelector,
 			),
 		),
 	}
