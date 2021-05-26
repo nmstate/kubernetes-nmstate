@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	admissionv1 "k8s.io/api/admission/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -15,8 +16,12 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 )
 
-func onPolicySpecChange(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
+func onPolicySpecChange(operation admissionv1.Operation, policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
 	return !reflect.DeepEqual(policy.Spec, currentPolicy.Spec)
+}
+
+func onCreate(operation admissionv1.Operation, policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
+	return operation == admissionv1.Create
 }
 
 func validatePolicyNotInProgressHook(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
@@ -60,15 +65,33 @@ func validatePolicyNodeSelector(policy nmstatev1beta1.NodeNetworkConfigurationPo
 	return causes
 }
 
+func validatePolicyName(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+	causes := []metav1.StatusCause{}
+	validationErrors := validation.IsValidLabelValue(policy.Name)
+	if len(validationErrors) > 0 {
+		causes = append(causes, metav1.StatusCause{
+			Type:    metav1.CauseTypeFieldValueInvalid,
+			Message: fmt.Sprintf("invalid policy name: %q: %s", policy.Name, strings.Join(validationErrors, "; ")),
+			Field:   "name",
+		})
+	}
+	return causes
+}
+
 func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 	return &webhook.Admission{
-		Handler: admission.HandlerFunc(
-			validatePolicyHandler(
+		Handler: admission.MultiValidatingHandler(
+			admission.HandlerFunc(validatePolicyHandler(
 				cli,
 				onPolicySpecChange,
 				validatePolicyNotInProgressHook,
 				validatePolicyNodeSelector,
-			),
+			)),
+			admission.HandlerFunc(validatePolicyHandler(
+				cli,
+				onCreate,
+				validatePolicyName,
+			)),
 		),
 	}
 }

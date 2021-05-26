@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/pkg/errors"
+	admissionv1 "k8s.io/api/admission/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -47,7 +48,7 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1beta1.NodeNetworkConfig
 	}
 }
 
-func validatePolicyHandler(cli client.Client, neededValidationFor func(nmstatev1beta1.NodeNetworkConfigurationPolicy, nmstatev1beta1.NodeNetworkConfigurationPolicy) bool, validators ...validator) admission.HandlerFunc {
+func validatePolicyHandler(cli client.Client, neededValidationFor func(admissionv1.Operation, nmstatev1beta1.NodeNetworkConfigurationPolicy, nmstatev1beta1.NodeNetworkConfigurationPolicy) bool, validators ...validator) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/validator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw
@@ -64,7 +65,7 @@ func validatePolicyHandler(cli client.Client, neededValidationFor func(nmstatev1
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, errMsg))
 		}
 
-		if !neededValidationFor(policy, currentPolicy) {
+		if !neededValidationFor(req.Operation, policy, currentPolicy) {
 			return admission.Allowed("validation not needed")
 		}
 
