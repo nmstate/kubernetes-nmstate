@@ -107,5 +107,23 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 			validationFn:     validatePolicyNodeSelector,
 			validationResult: []metav1.StatusCause{},
 		}),
+		Entry("policy has name with length beyond the limit", ValidationWebhookCase{
+			policy:       nmstatev1beta1.NodeNetworkConfigurationPolicy{ObjectMeta: metav1.ObjectMeta{Name: "this-is-longer-than-sixty-three-characters-hostname-bar-bar-bar.foo.com"}},
+			validationFn: validatePolicyName,
+			validationResult: []metav1.StatusCause{{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: "invalid policy name: \"this-is-longer-than-sixty-three-characters-hostname-bar-bar-bar.foo.com\": must be no more than 63 characters",
+				Field:   "name",
+			}},
+		}),
+		Entry("policy has name with invalid format", ValidationWebhookCase{
+			policy:       nmstatev1beta1.NodeNetworkConfigurationPolicy{ObjectMeta: metav1.ObjectMeta{Name: "foo+bar"}},
+			validationFn: validatePolicyName,
+			validationResult: []metav1.StatusCause{{
+				Type:    metav1.CauseTypeFieldValueInvalid,
+				Message: "invalid policy name: \"foo+bar\": a valid label must be an empty string or consist of alphanumeric characters, '-', '_' or '.', and must start and end with an alphanumeric character (e.g. 'MyValue',  or 'my_value',  or '12345', regex used for validation is '(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?')",
+				Field:   "name",
+			}},
+		}),
 	)
 })
