@@ -157,6 +157,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 		log.Error(err, "Error initializing enactment")
 	}
 
+	err = r.reconcilePolicyMaxUnavailableCount(instance)
+	if err != nil {
+		log.Error(err, "failed to sync unavailableNodeCount")
+		return ctrl.Result{}, err
+	}
+
 	enactmentConditions := enactmentconditions.New(r.Client, nmstateapi.EnactmentKey(nodeName, instance.Name))
 
 	_, enactmentCountByCondition, err := enactment.CountByPolicy(r.Client, instance)
@@ -301,6 +307,26 @@ func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(poli
 		return errors.Wrap(err, "failed deleting enactment")
 	}
 	return nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) reconcilePolicyMaxUnavailableCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
+		instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		err := r.Client.Get(context.TODO(), policyKey, instance)
+		if err != nil {
+			return err
+		}
+		_, enactmentCountByCondition, err := enactment.CountByPolicy(r.Client, instance)
+		if err != nil {
+			return err
+		}
+		if instance.Status.UnavailableNodeCount != enactmentCountByCondition.Progressing() {
+			instance.Status.UnavailableNodeCount = enactmentCountByCondition.Progressing()
+			return r.Client.Status().Update(context.TODO(), instance)
+		}
+		return nil
+	})
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
