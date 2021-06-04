@@ -1,4 +1,4 @@
-apiVersion: nmstate.io/v1betaa1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   name: bond
@@ -15,6 +15,6 @@ spec:
         mode: balance-rr
         options:
           miimon: '140'
-        slaves:
+        port:
         - eth1
         - eth2
