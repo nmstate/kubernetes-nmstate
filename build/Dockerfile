@@ -5,7 +5,7 @@ RUN dnf install -b -y dnf-plugins-core && \
     dnf copr enable -y networkmanager/$NM_COPR_REPO && \
     dnf copr enable -y nmstate/$NMSTATE_COPR_REPO && \
     dnf copr enable -y nmstate/nispor && \
-    dnf install -b -y nmstate iproute iputils && \
+    dnf install -b -y $NM_COPR_REPO* $NMSTATE_COPR_REPO* iproute iputils && \
     dnf remove -y dnf-plugins-core && \
     dnf clean all
 
