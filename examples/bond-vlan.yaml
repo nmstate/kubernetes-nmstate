@@ -15,7 +15,7 @@ spec:
         mode: balance-rr
         options:
           miimon: '140'
-        port:
+        slaves:
         - eth1
         - eth2
     - name: bond0.102
