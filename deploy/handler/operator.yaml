@@ -192,6 +192,22 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: COMPONENT
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/component']
+            - name: PART_OF
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/part-of']
+            - name: VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/version']
+            - name: MANAGED_BY
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/managed-by']
             - name: OPERATOR_NAME
               value: "{{template "handlerPrefix" .}}nmstate"
             - name: NODE_NAME

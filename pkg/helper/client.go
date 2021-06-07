@@ -17,6 +17,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -61,6 +62,7 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmsta
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            node.ObjectMeta.Name,
 			OwnerReferences: ownerRefList,
+			Labels:          names.IncludeRelationshipLabels(nil),
 		},
 	}
 
