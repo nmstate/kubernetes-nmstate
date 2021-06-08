@@ -13,10 +13,9 @@ trap end EXIT SIGINT SIGTERM SIGSTOP
 
 $RELEASE_NOTES \
     --go-template go-template:$script_dir/release-notes.tmpl \
-    --release-version $new_version \
     --required-author "" \
-    --github-org nmstate \
-    --github-repo kubernetes-nmstate \
+    --org nmstate \
+    --repo kubernetes-nmstate \
     --start-rev $old_version \
     --end-rev $new_version \
     --output $release_notes > /dev/null 2>&1
