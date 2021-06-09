@@ -154,6 +154,10 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 		Operator: corev1.TolerationOpExists,
 		Effect:   corev1.TaintEffectNoSchedule,
 	}
+	operatorExistsToleration := corev1.Toleration{
+		Key:      "",
+		Operator: corev1.TolerationOpExists,
+	}
 	amd64ArchOnMasterNodeSelector := map[string]string{
 		"beta.kubernetes.io/arch":        "amd64",
 		"node-role.kubernetes.io/master": "",
@@ -172,7 +176,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	data.Data["WebhookTolerations"] = []corev1.Toleration{masterExistsNoScheduleToleration}
 	data.Data["WebhookAffinity"] = corev1.Affinity{}
 	data.Data["HandlerNodeSelector"] = amd64AndCRNodeSelector
-	data.Data["HandlerTolerations"] = []corev1.Toleration{masterExistsNoScheduleToleration}
+	data.Data["HandlerTolerations"] = []corev1.Toleration{operatorExistsToleration}
 	data.Data["HandlerAffinity"] = corev1.Affinity{}
 	// TODO: This is just a place holder to make template renderer happy
 	//       proper variable has to be read from env or CR
