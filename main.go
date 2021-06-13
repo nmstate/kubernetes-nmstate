@@ -43,6 +43,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/controllers"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
@@ -111,6 +112,7 @@ func main() {
 			Namespace:   os.Getenv("POD_NAMESPACE"),
 			WebhookName: "nmstate",
 			WebhookType: certificate.MutatingWebhook,
+			ExtraLabels: names.IncludeRelationshipLabels(nil),
 		}
 
 		certManagerOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
