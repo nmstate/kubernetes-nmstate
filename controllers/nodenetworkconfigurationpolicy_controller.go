@@ -20,10 +20,9 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"reflect"
 	"time"
-
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -172,7 +171,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) claimNodeRunningUpdate(policy
 	if err != nil {
 		return err
 	}
-	if policy.Status.NodeRunningUpdate != "" && policy.Status.NodeRunningUpdate != nodeName {
+	if policy.Status.NodeRunningUpdate != "" {
 		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("Another node is working on configuration"))
 	}
 	policy.Status.NodeRunningUpdate = nodeName
