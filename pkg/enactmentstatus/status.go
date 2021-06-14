@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -53,4 +54,12 @@ func Update(client client.Client, key types.NamespacedName, statusSetter func(*n
 			return isEqual, nil
 		})
 	})
+}
+
+func IsProgressing(conditions *nmstate.ConditionList) bool {
+	progressingCondition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
+	if progressingCondition != nil && progressingCondition.Status == corev1.ConditionTrue {
+		return true
+	}
+	return false
 }
