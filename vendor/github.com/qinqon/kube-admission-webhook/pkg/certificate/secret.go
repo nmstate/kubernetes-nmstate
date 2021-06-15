@@ -110,6 +110,7 @@ func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.
 						Name:        secretKey.Name,
 						Namespace:   secretKey.Namespace,
 						Annotations: map[string]string{},
+						Labels:      m.extraLabels,
 					},
 					Type: secretType,
 				}
