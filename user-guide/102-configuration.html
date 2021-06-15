@@ -830,6 +830,57 @@ selectors:</p>
     <span class="na">type</span><span class="pi">:</span> <span class="s">Matching</span>
 </code></pre></div></div>
 
+<h2 id="configuring-multiple-nodes-concurrently">Configuring multiple nodes concurrently</h2>
+
+<p>By default, Policy configuration is applied sequentially, one node at a time.
+This configuration strategy is safe and prevents the entire cluster from being
+temporarily unavailable, if the applied configuration breaks network connectivity.</p>
+
+<p>For big clusters however, it may take too much time for a configuration to finish.
+In such a case, <code class="language-plaintext highlighter-rouge">maxUnavailable</code> can be used to define portion size of a cluster
+that can apply a policy configuration concurrently.
+MaxUnavailable specifies percentage or a constant number of nodes that
+can be progressing a policy at a time. The default is “50%” of cluster nodes.</p>
+
+<p>The following policy specifies that up to 3 nodes may be progressing concurrently:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">linux-bridge-maxunavailable</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">maxUnavailable</span><span class="pi">:</span> <span class="m">3</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">br1</span>
+        <span class="na">description</span><span class="pi">:</span> <span class="s">Linux bridge with eth1 as a port</span>
+        <span class="na">type</span><span class="pi">:</span> <span class="s">linux-bridge</span>
+        <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+        <span class="na">ipv4</span><span class="pi">:</span>
+          <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+          <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">bridge</span><span class="pi">:</span>
+          <span class="na">options</span><span class="pi">:</span>
+            <span class="na">stp</span><span class="pi">:</span>
+              <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
+          <span class="na">port</span><span class="pi">:</span>
+            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+
+</code></pre></div></div>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> linux-bridge_maxunavailable.yaml
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                                 STATUS
+node01.linux-bridge-maxunavailable   AllSelectorsMatching
+node02.linux-bridge-maxunavailable   ConfigurationProgressing
+node03.linux-bridge-maxunavailable   SuccessfullyConfigured
+node04.linux-bridge-maxunavailable   ConfigurationProgressing
+node05.linux-bridge-maxunavailable   ConfigurationProgressing
+node06.linux-bridge-maxunavailable   AllSelectorsMatching
+</code></pre></div></div>
+
 <h2 id="continue-reading">Continue reading</h2>
 
 <p>The following tutorial will guide you through troubleshooting of a failed
