@@ -28,6 +28,7 @@ spec:
       nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-webhook
           args:
@@ -107,6 +108,7 @@ spec:
       nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-cert-manager
           args:
@@ -192,6 +194,7 @@ spec:
       nodeSelector: {{ toYaml .HandlerNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .HandlerTolerations | nindent 8 }}
       affinity: {{ toYaml .HandlerAffinity | nindent 8 }}
+      priorityClassName: system-node-critical
       containers:
         - name: nmstate-handler
           args:
