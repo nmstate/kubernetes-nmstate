@@ -72,7 +72,6 @@ KUBECTL ?= ./cluster/kubectl.sh
 GINKGO ?= $(GOBIN)/ginkgo
 CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 export GITHUB_RELEASE ?= $(GOBIN)/github-release
-export RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
 OPM ?= $(GOBIN)/opm
@@ -131,8 +130,6 @@ $(GINKGO): go.mod
 $(OPENAPI_GEN): go.mod
 	$(MAKE) tools
 $(GITHUB_RELEASE): go.mod
-	$(MAKE) tools
-$(RELEASE_NOTES): go.mod
 	$(MAKE) tools
 $(CONTROLLER_GEN): go.mod
 	$(MAKE) tools
@@ -207,7 +204,10 @@ version-minor:
 version-major:
 	./hack/tag-version.sh major
 
-release: $(GITHUB_RELEASE) $(RELEASE_NOTES)
+release-notes: $(GO)
+	hack/render-release-notes.sh $(WHAT)
+
+release: $(GITHUB_RELEASE) $(GO)
 	hack/release.sh
 
 vendor: $(GO)
