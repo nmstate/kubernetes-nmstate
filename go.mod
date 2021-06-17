@@ -3,14 +3,18 @@ module github.com/nmstate/kubernetes-nmstate
 go 1.16
 
 require (
+	github.com/Microsoft/hcsshim v0.8.14 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.4.0
 	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.0
+	github.com/gorilla/mux v1.7.4 // indirect
+	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
+	github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2 // indirect
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.17.0
 	github.com/phoracek/networkmanager-go v0.1.0
@@ -22,7 +26,7 @@ require (
 	k8s.io/apimachinery v0.21.1
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kubectl v0.21.1
-	k8s.io/release v0.7.0
+	k8s.io/release v0.9.0
 	kubevirt.io/qe-tools v0.1.7
 	sigs.k8s.io/controller-runtime v0.9.0
 	sigs.k8s.io/controller-tools v0.5.0

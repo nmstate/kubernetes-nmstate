@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	gogithub "github.com/google/go-github/v33/github"
 	"github.com/nozzle/throttler"
@@ -56,17 +57,6 @@ type (
 	Notes []string
 	Kind  string
 )
-
-// CVEData Information of a linked CVE vulnerability
-type CVEData struct {
-	ID          string  `json:"id"`
-	Title       string  `json:"title"`
-	Published   string  `json:"published"`
-	Score       float32 `json:"score"`
-	Rating      string  `json:"rating"`
-	LinkedPRs   []int   `json:"linkedPRs"`
-	Description string  `json:"description"`
-}
 
 const (
 	KindAPIChange     Kind = "api-change"
@@ -137,7 +127,7 @@ type ReleaseNote struct {
 	DoNotPublish bool `json:"do_not_publish,omitempty"`
 
 	// DataFields a key indexed map of data fields
-	DataFields map[string]ReleaseNotesDataField `json:"data_fields,omitempty"`
+	DataFields map[string]ReleaseNotesDataField `json:"-"`
 }
 
 type Documentation struct {
@@ -245,10 +235,18 @@ func GatherReleaseNotes(opts *options.Options) (*ReleaseNotes, error) {
 		return nil, errors.Wrapf(err, "retrieving notes gatherer")
 	}
 
-	releaseNotes, err := gatherer.ListReleaseNotes()
+	var releaseNotes *ReleaseNotes
+	startTime := time.Now()
+	if gatherer.options.ListReleaseNotesV2 {
+		logrus.Warn("EXPERIMENTAL IMPLEMENTATION ListReleaseNotesV2 ENABLED")
+		releaseNotes, err = gatherer.ListReleaseNotesV2()
+	} else {
+		releaseNotes, err = gatherer.ListReleaseNotes()
+	}
 	if err != nil {
 		return nil, errors.Wrapf(err, "listing release notes")
 	}
+	logrus.Infof("finished gathering release notes in %v", time.Since(startTime))
 
 	return releaseNotes, nil
 }
@@ -271,9 +269,43 @@ func (g *Gatherer) ListReleaseNotes() (*ReleaseNotes, error) {
 		return nil, errors.Wrap(err, "listing commits")
 	}
 
-	results, err := g.gatherNotes(commits)
+	// Get the PRs into a temporary results set
+	resultsTemp, err := g.gatherNotes(commits)
 	if err != nil {
 		return nil, errors.Wrap(err, "gathering notes")
+	}
+
+	// Cycle the results and add the complete notes, as well as those that
+	// have a map associated with it
+	results := []*Result{}
+	logrus.Info("Checking PRs for mapped data")
+	for _, res := range resultsTemp {
+		// If the PR has no release note, check if we have to add it
+		if MatchesExcludeFilter(*res.pullRequest.Body) {
+			for _, provider := range mapProviders {
+				noteMaps, err := provider.GetMapsForPR(res.pullRequest.GetNumber())
+				if err != nil {
+					return nil, errors.Wrapf(
+						err, "checking if a map exists for PR %d", res.pullRequest.GetNumber(),
+					)
+				}
+				if len(noteMaps) != 0 {
+					logrus.Infof(
+						"Artificially adding pr #%d because a map for it was found",
+						res.pullRequest.GetNumber(),
+					)
+					results = append(results, res)
+				} else {
+					logrus.Debugf(
+						"Skipping PR #%d because it contains no release note",
+						res.pullRequest.GetNumber(),
+					)
+				}
+			}
+		} else {
+			// Append the note as it is
+			results = append(results, res)
+		}
 	}
 
 	dedupeCache := map[string]struct{}{}
@@ -281,6 +313,10 @@ func (g *Gatherer) ListReleaseNotes() (*ReleaseNotes, error) {
 	for _, result := range results {
 		if g.options.RequiredAuthor != "" {
 			if result.commit.GetAuthor().GetLogin() != g.options.RequiredAuthor {
+				logrus.Infof(
+					"Skipping release note for PR #%d because required author %q does not match with %q",
+					result.pullRequest.GetNumber(), g.options.RequiredAuthor, result.commit.GetAuthor().GetLogin(),
+				)
 				continue
 			}
 		}
@@ -313,7 +349,6 @@ func (g *Gatherer) ListReleaseNotes() (*ReleaseNotes, error) {
 			dedupeCache[note.Text] = struct{}{}
 		}
 	}
-
 	return notes, nil
 }
 
@@ -662,7 +697,7 @@ func (g *Gatherer) notesForCommit(commit *gogithub.RepositoryCommit) (*Result, e
 	prs, err := g.prsFromCommit(commit)
 	if err != nil {
 		if err == errNoPRIDFoundInCommitMessage || err == errNoPRFoundForCommitSHA {
-			logrus.Infof(
+			logrus.Debugf(
 				"No matches found when parsing PR from commit SHA %s",
 				commit.GetSHA(),
 			)
@@ -674,17 +709,9 @@ func (g *Gatherer) notesForCommit(commit *gogithub.RepositoryCommit) (*Result, e
 	for _, pr := range prs {
 		prBody := pr.GetBody()
 
-		logrus.Infof(
+		logrus.Debugf(
 			"Got PR #%d for commit: %s", pr.GetNumber(), commit.GetSHA(),
 		)
-
-		if MatchesExcludeFilter(prBody) {
-			logrus.Infof(
-				"Skipping PR #%d because it contains no release note",
-				pr.GetNumber(),
-			)
-			continue
-		}
 
 		if MatchesIncludeFilter(prBody) {
 			res := &Result{commit: commit, pullRequest: pr}
@@ -722,7 +749,7 @@ func (g *Gatherer) prsFromCommit(commit *gogithub.RepositoryCommit) (
 ) {
 	githubPRs, err := g.prsForCommitFromMessage(*commit.Commit.Message)
 	if err != nil {
-		logrus.Infof("No PR found for commit %s: %v", commit.GetSHA(), err)
+		logrus.Debugf("No PR found for commit %s: %v", commit.GetSHA(), err)
 		return g.prsForCommitFromSHA(*commit.SHA)
 	}
 	return githubPRs, err
@@ -779,7 +806,8 @@ func stripDash(note string) string {
 const listPrefix = "- "
 
 func dashify(note string) string {
-	return strings.ReplaceAll(note, "* ", listPrefix)
+	re := regexp.MustCompile(`(?m)(^\s*)\*\s`)
+	return re.ReplaceAllString(note, "$1- ")
 }
 
 // unlist transforms a single markdown list entry to a flat note entry
@@ -973,7 +1001,9 @@ func prettifySIGList(sigs []string) string {
 // ApplyMap Modifies the content of the release using information from
 //  a ReleaseNotesMap
 func (rn *ReleaseNote) ApplyMap(noteMap *ReleaseNotesMap) error {
-	logrus.Infof("Applying map to note from PR %d", rn.PrNumber)
+	logrus.WithFields(logrus.Fields{
+		"pr": rn.PrNumber,
+	}).Debugf("Applying map to note")
 	reRenderMarkdown := false
 	if noteMap.ReleaseNote.Author != nil {
 		rn.Author = *noteMap.ReleaseNote.Author

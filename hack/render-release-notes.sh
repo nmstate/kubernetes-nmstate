@@ -11,13 +11,14 @@ end() {
 
 trap end EXIT SIGINT SIGTERM SIGSTOP
 
-$RELEASE_NOTES \
+$GO run k8s.io/release/cmd/release-notes \
+    --list-v2 \
     --go-template go-template:$script_dir/release-notes.tmpl \
     --required-author "" \
     --org nmstate \
     --repo kubernetes-nmstate \
     --start-rev $old_version \
     --end-rev $new_version \
-    --output $release_notes > /dev/null 2>&1
+    --output $release_notes > release-notes.log 2>&1
 
 cat $release_notes
