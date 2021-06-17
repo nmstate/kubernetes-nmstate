@@ -26,16 +26,11 @@ func NewSQLStrandedBundleRemover(store registry.Load) *StrandedBundleRemover {
 func (d *StrandedBundleRemover) Remove() error {
 	log := logrus.New()
 
-	bundles, err := d.store.RemoveStrandedBundles()
+	err := d.store.RemoveStrandedBundles()
 	if err != nil {
 		return err
 	}
-
-	if len(bundles) > 0 {
-		log.Info("removing stranded bundles ", bundles)
-	} else {
-		log.Info("no stranded bundles found")
-	}
+	log.Info("removing stranded bundles ")
 
 	return nil
 }

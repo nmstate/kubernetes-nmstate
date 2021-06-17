@@ -2,7 +2,6 @@ package registry
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -32,19 +31,21 @@ type AddToRegistryRequest struct {
 	Mode          registry.Mode
 	ContainerTool containertools.ContainerTool
 	Overwrite     bool
+	EnableAlpha   bool
 }
 
 func (r RegistryUpdater) AddToRegistry(request AddToRegistryRequest) error {
-	db, err := sql.Open("sqlite3", "file:"+request.InputDatabase+"?_foreign_keys=on")
+	db, err := sqlite.Open(request.InputDatabase)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
-	dbLoader, err := sqlite.NewSQLLiteLoader(db)
+	dbLoader, err := sqlite.NewSQLLiteLoader(db, sqlite.WithEnableAlpha(request.EnableAlpha))
 	if err != nil {
 		return err
 	}
+
 	if err := dbLoader.Migrate(context.TODO()); err != nil {
 		return err
 	}
@@ -151,46 +152,45 @@ func populate(ctx context.Context, loader registry.Load, graphLoader registry.Gr
 				}
 				return err
 			}
-			if overwritten != "" {
-				// get all bundle paths for that package - we will re-add these to regenerate the graph
-				bundles, err := querier.GetBundlesForPackage(ctx, img.Bundle.Package)
-				if err != nil {
-					return err
-				}
-				type unpackedImage struct {
-					to      image.Reference
-					from    string
-					cleanup func()
-					err     error
-				}
-				unpacked := make(chan unpackedImage)
-				for bundle := range bundles {
-					// parallelize image pulls
-					go func(bundle registry.BundleKey, img *registry.ImageInput) {
-						if bundle.CsvName != img.Bundle.Name {
-							to, from, cleanup, err := unpackImage(ctx, reg, image.SimpleReference(bundle.BundlePath))
-							unpacked <- unpackedImage{to: to, from: from, cleanup: cleanup, err: err}
-						} else {
-							unpacked <- unpackedImage{to: to, from: from, cleanup: func() { return }, err: nil}
-						}
-					}(bundle, img)
-				}
-				if _, ok := overwriteImageMap[img.Bundle.Package]; !ok {
-					overwriteImageMap[img.Bundle.Package] = make(map[image.Reference]string, 0)
-				}
-				for i := 0; i < len(bundles); i++ {
-					unpack := <-unpacked
-					if unpack.err != nil {
-						return unpack.err
-					}
-					overwriteImageMap[img.Bundle.Package][unpack.to] = unpack.from
-					if _, ok := unpackedImageMap[unpack.to]; ok {
-						delete(unpackedImageMap, unpack.to)
-					}
-					defer unpack.cleanup()
-				}
-			} else {
+			if overwritten == "" {
 				return fmt.Errorf("index add --overwrite-latest is only supported when using bundle images")
+			}
+			// get all bundle paths for that package - we will re-add these to regenerate the graph
+			bundles, err := querier.GetBundlesForPackage(ctx, img.Bundle.Package)
+			if err != nil {
+				return err
+			}
+			type unpackedImage struct {
+				to      image.Reference
+				from    string
+				cleanup func()
+				err     error
+			}
+			unpacked := make(chan unpackedImage)
+			for bundle := range bundles {
+				// parallelize image pulls
+				go func(bundle registry.BundleKey, img *registry.ImageInput) {
+					if bundle.CsvName != img.Bundle.Name {
+						to, from, cleanup, err := unpackImage(ctx, reg, image.SimpleReference(bundle.BundlePath))
+						unpacked <- unpackedImage{to: to, from: from, cleanup: cleanup, err: err}
+					} else {
+						unpacked <- unpackedImage{to: to, from: from, cleanup: func() { return }, err: nil}
+					}
+				}(bundle, img)
+			}
+			if _, ok := overwriteImageMap[img.Bundle.Package]; !ok {
+				overwriteImageMap[img.Bundle.Package] = make(map[image.Reference]string, 0)
+			}
+			for i := 0; i < len(bundles); i++ {
+				unpack := <-unpacked
+				if unpack.err != nil {
+					return unpack.err
+				}
+				overwriteImageMap[img.Bundle.Package][unpack.to] = unpack.from
+				if _, ok := unpackedImageMap[unpack.to]; ok {
+					delete(unpackedImageMap, unpack.to)
+				}
+				defer unpack.cleanup()
 			}
 		}
 	}
@@ -206,7 +206,7 @@ type DeleteFromRegistryRequest struct {
 }
 
 func (r RegistryUpdater) DeleteFromRegistry(request DeleteFromRegistryRequest) error {
-	db, err := sql.Open("sqlite3", request.InputDatabase)
+	db, err := sqlite.Open(request.InputDatabase)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ type PruneStrandedFromRegistryRequest struct {
 }
 
 func (r RegistryUpdater) PruneStrandedFromRegistry(request PruneStrandedFromRegistryRequest) error {
-	db, err := sql.Open("sqlite3", request.InputDatabase)
+	db, err := sqlite.Open(request.InputDatabase)
 	if err != nil {
 		return err
 	}
@@ -276,7 +276,7 @@ type PruneFromRegistryRequest struct {
 }
 
 func (r RegistryUpdater) PruneFromRegistry(request PruneFromRegistryRequest) error {
-	db, err := sql.Open("sqlite3", request.InputDatabase)
+	db, err := sqlite.Open(request.InputDatabase)
 	if err != nil {
 		return err
 	}
@@ -328,7 +328,7 @@ type DeprecateFromRegistryRequest struct {
 }
 
 func (r RegistryUpdater) DeprecateFromRegistry(request DeprecateFromRegistryRequest) error {
-	db, err := sql.Open("sqlite3", request.InputDatabase)
+	db, err := sqlite.Open(request.InputDatabase)
 	if err != nil {
 		return err
 	}

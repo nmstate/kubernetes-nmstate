@@ -122,6 +122,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			cl := clb.Build()
 
 			reconciler.Client = cl
+			reconciler.APIClient = cl
 			reconciler.Log = ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy")
 
 			res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{

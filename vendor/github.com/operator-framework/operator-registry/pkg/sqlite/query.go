@@ -40,7 +40,7 @@ type SQLQuerier struct {
 var _ registry.Query = &SQLQuerier{}
 
 func NewSQLLiteQuerier(dbFilename string) (*SQLQuerier, error) {
-	db, err := sql.Open("sqlite3", "file:"+dbFilename+"?immutable=true")
+	db, err := OpenReadOnly(dbFilename)
 	if err != nil {
 		return nil, err
 	}
@@ -645,7 +645,7 @@ func (s *SQLQuerier) GetApisForEntry(ctx context.Context, entryID int64) (provid
 	kinds := map[string]struct{}{}
 	versions := map[string]struct{}{}
 
-	providedQuery := `SELECT properties.value FROM properties 
+	providedQuery := `SELECT properties.value FROM properties
 		 	  		  INNER JOIN channel_entry ON channel_entry.operatorbundle_name = properties.operatorbundle_name
 			  		  WHERE properties.type=? AND channel_entry.entry_id=?`
 
@@ -821,11 +821,10 @@ func (s *SQLQuerier) GetBundlePathsForPackage(ctx context.Context, pkgName strin
 		if err := rows.Scan(&imgName); err != nil {
 			return nil, err
 		}
-		if imgName.Valid && imgName.String != "" {
-			images = append(images, imgName.String)
-		} else {
+		if imgName.Valid && imgName.String == "" {
 			return nil, fmt.Errorf("Index malformed: cannot find paths to bundle images")
 		}
+		images = append(images, imgName.String)
 	}
 	return images, nil
 }
@@ -1173,7 +1172,7 @@ func (s *SQLQuerier) GetDependenciesForBundle(ctx context.Context, name, version
 }
 
 func (s *SQLQuerier) GetPropertiesForBundle(ctx context.Context, name, version, path string) (properties []*api.Property, err error) {
-	propQuery := `SELECT DISTINCT type, value FROM properties 
+	propQuery := `SELECT DISTINCT type, value FROM properties
 				 WHERE operatorbundle_name=?
 				 AND (operatorbundle_version=? OR operatorbundle_version is NULL)
 				 AND (operatorbundle_path=? OR operatorbundle_path is NULL)`
