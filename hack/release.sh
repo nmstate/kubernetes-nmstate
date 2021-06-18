@@ -2,14 +2,16 @@
 
 set -xe
 
+
 old_version=$(hack/versions.sh -2)
 new_version=$(hack/versions.sh -1)
 gh_organization=nmstate
 gh_repo=kubernetes-nmstate
+github_release_cmd="go run github.com/github-release/github-release"
 
 function upload() {
     resource=$1
-    $GITHUB_RELEASE upload \
+    $github_release_cmd upload \
         -u $gh_organization \
         -r $gh_repo \
         --name $(basename $resource) \
@@ -19,7 +21,7 @@ function upload() {
 
 function create_github_release() {
     # Create the release
-    $GITHUB_RELEASE release \
+    $github_release_cmd release \
         -u $gh_organization \
         -r $gh_repo \
         --tag $new_version \
