@@ -204,9 +204,6 @@ vendor: $(GO)
 	$(GO) mod tidy
 	$(GO) mod vendor
 
-tools: $(GO) $(OPERATOR_SDK)
-	./hack/install-tools.sh
-
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: $(OPERATOR_SDK) gen-crds manifests
 	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
