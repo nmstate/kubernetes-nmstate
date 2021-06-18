@@ -69,12 +69,13 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-GINKGO = go run github.com/onsi/ginkgo/ginkgo
-CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
 OPM ?= $(GOBIN)/opm
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
+
+GINKGO = go run github.com/onsi/ginkgo/ginkgo
+CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -124,20 +125,18 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(CONTROLLER_GEN): go.mod
-	$(MAKE) tools
 $(OPM): go.mod
 	$(MAKE) tools
 $(OPERATOR_SDK):
 	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
-gen-k8s: $(CONTROLLER_GEN)
+gen-k8s: $(GO)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-gen-crds: $(CONTROLLER_GEN)
+gen-crds: $(GO)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
-gen-rbac: $(CONTROLLER_GEN)
+gen-rbac: $(GO)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
 
 check-gen: generate
