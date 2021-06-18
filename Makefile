@@ -71,11 +71,11 @@ export KUBECTL ?= ./cluster/kubectl.sh
 KUBECTL ?= ./cluster/kubectl.sh
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
-OPM ?= $(GOBIN)/opm
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
 GINKGO = go run github.com/onsi/ginkgo/ginkgo
 CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
+OPM = go run github.com/operator-framework/operator-registry/cmd/opm
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -125,8 +125,6 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(OPM): go.mod
-	$(MAKE) tools
 $(OPERATOR_SDK):
 	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
@@ -219,7 +217,7 @@ bundle-build:
 	$(IMAGE_BUILDER) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 # Build the index
-index-build: $(OPM) bundle-build
+index-build: $(GO) bundle-build
 	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG)
 
 bundle-push: bundle-build
