@@ -69,7 +69,7 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-GINKGO ?= $(GOBIN)/ginkgo
+GINKGO = go run github.com/onsi/ginkgo/ginkgo
 CONTROLLER_GEN ?= $(GOBIN)/controller-gen
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
@@ -124,8 +124,6 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(GINKGO): go.mod
-	$(MAKE) tools
 $(OPENAPI_GEN): go.mod
 	$(MAKE) tools
 $(CONTROLLER_GEN): go.mod
@@ -168,13 +166,13 @@ push-operator: operator
 	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
 push: push-handler push-operator
 
-test/unit: $(GINKGO)
+test/unit: $(GO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
-test-e2e-handler: $(GINKGO)
+test-e2e-handler: $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
 
-test-e2e-operator: manifests $(GINKGO)
+test-e2e-operator: manifests $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
