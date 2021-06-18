@@ -60,17 +60,15 @@ BIN_DIR = $(CURDIR)/build/_output/bin/
 export GOPROXY=direct
 export GOSUMDB=off
 export GOFLAGS=-mod=vendor
-export GOROOT=$(BIN_DIR)/go/
-export GOBIN=$(GOROOT)/bin/
-export PATH := $(GOROOT)/bin:$(PATH)
 
 export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
 export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
+GO_VERSION = $(shell grep "^go " go.mod |awk '{print $$2}')
 KUBECTL ?= ./cluster/kubectl.sh
 GOFMT := $(GOBIN)/gofmt
-export GO := $(GOBIN)/go
+export GO := go$(GO_VERSION)
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
 GINKGO = go run github.com/onsi/ginkgo/ginkgo
@@ -123,7 +121,8 @@ gofmt-check: $(GO)
 	test -z "`$(GOFMT) -l *.go test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l *.go test/ hack/ api/ controllers/ pkg/ && exit 1)
 
 $(GO):
-	hack/install-go.sh $(BIN_DIR)
+	cd /tmp/ && go get golang.org/dl/$(GO)
+	$(GO) download
 
 $(OPERATOR_SDK):
 	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
