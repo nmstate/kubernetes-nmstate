@@ -124,8 +124,6 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(OPENAPI_GEN): go.mod
-	$(MAKE) tools
 $(CONTROLLER_GEN): go.mod
 	$(MAKE) tools
 $(OPM): go.mod
