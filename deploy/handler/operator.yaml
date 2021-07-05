@@ -38,6 +38,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: "30m"
+              memory: "20Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -118,6 +122,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: "30m"
+              memory: "30Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -188,6 +196,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
             - manager
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
