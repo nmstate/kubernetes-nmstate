@@ -44,7 +44,9 @@ to learn about supported versions of NetworkManager.
 ## kubernetes-nmstate
 
 Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
-please use [Cluster Network Addons Operator Project](https://github.com/kubevirt/cluster-network-addons-operator#nmstate).
+please find the [latest
+release](https://github.com/nmstate/kubernetes-nmstate/releases) and follow the
+the Installation guide attached to it.
 
 You can stop here and play with the cluster on your own or continue with one of
 the [user guides]({{ "user-guide.html" | relative_url }}) that will guide you through
