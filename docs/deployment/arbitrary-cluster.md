@@ -37,6 +37,10 @@ yum install NetworkManager
 systemctl start NetworkManager
 ```
 
+See [Compatibility
+guide](https://github.com/nmstate/kubernetes-nmstate/blob/main/CONTRIBUTING.md#networkmanager-compatibility)
+to learn about supported versions of NetworkManager.
+
 ## kubernetes-nmstate
 
 Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
