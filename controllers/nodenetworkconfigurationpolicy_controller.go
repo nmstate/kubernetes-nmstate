@@ -336,7 +336,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(policyconditions.StatusUpdateRetry, func() error {
 		err := r.Client.Get(context.TODO(), policyKey, instance)
 		if err != nil {
 			return err
