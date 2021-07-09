@@ -30,7 +30,7 @@ kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download
 Once that's done, create an `NMState` CR, triggering deployment of
 kubernetes-nmstate handler:
 
-```
+```yaml
 cat <<EOF | kubectl create -f -
 apiVersion: nmstate.io/v1beta1
 kind: NMState
