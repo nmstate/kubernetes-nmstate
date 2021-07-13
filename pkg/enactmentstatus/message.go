@@ -18,6 +18,10 @@ limitations under the License.
 package enactmentstatus
 
 import (
+	"bytes"
+	"compress/flate"
+	b64 "encoding/base64"
+	"io/ioutil"
 	"regexp"
 	"strings"
 )
@@ -113,4 +117,52 @@ func skipLines(lines []string, index int) int {
 
 func lineEmpty(trimmedLine string) bool {
 	return trimmedLine == "" || trimmedLine == "'"
+}
+
+func CompressAndEncodeMessage(message string) string {
+	compressedMessage, err := compressMessage(message)
+	if err != nil {
+		return ""
+	}
+	return encodeMessage(compressedMessage)
+}
+
+func compressMessage(message string) (bytes.Buffer, error) {
+	var buf bytes.Buffer
+	writer, err := flate.NewWriter(&buf, flate.BestCompression)
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+
+	_, err = writer.Write([]byte(message))
+	if err != nil {
+		return bytes.Buffer{}, err
+	}
+
+	if err := writer.Close(); err != nil {
+		return bytes.Buffer{}, err
+	}
+
+	return buf, nil
+}
+
+func encodeMessage(buf bytes.Buffer) string {
+	return b64.StdEncoding.EncodeToString(buf.Bytes())
+}
+
+func DecodeAndDecompressMessage(message string) string {
+	decodedMessage := decodeMessage(message)
+	return decompressMessage(decodedMessage)
+}
+
+func decodeMessage(encodedMessage string) []byte {
+	data, _ := b64.StdEncoding.DecodeString(encodedMessage)
+	return data
+}
+
+func decompressMessage(data []byte) string {
+	bytesReader := bytes.NewReader(data)
+	flateReader := flate.NewReader(bytesReader)
+	decompressedMessage, _ := ioutil.ReadAll(flateReader)
+	return string(decompressedMessage)
 }
