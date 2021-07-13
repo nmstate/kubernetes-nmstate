@@ -54,14 +54,24 @@ var _ = Describe("Error messages formatting", func() {
 		})
 	})
 
-	Describe("Error messages compressing", func() {
+	Describe("Error messages compression and decompression", func() {
+		var (
+			messages = [...]string{
+				"A message containing debug that should not be removed.\n",
+				"      libnmstate.error.NmstateValueError\n  Interface bond1 has unknown slave\n    eth10\n",
+				"A message containing File \"/usr/bin/nmstatectl\" that should not be removed.\n",
+				"failed to execute nmstatectl set --no-commit --timeout 480: 'exit status 1'\n",
+				"      \n  failed to retrieve default gw at runProbes\n    timed out waiting for the condition\n",
+			}
+		)
 		Context("With a sample message", func() {
-			It("Should compress and decompress message", func() {
-				encodedValue, _ := encodeMessage(debugValidInput.Error())
-				Expect(decodeMessage(encodedValue)).To(Equal(debugValidInput.Error()))
-
-				encodedValue, _ = encodeMessage(failedToExecuteInput.Error())
-				Expect(decodeMessage(encodedValue)).To(Equal(failedToExecuteInput.Error()))
+			It("Should decompress the message correctly", func() {
+				for _, message := range messages {
+					encodedMessage, err := encodeMessage(message)
+					if err == nil {
+						Expect(message).To(Equal(decodeMessage(encodedMessage)))
+					}
+				}
 			})
 		})
 	})
