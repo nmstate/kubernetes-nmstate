@@ -11,6 +11,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -31,7 +33,14 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler          NMStateReconciler
 		existingNMStateName = "nmstate"
 		handlerNodeSelector = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
-		nmstate             = nmstatev1beta1.NMState{
+		handlerTolerations  = []corev1.Toleration{
+			{
+				Effect:   "NoSchedule",
+				Key:      "node.kubernetes.io/special-toleration",
+				Operator: "Exists",
+			},
+		}
+		nmstate = nmstatev1beta1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNMStateName,
 				UID:  "12345",
@@ -163,6 +172,41 @@ var _ = Describe("NMState controller reconcile", func() {
 			}
 		})
 	})
+	Context("when operator spec has Tolerations", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NMState{},
+			)
+			// set Tolerations field in operator Spec
+			nmstate.Spec.Tolerations = handlerTolerations
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewFakeClientWithScheme(s, objs...)
+			reconciler.Client = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("should add Tolerations to handler daemonset", func() {
+			ds := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(allTolerationsPresent(handlerTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeTrue())
+		})
+		It("should NOT add Tolerations to webhook deployment", func() {
+			deployment := &appsv1.Deployment{}
+			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+			err := cl.Get(context.TODO(), webhookKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(anyTolerationsPresent(handlerTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeFalse())
+		})
+	})
 
 })
 
@@ -226,4 +270,80 @@ func copyManifests(manifestsDir string) error {
 		}
 	}
 	return nil
+}
+
+func checkTolerationInList(toleration corev1.Toleration, tolerationList []corev1.Toleration) bool {
+	found := false
+	for _, currentToleration := range tolerationList {
+		if isSuperset(toleration, currentToleration) {
+			found = true
+			break
+		}
+	}
+	return found
+}
+
+// isSuperset checks whether ss tolerates a superset of t.
+func isSuperset(ss, t corev1.Toleration) bool {
+	if apiequality.Semantic.DeepEqual(&t, &ss) {
+		return true
+	}
+
+	if !isKeyMatching(t, ss) {
+		return false
+	}
+
+	if !isEffectMatching(t, ss) {
+		return false
+	}
+
+	if ss.Effect == corev1.TaintEffectNoExecute {
+		if ss.TolerationSeconds != nil {
+			if t.TolerationSeconds == nil ||
+				*t.TolerationSeconds > *ss.TolerationSeconds {
+				return false
+			}
+		}
+	}
+
+	switch ss.Operator {
+	case corev1.TolerationOpEqual, "": // empty operator means Equal
+		return t.Operator == corev1.TolerationOpEqual && t.Value == ss.Value
+	case corev1.TolerationOpExists:
+		return true
+	default:
+		return false
+	}
+}
+
+//allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
+func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
+	tolerationsFound := true
+	for _, toleration := range toBeCheckedTolerations {
+		tolerationsFound = tolerationsFound && checkTolerationInList(toleration, actualTolerations)
+	}
+	return tolerationsFound
+}
+
+//anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
+func anyTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
+	tolerationsFound := false
+	for _, toleration := range toBeCheckedTolerations {
+		tolerationsFound = tolerationsFound || checkTolerationInList(toleration, actualTolerations)
+	}
+	return tolerationsFound
+}
+
+// isKeyMatching check if tolerations arguments match the toleration keys.
+func isKeyMatching(a, b corev1.Toleration) bool {
+	if a.Key == b.Key || (b.Key == "" && b.Operator == corev1.TolerationOpExists) {
+		return true
+	}
+	return false
+}
+
+// isEffectMatching check if tolerations arguments match the effects
+func isEffectMatching(a, b corev1.Toleration) bool {
+	// An empty effect means match all effects.
+	return a.Effect == b.Effect || b.Effect == ""
 }
