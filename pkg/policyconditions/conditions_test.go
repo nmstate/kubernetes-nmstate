@@ -74,13 +74,13 @@ func newNode(idx int) corev1.Node {
 	return node
 }
 
-func newPodAtNode(idx int, name string, namespace string, app string) corev1.Pod {
+func newPodAtNode(idx int, name string, namespace string, component string) corev1.Pod {
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%d", name, idx),
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app": app,
+				"component": component,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -91,7 +91,7 @@ func newPodAtNode(idx int, name string, namespace string, app string) corev1.Pod
 }
 
 func newNmstatePodAtNode(idx int) corev1.Pod {
-	return newPodAtNode(idx, "nmstate-handler", "nmstate", "kubernetes-nmstate")
+	return newPodAtNode(idx, "nmstate-handler", "nmstate", "kubernetes-nmstate-handler")
 }
 
 func newNonNmstatePodAtNode(idx int) corev1.Pod {
