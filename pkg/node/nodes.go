@@ -24,8 +24,8 @@ func NodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
 	}
 
 	pods := corev1.PodList{}
-	byApp := client.MatchingLabels{"app": "kubernetes-nmstate"}
-	err = cli.List(context.TODO(), &pods, byApp)
+	byComponent := client.MatchingLabels{"component": "kubernetes-nmstate-handler"}
+	err = cli.List(context.TODO(), &pods, byComponent)
 	if err != nil {
 		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
 	}
