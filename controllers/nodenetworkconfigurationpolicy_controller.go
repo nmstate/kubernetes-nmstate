@@ -158,6 +158,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	previousConditions, err := r.initializeEnactment(*instance)
 	if err != nil {
 		log.Error(err, "Error initializing enactment")
+		return ctrl.Result{}, err
+	}
+
+	enactmentInstance, err := r.applyEnactmentDefaults(instance)
+	if err != nil {
+		log.Error(err, "error setting enactment defaults")
+		return ctrl.Result{}, err
 	}
 
 	enactmentConditions := enactmentconditions.New(r.APIClient, nmstateapi.EnactmentKey(nodeName, instance.Name))
@@ -187,7 +194,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	defer r.decrementUnavailableNodeCount(instance)
 
 	enactmentConditions.NotifyProgressing()
-	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, instance.Spec.DesiredState)
+	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, enactmentInstance.Status.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s, %v", nmstateOutput, err)
 
@@ -274,6 +281,32 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 		status.DesiredState = policy.Spec.DesiredState
 		status.PolicyGeneration = policy.Generation
 	})
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) applyEnactmentDefaults(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (*nmstatev1beta1.NodeNetworkConfigurationEnactment, error) {
+	enactmentKey := nmstateapi.EnactmentKey(nodeName, policy.Name)
+	instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+	ds, err := nmstate.ApplyDefaultVlanFiltering(policy.Spec.DesiredState)
+	if err != nil {
+		r.Log.Error(err, "error calculating enactment desiredState defaults")
+		return nil, err
+	}
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err = r.APIClient.Get(context.TODO(), enactmentKey, instance)
+		if err != nil {
+			return errors.Wrap(err, "getting enactment failed")
+		}
+
+		instance.Status.DesiredState = ds
+
+		err = r.APIClient.Status().Update(context.TODO(), instance)
+		if err != nil {
+			r.Log.Error(err, "error updating enactment desiredState defaults")
+			return err
+		}
+		return nil
+	})
+	return instance, err
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmentKey types.NamespacedName) error {

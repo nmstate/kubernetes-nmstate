@@ -47,6 +47,30 @@ func linuxBrUp(bridgeName string) nmstate.State {
 `, bridgeName, firstSecondaryNic, secondSecondaryNic))
 }
 
+func linuxBrUpWithDefaults(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: %s
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id-range:
+                max: 4094
+                min: 2
+        - name: %s
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id-range:
+                max: 4094
+                min: 2
+`, bridgeName, firstSecondaryNic, secondSecondaryNic))
+}
+
 func linuxBrAbsent(bridgeName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
@@ -66,6 +90,21 @@ func linuxBrUpNoPorts(bridgeName string) nmstate.State {
           enabled: false
       port: []
 `, bridgeName))
+}
+
+func linuxBrUpWithDisabledVlan(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: linux-bridge
+    state: up
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+        - name: %s
+          vlan: {}
+`, bridgeName, firstSecondaryNic))
 }
 
 func ovsBrAbsent(bridgeName string) nmstate.State {

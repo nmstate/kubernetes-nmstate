@@ -130,24 +130,6 @@ func ApplyDesiredState(client client.Client, desiredState shared.State) (string,
 		return setOutput, err
 	}
 
-	// Future versions of nmstate/NM will support vlan-filtering meanwhile
-	// we have to enforce it at the desiredState bridges and outbound ports
-	// they will be configured with vlan_filtering 1 and all the vlan id range
-	// set
-	bridgesUpWithPorts, err := getBridgesUp(desiredState)
-	if err != nil {
-		return "", rollback(client, probes, fmt.Errorf("error retrieving up bridges from desired state"))
-	}
-
-	commandOutput := ""
-	for bridge, ports := range bridgesUpWithPorts {
-		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
-		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
-		if err != nil {
-			return commandOutput, rollback(client, probes, err)
-		}
-	}
-
 	err = probe.Run(client, probes)
 	if err != nil {
 		return "", rollback(client, probes, errors.Wrap(err, "failed runnig probes after network changes"))
@@ -159,6 +141,6 @@ func ApplyDesiredState(client client.Client, desiredState shared.State) (string,
 		return commitOutput, err
 	}
 
-	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
+	commandOutput := fmt.Sprintf("setOutput: %s \n", setOutput)
 	return commandOutput, nil
 }
