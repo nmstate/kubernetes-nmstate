@@ -1,10 +1,8 @@
 package helper
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"time"
 
 	"github.com/pkg/errors"
@@ -25,24 +23,9 @@ var (
 	log = logf.Log.WithName("client")
 )
 
-const vlanFilteringCommand = "vlan-filtering"
 const defaultGwRetrieveTimeout = 120 * time.Second
 const defaultGwProbeTimeout = 120 * time.Second
 const apiServerProbeTimeout = 120 * time.Second
-
-func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
-	command := []string{bridgeName}
-	command = append(command, ports...)
-
-	cmd := exec.Command(vlanFilteringCommand, command...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", vlanFilteringCommand, err, stdout.String(), stderr.String())
-	}
-	return stdout.String(), nil
-}
 
 func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}

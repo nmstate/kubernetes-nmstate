@@ -35,6 +35,17 @@ func ethernetNicsUp(nics ...string) nmstate.State {
 	return ethernetNicsState(states)
 }
 
+func linuxBrBadYaml(name string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: linux-bridge
+    state: badstate
+    bridge:
+      port:
+        - name: eth1
+`, name))
+}
+
 func linuxBrUp(bridgeName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
