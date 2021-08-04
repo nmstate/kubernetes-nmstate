@@ -9,12 +9,10 @@ approvers:
 reviewers:
   - phoracek
   - qinqon
-  - bcrochet
   - yboaron
   - RamLavi
   - rhrazdil
   - cybertron
-  - celebdor
 
 # Bugzilla info;
 component: Networking
