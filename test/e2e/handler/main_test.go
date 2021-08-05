@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -121,21 +120,6 @@ var _ = AfterEach(func() {
 			"to initial state on node %s", node))
 	}
 })
-
-func getMaxFailsFromEnv() int {
-	maxFailsEnv := os.Getenv("REPORTER_MAX_FAILS")
-	if maxFailsEnv == "" {
-		return 10
-	}
-
-	maxFails, err := strconv.Atoi(maxFailsEnv)
-	if err != nil { // if the variable is set with a non int value
-		fmt.Println("Invalid REPORTER_MAX_FAILS variable, defaulting to 10")
-		return 10
-	}
-
-	return maxFails
-}
 
 func containsNode(nodes []string, node string) bool {
 	for _, n := range nodes {
