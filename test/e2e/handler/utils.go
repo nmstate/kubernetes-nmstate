@@ -237,7 +237,7 @@ func createDummyConnectionAtNodes(dummyName string) []error {
 }
 
 func createDummyConnectionAtAllNodes(dummyName string) []error {
-	return createDummyConnection(allNodes, dummyName)
+	return createDummyConnection(nodes, dummyName)
 }
 
 func deleteConnection(nodesToModify []string, name string) []error {
@@ -250,7 +250,7 @@ func deleteConnectionAtNodes(name string) []error {
 	return deleteConnection(nodes, name)
 }
 func deleteConnectionAtAllNodes(name string) []error {
-	return deleteConnection(allNodes, name)
+	return deleteConnection(nodes, name)
 }
 
 func deleteDevice(nodesToModify []string, name string) []error {
