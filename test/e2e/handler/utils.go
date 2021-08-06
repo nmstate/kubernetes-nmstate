@@ -236,21 +236,10 @@ func createDummyConnectionAtNodes(dummyName string) []error {
 	return createDummyConnection(nodes, dummyName)
 }
 
-func createDummyConnectionAtAllNodes(dummyName string) []error {
-	return createDummyConnection(nodes, dummyName)
-}
-
 func deleteConnection(nodesToModify []string, name string) []error {
 	By(fmt.Sprintf("Delete connection %s", name))
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "delete", name)
 	return errs
-}
-
-func deleteConnectionAtNodes(name string) []error {
-	return deleteConnection(nodes, name)
-}
-func deleteConnectionAtAllNodes(name string) []error {
-	return deleteConnection(nodes, name)
 }
 
 func deleteDevice(nodesToModify []string, name string) []error {
