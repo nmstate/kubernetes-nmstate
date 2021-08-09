@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -29,6 +30,10 @@ type NMStateSpec struct {
 	// as labels applied to the node.
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// Tolerations is an optional list of tolerations to be added to handler DaemonSet manifest
+	// If Tolerations is specified, the handler daemonset will be also scheduled on nodes with corresponding taints
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState

@@ -22,6 +22,7 @@ package v1beta1
 
 import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	"k8s.io/api/core/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -92,6 +93,13 @@ func (in *NMStateSpec) DeepCopyInto(out *NMStateSpec) {
 		*out = make(map[string]string, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
+		}
+	}
+	if in.Tolerations != nil {
+		in, out := &in.Tolerations, &out.Tolerations
+		*out = make([]v1.Toleration, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
 }
