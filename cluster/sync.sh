@@ -7,8 +7,14 @@ source ./cluster/sync-operator.sh
 
 kubectl=./cluster/kubectl.sh
 
+nmstate_cr_manifest=deploy/crds/nmstate.io_v1beta1_nmstate_cr.yaml
+
 function deploy_handler() {
-    $kubectl apply -f deploy/crds/nmstate.io_v1beta1_nmstate_cr.yaml
+    $kubectl apply -f $nmstate_cr_manifest
+}
+
+function patch_handler_nodeselector() {
+    $kubectl patch -f $nmstate_cr_manifest --patch '{"spec": {"nodeSelector": { "node-role.kubernetes.io/worker": "" }}}' --type=merge
 }
 
 function wait_ready_handler() {
@@ -40,4 +46,5 @@ function wait_ready_handler() {
 deploy_operator
 wait_ready_operator
 deploy_handler
+patch_handler_nodeselector
 wait_ready_handler

@@ -27,7 +27,6 @@ import (
 var (
 	t                    *testing.T
 	nodes                []string
-	allNodes             []string
 	startTime            time.Time
 	bond1                string
 	bridge1              string
@@ -56,21 +55,13 @@ var _ = BeforeSuite(func() {
 	portFieldName = "port"
 	miimonFormat = "%d"
 
-	By("Getting worker node list from cluster")
+	By("Getting nmstate-enabled worker node list from cluster")
 	nodeList := corev1.NodeList{}
 	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
 	err := testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
-	}
-
-	By("Getting all node list from cluster")
-	nodeList = corev1.NodeList{}
-	err = testenv.Client.List(context.TODO(), &nodeList)
-	Expect(err).ToNot(HaveOccurred())
-	for _, node := range nodeList.Items {
-		allNodes = append(allNodes, node.Name)
 	}
 
 	resetDesiredStateForNodes()
@@ -102,7 +93,7 @@ var _ = BeforeEach(func() {
 	startTime = time.Now()
 
 	By("Getting nodes initial state")
-	for _, node := range allNodes {
+	for _, node := range nodes {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		nodesInterfacesState[node] = nodeState
 	}
@@ -110,7 +101,7 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	By("Verifying initial state")
-	for _, node := range allNodes {
+	for _, node := range nodes {
 		Eventually(func() []byte {
 			By("Verifying initial state eventually")
 			nodeState := nodeInterfacesState(node, interfacesToIgnore)

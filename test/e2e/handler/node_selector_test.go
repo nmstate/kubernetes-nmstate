@@ -48,7 +48,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		})
 
 		It("[test_id:3813]should not update any nodes and have not enactments", func() {
-			for _, node := range allNodes {
+			for _, node := range nodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}
 			Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(0), "should not create any enactment")
@@ -62,10 +62,10 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			})
 
 			It("should update all nodes and have Matching enactment state", func() {
-				for _, node := range allNodes {
+				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 				}
-				Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(len(allNodes)), "should create all the enactments")
+				Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(len(nodes)), "should create all the enactments")
 
 			})
 
