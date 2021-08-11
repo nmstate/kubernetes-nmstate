@@ -55,13 +55,13 @@ var _ = BeforeSuite(func() {
 	portFieldName = "port"
 	miimonFormat = "%d"
 
-	By("Getting nmstate-enabled worker node list from cluster")
-	nodeList := corev1.NodeList{}
-	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
-	err := testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
+	By("Getting nmstate-enabled node list from cluster")
+	podList := corev1.PodList{}
+	filterHandlers := client.MatchingLabels{"component": "kubernetes-nmstate-handler"}
+	err := testenv.Client.List(context.TODO(), &podList, filterHandlers)
 	Expect(err).ToNot(HaveOccurred())
-	for _, node := range nodeList.Items {
-		nodes = append(nodes, node.Name)
+	for _, pod := range podList.Items {
+		nodes = append(nodes, pod.Spec.NodeName)
 	}
 
 	resetDesiredStateForNodes()
