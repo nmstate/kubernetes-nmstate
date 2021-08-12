@@ -19,7 +19,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	)
 	BeforeEach(func() {
 		originalNNSs = map[string]nmstatev1beta1.NodeNetworkState{}
-		for _, node := range nodes {
+		for _, node := range allNodes {
 			key := types.NamespacedName{Name: node}
 			originalNNSs[node] = nodeNetworkState(key)
 		}
@@ -49,10 +49,10 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 		expectedDummyName := "dummy0"
 
 		BeforeEach(func() {
-			createDummyConnectionAtNodes(expectedDummyName)
+			createDummyConnectionAtAllNodes(expectedDummyName)
 		})
 		AfterEach(func() {
-			deleteConnectionAndWait(nodes, expectedDummyName)
+			deleteConnectionAndWait(allNodes, expectedDummyName)
 		})
 		It("should update it with according to network state refresh duration", func() {
 			for node, originalNNS := range originalNNSs {
