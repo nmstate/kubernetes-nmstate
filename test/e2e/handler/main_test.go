@@ -26,6 +26,7 @@ import (
 
 var (
 	t                    *testing.T
+	allNodes             []string
 	nodes                []string
 	startTime            time.Time
 	bond1                string
@@ -61,7 +62,17 @@ var _ = BeforeSuite(func() {
 	err := testenv.Client.List(context.TODO(), &podList, filterHandlers)
 	Expect(err).ToNot(HaveOccurred())
 	for _, pod := range podList.Items {
-		nodes = append(nodes, pod.Spec.NodeName)
+		allNodes = append(allNodes, pod.Spec.NodeName)
+	}
+
+	By("Getting nmstate-enabled worker node list from cluster")
+	nodeList := corev1.NodeList{}
+	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
+	err = testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
+	for _, node := range nodeList.Items {
+		if containsNode(allNodes, node.Name) {
+			nodes = append(nodes, node.Name)
+		}
 	}
 
 	resetDesiredStateForNodes()
@@ -93,7 +104,7 @@ var _ = BeforeEach(func() {
 	startTime = time.Now()
 
 	By("Getting nodes initial state")
-	for _, node := range nodes {
+	for _, node := range allNodes {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
 		nodesInterfacesState[node] = nodeState
 	}
@@ -101,7 +112,7 @@ var _ = BeforeEach(func() {
 
 var _ = AfterEach(func() {
 	By("Verifying initial state")
-	for _, node := range nodes {
+	for _, node := range allNodes {
 		Eventually(func() []byte {
 			By("Verifying initial state eventually")
 			nodeState := nodeInterfacesState(node, interfacesToIgnore)
@@ -124,4 +135,13 @@ func getMaxFailsFromEnv() int {
 	}
 
 	return maxFails
+}
+
+func containsNode(nodes []string, node string) bool {
+	for _, n := range nodes {
+		if n == node {
+			return true
+		}
+	}
+	return false
 }
