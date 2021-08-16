@@ -64,20 +64,15 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmsta
 	return &nodeNetworkState, nil
 }
 
-func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedState shared.State) error {
-	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
-	err := client.Get(context.TODO(), namespace, nnsInstance)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return errors.Wrap(err, "Failed to get nmstate")
-		} else {
-			nnsInstance, err = InitializeNodeNetworkState(client, node)
-			if err != nil {
-				return err
-			}
+func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState) error {
+	if nns == nil {
+		var err error
+		nns, err = InitializeNodeNetworkState(client, node)
+		if err != nil {
+			return err
 		}
 	}
-	return UpdateCurrentState(client, nnsInstance, observedState)
+	return UpdateCurrentState(client, nns, observedState)
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State) error {
