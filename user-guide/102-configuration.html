@@ -337,18 +337,14 @@ routing on cluster nodes. The configuration is driven by two main object types,
 <code class="language-plaintext highlighter-rouge">NodeNetworkConfigurationEnactment</code> (Enactment).</p>
 
 <p>A Policy describes what is the desired network configuration on cluster nodes.
-It is created by users and applies cluster-wide.
-An Enactment, on the other hand, is a read-only object that carries execution
-state of a Policy per each Node.</p>
-
-<p>Multiple policies can be created at a time, but users need to avoid
-inter-policy dependencies. If two policies need to be applied in specific
-order, they should form a single policy.</p>
+It is created by users and applies cluster-wide. User needs to ensure that only one policy is in progress
+at a time. Creating a new policy before existing one finishes has undefined behaviour.
+An Enactment, on the other hand, is a read-only object that carries execution state of a Policy per each Node.</p>
 
 <p>Policies are applied on a node via NetworkManager. Thanks to this, the
 configuration is persistent on the node and survives reboots.</p>
 
-<p><img class="emoji" title=":warning:" alt=":warning:" raw="⚠️" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" style="vertical-align: middle; display: inline; max-width: 1em; visibility: hidden;" onload="this.style.visibility='visible'" onerror="this.replaceWith(this.getAttribute('raw'))">Changing a policy that is in progress has undefined behaviour.</p>
+<p><img class="emoji" title=":warning:" alt=":warning:" raw="⚠️" src="https://github.githubassets.com/images/icons/emoji/unicode/26a0.png" style="vertical-align: middle; display: inline; max-width: 1em; visibility: hidden;" onload="this.style.visibility='visible'" onerror="this.replaceWith(this.getAttribute('raw'))">Only one policy can be in progress at a time.</p>
 
 <h2 id="creating-interfaces">Creating interfaces</h2>
 
@@ -576,7 +572,7 @@ the node (<code class="language-plaintext highlighter-rouge">Progressing</code>)
 </code></pre></div></div>
 
 <p>As seen in the output, the configuration is indeed applied and there is a bond
-available with two NICs used as its ports.</p>
+available with two NICs used as its slaves.</p>
 
 <h2 id="removing-interfaces">Removing interfaces</h2>
 
@@ -632,10 +628,10 @@ interface to <code class="language-plaintext highlighter-rouge">state: absent</c
 
 <p>Another maybe surprising behavior is, that by removing an interface, original
 configuration of the node interfaces is not restored. In case of the bonding it
-means that after it is deleted, its ports won’t come back up as standalone
-ports, even if they had previously configured IP address. The operator is not
-owning the interfaces and does not want to do anything that is not explicitly
-specified, that’s up to the user.</p>
+means that after it is deleted, its slave NICs won’t come back up, even if they
+had previously configured IP address. The operator is not owning the interfaces
+and does not want to do anything that is not explicitly specified, that’s up to
+the user.</p>
 
 <p><code class="language-plaintext highlighter-rouge">NodeNetworkState</code> shows that both of the NICs are now down and without any IP
 configuration.</p>
@@ -666,7 +662,7 @@ configuration.</p>
       <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
 </code></pre></div></div>
 
-<p>In order to configure IP on previously attached NICs, apply a new Policy:</p>
+<p>In order to configure IP on previously enslaved NICs, apply a new Policy:</p>
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
@@ -828,57 +824,6 @@ selectors:</p>
     <span class="na">reason</span><span class="pi">:</span> <span class="s">NodeSelectorNotMatching</span>
     <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
     <span class="na">type</span><span class="pi">:</span> <span class="s">Matching</span>
-</code></pre></div></div>
-
-<h2 id="configuring-multiple-nodes-concurrently">Configuring multiple nodes concurrently</h2>
-
-<p>By default, Policy configuration is applied sequentially, one node at a time.
-This configuration strategy is safe and prevents the entire cluster from being
-temporarily unavailable, if the applied configuration breaks network connectivity.</p>
-
-<p>For big clusters however, it may take too much time for a configuration to finish.
-In such a case, <code class="language-plaintext highlighter-rouge">maxUnavailable</code> can be used to define portion size of a cluster
-that can apply a policy configuration concurrently.
-MaxUnavailable specifies percentage or a constant number of nodes that
-can be progressing a policy at a time. The default is “50%” of cluster nodes.</p>
-
-<p>The following policy specifies that up to 3 nodes may be progressing concurrently:</p>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
-<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
-<span class="na">metadata</span><span class="pi">:</span>
-  <span class="na">name</span><span class="pi">:</span> <span class="s">linux-bridge-maxunavailable</span>
-<span class="na">spec</span><span class="pi">:</span>
-  <span class="na">maxUnavailable</span><span class="pi">:</span> <span class="m">3</span>
-  <span class="na">desiredState</span><span class="pi">:</span>
-    <span class="na">interfaces</span><span class="pi">:</span>
-      <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">br1</span>
-        <span class="na">description</span><span class="pi">:</span> <span class="s">Linux bridge with eth1 as a port</span>
-        <span class="na">type</span><span class="pi">:</span> <span class="s">linux-bridge</span>
-        <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
-        <span class="na">ipv4</span><span class="pi">:</span>
-          <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
-          <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
-        <span class="na">bridge</span><span class="pi">:</span>
-          <span class="na">options</span><span class="pi">:</span>
-            <span class="na">stp</span><span class="pi">:</span>
-              <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
-          <span class="na">port</span><span class="pi">:</span>
-            <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
-
-</code></pre></div></div>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl apply <span class="nt">-f</span> linux-bridge_maxunavailable.yaml
-</code></pre></div></div>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                                 STATUS
-node01.linux-bridge-maxunavailable   AllSelectorsMatching
-node02.linux-bridge-maxunavailable   ConfigurationProgressing
-node03.linux-bridge-maxunavailable   SuccessfullyConfigured
-node04.linux-bridge-maxunavailable   ConfigurationProgressing
-node05.linux-bridge-maxunavailable   ConfigurationProgressing
-node06.linux-bridge-maxunavailable   AllSelectorsMatching
 </code></pre></div></div>
 
 <h2 id="continue-reading">Continue reading</h2>
