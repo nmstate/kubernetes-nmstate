@@ -206,14 +206,6 @@ func main() {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 			os.Exit(1)
 		}
-		if err = (&controllers.NodeNetworkStateReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkState"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create NodeNetworkState controller", "controller", "NMState")
-			os.Exit(1)
-		}
 
 		// Check that nmstatectl is working
 		_, err = nmstatectl.Show()
