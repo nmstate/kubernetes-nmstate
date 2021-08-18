@@ -22,7 +22,7 @@ metadata:
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
     containerImage: quay.io/openshift/origin-kubernetes-nmstate-operator:4.8
     createdAt: 2020-011-12 17:13:03
-    olm.skipRange: ">=4.3.0-0 < 4.7.0-0"
+    olm.skipRange: ">=4.3.0 <4.8.0"
     support: Red Hat, Inc.
     repository: https://github.com/openshift/kubernetes-nmstate
   name: kubernetes-nmstate-operator.v4.8.0
