@@ -9,7 +9,7 @@ metadata:
     app: kubernetes-nmstate
     component: kubernetes-nmstate-webhook
 spec:
-  replicas: 2
+  replicas: {{ .WebhookReplicas }}
   strategy:
     type: Recreate
   selector:
