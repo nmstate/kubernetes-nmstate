@@ -166,6 +166,10 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-handler
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
   template:
     metadata:
       labels:
