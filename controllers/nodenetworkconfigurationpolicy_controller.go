@@ -57,14 +57,14 @@ import (
 )
 
 var (
-	nodeName                                string
-	nodeRunningUpdateRetryTime              = 5 * time.Second
-	onCreateOrUpdateWithDifferentGeneration = predicate.Funcs{
+	nodeName                                        string
+	nodeRunningUpdateRetryTime                      = 5 * time.Second
+	onCreateOrUpdateWithDifferentGenerationOrDelete = predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
 			return true
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return false
+			return true
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
@@ -125,10 +125,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	err := r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{}, nil
+			log.Info("Policy is not found, removing previous enactment if any")
+			err = r.deleteEnactmentForPolicy(request.NamespacedName.Name)
+			return ctrl.Result{}, err
 		}
 		log.Error(err, "Error retrieving policy")
 		// Error reading the object - requeue the request.
@@ -150,8 +149,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	}
 
 	if len(unmatchingNodeLabels) > 0 {
-		log.Info("Policy node selectors does not match node, removing previous enactments if any")
-		err = r.deleteEnactmentForPolicy(instance)
+		log.Info("Policy node selectors does not match node, removing previous enactment if any")
+		err = r.deleteEnactmentForPolicy(request.NamespacedName.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -228,7 +227,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	// Reconcile NNCP if they are created or updated
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkConfigurationPolicy{}).
-		WithEventFilter(onCreateOrUpdateWithDifferentGeneration).
+		WithEventFilter(onCreateOrUpdateWithDifferentGenerationOrDelete).
 		Complete(r)
 	if err != nil {
 		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening NNCP events")
@@ -257,7 +256,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	}
 	if err != nil && apierrors.IsNotFound(err) {
 		log.Info("creating enactment")
-		enactment = nmstatev1beta1.NewEnactment(nodeName, policy)
+		// Fetch the Node instance
+		nodeInstance := &corev1.Node{}
+		err = r.APIClient.Get(context.TODO(), types.NamespacedName{Name: nodeName}, nodeInstance)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed getting node")
+		}
+		enactment = nmstatev1beta1.NewEnactment(nodeInstance, policy)
 		err = r.APIClient.Create(context.TODO(), &enactment)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error creating NodeNetworkConfigurationEnactment: %+v", enactment)
@@ -295,8 +300,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmen
 	return pollErr
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
-	enactmentKey := nmstateapi.EnactmentKey(nodeName, policy.Name)
+func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(policyName string) error {
+	enactmentKey := nmstateapi.EnactmentKey(nodeName, policyName)
 	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: enactmentKey.Name,

@@ -24,7 +24,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	type predicateCase struct {
 		GenerationOld   int64
 		GenerationNew   int64
-		ReconcileCreate bool
 		ReconcileUpdate bool
 	}
 	DescribeTable("testing predicates",
@@ -40,12 +39,12 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				},
 			}
 
-			predicate := onCreateOrUpdateWithDifferentGeneration
+			predicate := onCreateOrUpdateWithDifferentGenerationOrDelete
 
 			Expect(predicate.
 				CreateFunc(event.CreateEvent{
 					Object: &newNNCP,
-				})).To(Equal(c.ReconcileCreate))
+				})).To(BeTrue())
 			Expect(predicate.
 				UpdateFunc(event.UpdateEvent{
 					ObjectOld: &oldNNCP,
@@ -53,21 +52,19 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				})).To(Equal(c.ReconcileUpdate))
 			Expect(predicate.
 				DeleteFunc(event.DeleteEvent{
-					Object: &newNNCP,
-				})).To(BeFalse())
+					Object: &oldNNCP,
+				})).To(BeTrue())
 		},
 		Entry("generation remains the same",
 			predicateCase{
 				GenerationOld:   1,
 				GenerationNew:   1,
-				ReconcileCreate: true,
 				ReconcileUpdate: false,
 			}),
 		Entry("generation is different",
 			predicateCase{
 				GenerationOld:   1,
 				GenerationNew:   2,
-				ReconcileCreate: true,
 				ReconcileUpdate: true,
 			}),
 	)
