@@ -1,0 +1,29 @@
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: linux-bridge-vlan
+spec:
+  desiredState:
+    interfaces:
+      - name: br1
+        description: Linux bridge with eth1 as a port with custom vlan configuration
+        type: linux-bridge
+        state: up
+        ipv4:
+          dhcp: true
+          enabled: true
+        bridge:
+          options:
+            stp:
+              enabled: false
+          port:
+            - name: eth1
+            vlan:
+              mode: trunk
+              trunk-tags:
+                - id: 101
+                - id-range:
+                    max: 500
+                    min: 200
+              tag: 100
+              enable-native: true
