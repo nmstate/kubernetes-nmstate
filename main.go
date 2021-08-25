@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/kubevirt/kubernetes-nmstate/api/shared"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -26,6 +27,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -105,7 +107,9 @@ func main() {
 		ctrlOptions.LeaderElectionID = "5d2e944b.nmstate.io"
 	} else if environment.IsHandler() {
 		// Handler runs as a daemonset and we want that each handler pod will cache/reconcile only resources belongs the node it runs on.
-		metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": environment.NodeName()}.AsSelector()
+		nodeName := environment.NodeName()
+		metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": nodeName}.AsSelector()
+		nodelabelMatchingNodeNameSelector := labels.Set{shared.EnactmentNodeLabel: nodeName}.AsSelector()
 		ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: cache.SelectorsByObject{
 				&corev1.Node{}: {
@@ -113,6 +117,9 @@ func main() {
 				},
 				&nmstatev1beta1.NodeNetworkState{}: {
 					Field: metadataNameMatchingNodeNameSelector,
+				},
+				&nmstatev1beta1.NodeNetworkConfigurationEnactment{}: {
+					Label: nodelabelMatchingNodeNameSelector,
 				},
 			},
 		})
