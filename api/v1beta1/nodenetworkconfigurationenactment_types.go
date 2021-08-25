@@ -40,8 +40,8 @@ func NewEnactment(node *corev1.Node, policy NodeNetworkConfigurationPolicy) Node
 			OwnerReferences: []metav1.OwnerReference{
 				{Name: node.Name, Kind: "Node", APIVersion: "v1", UID: node.UID},
 			},
-			// Associate policy with the enactment using labels
-			Labels: names.IncludeRelationshipLabels(map[string]string{shared.EnactmentPolicyLabel: policy.Name}),
+			// Associate policy and node with the enactment using labels
+			Labels: names.IncludeRelationshipLabels(map[string]string{shared.EnactmentPolicyLabel: policy.Name, shared.EnactmentNodeLabel: node.Name}),
 		},
 		Status: shared.NodeNetworkConfigurationEnactmentStatus{
 			DesiredState: shared.NewState(""),

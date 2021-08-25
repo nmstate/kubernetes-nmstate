@@ -6,6 +6,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 var _ = Describe("NodeNetworkEnactment", func() {
@@ -31,10 +33,15 @@ var _ = Describe("NodeNetworkEnactment", func() {
 	Context("NewEnactment", func() {
 		It("should have the node as the owner reference of the created enactment", func() {
 			nnce := NewEnactment(&node, nncp)
-			desiredOnwerRefs := []metav1.OwnerReference{
+			desiredOwnerRefs := []metav1.OwnerReference{
 				{Name: node.Name, Kind: "Node", APIVersion: "v1", UID: node.UID},
 			}
-			Expect(nnce.OwnerReferences).To(Equal(desiredOnwerRefs))
+			Expect(nnce.OwnerReferences).To(Equal(desiredOwnerRefs))
+		})
+		It("should have labels assocoating to the policy and the node", func() {
+			nnce := NewEnactment(&node, nncp)
+			Expect(nnce.Labels).To(HaveKeyWithValue(shared.EnactmentPolicyLabel, nncp.Name))
+			Expect(nnce.Labels).To(HaveKeyWithValue(shared.EnactmentNodeLabel, node.Name))
 		})
 	})
 
