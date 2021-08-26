@@ -196,11 +196,19 @@ func deletePolicy(name string) {
 }
 
 func restartNode(node string) error {
+	restartNodeWithoutWaiting(node)
+	return waitFotNodeToStart(node)
+}
+
+func restartNodeWithoutWaiting(node string) {
 	By(fmt.Sprintf("Restarting node %s", node))
 	// Use halt so reboot command does not get stuck also
 	// this command always fail since connection is closed
 	// so let's not check err
 	runner.RunAtNode(node, "sudo", "halt", "--reboot")
+}
+
+func waitFotNodeToStart(node string) error {
 	By(fmt.Sprintf("Waiting till node %s is rebooted", node))
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
 	Eventually(func() string {
@@ -210,7 +218,6 @@ func restartNode(node string) error {
 		}
 		return output
 	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
-
 	return nil
 }
 
