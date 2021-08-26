@@ -362,7 +362,7 @@ metadata:
   namespace: {{ .HandlerNamespace }}
   name: {{template "handlerPrefix" .}}nmstate-webhook
 spec:
-  minAvailable: 1
+  minAvailable: {{  .WebhookMinReplicas  }}
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
