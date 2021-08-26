@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/kubevirt/kubernetes-nmstate/api/shared"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -44,6 +43,7 @@ import (
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/controllers"
@@ -109,7 +109,7 @@ func main() {
 		// Handler runs as a daemonset and we want that each handler pod will cache/reconcile only resources belongs the node it runs on.
 		nodeName := environment.NodeName()
 		metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": nodeName}.AsSelector()
-		nodelabelMatchingNodeNameSelector := labels.Set{shared.EnactmentNodeLabel: nodeName}.AsSelector()
+		nodelabelMatchingNodeNameSelector := labels.Set{nmstateapi.EnactmentNodeLabel: nodeName}.AsSelector()
 		ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
 			SelectorsByObject: cache.SelectorsByObject{
 				&corev1.Node{}: {
@@ -211,6 +211,15 @@ func main() {
 			Scheme:    mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
+			os.Exit(1)
+		}
+
+		if err = (&controllers.NodeNetworkConfigurationEnactmentReconciler{
+			Client: mgr.GetClient(),
+			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationEnactment"),
+			Scheme: mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create NodeNetworkConfigurationEnactment controller", "controller", "NMState")
 			os.Exit(1)
 		}
 
