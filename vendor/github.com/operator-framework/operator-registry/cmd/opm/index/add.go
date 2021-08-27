@@ -68,6 +68,10 @@ func addIndexAddCmd(parent *cobra.Command) {
 	if err := indexCmd.Flags().MarkHidden("overwrite-latest"); err != nil {
 		logrus.Panic(err.Error())
 	}
+	indexCmd.Flags().Bool("enable-alpha", false, "enable unsupported alpha features of the OPM CLI")
+	if err := indexCmd.Flags().MarkHidden("enable-alpha"); err != nil {
+		logrus.Panic(err.Error())
+	}
 	if err := indexCmd.Flags().MarkHidden("debug"); err != nil {
 		logrus.Panic(err.Error())
 	}
@@ -129,6 +133,11 @@ func runIndexAddCmdFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	enableAlpha, err := cmd.Flags().GetBool("enable-alpha")
+	if err != nil {
+		return err
+	}
+
 	modeEnum, err := registry.GetModeFromString(mode)
 	if err != nil {
 		return err
@@ -159,6 +168,7 @@ func runIndexAddCmdFunc(cmd *cobra.Command, args []string) error {
 		Mode:              modeEnum,
 		SkipTLS:           skipTLS,
 		Overwrite:         overwrite,
+		EnableAlpha:       enableAlpha,
 	}
 
 	err = indexAdder.AddToIndex(request)
@@ -195,9 +205,8 @@ func getContainerTools(cmd *cobra.Command) (string, string, error) {
 	if containerTool != "" {
 		if pullTool == "" && buildTool == "" {
 			return containerTool, containerTool, nil
-		} else {
-			return "", "", fmt.Errorf("container-tool cannot be set alongside pull-tool or build-tool")
 		}
+		return "", "", fmt.Errorf("container-tool cannot be set alongside pull-tool or build-tool")
 	}
 
 	// Check for defaults, then return

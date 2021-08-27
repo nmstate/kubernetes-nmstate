@@ -12,7 +12,7 @@ import (
 var deprecateLong = templates.LongDesc(`
 	Deprecate and truncate operator bundles from an index.
 	
-	Deprecated bundles will no longer be installable. Bundles that are replaced by deprecated bundles will be removed enirely from the index.
+	Deprecated bundles will no longer be installable. Bundles that are replaced by deprecated bundles will be removed entirely from the index.
 	
 	For example:
 

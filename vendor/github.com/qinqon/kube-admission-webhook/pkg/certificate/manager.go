@@ -47,7 +47,7 @@ type Manager struct {
 	// caCertDuration Options.CARotateInterval
 	caCertDuration time.Duration
 
-	// caCertDuration Options.CAOverlapInterval
+	// caOverlapDuration Options.CAOverlapInterval
 	caOverlapDuration time.Duration
 
 	// serviceCertDuration Options.CertRotateInterval
@@ -59,6 +59,9 @@ type Manager struct {
 	// log initialized log that containes the webhook configuration name and
 	// namespace so it's easy to debug.
 	log logr.Logger
+
+	// extraLabels Options.ExtraLabels
+	extraLabels map[string]string
 }
 
 // NewManager with create a certManager that generated a secret per service
@@ -97,6 +100,7 @@ func NewManager(
 		caOverlapDuration:      options.CAOverlapInterval,
 		serviceCertDuration:    options.CertRotateInterval,
 		serviceOverlapDuration: options.CertOverlapInterval,
+		extraLabels:            options.ExtraLabels,
 		log: logf.Log.WithName("certificate/Manager").
 			WithValues("webhookType", options.WebhookType, "webhookName", options.WebhookName),
 	}

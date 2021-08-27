@@ -23,8 +23,8 @@ const (
 	EnactmentPolicyLabel                                                = "nmstate.io/policy"
 	NodeNetworkConfigurationEnactmentConditionAvailable   ConditionType = "Available"
 	NodeNetworkConfigurationEnactmentConditionFailing     ConditionType = "Failing"
+	NodeNetworkConfigurationEnactmentConditionPending     ConditionType = "Pending"
 	NodeNetworkConfigurationEnactmentConditionProgressing ConditionType = "Progressing"
-	NodeNetworkConfigurationEnactmentConditionMatching    ConditionType = "Matching"
 	NodeNetworkConfigurationEnactmentConditionAborted     ConditionType = "Aborted"
 )
 
@@ -32,17 +32,16 @@ var NodeNetworkConfigurationEnactmentConditionTypes = [...]ConditionType{
 	NodeNetworkConfigurationEnactmentConditionAvailable,
 	NodeNetworkConfigurationEnactmentConditionFailing,
 	NodeNetworkConfigurationEnactmentConditionProgressing,
-	NodeNetworkConfigurationEnactmentConditionMatching,
+	NodeNetworkConfigurationEnactmentConditionPending,
 	NodeNetworkConfigurationEnactmentConditionAborted,
 }
 
 const (
-	NodeNetworkConfigurationEnactmentConditionFailedToConfigure                ConditionReason = "FailedToConfigure"
-	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured           ConditionReason = "SuccessfullyConfigured"
-	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing         ConditionReason = "ConfigurationProgressing"
-	NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching          ConditionReason = "NodeSelectorNotMatching"
-	NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching ConditionReason = "AllSelectorsMatching"
-	NodeNetworkConfigurationEnactmentConditionConfigurationAborted             ConditionReason = "ConfigurationAborted"
+	NodeNetworkConfigurationEnactmentConditionFailedToConfigure          ConditionReason = "FailedToConfigure"
+	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured     ConditionReason = "SuccessfullyConfigured"
+	NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached ConditionReason = "MaxUnavailableLimitReached"
+	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing   ConditionReason = "ConfigurationProgressing"
+	NodeNetworkConfigurationEnactmentConditionConfigurationAborted       ConditionReason = "ConfigurationAborted"
 )
 
 func EnactmentKey(node string, policy string) types.NamespacedName {

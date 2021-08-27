@@ -3,12 +3,14 @@ package policyconditions
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -20,7 +22,13 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("policyconditions")
+	log               = logf.Log.WithName("policyconditions")
+	StatusUpdateRetry = wait.Backoff{
+		Steps:    20,
+		Duration: 10 * time.Millisecond,
+		Factor:   2.0,
+		Jitter:   0.1,
+	}
 )
 
 func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
@@ -87,12 +95,13 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 	)
 }
 
-func Update(cli client.Client, policyKey types.NamespacedName) error {
+func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
+
 	// On conflict we need to re-retrieve enactments since the
 	// conflict can denote that the calculated policy conditions
 	// are now not accurate.
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	return retry.RetryOnConflict(StatusUpdateRetry, func() error {
 		policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 		err := cli.Get(context.TODO(), policyKey, policy)
 		if err != nil {
@@ -101,40 +110,41 @@ func Update(cli client.Client, policyKey types.NamespacedName) error {
 
 		enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 		policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
-		err = cli.List(context.TODO(), &enactments, policyLabelFilter)
+		err = apiReader.List(context.TODO(), &enactments, policyLabelFilter)
 		if err != nil {
 			return errors.Wrap(err, "getting enactments failed")
 		}
 
-		// Count only nodes that runs nmstate handler, could be that
-		// users don't want to run knmstate at master for example so
-		// they don't want to change net config there.
-		nmstateNodes, err := node.NodesRunningNmstate(cli)
+		// Count only nodes that runs nmstate handler and match the policy
+		// nodeSelector, could be that users don't want to run knmstate at control-plane for example
+		// so they don't want to change net config there.
+		nmstateMatchingNodes, err := node.NodesRunningNmstate(apiReader, policy.Spec.NodeSelector)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
-		numberOfNmstateNodes := len(nmstateNodes)
+		numberOfNmstateMatchingNodes := len(nmstateMatchingNodes)
 
 		// Let's get conditions with true status count filtered by policy generation
-		enactmentsCount := enactmentconditions.Count(enactments, policy.Generation)
+		enactmentsCountByCondition := enactmentconditions.Count(enactments, policy.Generation)
 
-		numberOfFinishedEnactments := enactmentsCount.Available() + enactmentsCount.Failed() + enactmentsCount.NotMatching() + enactmentsCount.Aborted()
+		numberOfFinishedEnactments := enactmentsCountByCondition.Available() + enactmentsCountByCondition.Failed() + enactmentsCountByCondition.Aborted()
 
-		logger.Info(fmt.Sprintf("enactments count: %s", enactmentsCount))
-		if numberOfFinishedEnactments < numberOfNmstateNodes {
-			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateNodes))
+		logger.Info(fmt.Sprintf("numberOfNmstateMatchingNodes: %d, enactments count: %s", numberOfNmstateMatchingNodes, enactmentsCountByCondition))
+
+		if numberOfNmstateMatchingNodes == 0 {
+			message := "Policy does not match any node"
+			SetPolicyNotMatching(&policy.Status.Conditions, message)
+		} else if numberOfFinishedEnactments < numberOfNmstateMatchingNodes {
+			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateMatchingNodes))
 		} else {
-			if enactmentsCount.Matching() == 0 {
-				message := "Policy does not match any node"
-				SetPolicyNotMatching(&policy.Status.Conditions, message)
-			} else if enactmentsCount.Failed() > 0 || enactmentsCount.Aborted() > 0 {
-				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCount.Failed(), enactmentsCount.Matching())
-				if enactmentsCount.Aborted() > 0 {
-					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCount.Aborted())
+			if enactmentsCountByCondition.Failed() > 0 || enactmentsCountByCondition.Aborted() > 0 {
+				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCountByCondition.Failed(), numberOfNmstateMatchingNodes)
+				if enactmentsCountByCondition.Aborted() > 0 {
+					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCountByCondition.Aborted())
 				}
 				SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
 			} else {
-				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCount.Available(), enactmentsCount.Available())
+				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCountByCondition.Available(), enactmentsCountByCondition.Available())
 				SetPolicySuccess(&policy.Status.Conditions, message)
 			}
 		}

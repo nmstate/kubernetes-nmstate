@@ -9,7 +9,7 @@ metadata:
     app: kubernetes-nmstate
     component: kubernetes-nmstate-webhook
 spec:
-  replicas: 2
+  replicas: {{ .WebhookReplicas }}
   strategy:
     type: Recreate
   selector:
@@ -28,6 +28,7 @@ spec:
       nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-webhook
           args:
@@ -37,6 +38,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: "30m"
+              memory: "20Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -107,6 +112,7 @@ spec:
       nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-cert-manager
           args:
@@ -116,6 +122,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: "30m"
+              memory: "30Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -127,6 +137,22 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            - name: COMPONENT
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/component']
+            - name: PART_OF
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/part-of']
+            - name: VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/version']
+            - name: MANAGED_BY
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/managed-by']
             - name: RUN_CERT_MANAGER
               value: ""
             - name: OPERATOR_NAME
@@ -156,6 +182,10 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-handler
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
   template:
     metadata:
       labels:
@@ -176,6 +206,7 @@ spec:
       nodeSelector: {{ toYaml .HandlerNodeSelector | nindent 8 }}
       tolerations: {{ toYaml .HandlerTolerations | nindent 8 }}
       affinity: {{ toYaml .HandlerAffinity | nindent 8 }}
+      priorityClassName: system-node-critical
       containers:
         - name: nmstate-handler
           args:
@@ -185,6 +216,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
             - manager
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "100Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -192,6 +227,22 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.name
+            - name: COMPONENT
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/component']
+            - name: PART_OF
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/part-of']
+            - name: VERSION
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/version']
+            - name: MANAGED_BY
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.labels['app.kubernetes.io/managed-by']
             - name: OPERATOR_NAME
               value: "{{template "handlerPrefix" .}}nmstate"
             - name: NODE_NAME
@@ -199,10 +250,7 @@ spec:
                 fieldRef:
                   fieldPath: spec.nodeName
             - name: INTERFACES_FILTER
-              valueFrom:
-                configMapKeyRef:
-                  name: {{template "handlerPrefix" .}}nmstate-config
-                  key: interfaces_filter
+              value: "{veth*,cali*}"
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
@@ -232,14 +280,6 @@ spec:
         - name: nmstate-lock
           hostPath:
             path: /var/k8s_nmstate
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{template "handlerPrefix" .}}nmstate-config
-  namespace: {{ .HandlerNamespace }}
-data:
-  interfaces_filter: "{veth*,cali*}"
 ---
 apiVersion: v1
 kind: Service

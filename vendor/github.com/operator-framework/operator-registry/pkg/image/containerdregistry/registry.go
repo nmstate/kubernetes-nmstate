@@ -42,7 +42,7 @@ func (r *Registry) Pull(ctx context.Context, ref image.Reference) error {
 	if err != nil {
 		return fmt.Errorf("error resolving name %s: %v", name, err)
 	}
-	r.log.Infof("resolved name: %s", name)
+	r.log.Debugf("resolved name: %s", name)
 
 	fetcher, err := r.resolver.Fetcher(ctx, name)
 	if err != nil {
@@ -82,7 +82,7 @@ func (r *Registry) Unpack(ctx context.Context, ref image.Reference, dir string) 
 	}
 
 	for _, layer := range manifest.Layers {
-		r.log.Infof("unpacking layer: %v", layer)
+		r.log.Debugf("unpacking layer: %v", layer)
 		if err := r.unpackLayer(ctx, layer, dir); err != nil {
 			return err
 		}
@@ -153,7 +153,7 @@ func (r *Registry) getImage(ctx context.Context, manifest ocispec.Manifest) (*oc
 
 func (r *Registry) fetch(ctx context.Context, fetcher remotes.Fetcher, root ocispec.Descriptor) error {
 	visitor := images.HandlerFunc(func(ctx context.Context, desc ocispec.Descriptor) ([]ocispec.Descriptor, error) {
-		r.log.WithField("digest", desc.Digest).Info("fetched")
+		r.log.WithField("digest", desc.Digest).Debug("fetched")
 		r.log.Debug(desc)
 		return nil, nil
 	})

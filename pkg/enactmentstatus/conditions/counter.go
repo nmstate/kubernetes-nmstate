@@ -40,11 +40,11 @@ func (c ConditionCount) failed() CountByConditionStatus {
 func (c ConditionCount) progressing() CountByConditionStatus {
 	return c[nmstate.NodeNetworkConfigurationEnactmentConditionProgressing]
 }
+func (c ConditionCount) pending() CountByConditionStatus {
+	return c[nmstate.NodeNetworkConfigurationEnactmentConditionPending]
+}
 func (c ConditionCount) available() CountByConditionStatus {
 	return c[nmstate.NodeNetworkConfigurationEnactmentConditionAvailable]
-}
-func (c ConditionCount) matching() CountByConditionStatus {
-	return c[nmstate.NodeNetworkConfigurationEnactmentConditionMatching]
 }
 func (c ConditionCount) aborted() CountByConditionStatus {
 	return c[nmstate.NodeNetworkConfigurationEnactmentConditionAborted]
@@ -74,17 +74,17 @@ func (c ConditionCount) Progressing() int {
 func (c ConditionCount) NotProgressing() int {
 	return c.progressing().false()
 }
+func (c ConditionCount) Pending() int {
+	return c.progressing().true()
+}
+func (c ConditionCount) NotPending() int {
+	return c.progressing().false()
+}
 func (c ConditionCount) Available() int {
 	return c.available().true()
 }
 func (c ConditionCount) NotAvailable() int {
 	return c.available().false()
-}
-func (c ConditionCount) Matching() int {
-	return c.matching().true()
-}
-func (c ConditionCount) NotMatching() int {
-	return c.matching().false()
 }
 func (c ConditionCount) Aborted() int {
 	return c.aborted().true()
@@ -94,7 +94,7 @@ func (c ConditionCount) NotAborted() int {
 }
 
 func (c ConditionCount) String() string {
-	return fmt.Sprintf("{failed: %s, progressing: %s, available: %s, matching: %s, aborted: %s}", c.failed(), c.progressing(), c.available(), c.matching(), c.aborted())
+	return fmt.Sprintf("{failed: %s, progressing: %s, pending: %s, available: %s, aborted: %s}", c.failed(), c.progressing(), c.pending(), c.available(), c.aborted())
 }
 
 func (c CountByConditionStatus) String() string {

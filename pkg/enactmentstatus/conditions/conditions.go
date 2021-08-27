@@ -33,26 +33,9 @@ func New(client client.Client, enactmentKey types.NamespacedName) EnactmentCondi
 func (ec *EnactmentConditions) NotifyNodeSelectorFailure(err error) {
 	ec.logger.Info("NotifyNodeSelectorFailure")
 	message := fmt.Sprintf("failure checking node selectors : %v", err)
-	err = ec.updateEnactmentConditions(SetNodeSelectorNotMatching, message)
+	err = ec.updateEnactmentConditions(SetFailedToConfigure, message)
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state NodeSelectorNotMatching with failure")
-	}
-}
-
-func (ec *EnactmentConditions) NotifyNodeSelectorNotMatching(unmatchingLabels map[string]string) {
-	ec.logger.Info("NotifyNodeSelectorNotMatching")
-	message := fmt.Sprintf("Unmatching labels: %v", unmatchingLabels)
-	err := ec.updateEnactmentConditions(SetNodeSelectorNotMatching, message)
-	if err != nil {
-		ec.logger.Error(err, "Error notifying state NodeSelectorNotMatching")
-	}
-}
-
-func (ec *EnactmentConditions) NotifyMatching() {
-	ec.logger.Info("NotifyMatching")
-	err := ec.updateEnactmentConditions(SetMatching, "All policy selectors are matching the node")
-	if err != nil {
-		ec.logger.Error(err, "Error notifying state Matching")
 	}
 }
 
@@ -85,6 +68,14 @@ func (ec *EnactmentConditions) NotifySuccess() {
 	err := ec.updateEnactmentConditions(SetSuccess, "successfully reconciled")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Success")
+	}
+}
+
+func (ec *EnactmentConditions) NotifyPending() {
+	ec.logger.Info("NotifyPending")
+	err := ec.updateEnactmentConditions(SetPending, "Max unavailable node limit reached")
+	if err != nil {
+		ec.logger.Error(err, "Error notifying state Pending")
 	}
 }
 
@@ -132,6 +123,12 @@ func SetFailed(conditions *nmstate.ConditionList, reason nmstate.ConditionReason
 		"",
 	)
 	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
@@ -158,6 +155,12 @@ func SetAborted(conditions *nmstate.ConditionList, reason nmstate.ConditionReaso
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		reason,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
 		corev1.ConditionFalse,
 		reason,
 		"",
@@ -190,6 +193,12 @@ func SetSuccess(conditions *nmstate.ConditionList, message string) {
 		"",
 	)
 	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
+		"",
+	)
+	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured,
@@ -217,6 +226,12 @@ func SetProgressing(conditions *nmstate.ConditionList, message string) {
 		"",
 	)
 	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		"",
+	)
+	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
@@ -224,72 +239,35 @@ func SetProgressing(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
-func SetNodeSelectorNotMatching(conditions *nmstate.ConditionList, message string) {
-	SetNotMatching(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorNotMatching, message)
-}
-
-func SetNotMatching(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {
+func SetPending(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
-		corev1.ConditionFalse,
-		reason,
-		"",
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
-		corev1.ConditionFalse,
-		reason,
-		"",
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
-		corev1.ConditionFalse,
-		reason,
-		"",
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
-		corev1.ConditionFalse,
-		reason,
-		message,
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
-		corev1.ConditionFalse,
-		reason,
-		"",
-	)
-}
-
-func SetMatching(conditions *nmstate.ConditionList, message string) {
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
-		corev1.ConditionUnknown,
-		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
-		"",
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
-		corev1.ConditionUnknown,
-		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
-		"",
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
-		corev1.ConditionUnknown,
-		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
-		"",
-	)
-	conditions.Set(
-		nmstate.NodeNetworkConfigurationEnactmentConditionMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
 		corev1.ConditionTrue,
-		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
 		message,
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
-		corev1.ConditionUnknown,
-		nmstate.NodeNetworkConfigurationEnactmentConditionNodeSelectorAllSelectorsMatching,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		message,
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
 		"",
 	)
 }

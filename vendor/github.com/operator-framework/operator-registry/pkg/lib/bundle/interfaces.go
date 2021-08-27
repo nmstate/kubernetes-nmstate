@@ -25,6 +25,6 @@ func NewImageValidator(registry image.Registry, logger *logrus.Entry, options ..
 	return imageValidator{
 		registry: registry,
 		logger:   logger,
-		optional:  options,
+		optional: options,
 	}
 }

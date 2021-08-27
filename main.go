@@ -24,11 +24,15 @@ import (
 	"os"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	// +kubebuilder:scaffold:imports
 
@@ -43,6 +47,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/controllers"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
@@ -98,8 +103,20 @@ func main() {
 	} else if environment.IsCertManager() {
 		ctrlOptions.LeaderElection = true
 		ctrlOptions.LeaderElectionID = "5d2e944b.nmstate.io"
+	} else if environment.IsHandler() {
+		// Handler runs as a daemonset and we want that each handler pod will cache/reconcile only resources belongs the node it runs on.
+		metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": environment.NodeName()}.AsSelector()
+		ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
+			SelectorsByObject: cache.SelectorsByObject{
+				&corev1.Node{}: {
+					Field: metadataNameMatchingNodeNameSelector,
+				},
+				&nmstatev1beta1.NodeNetworkState{}: {
+					Field: metadataNameMatchingNodeNameSelector,
+				},
+			},
+		})
 	}
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -111,6 +128,7 @@ func main() {
 			Namespace:   os.Getenv("POD_NAMESPACE"),
 			WebhookName: "nmstate",
 			WebhookType: certificate.MutatingWebhook,
+			ExtraLabels: names.IncludeRelationshipLabels(nil),
 		}
 
 		certManagerOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
@@ -172,25 +190,25 @@ func main() {
 			setupLog.Error(err, "unable to create Node controller", "controller", "NMState")
 			os.Exit(1)
 		}
+
+		apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+		if err != nil {
+			setupLog.Error(err, "failed creating non cached client")
+			os.Exit(1)
+		}
+
 		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
-			Scheme: mgr.GetScheme(),
+			Client:    mgr.GetClient(),
+			APIClient: apiClient,
+			Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
+			Scheme:    mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 			os.Exit(1)
 		}
-		if err = (&controllers.NodeNetworkStateReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkState"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create NodeNetworkState controller", "controller", "NMState")
-			os.Exit(1)
-		}
 
 		// Check that nmstatectl is working
-		_, err := nmstatectl.Show()
+		_, err = nmstatectl.Show()
 		if err != nil {
 			setupLog.Error(err, "failed checking nmstatectl health")
 			os.Exit(1)

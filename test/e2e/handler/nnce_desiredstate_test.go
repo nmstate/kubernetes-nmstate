@@ -26,7 +26,7 @@ var _ = Describe("Enactment DesiredState", func() {
 				enactmentKey := nmstate.EnactmentKey(node, TestPolicy)
 				By(fmt.Sprintf("Check enactment %s has expected desired state", enactmentKey.Name))
 				nnce := nodeNetworkConfigurationEnactment(enactmentKey)
-				Expect(nnce.Status.DesiredState).To(MatchYAML(linuxBrUp(bridge1)))
+				Expect(nnce.Status.DesiredState).To(MatchYAML(linuxBrUpWithDefaults(bridge1)))
 			}
 		})
 	})

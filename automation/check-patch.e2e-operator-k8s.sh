@@ -14,7 +14,7 @@ teardown() {
 }
 
 main() {
-    export KUBEVIRT_NUM_NODES=3 # 1 master, 2 workers
+    export KUBEVIRT_NUM_NODES=3 # 1 control-plane, 2 workers
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
 

@@ -52,6 +52,11 @@ func p(conditionsSetter func(*nmstate.ConditionList, string), message string) nm
 	}
 }
 
+func s(nodeSelector map[string]string, policy nmstatev1beta1.NodeNetworkConfigurationPolicy) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+	policy.Spec.NodeSelector = nodeSelector
+	return policy
+}
+
 func nodeName(idx int) string {
 	return fmt.Sprintf("node%d", idx)
 }
@@ -69,13 +74,13 @@ func newNode(idx int) corev1.Node {
 	return node
 }
 
-func newPodAtNode(idx int, name string, namespace string, app string) corev1.Pod {
+func newPodAtNode(idx int, name string, namespace string, component string) corev1.Pod {
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%d", name, idx),
 			Namespace: namespace,
 			Labels: map[string]string{
-				"app": app,
+				"component": component,
 			},
 		},
 		Spec: corev1.PodSpec{
@@ -86,7 +91,7 @@ func newPodAtNode(idx int, name string, namespace string, app string) corev1.Pod
 }
 
 func newNmstatePodAtNode(idx int) corev1.Pod {
-	return newPodAtNode(idx, "nmstate-handler", "nmstate", "kubernetes-nmstate")
+	return newPodAtNode(idx, "nmstate-handler", "nmstate", "kubernetes-nmstate-handler")
 }
 
 func newNonNmstatePodAtNode(idx int) corev1.Pod {
@@ -156,7 +161,7 @@ var _ = Describe("Policy Conditions", func() {
 
 			client := fake.NewFakeClientWithScheme(s, objs...)
 			key := types.NamespacedName{Name: updatedPolicy.Name}
-			err := Update(client, key)
+			err := Update(client, client, key)
 			Expect(err).ToNot(HaveOccurred())
 			err = client.Get(context.TODO(), key, updatedPolicy)
 			Expect(err).ToNot(HaveOccurred())
@@ -164,9 +169,9 @@ var _ = Describe("Policy Conditions", func() {
 		},
 		Entry("when all enactments are progressing then policy is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
+				e("node1", "policy1", enactmentconditions.SetProgressing),
+				e("node2", "policy1", enactmentconditions.SetProgressing),
+				e("node3", "policy1", enactmentconditions.SetProgressing),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
@@ -174,9 +179,9 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when all enactments are success then policy is success", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
@@ -184,9 +189,9 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when not all enactments are created is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes:  newNodes(4),
 			Pods:   newNmstatePods(4),
@@ -194,9 +199,9 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when enactments are progressing/success then policy is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetProgressing),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
@@ -204,10 +209,10 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when enactments are failed/progressing/success then policy is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
-				e("node4", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetProgressing),
+				e("node3", "policy1", enactmentconditions.SetFailedToConfigure),
+				e("node4", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes:  newNodes(4),
 			Pods:   newNmstatePods(4),
@@ -215,9 +220,9 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when all the enactments are at failing or success policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node1", "policy1", enactmentconditions.SetFailedToConfigure),
+				e("node2", "policy1", enactmentconditions.SetFailedToConfigure),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
@@ -225,29 +230,25 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when all the enactments are at failing policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetFailedToConfigure),
+				e("node1", "policy1", enactmentconditions.SetFailedToConfigure),
+				e("node2", "policy1", enactmentconditions.SetFailedToConfigure),
+				e("node3", "policy1", enactmentconditions.SetFailedToConfigure),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
 			Policy: p(SetPolicyFailedToConfigure, "3/3 nodes failed to configure"),
 		}),
 		Entry("when no node matches policy node selector, policy state is not matching", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetNodeSelectorNotMatching),
-				e("node2", "policy1", enactmentconditions.SetNodeSelectorNotMatching),
-				e("node3", "policy1", enactmentconditions.SetNodeSelectorNotMatching),
-			},
-			Nodes:  newNodes(3),
-			Pods:   newNmstatePods(3),
-			Policy: p(SetPolicyNotMatching, "Policy does not match any node"),
+			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			Nodes:      newNodes(3),
+			Pods:       newNmstatePods(3),
+			Policy:     s(map[string]string{"foo": "bar"}, p(SetPolicyNotMatching, "Policy does not match any node")),
 		}),
-		Entry("when some enacments has unknown matching state policy state is progressing", ConditionsCase{
+		Entry("when some enacments has unknown state policy state is progressing", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1"),
 				e("node2", "policy1"),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
@@ -255,11 +256,11 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when some enactments are from different profile it does no affect the profile status", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node1", "policy2", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
-				e("node2", "policy2", enactmentconditions.SetMatching, enactmentconditions.SetProgressing),
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
+				e("node1", "policy2", enactmentconditions.SetProgressing),
+				e("node2", "policy2", enactmentconditions.SetProgressing),
 			},
 			Nodes:  newNodes(3),
 			Pods:   newNmstatePods(3),
@@ -267,9 +268,9 @@ var _ = Describe("Policy Conditions", func() {
 		}),
 		Entry("when a node does not run nmstate pod ignore it for policy conditions calculations", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
-				e("node1", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node2", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
-				e("node3", "policy1", enactmentconditions.SetMatching, enactmentconditions.SetSuccess),
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
 			},
 			Nodes: newNodes(4),
 			Pods: []corev1.Pod{

@@ -22,13 +22,12 @@ import (
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
-	"github.com/nmstate/kubernetes-nmstate/test/version"
 )
 
 var (
 	t                    *testing.T
-	nodes                []string
 	allNodes             []string
+	nodes                []string
 	startTime            time.Time
 	bond1                string
 	bridge1              string
@@ -54,29 +53,26 @@ var _ = BeforeSuite(func() {
 
 	testenv.Start()
 
-	if version.IsNmstate(">= 1.0.0") {
-		portFieldName = "port"
-		miimonFormat = "%d"
-	} else {
-		portFieldName = "slaves"
-		miimonFormat = "'%d'"
+	portFieldName = "port"
+	miimonFormat = "%d"
+
+	By("Getting nmstate-enabled node list from cluster")
+	podList := corev1.PodList{}
+	filterHandlers := client.MatchingLabels{"component": "kubernetes-nmstate-handler"}
+	err := testenv.Client.List(context.TODO(), &podList, filterHandlers)
+	Expect(err).ToNot(HaveOccurred())
+	for _, pod := range podList.Items {
+		allNodes = append(allNodes, pod.Spec.NodeName)
 	}
 
-	By("Getting worker node list from cluster")
+	By("Getting nmstate-enabled worker node list from cluster")
 	nodeList := corev1.NodeList{}
 	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
-	err := testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
-	Expect(err).ToNot(HaveOccurred())
+	err = testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
 	for _, node := range nodeList.Items {
-		nodes = append(nodes, node.Name)
-	}
-
-	By("Getting all node list from cluster")
-	nodeList = corev1.NodeList{}
-	err = testenv.Client.List(context.TODO(), &nodeList)
-	Expect(err).ToNot(HaveOccurred())
-	for _, node := range nodeList.Items {
-		allNodes = append(allNodes, node.Name)
+		if containsNode(allNodes, node.Name) {
+			nodes = append(nodes, node.Name)
+		}
 	}
 
 	resetDesiredStateForNodes()
@@ -139,4 +135,13 @@ func getMaxFailsFromEnv() int {
 	}
 
 	return maxFails
+}
+
+func containsNode(nodes []string, node string) bool {
+	for _, n := range nodes {
+		if n == node {
+			return true
+		}
+	}
+	return false
 }

@@ -17,7 +17,7 @@ var (
     state: up
     link-aggregation:
       mode: active-backup
-      slaves:
+      port:
         - eth1
       options:
         miimon: '120'
@@ -45,20 +45,148 @@ var (
     type: linux-bridge
     state: up
     bridge:
-      options:
-        stp:
-          enabled: false
       port:
         - name: eth1
   - name: br2
     type: linux-bridge
     state: up
     bridge:
-      options:
-        stp:
-          enabled: false
       port:
         - name: eth2
+        - name: eth3
+  - name: br3
+    type: linux-bridge
+    state: down
+  - name: br4
+    type: linux-bridge
+    state: absent
+`)
+	expectedSomeBridgesUpDefaults = nmstate.NewState(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: eth1
+        vlan:
+          mode: trunk
+          trunk-tags:
+          - id-range:
+              max: 4094
+              min: 2
+  - name: br2
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: eth2
+        vlan:
+          mode: trunk
+          trunk-tags:
+          - id-range:
+              max: 4094
+              min: 2
+      - name: eth3
+        vlan:
+          mode: trunk
+          trunk-tags:
+          - id-range:
+              max: 4094
+              min: 2
+  - name: br3
+    type: linux-bridge
+    state: down
+  - name: br4
+    type: linux-bridge
+    state: absent
+`)
+	bridgeWithCustomVlan = nmstate.NewState(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: eth1
+        vlan:
+          mode: trunk
+          trunk-tags:
+          - id-range:
+              max: 200
+              min: 2
+          - id: 101
+          tag: 100
+          enable-native: true
+`)
+	bridgeWithDisabledVlan = nmstate.NewState(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: eth1
+        vlan: {}
+`)
+	someBridgesWithVlanConfiguration = nmstate.NewState(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: eth1
+  - name: br2
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: eth2
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id: 101
+            - id: 102
+            tag: 100
+            enable-native: true
+        - name: eth3
+  - name: br3
+    type: linux-bridge
+    state: down
+  - name: br4
+    type: linux-bridge
+    state: absent
+`)
+	expectedSomeBridgesWithVlanConfigurationDefaults = nmstate.NewState(`interfaces:
+  - name: br1
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: eth1
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id-range:
+                max: 4094
+                min: 2
+  - name: br2
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: eth2
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id: 101
+            - id: 102
+            tag: 100
+            enable-native: true
+        - name: eth3
+          vlan:
+            mode: trunk
+            trunk-tags:
+            - id-range:
+                max: 4094
+                min: 2
   - name: br3
     type: linux-bridge
     state: down
@@ -70,12 +198,12 @@ var (
 
 var _ = Describe("Network desired state bridge parser", func() {
 	var (
-		obtainedBridgesAndPorts map[string][]string
-		desiredState            nmstate.State
-		err                     error
+		updatedDesiredState nmstate.State
+		desiredState        nmstate.State
+		err                 error
 	)
 	JustBeforeEach(func() {
-		obtainedBridgesAndPorts, err = getBridgesUp(desiredState)
+		updatedDesiredState, err = ApplyDefaultVlanFiltering(desiredState)
 	})
 	Context("when desired state is not a yaml", func() {
 		BeforeEach(func() {
@@ -89,51 +217,72 @@ var _ = Describe("Network desired state bridge parser", func() {
 		BeforeEach(func() {
 			desiredState = empty
 		})
-		It("should return empty map", func() {
+		It("should not be changed", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridgesAndPorts).To(BeEmpty())
+			Expect(updatedDesiredState).To(MatchYAML(desiredState))
 		})
 	})
-	Context("when there is no bridges", func() {
+	Context("when there are no bridges", func() {
 		BeforeEach(func() {
 			desiredState = noBridges
 		})
-		It("should return empty map", func() {
+		It("should not be changed", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridgesAndPorts).To(BeEmpty())
+			Expect(updatedDesiredState).To(MatchYAML(desiredState))
 		})
 	})
 	Context("when there are no bridges up", func() {
 		BeforeEach(func() {
 			desiredState = noBridgesUp
 		})
-		It("should return empty map", func() {
+		It("should not be changed", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridgesAndPorts).To(BeEmpty())
+			Expect(updatedDesiredState).To(MatchYAML(desiredState))
 		})
 	})
 	Context("when there are no ports in the bridge", func() {
 		BeforeEach(func() {
 			desiredState = bridgeWithNoPorts
 		})
-		It("should return the bridge with empty port list", func() {
+		It("should not be changed", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(obtainedBridgesAndPorts).To(HaveKeyWithValue("br1", BeEmpty()))
+			Expect(updatedDesiredState).To(MatchYAML(desiredState))
 		})
 	})
 	Context("when there are bridges up", func() {
 		BeforeEach(func() {
 			desiredState = someBridgesUp
 		})
-		It("should return the map with the bridges and ports", func() {
+		It("should add default vlan filtering to linux-bridge ports", func() {
 			Expect(err).ToNot(HaveOccurred())
-			Expect(len(obtainedBridgesAndPorts)).To(Equal(2))
-			ports, exist := obtainedBridgesAndPorts["br1"]
-			Expect(exist).To(BeTrue())
-			Expect(ports).To(ConsistOf("eth1"))
-			ports, exist = obtainedBridgesAndPorts["br2"]
-			Expect(exist).To(BeTrue())
-			Expect(ports).To(ConsistOf("eth2"))
+			Expect(updatedDesiredState).To(MatchYAML(expectedSomeBridgesUpDefaults))
+		})
+		Context("when there is custom vlan configuration on linux-bridge port", func() {
+			BeforeEach(func() {
+				desiredState = bridgeWithCustomVlan
+			})
+			It("should keep custom vlan configuration intact", func() {
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updatedDesiredState).To(MatchYAML(desiredState))
+			})
+		})
+		Context("when there is empty vlan configuration", func() {
+			BeforeEach(func() {
+				desiredState = bridgeWithDisabledVlan
+			})
+			It("should keep custom vlan configuration intact", func() {
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updatedDesiredState).To(MatchYAML(desiredState))
+			})
+		})
+		Context("when some ports have vlan configuration while other do not", func() {
+			BeforeEach(func() {
+				desiredState = someBridgesWithVlanConfiguration
+			})
+			It("should keep custom vlan configuration intact", func() {
+				Expect(err).ToNot(HaveOccurred())
+				Expect(updatedDesiredState).To(MatchYAML(expectedSomeBridgesWithVlanConfigurationDefaults))
+			})
 		})
 	})
 })

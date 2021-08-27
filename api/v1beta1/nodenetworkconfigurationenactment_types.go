@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
 // +kubebuilder:object:root=true
@@ -20,7 +21,7 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationenactments,shortName=nnce,scope=Cluster
-// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.type==\"Available\")].reason",description="Status"
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
 // +kubebuilder:pruning:PreserveUnknownFields
 // +kubebuilder:storageversion
 
@@ -32,17 +33,15 @@ type NodeNetworkConfigurationEnactment struct {
 	Status shared.NodeNetworkConfigurationEnactmentStatus `json:"status,omitempty"`
 }
 
-func NewEnactment(nodeName string, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+func NewEnactment(node *corev1.Node, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: shared.EnactmentKey(nodeName, policy.Name).Name,
+			Name: shared.EnactmentKey(node.Name, policy.Name).Name,
 			OwnerReferences: []metav1.OwnerReference{
-				{Name: policy.Name, Kind: policy.TypeMeta.Kind, APIVersion: policy.TypeMeta.APIVersion, UID: policy.UID},
+				{Name: node.Name, Kind: "Node", APIVersion: "v1", UID: node.UID},
 			},
 			// Associate policy with the enactment using labels
-			Labels: map[string]string{
-				shared.EnactmentPolicyLabel: policy.Name,
-			},
+			Labels: names.IncludeRelationshipLabels(map[string]string{shared.EnactmentPolicyLabel: policy.Name}),
 		},
 		Status: shared.NodeNetworkConfigurationEnactmentStatus{
 			DesiredState: shared.NewState(""),

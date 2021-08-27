@@ -26,11 +26,15 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -39,7 +43,7 @@ import (
 )
 
 // Added for test purposes
-type NmstateUpdater func(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedState shared.State) error
+type NmstateUpdater func(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState) error
 type NmstatectlShow func() (string, error)
 
 // NodeReconciler reconciles a Node object
@@ -69,16 +73,25 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
+	err = r.Client.Get(context.TODO(), request.NamespacedName, nnsInstance)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, errors.Wrap(err, "Failed to get nnstate")
+		} else {
+			nnsInstance = nil
+		}
+	}
 	// Reduce apiserver hits by checking node's network state with last one
-	if r.lastState.String() == currentState.String() {
-		return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, err
+	if nnsInstance != nil && r.lastState.String() == currentState.String() {
+		return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 	} else {
-		r.Log.Info("Network configuration changed, updating NodeNetworkState")
+		r.Log.Info("Creating/updating NodeNetworkState")
 	}
 
 	// Fetch the Node instance
-	instance := &corev1.Node{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
+	nodeInstance := &corev1.Node{}
+	err = r.Client.Get(context.TODO(), request.NamespacedName, nodeInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -89,7 +102,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-	err = r.nmstateUpdater(r.Client, instance, request.NamespacedName, currentState)
+	err = r.nmstateUpdater(r.Client, nodeInstance, currentState, nnsInstance)
 	if err != nil {
 		err = errors.Wrap(err, "error at node reconcile creating NodeNetworkState")
 		return ctrl.Result{}, err
@@ -123,8 +136,50 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err := ctrl.NewControllerManagedBy(mgr).
 		For(&corev1.Node{}).
 		WithEventFilter(onCreationForThisNode).
 		Complete(r)
+	if err != nil {
+		return errors.Wrap(err, "failed to add controller to Node Reconciler listening Node events")
+	}
+
+	// By default all this functors return true so controller watch all events,
+	// but we only want to watch delete/update for current node.
+	onDeleteOrForceUpdateForThisNode := predicate.Funcs{
+		CreateFunc: func(event.CreateEvent) bool {
+			return false
+		},
+		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+			return nmstate.EventIsForThisNode(deleteEvent.Object)
+		},
+		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+			return nmstate.EventIsForThisNode(updateEvent.ObjectNew) &&
+				shouldForceRefresh(updateEvent)
+		},
+		GenericFunc: func(event.GenericEvent) bool {
+			return false
+		},
+	}
+	err = ctrl.NewControllerManagedBy(mgr).
+		For(&nmstatev1beta1.NodeNetworkState{}).
+		Watches(&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}}, &handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}}, builder.WithPredicates(onDeleteOrForceUpdateForThisNode)).
+		Complete(r)
+	if err != nil {
+		return errors.Wrap(err, "failed to add controller to Node Reconciler listening Node Network State events")
+	}
+
+	return nil
+}
+
+func shouldForceRefresh(updateEvent event.UpdateEvent) bool {
+	newForceRefresh, hasForceRefreshNow := updateEvent.ObjectNew.GetLabels()[forceRefreshLabel]
+	if !hasForceRefreshNow {
+		return false
+	}
+	oldForceRefresh, hasForceRefreshLabelPreviously := updateEvent.ObjectOld.GetLabels()[forceRefreshLabel]
+	if !hasForceRefreshLabelPreviously {
+		return true
+	}
+	return oldForceRefresh != newForceRefresh
 }

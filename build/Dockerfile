@@ -10,6 +10,5 @@ RUN dnf install -b -y dnf-plugins-core && \
     dnf clean all
 
 COPY build/_output/bin/manager /usr/local/bin/manager
-COPY build/bin /usr/local/bin
 
 ENTRYPOINT ["manager"]

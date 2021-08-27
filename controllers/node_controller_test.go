@@ -103,11 +103,15 @@ routes:
 			request reconcile.Request
 		)
 		BeforeEach(func() {
+			By("Set last state")
 			reconciler.lastState = filteredOutObservedState
+
 			reconciler.nmstateUpdater = func(client.Client, *corev1.Node,
-				client.ObjectKey, shared.State) error {
+				shared.State, *nmstatev1beta1.NodeNetworkState) error {
 				return fmt.Errorf("we are not suppose to catch this error")
 			}
+
+			request.Name = existingNodeName
 		})
 		It("should not call nmstateUpdater and return a Result with RequeueAfter set", func() {
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -151,9 +155,8 @@ routes:
 `
 			)
 			BeforeEach(func() {
-				By("Create the NNS with last state")
-				err := reconciler.nmstateUpdater(cl, &node, types.NamespacedName{Name: node.Name}, filteredOutObservedState)
-				Expect(err).ToNot(HaveOccurred())
+				By("Set last state")
+				reconciler.lastState = filteredOutObservedState
 
 				By("Mock nmstate show so we return different value from last state")
 				reconciler.nmstatectlShow = func() (string, error) {
@@ -178,6 +181,9 @@ routes:
 				By("Delete the nodenetworkstate")
 				err := cl.Delete(context.TODO(), &nodenetworkstate)
 				Expect(err).ToNot(HaveOccurred())
+
+				By("Set last state")
+				reconciler.lastState = filteredOutObservedState
 			})
 			It("should create a new nodenetworkstate with node as owner reference, making sure the nodenetworkstate will be removed when the node is deleted", func() {
 				_, err := reconciler.Reconcile(context.Background(), request)

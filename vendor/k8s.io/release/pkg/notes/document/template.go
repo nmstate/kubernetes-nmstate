@@ -22,9 +22,7 @@ package document
 const defaultReleaseNotesTemplate = `
 {{- $CurrentRevision := .CurrentRevision -}}
 {{- $PreviousRevision := .PreviousRevision -}}
-# Release notes for {{$CurrentRevision}}
 
-[Documentation](https://docs.k8s.io/docs/home)
 {{if .Downloads}}
 ## Downloads for {{$CurrentRevision}}
 
@@ -38,7 +36,7 @@ filename | sha512 hash
 {{end}}
 
 {{- with .Downloads.Client -}}
-### Client binaries
+### Client Binaries
 
 filename | sha512 hash
 -------- | -----------
@@ -46,7 +44,7 @@ filename | sha512 hash
 {{end}}
 
 {{- with .Downloads.Server -}}
-### Server binaries
+### Server Binaries
 
 filename | sha512 hash
 -------- | -----------
@@ -54,14 +52,31 @@ filename | sha512 hash
 {{end}}
 
 {{- with .Downloads.Node -}}
-### Node binaries
+### Node Binaries
 
 filename | sha512 hash
 -------- | -----------
 {{range .}}[{{.Name}}]({{.URL}}) | {{.Checksum}}{{println}}{{end}}
 {{end -}}
 {{- end -}}
-# Changelog since {{$PreviousRevision}}
+
+{{with .CVEList -}}
+## Important Security Information
+
+This release contains changes that address the following vulnerabilities:
+{{range .}}
+### {{.ID}}: {{.Title}}
+
+{{.Description}}
+
+**CVSS Rating:** {{.CVSSRating}} ({{.CVSSScore}}) [{{.CVSSVector}}]({{.CalcLink}})
+{{- if .TrackingIssue -}}
+<br>
+**Tracking Issue:** {{.TrackingIssue}}
+{{- end }}
+
+{{ end }}
+{{- end -}}
 
 {{with .NotesWithActionRequired -}}
 ## Urgent Upgrade Notes 

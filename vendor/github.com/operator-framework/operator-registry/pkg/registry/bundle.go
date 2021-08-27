@@ -150,6 +150,20 @@ func (b *Bundle) Skips() ([]string, error) {
 	return b.csv.GetSkips()
 }
 
+func (b *Bundle) Icons() ([]Icon, error) {
+	if err := b.cache(); err != nil {
+		return nil, err
+	}
+	return b.csv.GetIcons()
+}
+
+func (b *Bundle) Description() (string, error) {
+	if err := b.cache(); err != nil {
+		return "", err
+	}
+	return b.csv.GetDescription()
+}
+
 func (b *Bundle) CustomResourceDefinitions() ([]runtime.Object, error) {
 	if err := b.cache(); err != nil {
 		return nil, err
@@ -370,4 +384,11 @@ func (b *Bundle) cache() error {
 
 	b.cacheStale = false
 	return nil
+}
+
+func (b *Bundle) SubstitutesFor() (string, error) {
+	if err := b.cache(); err != nil {
+		return "", err
+	}
+	return b.csv.GetSubstitutesFor(), nil
 }
