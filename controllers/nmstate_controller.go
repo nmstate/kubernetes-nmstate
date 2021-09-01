@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -83,10 +84,20 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// We only want one instance of NMState. Ignore anything after that.
-	if len(instanceList.Items) > 0 && instanceList.Items[0].Name != req.Name {
-		r.Log.Info("Ignoring NMState.nmstate.io because one already exists and does not match existing name")
-		err = r.Client.Delete(context.TODO(), instance, &client.DeleteOptions{})
-		return ctrl.Result{}, nil
+	if len(instanceList.Items) > 0 {
+		if len(instanceList.Items) > 1 {
+			sort.Slice(instanceList.Items, func(i, j int) bool {
+				return instanceList.Items[j].CreationTimestamp.After(instanceList.Items[i].CreationTimestamp.Time)
+			})
+		}
+		if instanceList.Items[0].Name != req.Name {
+			r.Log.Info("Ignoring NMState.nmstate.io because one already exists and does not match existing name")
+			err = r.Client.Delete(context.TODO(), instance, &client.DeleteOptions{})
+			if err != nil {
+				r.Log.Error(err, "failed to remove NMState.nmstate.io instance")
+			}
+			return ctrl.Result{}, nil
+		}
 	}
 
 	err = r.applyCRDs(instance)
