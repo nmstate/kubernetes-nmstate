@@ -4,11 +4,11 @@ IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
-NMSTATE_CURRENT_COPR_REPO=nmstate-0.3
-NM_CURRENT_COPR_REPO=NetworkManager-1.26
+NMSTATE_CURRENT_COPR_REPO=nmstate-1.0
+NM_CURRENT_COPR_REPO=NetworkManager-1.30
 
-NMSTATE_FUTURE_COPR_REPO=nmstate
-NM_FUTURE_COPR_REPO=NetworkManager-1.26
+NMSTATE_FUTURE_COPR_REPO=nmstate-git
+NM_FUTURE_COPR_REPO=NetworkManager-main
 
 ifeq ($(NMSTATE_PIN), future)
 	NMSTATE_COPR_REPO=$(NMSTATE_FUTURE_COPR_REPO)
@@ -39,7 +39,7 @@ WHAT ?= ./pkg ./controllers ./api
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
 export KUBEVIRT_PROVIDER ?= k8s-1.20
-export KUBEVIRT_NUM_NODES ?= 2 # 1 master, 1 worker needed for e2e tests
+export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 80m
@@ -69,14 +69,13 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-GINKGO ?= $(GOBIN)/ginkgo
-CONTROLLER_GEN ?= $(GOBIN)/controller-gen
-export GITHUB_RELEASE ?= $(GOBIN)/github-release
-export RELEASE_NOTES ?= $(GOBIN)/release-notes
 GOFMT := $(GOBIN)/gofmt
 export GO := $(GOBIN)/go
-OPM ?= $(GOBIN)/opm
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
+
+GINKGO = go run github.com/onsi/ginkgo/ginkgo
+CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
+OPM = go run github.com/operator-framework/operator-registry/cmd/opm
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -126,28 +125,16 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
-$(GINKGO): go.mod
-	$(MAKE) tools
-$(OPENAPI_GEN): go.mod
-	$(MAKE) tools
-$(GITHUB_RELEASE): go.mod
-	$(MAKE) tools
-$(RELEASE_NOTES): go.mod
-	$(MAKE) tools
-$(CONTROLLER_GEN): go.mod
-	$(MAKE) tools
-$(OPM): go.mod
-	$(MAKE) tools
-$(OPERATOR_SDK): go.mod
-	$(MAKE) tools
+$(OPERATOR_SDK):
+	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
-gen-k8s: $(CONTROLLER_GEN)
+gen-k8s: $(GO)
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-gen-crds: $(CONTROLLER_GEN)
+gen-crds: $(GO)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
-gen-rbac: $(CONTROLLER_GEN)
+gen-rbac: $(GO)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
 
 check-gen: generate
@@ -174,13 +161,13 @@ push-operator: operator
 	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
 push: push-handler push-operator
 
-test/unit: $(GINKGO)
+test/unit: $(GO)
 	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
-test-e2e-handler: $(GINKGO)
+test-e2e-handler: $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
 
-test-e2e-operator: manifests $(GINKGO)
+test-e2e-operator: manifests $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
@@ -207,15 +194,15 @@ version-minor:
 version-major:
 	./hack/tag-version.sh major
 
-release: $(GITHUB_RELEASE) $(RELEASE_NOTES)
+release-notes: $(GO)
+	hack/render-release-notes.sh $(WHAT)
+
+release: $(GO)
 	hack/release.sh
 
 vendor: $(GO)
 	$(GO) mod tidy
 	$(GO) mod vendor
-
-tools: $(GO)
-	./hack/install-tools.sh
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: $(OPERATOR_SDK) gen-crds manifests
@@ -227,7 +214,7 @@ bundle-build:
 	$(IMAGE_BUILDER) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 # Build the index
-index-build: $(OPM) bundle-build
+index-build: $(GO) bundle-build
 	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG)
 
 bundle-push: bundle-build

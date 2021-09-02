@@ -32,7 +32,7 @@ spec:
 
 The only external dependency is NetworkManager running on nodes. See more
 details in
-[Compatibility documentation]({{ site.github.repository_url }}/blob/master/CONTRIBUTING.md).
+[Compatibility documentation]({{ site.github.repository_url }}/blob/main/CONTRIBUTING.md).
 
 Some [examples](examples.html) can be used as reference on how to configure various
 configuration options
@@ -58,4 +58,4 @@ what this project is addressing.
 # Development and Contributing
 
 Contributions are welcome! Find details about the project's design and
-development workflow in the [developer guide]({{ site.github.repository_url }}/blob/master/CONTRIBUTING.md).
+development workflow in the [developer guide]({{ site.github.repository_url }}/blob/main/CONTRIBUTING.md).

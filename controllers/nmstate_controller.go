@@ -168,6 +168,13 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	}
 	amd64AndCRNodeSelector["beta.kubernetes.io/arch"] = "amd64"
 
+	handlerTolerations := instance.Spec.Tolerations
+	if handlerTolerations == nil {
+		handlerTolerations = []corev1.Toleration{operatorExistsToleration}
+	}
+
+	const WEBHOOK_REPLICAS = int32(2)
+
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
@@ -175,8 +182,9 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	data.Data["WebhookNodeSelector"] = amd64ArchOnMasterNodeSelector
 	data.Data["WebhookTolerations"] = []corev1.Toleration{masterExistsNoScheduleToleration}
 	data.Data["WebhookAffinity"] = corev1.Affinity{}
+	data.Data["WebhookReplicas"] = WEBHOOK_REPLICAS
 	data.Data["HandlerNodeSelector"] = amd64AndCRNodeSelector
-	data.Data["HandlerTolerations"] = []corev1.Toleration{operatorExistsToleration}
+	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = corev1.Affinity{}
 	// TODO: This is just a place holder to make template renderer happy
 	//       proper variable has to be read from env or CR

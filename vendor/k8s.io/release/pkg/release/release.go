@@ -17,40 +17,36 @@ limitations under the License.
 package release
 
 import (
-	"context"
 	"crypto/sha256"
 	"crypto/sha512"
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
-	"github.com/containers/image/v5/docker/archive"
-	"github.com/containers/image/v5/docker/tarfile"
-	"github.com/containers/image/v5/manifest"
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"gopkg.in/yaml.v2"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"k8s.io/release/pkg/command"
 	"k8s.io/release/pkg/git"
-	"k8s.io/release/pkg/http"
+	"k8s.io/release/pkg/github"
 	"k8s.io/release/pkg/object"
-	"k8s.io/release/pkg/tar"
-	"k8s.io/release/pkg/util"
+	"sigs.k8s.io/release-utils/command"
+	"sigs.k8s.io/release-utils/env"
+	rhash "sigs.k8s.io/release-utils/hash"
+	"sigs.k8s.io/release-utils/tar"
+	"sigs.k8s.io/release-utils/util"
 )
 
 const (
-	DefaultToolRepo   = "release"
-	DefaultToolBranch = git.DefaultBranch
-	DefaultToolOrg    = git.DefaultGithubOrg
+	DefaultToolRepo = "release"
+	DefaultToolRef  = git.DefaultBranch
+	DefaultToolOrg  = git.DefaultGithubOrg
 	// TODO(vdf): Need to reference K8s Infra project here
 	DefaultKubernetesStagingProject = "kubernetes-release-test"
 	DefaultRelengStagingProject     = "k8s-staging-releng"
@@ -125,6 +121,13 @@ const (
 
 	// Archive path is the root path in the bucket where releases are archived
 	ArchivePath = "archive"
+
+	// Publishing bot issue repository
+	PubBotRepoOrg  = "k8s-release-robot"
+	PubBotRepoName = "sig-release"
+
+	DockerHubEnvKey   = "DOCKERHUB_TOKEN" // Env var containing the docker key
+	DockerHubUserName = "k8sreleng"       // Docker Hub username
 )
 
 var (
@@ -155,44 +158,22 @@ type ImagePromoterImages []struct {
 	DMap map[string][]string `json:"dmap"` // eg "sha256:ef9493aff21f7e368fb3968b46ff2542b0f6863a5de2b9bc58d8d151d8b0232c": ["v1.17.12-rc.0"]
 }
 
-// GetDefaultToolRepoURL returns the default HTTPS repo URL for Release Engineering tools.
-// Expected: https://github.com/kubernetes/release
-func GetDefaultToolRepoURL() string {
-	return GetToolRepoURL(DefaultToolOrg, DefaultToolRepo, false)
-}
-
-// GetToolRepoURL takes a GitHub org and repo, and useSSH as a boolean and
-// returns a repo URL for Release Engineering tools.
-// Expected result is one of the following:
-// - https://github.com/<org>/release
-// - git@github.com:<org>/release
-func GetToolRepoURL(org, repo string, useSSH bool) string {
-	if org == "" {
-		org = GetToolOrg()
-	}
-	if repo == "" {
-		repo = GetToolRepo()
-	}
-
-	return git.GetRepoURL(org, repo, useSSH)
-}
-
 // GetToolOrg checks if the 'TOOL_ORG' environment variable is set.
 // If 'TOOL_ORG' is non-empty, it returns the value. Otherwise, it returns DefaultToolOrg.
 func GetToolOrg() string {
-	return util.EnvDefault("TOOL_ORG", DefaultToolOrg)
+	return env.Default("TOOL_ORG", DefaultToolOrg)
 }
 
 // GetToolRepo checks if the 'TOOL_REPO' environment variable is set.
 // If 'TOOL_REPO' is non-empty, it returns the value. Otherwise, it returns DefaultToolRepo.
 func GetToolRepo() string {
-	return util.EnvDefault("TOOL_REPO", DefaultToolRepo)
+	return env.Default("TOOL_REPO", DefaultToolRepo)
 }
 
-// GetToolBranch checks if the 'TOOL_BRANCH' environment variable is set.
-// If 'TOOL_BRANCH' is non-empty, it returns the value. Otherwise, it returns DefaultToolBranch.
-func GetToolBranch() string {
-	return util.EnvDefault("TOOL_BRANCH", DefaultToolBranch)
+// GetToolRef checks if the 'TOOL_REF' environment variable is set.
+// If 'TOOL_REF' is non-empty, it returns the value. Otherwise, it returns DefaultToolRef.
+func GetToolRef() string {
+	return env.Default("TOOL_REF", DefaultToolRef)
 }
 
 // BuiltWithBazel determines whether the most recent Kubernetes release was built with Bazel.
@@ -204,12 +185,12 @@ func BuiltWithBazel(workDir string) (bool, error) {
 
 // ReadBazelVersion reads the version from a Bazel build.
 func ReadBazelVersion(workDir string) (string, error) {
-	version, err := ioutil.ReadFile(filepath.Join(workDir, "bazel-bin", "version"))
+	version, err := os.ReadFile(filepath.Join(workDir, "bazel-bin", "version"))
 	if os.IsNotExist(err) {
 		// The check for version in bazel-genfiles can be removed once everyone is
 		// off of versions before 0.25.0.
 		// https://github.com/bazelbuild/bazel/issues/8651
-		version, err = ioutil.ReadFile(filepath.Join(workDir, "bazel-genfiles/version"))
+		version, err = os.ReadFile(filepath.Join(workDir, "bazel-genfiles/version"))
 	}
 	return string(version), err
 }
@@ -223,12 +204,16 @@ func ReadDockerizedVersion(workDir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	file, err := ioutil.ReadAll(reader)
+	file, err := io.ReadAll(reader)
 	return strings.TrimSpace(string(file)), err
 }
 
 // IsValidReleaseBuild checks if build version is valid for release.
 func IsValidReleaseBuild(build string) (bool, error) {
+	// If the tag has a plus sign, then we force the versionBuildRe to match
+	if strings.Contains(build, "+") {
+		return regexp.MatchString("("+versionReleaseRE+`(\.`+versionBuildRE+")"+versionDirtyRE+"?)", build)
+	}
 	return regexp.MatchString("("+versionReleaseRE+`(\.`+versionBuildRE+")?"+versionDirtyRE+"?)", build)
 }
 
@@ -245,21 +230,6 @@ func GetWorkspaceVersion() (string, error) {
 			"checking for workspace status script",
 		)
 	}
-
-	/*
-		version = ''
-		try:
-				match = re.search(
-						r'gitVersion ([^\n]+)',
-						check_output('hack/print-workspace-status.sh')
-				)
-				if match:
-						version = match.group(1)
-		except subprocess.CalledProcessError as exc:
-				# fallback with doing a real build
-				print >>sys.stderr, 'Failed to get k8s version, continue: %s' % exc
-				return False
-	*/
 
 	logrus.Info("Getting workspace status")
 	workspaceStatusStream, getWorkspaceStatusErr := command.New(workspaceStatusScript).RunSuccessOutput()
@@ -278,31 +248,6 @@ func GetWorkspaceVersion() (string, error) {
 	return version, nil
 }
 
-// GetKubecrossVersion returns the current kube-cross container version.
-func GetKubecrossVersion(branches ...string) (string, error) {
-	for i, branch := range branches {
-		logrus.Infof("Trying to get the kube-cross version for %s...", branch)
-
-		versionURL := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes/kubernetes/%s/build/build-image/cross/VERSION", branch)
-
-		version, httpErr := http.GetURLResponse(versionURL, true)
-		if httpErr != nil {
-			if i < len(branches)-1 {
-				logrus.Infof("Error retrieving the kube-cross version for the '%s': %v", branch, httpErr)
-			} else {
-				return "", httpErr
-			}
-		}
-
-		if version != "" {
-			logrus.Infof("Found the following kube-cross version: %s", version)
-			return version, nil
-		}
-	}
-
-	return "", errors.New("kube-cross version should not be empty; cannot continue")
-}
-
 // URLPrefixForBucket returns the URL prefix for the provided bucket string
 func URLPrefixForBucket(bucket string) string {
 	bucket = strings.TrimPrefix(bucket, object.GcsPrefix)
@@ -313,105 +258,11 @@ func URLPrefixForBucket(bucket string) string {
 	return urlPrefix
 }
 
-// GetImageTags Takes a workdir and returns the release images from the manifests
-func GetImageTags(workDir string) (imagesList map[string][]string, err error) {
-	// Our image list will be lists of tags indexed by arch
-	imagesList = make(map[string][]string)
-
-	// Images are held inside a subdir of the workdir
-	imagesDir := filepath.Join(workDir, ImagesPath)
-	if !util.Exists(imagesDir) {
-		return nil, errors.Errorf("images directory %s does not exist", imagesDir)
-	}
-
-	archDirs, err := ioutil.ReadDir(imagesDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "reading images dir")
-	}
-
-	for _, archDir := range archDirs {
-		imagesList[archDir.Name()] = make([]string, 0)
-		tarFiles, err := ioutil.ReadDir(filepath.Join(imagesDir, archDir.Name()))
-		if err != nil {
-			return nil, errors.Wrapf(err, "listing tar files for %s", archDir.Name())
-		}
-		for _, tarFile := range tarFiles {
-			tarmanifest, err := GetTarManifest(filepath.Join(imagesDir, archDir.Name(), tarFile.Name()))
-			if err != nil {
-				return nil, errors.Wrapf(
-					err, "while getting the manifest from %s/%s",
-					archDir.Name(), tarFile.Name(),
-				)
-			}
-			imagesList[archDir.Name()] = append(imagesList[archDir.Name()], tarmanifest.RepoTags...)
-		}
-	}
-	return imagesList, nil
-}
-
-// GetTarManifest return the image tar manifest
-func GetTarManifest(tarPath string) (*tarfile.ManifestItem, error) {
-	imageSource, err := tarfile.NewSourceFromFile(tarPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "creating image source from tar file")
-	}
-
-	defer func() {
-		if err := imageSource.Close(); err != nil {
-			logrus.Error(err)
-		}
-	}()
-
-	tarManifest, err := imageSource.LoadTarManifest()
-	if err != nil {
-		return nil, errors.Wrap(err, "reading the tar manifest")
-	}
-	if len(tarManifest) == 0 {
-		return nil, errors.New("could not find a tar manifest in the specified tar file")
-	}
-	return &tarManifest[0], nil
-}
-
-// GetOCIManifest Reads a tar file and returns a v1.Manifest structure with the image data
-func GetOCIManifest(tarPath string) (*ocispec.Manifest, error) {
-	ctx := context.Background()
-
-	// Since we know we're working with tar files,
-	// get the image reference directly from the tar transport
-	ref, err := archive.ParseReference(tarPath)
-	if err != nil {
-		return nil, errors.Wrap(err, "parsing reference")
-	}
-	logrus.Info(ref.StringWithinTransport())
-	// Get a docker image using the tar reference
-	// sys := &types.SystemContext{}
-
-	dockerImage, err := ref.NewImage(ctx, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "getting image")
-	}
-
-	// Get the manifest data from the dockerImage
-	dockerManifest, _, err := dockerImage.Manifest(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "while getting image manifest")
-	}
-
-	// Convert the manifest data to an OCI manifest
-	ociman, err := manifest.OCI1FromManifest(dockerManifest)
-	if err != nil {
-		return nil, errors.Wrap(err, "converting the docker manifest to OCI v1")
-	}
-
-	// Return the embedded v1 manifest wrapped in the container/image struct
-	return &ociman.Manifest, err
-}
-
 // CopyBinaries takes the provided `rootPath` and copies the binaries sorted by
 // their platform into the `targetPath`.
 func CopyBinaries(rootPath, targetPath string) error {
 	platformsPath := filepath.Join(rootPath, "client")
-	platformsAndArches, err := ioutil.ReadDir(platformsPath)
+	platformsAndArches, err := os.ReadDir(platformsPath)
 	if err != nil {
 		return errors.Wrapf(err, "retrieve platforms from %s", platformsPath)
 	}
@@ -493,7 +344,7 @@ func WriteChecksums(rootPath string) error {
 					return nil
 				}
 
-				sha, err := fileToHash(path, hasher)
+				sha, err := rhash.ForFile(path, hasher)
 				if err != nil {
 					return errors.Wrap(err, "get hash from file")
 				}
@@ -550,14 +401,14 @@ func WriteChecksums(rootPath string) error {
 	logrus.Infof("Hashing files in %s", rootPath)
 
 	writeSHAFile := func(fileName string, hasher hash.Hash) error {
-		sha, err := fileToHash(fileName, hasher)
+		sha, err := rhash.ForFile(fileName, hasher)
 		if err != nil {
 			return errors.Wrap(err, "get hash from file")
 		}
 		shaFileName := fmt.Sprintf("%s.sha%d", fileName, hasher.Size()*8)
 
 		return errors.Wrapf(
-			ioutil.WriteFile(shaFileName, []byte(sha), os.FileMode(0o644)),
+			os.WriteFile(shaFileName, []byte(sha), os.FileMode(0o644)),
 			"write SHA to file %s", shaFileName,
 		)
 	}
@@ -587,27 +438,12 @@ func WriteChecksums(rootPath string) error {
 	return nil
 }
 
-func fileToHash(fileName string, hasher hash.Hash) (string, error) {
-	file, err := os.Open(fileName)
-	if err != nil {
-		return "", errors.Wrapf(err, "opening file %s", fileName)
-	}
-	defer file.Close()
-
-	hasher.Reset()
-	if _, err := io.Copy(hasher, file); err != nil {
-		return "", errors.Wrapf(err, "copy file %s into hasher", fileName)
-	}
-
-	return fmt.Sprintf("%x", hasher.Sum(nil)), nil
-}
-
 // NewPromoterImageListFromFile parses an image promoter manifest file
 func NewPromoterImageListFromFile(manifestPath string) (imagesList *ImagePromoterImages, err error) {
 	if !util.Exists(manifestPath) {
 		return nil, errors.New("could not find image promoter manifest")
 	}
-	yamlCode, err := ioutil.ReadFile(manifestPath)
+	yamlCode, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "reading yaml code from file")
 	}
@@ -678,9 +514,59 @@ func (imagesList *ImagePromoterImages) Write(filePath string) error {
 		return errors.Wrap(err, "while marshalling image list")
 	}
 	// Write the yaml into the specified file
-	if err := ioutil.WriteFile(filePath, yamlCode, os.FileMode(0o644)); err != nil {
+	if err := os.WriteFile(filePath, yamlCode, os.FileMode(0o644)); err != nil {
 		return errors.Wrap(err, "writing yaml code into file")
 	}
 
+	return nil
+}
+
+// CreatePubBotBranchIssue creates an issue on GitHub to notify
+func CreatePubBotBranchIssue(branchName string) error {
+	// Check the GH token is set
+	if os.Getenv(github.TokenEnvKey) == "" {
+		return errors.New("cannot file publishing bot issue as GitHub token is not set")
+	}
+
+	gh := github.New()
+
+	// Create the body for the issue
+	issueBody := fmt.Sprintf("The branch `%s` was just created.\n\n", branchName)
+	issueBody += "Please update the publishing-bot's configuration to also publish this new branch.\n\n"
+	issueBody += "/sig release\n"
+	issueBody += "/area release-eng\n"
+	issueBody += "/milestone v" + strings.TrimPrefix(branchName, "release-") + "\n"
+
+	// Create the issue on GitHub
+	issue, err := gh.CreateIssue(
+		PubBotRepoOrg, PubBotRepoName,
+		"Update publishing-bot for "+branchName,
+		issueBody,
+		&github.NewIssueOptions{},
+	)
+	if err != nil {
+		return errors.Wrap(err, "creating publishing bot issue")
+	}
+	logrus.Infof("Publishing bot issue created #%d!", issue.GetNumber())
+	return nil
+}
+
+// Calls docker login to log into docker hub using a token from the environment
+func DockerHubLogin() error {
+	// Check the environment  variable is set
+	if os.Getenv(DockerHubEnvKey) == "" {
+		return errors.New("Unable to find docker token in the environment")
+	}
+	// Pipe the token into docker login
+	cmd := command.New(
+		"docker", "login", fmt.Sprintf("--username=%s", DockerHubUserName),
+		"--password", os.Getenv(DockerHubEnvKey),
+	)
+	// Run docker login:
+	if err := cmd.RunSuccess(); err != nil {
+		errStr := strings.ReplaceAll(err.Error(), os.Getenv(DockerHubEnvKey), "**********")
+		return errors.Wrap(errors.New(errStr), "logging into Docker Hub")
+	}
+	logrus.Infof("User %s successfully logged into Docker Hub", DockerHubUserName)
 	return nil
 }

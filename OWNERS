@@ -1,7 +1,6 @@
 approvers:
   - phoracek
   - qinqon
-  - bcrochet
   - rhrazdil
   - yboaron
   - cybertron
@@ -13,6 +12,7 @@ reviewers:
   - RamLavi
   - rhrazdil
   - cybertron
+  - celebdor
 
 # Bugzilla info;
 component: Networking

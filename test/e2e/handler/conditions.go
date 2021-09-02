@@ -59,20 +59,7 @@ func indexEnactmentStatusByName() map[string]shared.NodeNetworkConfigurationEnac
 }
 
 func enactmentConditionsStatus(node string, policy string) shared.ConditionList {
-	enactment := nodeNetworkConfigurationEnactment(shared.EnactmentKey(node, policy))
-	obtainedConditions := shared.ConditionList{}
-	for _, enactmentsConditionType := range shared.NodeNetworkConfigurationEnactmentConditionTypes {
-		obtainedCondition := enactment.Status.Conditions.Find(enactmentsConditionType)
-		obtainedConditionStatus := corev1.ConditionUnknown
-		if obtainedCondition != nil {
-			obtainedConditionStatus = obtainedCondition.Status
-		}
-		obtainedConditions = append(obtainedConditions, shared.Condition{
-			Type:   enactmentsConditionType,
-			Status: obtainedConditionStatus,
-		})
-	}
-	return obtainedConditions
+	return nodeNetworkConfigurationEnactment(shared.EnactmentKey(node, policy)).Status.Conditions
 }
 
 func enactmentConditionsStatusForPolicyEventually(node string, policy string) AsyncAssertion {
@@ -170,4 +157,23 @@ func waitForDegradedPolicy(policy string) {
 
 func waitForPolicy(policy string, matcher GomegaMatcher) {
 	policyConditionsStatusForPolicyEventually(policy).Should(matcher, "should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml())
+}
+
+func filterOutMessageAndTimestampFromConditions(conditions shared.ConditionList) shared.ConditionList {
+	modifiedConditions := shared.ConditionList{}
+	for _, condition := range conditions {
+		modifiedConditions = append(modifiedConditions, shared.Condition{
+			Type:   condition.Type,
+			Status: condition.Status,
+			Reason: condition.Reason,
+		})
+	}
+	return modifiedConditions
+}
+
+func matchConditionsFrom(conditionsSetter func(*shared.ConditionList, string)) GomegaMatcher {
+	expectedConditions := shared.ConditionList{}
+	conditionsSetter(&expectedConditions, "")
+	expectedConditions = filterOutMessageAndTimestampFromConditions(expectedConditions)
+	return WithTransform(filterOutMessageAndTimestampFromConditions, ConsistOf(expectedConditions))
 }

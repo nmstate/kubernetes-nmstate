@@ -1,6 +1,9 @@
 package registry
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -30,6 +33,7 @@ func newRegistryAddCmd() *cobra.Command {
 	rootCmd.Flags().StringSliceP("bundle-images", "b", []string{}, "comma separated list of links to bundle image")
 	rootCmd.Flags().Bool("permissive", false, "allow registry load errors")
 	rootCmd.Flags().Bool("skip-tls", false, "skip TLS certificate verification for container image registries while pulling bundles")
+	rootCmd.Flags().String("ca-file", "", "the root certificates to use when --container-tool=none; see docker/podman docs for certificate loading instructions")
 	rootCmd.Flags().StringP("mode", "", "replaces", "graph update mode that defines how channel graphs are updated. One of: [replaces, semver, semver-skippatch]")
 	rootCmd.Flags().StringP("container-tool", "c", "none", "tool to interact with container images (save, build, etc.). One of: [none, docker, podman]")
 
@@ -45,6 +49,10 @@ func addFunc(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	caFile, err := cmd.Flags().GetString("ca-file")
+	if err != nil {
+		return err
+	}
 	fromFilename, err := cmd.Flags().GetString("database")
 	if err != nil {
 		return err
@@ -53,10 +61,11 @@ func addFunc(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	containerTool, err := cmd.Flags().GetString("container-tool")
+	containerToolStr, err := cmd.Flags().GetString("container-tool")
 	if err != nil {
 		return err
 	}
+	containerTool := containertools.NewContainerTool(containerToolStr, containertools.NoneTool)
 	mode, err := cmd.Flags().GetString("mode")
 	if err != nil {
 		return err
@@ -66,13 +75,24 @@ func addFunc(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if caFile != "" {
+		if skipTLS {
+			return errors.New("--skip-tls must be false when --ca-file is set")
+		}
+		if containerTool != containertools.NoneTool {
+			return fmt.Errorf("--ca-file cannot be set with --container-tool=%[1]s; "+
+				"certificates must be configured specifically for %[1]s", containerTool)
+		}
+	}
+
 	request := registry.AddToRegistryRequest{
 		Permissive:    permissive,
 		SkipTLS:       skipTLS,
+		CaFile:        caFile,
 		InputDatabase: fromFilename,
 		Bundles:       bundleImages,
 		Mode:          modeEnum,
-		ContainerTool: containertools.NewContainerTool(containerTool, containertools.NoneTool),
+		ContainerTool: containerTool,
 		Overwrite:     false,
 	}
 

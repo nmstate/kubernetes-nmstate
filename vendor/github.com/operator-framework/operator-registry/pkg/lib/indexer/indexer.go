@@ -2,7 +2,6 @@ package indexer
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -66,6 +65,7 @@ type AddToIndexRequest struct {
 	CaFile            string
 	SkipTLS           bool
 	Overwrite         bool
+	EnableAlpha       bool
 }
 
 // AddToIndex is an aggregate API used to generate a registry index image with additional bundles
@@ -76,7 +76,7 @@ func (i ImageIndexer) AddToIndex(request AddToIndexRequest) error {
 		return err
 	}
 
-	databasePath, err := i.extractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
+	databasePath, err := i.ExtractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
 	if err != nil {
 		return err
 	}
@@ -90,6 +90,7 @@ func (i ImageIndexer) AddToIndex(request AddToIndexRequest) error {
 		SkipTLS:       request.SkipTLS,
 		ContainerTool: i.PullTool,
 		Overwrite:     request.Overwrite,
+		EnableAlpha:   request.EnableAlpha,
 	}
 
 	// Add the bundles to the registry
@@ -141,7 +142,7 @@ func (i ImageIndexer) DeleteFromIndex(request DeleteFromIndexRequest) error {
 		return err
 	}
 
-	databasePath, err := i.extractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
+	databasePath, err := i.ExtractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
 	if err != nil {
 		return err
 	}
@@ -199,7 +200,7 @@ func (i ImageIndexer) PruneStrandedFromIndex(request PruneStrandedFromIndexReque
 		return err
 	}
 
-	databasePath, err := i.extractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
+	databasePath, err := i.ExtractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
 	if err != nil {
 		return err
 	}
@@ -254,7 +255,7 @@ func (i ImageIndexer) PruneFromIndex(request PruneFromIndexRequest) error {
 		return err
 	}
 
-	databasePath, err := i.extractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
+	databasePath, err := i.ExtractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
 	if err != nil {
 		return err
 	}
@@ -292,8 +293,8 @@ func (i ImageIndexer) PruneFromIndex(request PruneFromIndexRequest) error {
 	return nil
 }
 
-// extractDatabase sets a temp directory for unpacking an image
-func (i ImageIndexer) extractDatabase(buildDir, fromIndex, caFile string, skipTLS bool) (string, error) {
+// ExtractDatabase sets a temp directory for unpacking an image
+func (i ImageIndexer) ExtractDatabase(buildDir, fromIndex, caFile string, skipTLS bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("./", tmpDirPrefix)
 	if err != nil {
 		return "", err
@@ -496,7 +497,7 @@ func (i ImageIndexer) ExportFromIndex(request ExportFromIndexRequest) error {
 		return err
 	}
 
-	db, err := sql.Open("sqlite3", databaseFile)
+	db, err := sqlite.Open(databaseFile)
 	if err != nil {
 		return err
 	}
@@ -659,7 +660,7 @@ func (i ImageIndexer) DeprecateFromIndex(request DeprecateFromIndexRequest) erro
 		return err
 	}
 
-	databasePath, err := i.extractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
+	databasePath, err := i.ExtractDatabase(buildDir, request.FromIndex, request.CaFile, request.SkipTLS)
 	if err != nil {
 		return err
 	}

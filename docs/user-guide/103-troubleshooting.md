@@ -47,8 +47,8 @@ kubectl get nnce
 
 ```
 NAME            STATUS
-node01.eth666   FailedToConfigure
-node02.eth666   FailedToConfigure
+node01.eth666   Failing
+node02.eth666   Failing
 ```
 
 Both Enactments have `FailedToConfigure`, let's see why:

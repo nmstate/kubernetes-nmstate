@@ -16,16 +16,16 @@ const (
 	DEFAULT_MAXUNAVAILABLE = "50%"
 )
 
-func NodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
+func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
 	nodes := corev1.NodeList{}
-	err := cli.List(context.TODO(), &nodes)
+	err := cli.List(context.TODO(), &nodes, client.MatchingLabels(nodeSelector))
 	if err != nil {
 		return []corev1.Node{}, errors.Wrap(err, "getting nodes failed")
 	}
 
 	pods := corev1.PodList{}
-	byApp := client.MatchingLabels{"app": "kubernetes-nmstate"}
-	err = cli.List(context.TODO(), &pods, byApp)
+	byComponent := client.MatchingLabels{"component": "kubernetes-nmstate-handler"}
+	err = cli.List(context.TODO(), &pods, byComponent)
 	if err != nil {
 		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
 	}
@@ -42,8 +42,8 @@ func NodesRunningNmstate(cli client.Client) ([]corev1.Node, error) {
 	return filteredNodes, nil
 }
 
-func MaxUnavailableNodeCount(cli client.Client, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
-	enactmentsCount, err := enactment.CountByPolicy(cli, policy)
+func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
+	enactmentsTotal, _, err := enactment.CountByPolicy(cli, policy)
 	if err != nil {
 		return 0, err
 	}
@@ -51,7 +51,7 @@ func MaxUnavailableNodeCount(cli client.Client, policy *nmstatev1beta1.NodeNetwo
 	if policy.Spec.MaxUnavailable != nil {
 		intOrPercent = *policy.Spec.MaxUnavailable
 	}
-	maxUnavailable, err := ScaledMaxUnavailableNodeCount(enactmentsCount.Matching(), intOrPercent)
+	maxUnavailable, err := ScaledMaxUnavailableNodeCount(enactmentsTotal, intOrPercent)
 	return maxUnavailable, nil
 }
 

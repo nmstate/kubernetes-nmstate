@@ -56,6 +56,7 @@ configuration options:
 - [Linux bonding](docs/examples/bond.yaml)
 - [Linux bonding with VLAN](docs/examples/bond-vlan.yaml)
 - [Linux bridge](docs/examples/linux-bridge.yaml)
+- [Linux bridge with custom VLAN](docs/examples/linux-bridge-vlan.yaml)
 - [VLAN](docs/examples/vlan.yaml)
 - [Ethernet](docs/examples/ethernet.yaml)
 - [Open vSwitch bridge](docs/examples/ovs-bridge.yaml)

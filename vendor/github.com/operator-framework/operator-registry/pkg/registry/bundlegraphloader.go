@@ -42,11 +42,10 @@ func (g *BundleGraphLoader) AddBundleToGraph(bundle *Bundle, graph *Package, ann
 
 	if graph.DefaultChannel == "" {
 		// Infer default channel from channel list
-		if annotations.SelectDefaultChannel() != "" {
-			graph.DefaultChannel = annotations.SelectDefaultChannel()
-		} else {
+		if annotations.SelectDefaultChannel() == "" {
 			return nil, fmt.Errorf("Default channel is missing and can't be inferred")
 		}
+		graph.DefaultChannel = annotations.SelectDefaultChannel()
 	}
 
 	// generate the DAG for each channel the new bundle is being insert into

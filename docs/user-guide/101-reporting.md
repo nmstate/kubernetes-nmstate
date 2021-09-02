@@ -168,7 +168,7 @@ The reported state is updated every 5 seconds.
 
 By default, all `veth*` interfaces are omitted from the report in order not to
 clutter the output with all Pod connections. This filtering can be adjusted via
-`interfaces_filter` variable in kubernetes-nmstate configmap.
+environment variable `INTERFACES_FILTER`at nmstate-handler daemonset.
 
 | Filter            | Effect                                                             |
 | ---               | ---                                                                |
@@ -177,12 +177,11 @@ clutter the output with all Pod connections. This filtering can be adjusted via
 | `"{veth*,vnet*}"` | Omit all interfaces starting with either `veth` or `vnet`          |
 
 
-To override the default configuration, use `patch` command. Additionally, in
-order for the config to take effect, all handlers need to be restarted:
+To override the default configuration, use `set env` command. Additionally, in
+order for the config to take effect, all handlers will be restarted:
 
 ```json
-kubectl -n nmstate patch configmap nmstate-config --patch '{"data": {"interfaces_filter": ""}}'
-kubectl -n nmstate delete pods --all
+kubectl set env -n nmstate daemonset/nmstate-handler INTERFACES_FILTER=""
 ```
 
 The `NodeNetworkState` will now list all interfaces seen on the host.

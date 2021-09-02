@@ -15,7 +15,7 @@ const (
 	failing     = nmstate.NodeNetworkConfigurationEnactmentConditionFailing
 	available   = nmstate.NodeNetworkConfigurationEnactmentConditionAvailable
 	progressing = nmstate.NodeNetworkConfigurationEnactmentConditionProgressing
-	matching    = nmstate.NodeNetworkConfigurationEnactmentConditionMatching
+	pending     = nmstate.NodeNetworkConfigurationEnactmentConditionPending
 	aborted     = nmstate.NodeNetworkConfigurationEnactmentConditionAborted
 	t           = corev1.ConditionTrue
 	f           = corev1.ConditionFalse
@@ -63,203 +63,217 @@ var _ = Describe("Enactment condition counter", func() {
 				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
 				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				progressing: CountByConditionStatus{t: 0, f: 0, u: 2},
-				matching:    CountByConditionStatus{t: 0, f: 0, u: 2},
+				pending:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				aborted:     CountByConditionStatus{t: 0, f: 0, u: 2},
 			},
 		}),
-		Entry("e(NotMatching), e(NotMatching)", EnactmentCounterCase{
+		Entry("e(Failed), e(Progressing)", EnactmentCounterCase{
 			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetNodeSelectorNotMatching),
-				enactment(1, SetNodeSelectorNotMatching),
-			),
-			expectedCount: ConditionCount{
-				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
-				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
-				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
-				matching:    CountByConditionStatus{t: 0, f: 2, u: 0},
-				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
-			},
-		}),
-		Entry("e(NotMatching), e(Matching, Progressing)", EnactmentCounterCase{
-			policyGeneration: 1,
-			enactmentsToCount: enactments(
-				enactment(1, SetNodeSelectorNotMatching),
-				enactment(1, SetMatching, SetProgressing),
-			),
-			expectedCount: ConditionCount{
-				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
-				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
-				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
-				matching:    CountByConditionStatus{t: 1, f: 1, u: 0},
-				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
-			},
-		}),
-		Entry("e(Matching, Failed), e(Matching, Progressing)", EnactmentCounterCase{
-			policyGeneration: 1,
-			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetFailedToConfigure),
-				enactment(1, SetMatching, SetProgressing),
+				enactment(1, SetFailedToConfigure),
+				enactment(1, SetProgressing),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 1, f: 0, u: 1},
 				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
-				matching:    CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("e(Matching, Success), e(Matching, Progressing)", EnactmentCounterCase{
+		Entry("e(Success), e(Progressing)", EnactmentCounterCase{
 			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetSuccess),
-				enactment(1, SetMatching, SetProgressing),
+				enactment(1, SetSuccess),
+				enactment(1, SetProgressing),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 1, f: 0, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
-				matching:    CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("e(Matching, Progressing), e(Matching, Progressing)", EnactmentCounterCase{
+		Entry("e(Progressing), e(Progressing)", EnactmentCounterCase{
 			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetProgressing),
-				enactment(1, SetMatching, SetProgressing),
+				enactment(1, SetProgressing),
+				enactment(1, SetProgressing),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
 				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				progressing: CountByConditionStatus{t: 2, f: 0, u: 0},
-				matching:    CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("e(Matching, Success), e(Matching, Success)", EnactmentCounterCase{
+		Entry("e(Success), e(Success)", EnactmentCounterCase{
 			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetSuccess),
-				enactment(1, SetMatching, SetSuccess),
+				enactment(1, SetSuccess),
+				enactment(1, SetSuccess),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 2, f: 0, u: 0},
 				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
-				matching:    CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("e(Matching, Failed), e(Matching, Failed)", EnactmentCounterCase{
+		Entry("e(Failed), e(Failed)", EnactmentCounterCase{
 			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetFailedToConfigure),
-				enactment(1, SetMatching, SetFailedToConfigure),
+				enactment(1, SetFailedToConfigure),
+				enactment(1, SetFailedToConfigure),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
 				failing:     CountByConditionStatus{t: 2, f: 0, u: 0},
 				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
-				matching:    CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("e(Matching, Failed), e(Matching, Aborted)", EnactmentCounterCase{
+		Entry("e(Failed), e(Aborted)", EnactmentCounterCase{
 			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetFailedToConfigure),
-				enactment(1, SetMatching, SetConfigurationAborted),
+				enactment(1, SetFailedToConfigure),
+				enactment(1, SetConfigurationAborted),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
 				failing:     CountByConditionStatus{t: 1, f: 1, u: 0},
 				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
-				matching:    CountByConditionStatus{t: 2, f: 0, u: 0},
+				pending:     CountByConditionStatus{t: 0, f: 2, u: 0},
 				aborted:     CountByConditionStatus{t: 1, f: 1, u: 0},
 			},
 		}),
-		Entry("p(2), e(1,NotMatching), e(2,NotMatching)", EnactmentCounterCase{
-			policyGeneration: 2,
+		Entry("e(Pending), e(Progressing)", EnactmentCounterCase{
+			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetNodeSelectorNotMatching),
-				enactment(2, SetNodeSelectorNotMatching),
+				enactment(1, SetPending),
+				enactment(1, SetProgressing),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
-				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
-				matching:    CountByConditionStatus{t: 0, f: 1, u: 1},
-				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
+				progressing: CountByConditionStatus{t: 1, f: 1, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("p(2), e(1,Matching), e(2,Matching)", EnactmentCounterCase{
-			policyGeneration: 2,
+		Entry("e(Pending), e(Success)", EnactmentCounterCase{
+			policyGeneration: 1,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching),
-				enactment(2, SetMatching),
+				enactment(1, SetPending),
+				enactment(1, SetSuccess),
 			),
 			expectedCount: ConditionCount{
-				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
-				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
-				progressing: CountByConditionStatus{t: 0, f: 0, u: 2},
-				matching:    CountByConditionStatus{t: 1, f: 0, u: 1},
-				aborted:     CountByConditionStatus{t: 0, f: 0, u: 2},
+				available:   CountByConditionStatus{t: 1, f: 1, u: 0},
+				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
+				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
 			},
 		}),
-		Entry("p(2), e(1,Matching,Progressing), e(2,Matching,Progressing)", EnactmentCounterCase{
+		Entry("e(Pending), e(Failed)", EnactmentCounterCase{
+			policyGeneration: 1,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(1, SetFailedToConfigure),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
+				failing:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 0, f: 2, u: 0},
+			},
+		}),
+		Entry("e(Pending), e(Aborted)", EnactmentCounterCase{
+			policyGeneration: 1,
+			enactmentsToCount: enactments(
+				enactment(1, SetPending),
+				enactment(1, SetConfigurationAborted),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 2, u: 0},
+				failing:     CountByConditionStatus{t: 0, f: 2, u: 0},
+				progressing: CountByConditionStatus{t: 0, f: 2, u: 0},
+				pending:     CountByConditionStatus{t: 1, f: 1, u: 0},
+				aborted:     CountByConditionStatus{t: 1, f: 1, u: 0},
+			},
+		}),
+		Entry("p(2), e(1,Progressing), e(2,Progressing)", EnactmentCounterCase{
 			policyGeneration: 2,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetProgressing),
-				enactment(2, SetMatching, SetProgressing),
+				enactment(1, SetProgressing),
+				enactment(2, SetProgressing),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 0, u: 2},
 				failing:     CountByConditionStatus{t: 0, f: 0, u: 2},
 				progressing: CountByConditionStatus{t: 1, f: 0, u: 1},
-				matching:    CountByConditionStatus{t: 1, f: 0, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
 			},
 		}),
-		Entry("p(2), e(1,Matching,Success), e(2,Matching,Success)", EnactmentCounterCase{
+		Entry("p(2), e(1,Pending), e(2,Pending)", EnactmentCounterCase{
 			policyGeneration: 2,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetSuccess),
-				enactment(2, SetMatching, SetSuccess),
+				enactment(1, SetPending),
+				enactment(2, SetPending),
+			),
+			expectedCount: ConditionCount{
+				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
+				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
+				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
+				pending:     CountByConditionStatus{t: 1, f: 0, u: 1},
+				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
+			},
+		}),
+		Entry("p(2), e(1,Success), e(2,Success)", EnactmentCounterCase{
+			policyGeneration: 2,
+			enactmentsToCount: enactments(
+				enactment(1, SetSuccess),
+				enactment(2, SetSuccess),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 1, f: 0, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
-				matching:    CountByConditionStatus{t: 1, f: 0, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
 			},
 		}),
-		Entry("p(2), e(1,Matching,Failed), e(2,Matching,Failed)", EnactmentCounterCase{
+		Entry("p(2), e(1,Failed), e(2,Failed)", EnactmentCounterCase{
 			policyGeneration: 2,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetFailedToConfigure),
-				enactment(2, SetMatching, SetFailedToConfigure),
+				enactment(1, SetFailedToConfigure),
+				enactment(2, SetFailedToConfigure),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 1, f: 0, u: 1},
 				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
-				matching:    CountByConditionStatus{t: 1, f: 0, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 0, f: 1, u: 1},
 			},
 		}),
-		Entry("p(2), e(1,Matching,Failed), e(2,Matching,Aborted)", EnactmentCounterCase{
+		Entry("p(2), e(1,Failed), e(2,Aborted)", EnactmentCounterCase{
 			policyGeneration: 2,
 			enactmentsToCount: enactments(
-				enactment(1, SetMatching, SetFailedToConfigure),
-				enactment(2, SetMatching, SetConfigurationAborted),
+				enactment(1, SetFailedToConfigure),
+				enactment(2, SetConfigurationAborted),
 			),
 			expectedCount: ConditionCount{
 				available:   CountByConditionStatus{t: 0, f: 1, u: 1},
 				failing:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				progressing: CountByConditionStatus{t: 0, f: 1, u: 1},
-				matching:    CountByConditionStatus{t: 1, f: 0, u: 1},
+				pending:     CountByConditionStatus{t: 0, f: 1, u: 1},
 				aborted:     CountByConditionStatus{t: 1, f: 0, u: 1},
 			},
 		}),

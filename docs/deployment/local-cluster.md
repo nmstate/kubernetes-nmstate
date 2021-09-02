@@ -15,7 +15,7 @@ the [deployment on arbitrary cluster guide]({{ "deployment/arbitrary-cluster.htm
 
 Start your local cluster. If you want to use OpenShift instead of Kubernetes or
 a different amount of nodes, check the
-[development guide]({{ site.github.repository_url }}/blob/master/CONTRIBUTING.md#local-cluster).
+[development guide]({{ site.github.repository_url }}/blob/main/CONTRIBUTING.md#local-cluster).
 
 Start the local cluster
 
@@ -57,5 +57,5 @@ cluster/kubectl.sh proxy --port=8080 --disable-filter=true &
 ```
 
 You can stop here and play with the cluster on your own or continue with the
-other [user guides]({{ site.github.repository_url }}/blob/master/README.md#deployment-and-usage) that will guide you
+other [user guides]({{ site.github.repository_url }}/blob/main/README.md#deployment-and-usage) that will guide you
 through requesting of node interfaces and their configuration.

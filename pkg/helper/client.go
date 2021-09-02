@@ -1,22 +1,20 @@
 package helper
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"os/exec"
 	"time"
 
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -25,33 +23,9 @@ var (
 	log = logf.Log.WithName("client")
 )
 
-const vlanFilteringCommand = "vlan-filtering"
 const defaultGwRetrieveTimeout = 120 * time.Second
 const defaultGwProbeTimeout = 120 * time.Second
 const apiServerProbeTimeout = 120 * time.Second
-
-func applyVlanFiltering(bridgeName string, ports []string) (string, error) {
-	command := []string{bridgeName}
-	command = append(command, ports...)
-
-	cmd := exec.Command(vlanFilteringCommand, command...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s: '%v', '%s', '%s'", vlanFilteringCommand, err, stdout.String(), stderr.String())
-	}
-	return stdout.String(), nil
-}
-
-func GetNodeNetworkState(client client.Client, nodeName string) (nmstatev1beta1.NodeNetworkState, error) {
-	var nodeNetworkState nmstatev1beta1.NodeNetworkState
-	nodeNetworkStateKey := types.NamespacedName{
-		Name: nodeName,
-	}
-	err := client.Get(context.TODO(), nodeNetworkStateKey, &nodeNetworkState)
-	return nodeNetworkState, err
-}
 
 func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
@@ -61,6 +35,7 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmsta
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            node.ObjectMeta.Name,
 			OwnerReferences: ownerRefList,
+			Labels:          names.IncludeRelationshipLabels(nil),
 		},
 	}
 
@@ -72,20 +47,15 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmsta
 	return &nodeNetworkState, nil
 }
 
-func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, namespace client.ObjectKey, observedState shared.State) error {
-	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
-	err := client.Get(context.TODO(), namespace, nnsInstance)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return errors.Wrap(err, "Failed to get nmstate")
-		} else {
-			nnsInstance, err = InitializeNodeNetworkState(client, node)
-			if err != nil {
-				return err
-			}
+func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState) error {
+	if nns == nil {
+		var err error
+		nns, err = InitializeNodeNetworkState(client, node)
+		if err != nil {
+			return err
 		}
 	}
-	return UpdateCurrentState(client, nnsInstance, observedState)
+	return UpdateCurrentState(client, nns, observedState)
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State) error {
@@ -143,24 +113,6 @@ func ApplyDesiredState(client client.Client, desiredState shared.State) (string,
 		return setOutput, err
 	}
 
-	// Future versions of nmstate/NM will support vlan-filtering meanwhile
-	// we have to enforce it at the desiredState bridges and outbound ports
-	// they will be configured with vlan_filtering 1 and all the vlan id range
-	// set
-	bridgesUpWithPorts, err := getBridgesUp(desiredState)
-	if err != nil {
-		return "", rollback(client, probes, fmt.Errorf("error retrieving up bridges from desired state"))
-	}
-
-	commandOutput := ""
-	for bridge, ports := range bridgesUpWithPorts {
-		outputVlanFiltering, err := applyVlanFiltering(bridge, ports)
-		commandOutput += fmt.Sprintf("bridge %s ports %v applyVlanFiltering command output: %s\n", bridge, ports, outputVlanFiltering)
-		if err != nil {
-			return commandOutput, rollback(client, probes, err)
-		}
-	}
-
 	err = probe.Run(client, probes)
 	if err != nil {
 		return "", rollback(client, probes, errors.Wrap(err, "failed runnig probes after network changes"))
@@ -172,6 +124,6 @@ func ApplyDesiredState(client client.Client, desiredState shared.State) (string,
 		return commitOutput, err
 	}
 
-	commandOutput += fmt.Sprintf("setOutput: %s \n", setOutput)
+	commandOutput := fmt.Sprintf("setOutput: %s \n", setOutput)
 	return commandOutput, nil
 }

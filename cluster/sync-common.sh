@@ -1,14 +1,14 @@
 function eventually {
-    timeout=$(( $KUBEVIRT_NUM_NODES * 10 ))
+    timeout=$(( $KUBEVIRT_NUM_NODES * 30 ))
     interval=5
     cmd=$@
     echo "Checking eventually $cmd"
     while ! $cmd; do
-        sleep $interval
-        timeout=$(( $timeout - $interval ))
         if [ $timeout -le 0 ]; then
             return 1
         fi
+        sleep $interval
+        timeout=$(( $timeout - $interval ))
     done
 }
 
@@ -18,11 +18,11 @@ function consistently {
     cmd=$@
     echo "Checking consistently $cmd"
     while $cmd; do
-        sleep $interval
-        timeout=$(( $timeout - $interval ))
         if [ $timeout -le 0 ]; then
             return 0
         fi
+        sleep $interval
+        timeout=$(( $timeout - $interval ))
     done
     return 1
 }

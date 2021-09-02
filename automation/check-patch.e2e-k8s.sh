@@ -16,7 +16,7 @@ teardown() {
 }
 
 main() {
-    export KUBEVIRT_NUM_NODES=5 # 1 master, 4 workers
+    export KUBEVIRT_NUM_NODES=5 # 1 control-plane, 4 workers
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
 
@@ -33,7 +33,7 @@ main() {
 
     export E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml"
 
-    make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="-noColor" test-e2e-handler
+    make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="-noColor" test-e2e-handler
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"

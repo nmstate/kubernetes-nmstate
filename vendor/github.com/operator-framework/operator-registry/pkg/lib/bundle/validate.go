@@ -146,7 +146,7 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 	if !annotationsFound {
 		validationErrors = append(validationErrors, fmt.Errorf("Could not find annotations file"))
 	} else {
-		i.logger.Info("Found annotations file")
+		i.logger.Debug("Found annotations file")
 		errs := validateAnnotations(mediaType, fileAnnotations)
 		if errs != nil {
 			validationErrors = append(validationErrors, errs...)
@@ -154,9 +154,9 @@ func (i imageValidator) ValidateBundleFormat(directory string) error {
 	}
 
 	if !dependenciesFound {
-		i.logger.Info("Could not find optional dependencies file")
+		i.logger.Debug("Could not find optional dependencies file")
 	} else {
-		i.logger.Info("Found dependencies file")
+		i.logger.Debug("Found dependencies file")
 		errs := validateDependencies(dependenciesFile)
 		if errs != nil {
 			validationErrors = append(validationErrors, errs...)

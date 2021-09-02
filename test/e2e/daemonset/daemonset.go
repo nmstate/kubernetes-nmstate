@@ -14,15 +14,31 @@ import (
 )
 
 func GetEventually(daemonSetKey types.NamespacedName) AsyncAssertion {
-	return Eventually(func() (appsv1.DaemonSet, error) {
+	return EventuallyWithOffset(1, func() (appsv1.DaemonSet, error) {
 		daemonSet := appsv1.DaemonSet{}
 		err := testenv.Client.Get(context.TODO(), daemonSetKey, &daemonSet)
 		return daemonSet, err
 	}, 180*time.Second, 1*time.Second)
 }
 
+func GetEventuallyError(daemonSetKey types.NamespacedName) AsyncAssertion {
+	return EventuallyWithOffset(1, func() error {
+		daemonSet := appsv1.DaemonSet{}
+		err := testenv.Client.Get(context.TODO(), daemonSetKey, &daemonSet)
+		return err
+	}, 180*time.Second, 1*time.Second)
+}
+
 func GetConsistently(daemonSetKey types.NamespacedName) AsyncAssertion {
-	return Consistently(func() (appsv1.DaemonSet, error) {
+	return ConsistentlyWithOffset(1, func() (appsv1.DaemonSet, error) {
+		daemonSet := appsv1.DaemonSet{}
+		err := testenv.Client.Get(context.TODO(), daemonSetKey, &daemonSet)
+		return daemonSet, err
+	}, 15*time.Second, 1*time.Second)
+}
+
+func GetConsistentlyError(daemonSetKey types.NamespacedName) AsyncAssertion {
+	return ConsistentlyWithOffset(1, func() (appsv1.DaemonSet, error) {
 		daemonSet := appsv1.DaemonSet{}
 		err := testenv.Client.Get(context.TODO(), daemonSetKey, &daemonSet)
 		return daemonSet, err

@@ -8,11 +8,11 @@ function eventually {
     cmd=$@
     echo "Checking eventually $cmd"
     while ! $cmd; do
-        sleep $interval
-        timeout=$(( $timeout - $interval ))
         if [ $timeout -le 0 ]; then
             return 1
         fi
+        sleep $interval
+        timeout=$(( $timeout - $interval ))
     done
 }
 
