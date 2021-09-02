@@ -25,6 +25,8 @@ metadata:
     olm.skipRange: ">=4.3.0 <4.8.0"
     support: Red Hat, Inc.
     repository: https://github.com/openshift/kubernetes-nmstate
+  labels:
+    operatorframework.io/arch.amd64: supported
   name: kubernetes-nmstate-operator.v4.8.0
   namespace: openshift-nmstate
 spec:
