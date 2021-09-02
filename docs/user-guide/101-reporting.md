@@ -164,27 +164,10 @@ observed state is fresh enough.
 
 The reported state is updated every 5 seconds.
 
-## Filter reported interfaces
+## Node Network State interfaces filtering
 
-By default, all `veth*` interfaces are omitted from the report in order not to
-clutter the output with all Pod connections. This filtering can be adjusted via
-environment variable `INTERFACES_FILTER`at nmstate-handler daemonset.
-
-| Filter            | Effect                                                             |
-| ---               | ---                                                                |
-| `"veth*"`         | Omit all interfaces starting with `veth` from the report (default) |
-| `""`              | Disable the filter, show all interfaces found on the node          |
-| `"{veth*,vnet*}"` | Omit all interfaces starting with either `veth` or `vnet`          |
-
-
-To override the default configuration, use `set env` command. Additionally, in
-order for the config to take effect, all handlers will be restarted:
-
-```json
-kubectl set env -n nmstate daemonset/nmstate-handler INTERFACES_FILTER=""
-```
-
-The `NodeNetworkState` will now list all interfaces seen on the host.
+All unmanaged `veth` interfaces are omitted from the report in order to not
+clutter the output with all Pod connections.
 
 ## Continue reading
 

@@ -54,6 +54,7 @@ type NodeReconciler struct {
 	lastState      shared.State
 	nmstateUpdater NmstateUpdater
 	nmstatectlShow NmstatectlShow
+	deviceInfo     state.DeviceInfoer
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -68,7 +69,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
+	currentState, err := state.FilterOut(shared.NewState(currentStateRaw), r.deviceInfo)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -118,6 +119,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 	r.nmstatectlShow = nmstatectl.Show
+	r.deviceInfo = state.DeviceInfo{}
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
