@@ -249,8 +249,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: INTERFACES_FILTER
-              value: "{veth*,cali*}"
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT

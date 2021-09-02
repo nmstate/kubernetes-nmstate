@@ -162,7 +162,7 @@ push-operator: operator
 push: push-handler push-operator
 
 test/unit: $(GO)
-	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
+	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
 test-e2e-handler: $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
