@@ -15,7 +15,6 @@ RUN \
 
 
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/build/_output/bin/manager  /usr/bin/
-COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/build/bin   /usr/bin/
 
 ENTRYPOINT ["/usr/bin/manager"]
 
