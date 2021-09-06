@@ -361,9 +361,20 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
+	err := tryDecrementingUnavailableNodeCount(r.Client, r.Client, policyKey)
+	if err != nil {
+		r.Log.Error(err, "error decrementing unavailableNodeCount with cached client, trying again with non-cached client.")
+		err = tryDecrementingUnavailableNodeCount(r.Client, r.APIClient, policyKey)
+		if err != nil {
+			r.Log.Error(err, "error decrementing unavailableNodeCount with non-cached client")
+		}
+	}
+}
+
+func tryDecrementingUnavailableNodeCount(statusWriterClient client.StatusClient, readerClient client.Reader, policyKey types.NamespacedName) error {
 	instance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
-	err := retry.RetryOnConflict(policyconditions.StatusUpdateRetry, func() error {
-		err := r.Client.Get(context.TODO(), policyKey, instance)
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := readerClient.Get(context.TODO(), policyKey, instance)
 		if err != nil {
 			return err
 		}
@@ -371,11 +382,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount
 			return fmt.Errorf("no unavailable nodes")
 		}
 		instance.Status.UnavailableNodeCount -= 1
-		return r.Client.Status().Update(context.TODO(), instance)
+		return statusWriterClient.Status().Update(context.TODO(), instance)
 	})
-	if err != nil {
-		r.Log.Error(err, "error decrementing unavailableNodeCount")
-	}
+	return err
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) {
