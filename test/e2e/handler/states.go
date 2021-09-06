@@ -118,6 +118,19 @@ func linuxBrUpWithDisabledVlan(bridgeName string) nmstate.State {
 `, bridgeName, firstSecondaryNic))
 }
 
+func linuxBrUpWithDescription(bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    description: linux bridge up with two ports
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+        - name: %s
+        - name: %s
+`, bridgeName, firstSecondaryNic, secondSecondaryNic))
+}
+
 func ovsBrAbsent(bridgeName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s

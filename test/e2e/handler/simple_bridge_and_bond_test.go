@@ -184,6 +184,9 @@ var _ = Describe("NodeNetworkState", func() {
 					hasVlans(node, secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})
+			It("should succeed updating the linux-bridge desiredState description", func() {
+				updateDesiredStateAndWait(linuxBrUpWithDescription(bridge1))
+			})
 		})
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
