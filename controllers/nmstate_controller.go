@@ -188,13 +188,24 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 		WEBHOOK_REPLICAS     = int32(2)
 		WEBHOOK_MIN_REPLICAS = int32(1)
 	)
+	amd64AndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
+	if amd64AndCRInfraNodeSelector == nil {
+		amd64AndCRInfraNodeSelector = amd64ArchOnMasterNodeSelector
+	} else {
+		amd64AndCRInfraNodeSelector["beta.kubernetes.io/arch"] = "amd64"
+	}
+
+	infraTolerations := instance.Spec.InfraTolerations
+	if infraTolerations == nil {
+		infraTolerations = []corev1.Toleration{masterExistsNoScheduleToleration}
+	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
-	data.Data["WebhookNodeSelector"] = amd64ArchOnMasterNodeSelector
-	data.Data["WebhookTolerations"] = []corev1.Toleration{masterExistsNoScheduleToleration}
+	data.Data["InfraNodeSelector"] = amd64AndCRInfraNodeSelector
+	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = corev1.Affinity{}
 	data.Data["WebhookReplicas"] = WEBHOOK_REPLICAS
 	data.Data["WebhookMinReplicas"] = WEBHOOK_MIN_REPLICAS

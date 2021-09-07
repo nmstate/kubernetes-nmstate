@@ -40,6 +40,14 @@ var _ = Describe("NMState controller reconcile", func() {
 				Operator: "Exists",
 			},
 		}
+		infraNodeSelector = map[string]string{"webhookselector_1": "value_1", "webhookselector_2": "value_2"}
+		infraTolerations  = []corev1.Toleration{
+			{
+				Effect:   "NoSchedule",
+				Key:      "node.kubernetes.io/special-webhook-toleration",
+				Operator: "Exists",
+			},
+		}
 		nmstate = nmstatev1beta1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNMStateName,
@@ -207,7 +215,96 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(anyTolerationsPresent(handlerTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeFalse())
 		})
 	})
-
+	Context("when operator spec has a InfraNodeSelector", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NMState{},
+			)
+			// set InfraNodeSelector field in operator Spec
+			nmstate.Spec.InfraNodeSelector = infraNodeSelector
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewFakeClientWithScheme(s, objs...)
+			reconciler.Client = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("should add InfraNodeSelector to webhook deployment", func() {
+			deployment := &appsv1.Deployment{}
+			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+			err := cl.Get(context.TODO(), webhookKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range infraNodeSelector {
+				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+			}
+		})
+		It("should add InfraNodeSelector to certmanager deployment", func() {
+			deployment := &appsv1.Deployment{}
+			certManagerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
+			err := cl.Get(context.TODO(), certManagerKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range infraNodeSelector {
+				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+			}
+		})
+		It("should NOT add InfraNodeSelector to handler daemonset", func() {
+			ds := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range infraNodeSelector {
+				Expect(ds.Spec.Template.Spec.NodeSelector).ToNot(HaveKeyWithValue(k, v))
+			}
+		})
+	})
+	Context("when operator spec has InfraTolerations", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NMState{},
+			)
+			// set Tolerations field in operator Spec
+			nmstate.Spec.InfraTolerations = infraTolerations
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewFakeClientWithScheme(s, objs...)
+			reconciler.Client = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("should add InfraTolerations to webhook deployment", func() {
+			deployment := &appsv1.Deployment{}
+			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+			err := cl.Get(context.TODO(), webhookKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
+		})
+		It("should add InfraTolerations to cert-manager deployment", func() {
+			deployment := &appsv1.Deployment{}
+			certManagerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
+			err := cl.Get(context.TODO(), certManagerKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
+		})
+		It("should NOT add InfraTolerations to handler daemonset", func() {
+			ds := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(anyTolerationsPresent(infraTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeFalse())
+		})
+	})
 })
 
 func copyManifest(src, dst string) error {

@@ -25,8 +25,8 @@ spec:
         description: kubernetes-nmstate-webhook resets NNCP status
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
-      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
-      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .InfraTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
       priorityClassName: system-cluster-critical
       containers:
@@ -109,8 +109,8 @@ spec:
         description: kubernetes-nmstate-webhook rotate webhook certs
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
-      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
-      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .InfraTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
       priorityClassName: system-cluster-critical
       containers:
