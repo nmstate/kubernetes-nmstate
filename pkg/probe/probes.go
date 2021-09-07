@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/sh3rp/tcping"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -56,20 +57,47 @@ func currentStateAsGJson() (gjson.Result, error) {
 
 }
 
-func ping(target string, timeout time.Duration) (string, error) {
-	output := ""
-	return output, wait.PollImmediate(time.Second, timeout, func() (bool, error) {
-		cmd := exec.Command("ping", "-c", "1", target)
-		var outputBuffer bytes.Buffer
-		cmd.Stdout = &outputBuffer
-		cmd.Stderr = &outputBuffer
-		err := cmd.Run()
-		output = fmt.Sprintf("cmd output: '%s'", outputBuffer.String())
-		if err != nil {
-			return false, nil
+func pingWithICMP(target string) error {
+	cmd := exec.Command("ping", "-c", "1", target)
+	var outputBuffer bytes.Buffer
+	cmd.Stdout = &outputBuffer
+	cmd.Stderr = &outputBuffer
+	err := cmd.Run()
+	if err != nil {
+		return fmt.Errorf("failed ICMP ping: %w, %s", err, outputBuffer.String())
+	}
+	return nil
+}
+
+func pingWithTCP(target string) error {
+	tcpingProbe := tcping.NewProbe(tcping.GetInterface(""), time.Second, true)
+
+	// Port 80 does not need to be open, this just check the tcp handshake with
+	// TCP Sync header
+	latency, err := tcpingProbe.GetLatency(target, 80)
+	if err != nil {
+		return fmt.Errorf("failed TCP ping for %s: %w", target, err)
+	}
+
+	if latency == -1 {
+		return fmt.Errorf("failed TCP ping for %s: timeout", target)
+	}
+
+	return nil
+}
+
+func ping(target string, timeout time.Duration) error {
+	var pingErr error
+	pollErr := wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+		if icmpErr := pingWithICMP(target); icmpErr != nil {
+			if tcpErr := pingWithTCP(target); tcpErr != nil {
+				pingErr = fmt.Errorf("failed ping probe: %v, %v", icmpErr, tcpErr)
+				return false, nil
+			}
 		}
 		return true, nil
 	})
+	return fmt.Errorf("%v: %v", pollErr, pingErr)
 }
 
 // This probes use its own client to bypass cache that
@@ -149,9 +177,8 @@ func runPing(client client.Client, timeout time.Duration) error {
 		return errors.Wrap(err, "failed to retrieve default gw at runProbes")
 	}
 
-	pingOutput, err := ping(defaultGw, timeout)
-	if err != nil {
-		return errors.Wrapf(err, "error pinging default gateway -> output: %s", pingOutput)
+	if err := ping(defaultGw, timeout); err != nil {
+		return errors.Wrapf(err, "failed pinging default gateway")
 	}
 	return nil
 }

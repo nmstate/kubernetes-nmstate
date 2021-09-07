@@ -4,10 +4,10 @@ go 1.16
 
 require (
 	github.com/Microsoft/hcsshim v0.8.14 // indirect
+	github.com/docker/docker v1.4.2-0.20200203170920-46ec8731fbce
 	github.com/evanphx/json-patch v4.11.0+incompatible
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.4.0
-	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.0
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
@@ -20,6 +20,7 @@ require (
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.16.0
+	github.com/sh3rp/tcping v0.0.0-20210110183155-c33dd40d133e
 	github.com/tidwall/gjson v1.8.0
 	github.com/tidwall/sjson v1.1.7
 	gopkg.in/yaml.v2 v2.4.0
