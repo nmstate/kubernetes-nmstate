@@ -382,7 +382,7 @@ NICs <code class="language-plaintext highlighter-rouge">eth1</code> and <code cl
         <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
       <span class="na">link-aggregation</span><span class="pi">:</span>
         <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
-        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="na">port</span><span class="pi">:</span>
         <span class="pi">-</span> <span class="s">eth1</span>
         <span class="pi">-</span> <span class="s">eth2</span>
 
@@ -402,7 +402,7 @@ NICs <code class="language-plaintext highlighter-rouge">eth1</code> and <code cl
 </code></pre></div></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME              STATUS
-bond0-eth1-eth2   SuccessfullyConfigured
+bond0-eth1-eth2   Available
 </code></pre></div></div>
 
 <p>We can also use short name <code class="language-plaintext highlighter-rouge">nncp</code> to reach the same effect:</p>
@@ -411,7 +411,7 @@ bond0-eth1-eth2   SuccessfullyConfigured
 </code></pre></div></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME              STATUS
-bond0-eth1-eth2   SuccessfullyConfigured
+bond0-eth1-eth2   Available
 </code></pre></div></div>
 
 <p>By using <code class="language-plaintext highlighter-rouge">-o yaml</code> we obtain the full Policy with its current state:</p>
@@ -447,8 +447,8 @@ created by the operator. List of Enactments of all Policies and Nodes:</p>
 </code></pre></div></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                     STATUS
-node01.bond0-eth1-eth2   SuccessfullyConfigured
-node02.bond0-eth1-eth2   SuccessfullyConfigured
+node01.bond0-eth1-eth2   Available
+node02.bond0-eth1-eth2   Available
 </code></pre></div></div>
 
 <p>We can also use short name <code class="language-plaintext highlighter-rouge">nnce</code> to reach the same effect:</p>
@@ -457,8 +457,8 @@ node02.bond0-eth1-eth2   SuccessfullyConfigured
 </code></pre></div></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                     STATUS
-node01.bond0-eth1-eth2   SuccessfullyConfigured
-node02.bond0-eth1-eth2   SuccessfullyConfigured
+node01.bond0-eth1-eth2   Available
+node02.bond0-eth1-eth2   Available
 </code></pre></div></div>
 
 <p>By using <code class="language-plaintext highlighter-rouge">-o yaml</code> we obtain the full status of given Enactment:</p>
@@ -487,10 +487,9 @@ node02.bond0-eth1-eth2   SuccessfullyConfigured
     <span class="na">type</span><span class="pi">:</span> <span class="s">Progressing</span>
   <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:04Z"</span>
     <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T10:27:04Z"</span>
-    <span class="na">message</span><span class="pi">:</span> <span class="s">All policy selectors are matching the node</span>
-    <span class="na">reason</span><span class="pi">:</span> <span class="s">AllSelectorsMatching</span>
-    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">True"</span>
-    <span class="na">type</span><span class="pi">:</span> <span class="s">Matching</span>
+    <span class="na">reason</span><span class="pi">:</span> <span class="s">SuccessfullyConfigured</span>
+    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
+    <span class="na">type</span><span class="pi">:</span> <span class="s">Pending</span>
   <span class="na">desiredState</span><span class="pi">:</span>
     <span class="na">interfaces</span><span class="pi">:</span>
     <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
@@ -498,7 +497,7 @@ node02.bond0-eth1-eth2   SuccessfullyConfigured
         <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
       <span class="na">link-aggregation</span><span class="pi">:</span>
         <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
-        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="na">port</span><span class="pi">:</span>
         <span class="pi">-</span> <span class="s">eth1</span>
         <span class="pi">-</span> <span class="s">eth2</span>
       <span class="na">name</span><span class="pi">:</span> <span class="s">bond0</span>
@@ -508,9 +507,10 @@ node02.bond0-eth1-eth2   SuccessfullyConfigured
 
 <p>The output contains the <code class="language-plaintext highlighter-rouge">desiredState</code> applied by the Policy for the given Node.
 It also contains a list of conditions. This list is more detailed than the one
-in Policy. It shows whether the Policy matched given Node
-(<code class="language-plaintext highlighter-rouge">AllSelectorsMatching</code>), if the <code class="language-plaintext highlighter-rouge">desiredState</code> is currently being applied on
-the node (<code class="language-plaintext highlighter-rouge">Progressing</code>), if the configuration failed (<code class="language-plaintext highlighter-rouge">Failing</code>) or succeeded
+in Policy. It shows whether the limit of unavailable nods was reached so the
+node has to wait for other nodes to finish applying network configuration
+(<code class="language-plaintext highlighter-rouge">Pending</code>), if the <code class="language-plaintext highlighter-rouge">desiredState</code> is currently being applied on the node
+(<code class="language-plaintext highlighter-rouge">Progressing</code>), if the configuration failed (<code class="language-plaintext highlighter-rouge">Failing</code>) or succeeded
 (<code class="language-plaintext highlighter-rouge">Available</code>).</p>
 
 <!-- TODO: Once we have an article about node selectors, link it here -->
@@ -541,7 +541,7 @@ the node (<code class="language-plaintext highlighter-rouge">Progressing</code>)
       <span class="na">link-aggregation</span><span class="pi">:</span>
         <span class="na">mode</span><span class="pi">:</span> <span class="s">balance-rr</span>
         <span class="na">options</span><span class="pi">:</span> <span class="pi">{}</span>
-        <span class="na">slaves</span><span class="pi">:</span>
+        <span class="na">port</span><span class="pi">:</span>
         <span class="pi">-</span> <span class="s">eth2</span>
         <span class="pi">-</span> <span class="s">eth1</span>
       <span class="na">mac-address</span><span class="pi">:</span> <span class="s">52:55:00:D1:56:01</span>
@@ -798,49 +798,33 @@ all the key-value pairs in the <code class="language-plaintext highlighter-rouge
 <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl <span class="nb">wait </span>nncp vlan100 <span class="nt">--for</span> <span class="nv">condition</span><span class="o">=</span>Available <span class="nt">--timeout</span> 2m
 </code></pre></div></div>
 
-<p>The list of Enactments then shows that the Policy has been applied only on
-Node <code class="language-plaintext highlighter-rouge">node01</code>, while <code class="language-plaintext highlighter-rouge">node02</code> is reporting <code class="language-plaintext highlighter-rouge">NodeSelectorNotMatching</code>:</p>
+<p>The list of Enactments then shows that the ‘vlan100’ Policy has been applied only on
+Node <code class="language-plaintext highlighter-rouge">node01</code></p>
 
 <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce
 </code></pre></div></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME             STATUS
-node01.eth1      SuccessfullyConfigured
-node01.eth2      SuccessfullyConfigured
-node01.vlan100   SuccessfullyConfigured
-node02.eth1      SuccessfullyConfigured
-node02.eth2      SuccessfullyConfigured
-node02.vlan100   NodeSelectorNotMatching
+node01.eth1      Available
+node01.eth2      Available
+node01.vlan100   Available
+node02.eth1      Available
+node02.eth2      Available
 </code></pre></div></div>
 
-<p>After a closer observation, we can see that it was indeed caused by not-matching
-selectors:</p>
-
-<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl get nnce node02.vlan100 <span class="nt">-o</span> yaml
-</code></pre></div></div>
-
-<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># output truncated</span>
-<span class="na">status</span><span class="pi">:</span>
-  <span class="na">conditions</span><span class="pi">:</span>
-  <span class="pi">-</span> <span class="na">lastHearbeatTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T15:34:26Z"</span>
-    <span class="na">lastTransitionTime</span><span class="pi">:</span> <span class="s2">"</span><span class="s">2020-02-07T15:34:26Z"</span>
-    <span class="na">message</span><span class="pi">:</span> <span class="s1">'</span><span class="s">Unmatching</span><span class="nv"> </span><span class="s">labels:</span><span class="nv"> </span><span class="s">map[kubernetes.io/hostname:node01]'</span>
-    <span class="na">reason</span><span class="pi">:</span> <span class="s">NodeSelectorNotMatching</span>
-    <span class="na">status</span><span class="pi">:</span> <span class="s2">"</span><span class="s">False"</span>
-    <span class="na">type</span><span class="pi">:</span> <span class="s">Matching</span>
-</code></pre></div></div>
+<p>After a closer observation, we can see that there is no node02.vlan100
+enactment.</p>
 
 <h2 id="configuring-multiple-nodes-concurrently">Configuring multiple nodes concurrently</h2>
 
-<p>By default, Policy configuration is applied sequentially, one node at a time.
-This configuration strategy is safe and prevents the entire cluster from being
+<p>By default, Policy configuration is applied in parallel on 50% of nmstate enabled nodes.
+This configuration strategy is considered safe enough and prevents the entire cluster from being
 temporarily unavailable, if the applied configuration breaks network connectivity.</p>
 
-<p>For big clusters however, it may take too much time for a configuration to finish.
-In such a case, <code class="language-plaintext highlighter-rouge">maxUnavailable</code> can be used to define portion size of a cluster
-that can apply a policy configuration concurrently.
+<p>User may change this behaviour per policy by setting <code class="language-plaintext highlighter-rouge">maxUnavailable</code> field to define
+portion size of a cluster that can apply a policy configuration in parallel.
 MaxUnavailable specifies percentage or a constant number of nodes that
-can be progressing a policy at a time. The default is “50%” of cluster nodes.</p>
+can be applying a policy at a time.</p>
 
 <p>The following policy specifies that up to 3 nodes may be progressing concurrently:</p>
 
@@ -873,12 +857,12 @@ can be progressing a policy at a time. The default is “50%” of cluster nodes
 </code></pre></div></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NAME                                 STATUS
-node01.linux-bridge-maxunavailable   AllSelectorsMatching
-node02.linux-bridge-maxunavailable   ConfigurationProgressing
-node03.linux-bridge-maxunavailable   SuccessfullyConfigured
-node04.linux-bridge-maxunavailable   ConfigurationProgressing
-node05.linux-bridge-maxunavailable   ConfigurationProgressing
-node06.linux-bridge-maxunavailable   AllSelectorsMatching
+node01.linux-bridge-maxunavailable   Pending
+node02.linux-bridge-maxunavailable   Progressing
+node03.linux-bridge-maxunavailable   Available
+node04.linux-bridge-maxunavailable   Progressing
+node05.linux-bridge-maxunavailable   Progressing
+node06.linux-bridge-maxunavailable   Pending
 </code></pre></div></div>
 
 <h2 id="continue-reading">Continue reading</h2>
