@@ -8,7 +8,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 // We cannot change routes at nmstate if the interface is with dhcp true
@@ -93,18 +92,12 @@ func discoverNameServers(nic string) nmstate.State {
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]rollback", func() {
 	Context("when an error happens during state configuration", func() {
-		BeforeEach(func() {
-			By("Rename vlan-filtering to vlan-filtering.bak to force failure during state configuration")
-			runner.RunAtHandlerPods("mv", "/usr/local/bin/vlan-filtering", "/usr/local/bin/vlan-filtering.bak")
-		})
 		AfterEach(func() {
-			By("Rename vlan-filtering.bak to vlan-filtering to leave it as it was")
-			runner.RunAtHandlerPods("mv", "/usr/local/bin/vlan-filtering.bak", "/usr/local/bin/vlan-filtering")
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			resetDesiredStateForNodes()
 		})
 		It("should rollback failed state configuration", func() {
-			updateDesiredState(linuxBrUpNoPorts(bridge1))
+			updateDesiredState(linuxBrBadYaml(bridge1))
 
 			By("Should not be available") // Fail fast
 			policyConditionsStatusConsistently().ShouldNot(containPolicyAvailable())
