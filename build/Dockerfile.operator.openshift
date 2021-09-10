@@ -13,6 +13,8 @@ COPY deploy/handler/service_account.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 
+ENV ENABLE_OVS=""
+
 ENTRYPOINT ["manager"]
 
 LABEL io.k8s.display-name="kubernetes-nmstate-operator" \
