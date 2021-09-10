@@ -305,6 +305,65 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(anyTolerationsPresent(infraTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeFalse())
 		})
 	})
+	Context("when OVS is NOT enabled", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NMState{},
+			)
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewFakeClientWithScheme(s, objs...)
+			reconciler.Client = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("should not mount host OVS socket at handler", func() {
+			handlerDs := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, handlerDs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hasOVSSocketMounted(*handlerDs)).To(BeFalse())
+		})
+	})
+	Context("when OVS is enabled", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			os.Setenv("ENABLE_OVS", "")
+		})
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NMState{},
+			)
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewFakeClientWithScheme(s, objs...)
+			reconciler.Client = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		AfterEach(func() {
+			os.Unsetenv("ENABLE_OVS")
+		})
+
+		It("should not mount host OVS socket at handler", func() {
+			handlerDs := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, handlerDs)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(hasOVSSocketMounted(*handlerDs)).To(BeTrue())
+		})
+	})
 })
 
 func copyManifest(src, dst string) error {
@@ -411,6 +470,31 @@ func isSuperset(ss, t corev1.Toleration) bool {
 	default:
 		return false
 	}
+}
+
+func hasOVSSocketHostPath(ds appsv1.DaemonSet) bool {
+	for _, v := range ds.Spec.Template.Spec.Volumes {
+		if v.Name == "ovs-socket" &&
+			v.HostPath != nil &&
+			v.HostPath.Path == "/run/openvswitch/db.sock" &&
+			v.HostPath.Type != nil &&
+			*v.HostPath.Type == corev1.HostPathSocket {
+			return true
+		}
+	}
+	return false
+}
+
+func hasOVSSocketMounted(ds appsv1.DaemonSet) bool {
+	if !hasOVSSocketHostPath(ds) {
+		return false
+	}
+	for _, v := range ds.Spec.Template.Spec.Containers[0].VolumeMounts {
+		if v.Name == "ovs-socket" && v.MountPath == "/run/openvswitch/db.sock" {
+			return true
+		}
+	}
+	return false
 }
 
 //allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
