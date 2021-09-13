@@ -364,7 +364,7 @@ webhooks:
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies"]
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   namespace: {{ .HandlerNamespace }}
