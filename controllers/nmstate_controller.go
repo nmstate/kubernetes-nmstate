@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"sort"
 
 	"github.com/go-logr/logr"
@@ -169,15 +170,15 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 		Key:      "",
 		Operator: corev1.TolerationOpExists,
 	}
-	amd64ArchOnMasterNodeSelector := map[string]string{
-		"beta.kubernetes.io/arch":        "amd64",
+	archOnMasterNodeSelector := map[string]string{
+		"beta.kubernetes.io/arch":        goruntime.GOARCH,
 		"node-role.kubernetes.io/master": "",
 	}
-	amd64AndCRNodeSelector := instance.Spec.NodeSelector
-	if amd64AndCRNodeSelector == nil {
-		amd64AndCRNodeSelector = map[string]string{}
+	archAndCRNodeSelector := instance.Spec.NodeSelector
+	if archAndCRNodeSelector == nil {
+		archAndCRNodeSelector = map[string]string{}
 	}
-	amd64AndCRNodeSelector["beta.kubernetes.io/arch"] = "amd64"
+	archAndCRNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
 
 	handlerTolerations := instance.Spec.Tolerations
 	if handlerTolerations == nil {
@@ -188,11 +189,11 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 		WEBHOOK_REPLICAS     = int32(2)
 		WEBHOOK_MIN_REPLICAS = int32(1)
 	)
-	amd64AndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
-	if amd64AndCRInfraNodeSelector == nil {
-		amd64AndCRInfraNodeSelector = amd64ArchOnMasterNodeSelector
+	archAndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
+	if archAndCRInfraNodeSelector == nil {
+		archAndCRInfraNodeSelector = archOnMasterNodeSelector
 	} else {
-		amd64AndCRInfraNodeSelector["beta.kubernetes.io/arch"] = "amd64"
+		archAndCRInfraNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
 	}
 
 	infraTolerations := instance.Spec.InfraTolerations
@@ -204,12 +205,12 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
-	data.Data["InfraNodeSelector"] = amd64AndCRInfraNodeSelector
+	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = corev1.Affinity{}
 	data.Data["WebhookReplicas"] = WEBHOOK_REPLICAS
 	data.Data["WebhookMinReplicas"] = WEBHOOK_MIN_REPLICAS
-	data.Data["HandlerNodeSelector"] = amd64AndCRNodeSelector
+	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = corev1.Affinity{}
 	_, enableOVS := os.LookupEnv("ENABLE_OVS")
