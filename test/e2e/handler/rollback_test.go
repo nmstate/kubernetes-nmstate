@@ -91,28 +91,6 @@ func discoverNameServers(nic string) nmstate.State {
 }
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]rollback", func() {
-	Context("when an error happens during state configuration", func() {
-		AfterEach(func() {
-			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
-			resetDesiredStateForNodes()
-		})
-		It("should rollback failed state configuration", func() {
-			updateDesiredState(linuxBrBadYaml(bridge1))
-
-			By("Should not be available") // Fail fast
-			policyConditionsStatusConsistently().ShouldNot(containPolicyAvailable())
-
-			By("Wait for reconcile to fail")
-			waitForDegradedTestPolicy()
-			for _, node := range nodes {
-				By(fmt.Sprintf("Check that %s has being rolled back", bridge1))
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-
-				By(fmt.Sprintf("Check that %s continue with rolled back state", bridge1))
-				interfacesNameForNodeConsistently(node).ShouldNot(ContainElement(bridge1))
-			}
-		})
-	})
 	// This spec is done only at first node since policy has to be different
 	// per node (ip addresses has to be different at cluster).
 	Context("when connectivity to default gw is lost after state configuration", func() {
