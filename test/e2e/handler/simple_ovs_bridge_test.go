@@ -5,9 +5,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-//FIXME: OVS bridge functionality at nmstate is unstable
-//       let's activate this again when that is fix
-var _ = PDescribe("Simple OVS bridge [pending cause nmstate bug -> https://bugzilla.redhat.com/show_bug.cgi?id=1724901]", func() {
+var _ = Describe("Simple OVS bridge", func() {
+	BeforeEach(func() {
+		skipIfNotNmstateFuture()
+	})
 	Context("when desiredState is configured with an ovs bridge up", func() {
 		BeforeEach(func() {
 			updateDesiredStateAndWait(ovsBrUp(bridge1))
