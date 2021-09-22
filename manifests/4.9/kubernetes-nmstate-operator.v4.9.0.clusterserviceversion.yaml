@@ -15,6 +15,7 @@ metadata:
           }
         }
       }]
+    operatorframework.io/suggested-namespace: openshift-nmstate
     capabilities: Basic Install
     certified: "false"
     categories: OpenShift Optional
