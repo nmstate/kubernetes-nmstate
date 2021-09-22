@@ -2,6 +2,20 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
+    operatorframework.io/initialization-resource: |-
+      {
+        "apiVersion": "nmstate.io/v1beta1",
+        "kind": "NMState",
+        "metadata": {
+          "name": "nmstate",
+          "namespace":"openshift-nmstate"
+        },
+        "spec": {
+          "nodeSelector": {
+            "beta.kubernetes.io/arch": "amd64"
+          }
+        }
+      }
     alm-examples: |-
       [{
         "apiVersion": "nmstate.io/v1beta1",
