@@ -520,6 +520,11 @@ func ipv4Address(node string, iface string) string {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
+func macAddress(node string, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
 func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	return Eventually(func() string {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
@@ -541,6 +546,13 @@ func skipIfNotKubernetes() {
 	provider := environment.GetVarWithDefault("KUBEVIRT_PROVIDER", "k8s")
 	if !strings.Contains(provider, "k8s") {
 		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
+	}
+}
+
+func skipIfNotNmstateFuture() {
+	nmstatePin := environment.GetVarWithDefault("NMSTATE_PIN", "")
+	if !strings.Contains(nmstatePin, "future") {
+		Skip("Functionality is available/stable only in nmstate future release")
 	}
 }
 
