@@ -15,6 +15,6 @@ spec:
         mode: balance-rr
         options:
           miimon: '140'
-        slaves:
+        port:
         - eth1
         - eth2
