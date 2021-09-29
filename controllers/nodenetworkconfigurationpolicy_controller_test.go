@@ -75,10 +75,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	type incrementUnavailableNodeCountCase struct {
 		currentUnavailableNodeCount  int
 		expectedUnavailableNodeCount int
-		expectedReconcileError       string
 		expectedReconcileResult      ctrl.Result
 		previousEnactmentConditions  func(*shared.ConditionList, string)
-		shouldConflict               bool
 	}
 	DescribeTable("when claimNodeRunningUpdate is called and",
 		func(c incrementUnavailableNodeCountCase) {
@@ -128,9 +126,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				NamespacedName: types.NamespacedName{Name: nncp.Name},
 			})
 
-			if c.shouldConflict {
-				Expect(err.Error()).To(Equal(c.expectedReconcileError))
-			}
+			Expect(err).To(BeNil())
 			Expect(res).To(Equal(c.expectedReconcileResult))
 
 			obtainedNNCP := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
@@ -143,7 +139,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				expectedUnavailableNodeCount: 0,
 				previousEnactmentConditions:  func(*shared.ConditionList, string) {},
 				expectedReconcileResult:      ctrl.Result{},
-				shouldConflict:               false,
 			}),
 		Entry("No node applying policy with progressing enactment, should succeed incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
@@ -151,7 +146,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				expectedUnavailableNodeCount: 0,
 				previousEnactmentConditions:  conditions.SetProgressing,
 				expectedReconcileResult:      ctrl.Result{},
-				shouldConflict:               false,
 			}),
 		Entry("One node applying policy with empty enactment, should conflict incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
@@ -159,8 +153,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				expectedUnavailableNodeCount: 1,
 				previousEnactmentConditions:  func(*shared.ConditionList, string) {},
 				expectedReconcileResult:      ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime},
-				expectedReconcileError:       "Operation cannot be fulfilled on nodenetworkconfigurationpolicies \"test\": maximal number of 1 nodes are already processing policy configuration",
-				shouldConflict:               true,
 			}),
 		Entry("One node applying policy with Progressing enactment, should succeed incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
@@ -168,7 +160,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				expectedUnavailableNodeCount: 0,
 				previousEnactmentConditions:  conditions.SetProgressing,
 				expectedReconcileResult:      ctrl.Result{},
-				shouldConflict:               false,
 			}),
 	)
 })
