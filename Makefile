@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-IMAGE_REGISTRY ?= quay.io
+export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
@@ -23,6 +23,7 @@ HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 HANDLER_PREFIX ?=
+
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
 OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME):$(OPERATOR_IMAGE_TAG)
@@ -32,7 +33,7 @@ export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
-IMAGE_BUILDER ?= docker
+export IMAGE_BUILDER ?= docker
 
 WHAT ?= ./pkg ./controllers ./api
 
@@ -146,19 +147,20 @@ manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 manager: $(GO)
-	$(GO) build -o $(BIN_DIR)/manager main.go
+	hack/build-manager.sh $(BIN_DIR)
 
-handler: manager
-	$(IMAGE_BUILDER) build . -f build/Dockerfile -t ${HANDLER_IMAGE} --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
+handler: SKIP_PUSH=true
+handler: push-handler
 
-push-handler: handler
-	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
+push-handler: manager
+	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/Dockerfile --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
 
-operator: manager
-	$(IMAGE_BUILDER) build . -f build/Dockerfile.operator -t $(OPERATOR_IMAGE)
+operator: SKIP_PUSH=true
+operator: push-operator
 
-push-operator: operator
-	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
+push-operator: manager
+	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
+
 push: push-handler push-operator
 
 test/unit: $(GO)
