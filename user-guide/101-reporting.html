@@ -488,43 +488,10 @@ observed state is fresh enough.</p>
 
 <p>The reported state is updated every 5 seconds.</p>
 
-<h2 id="filter-reported-interfaces">Filter reported interfaces</h2>
+<h2 id="node-network-state-interfaces-filtering">Node Network State interfaces filtering</h2>
 
-<p>By default, all <code class="language-plaintext highlighter-rouge">veth*</code> interfaces are omitted from the report in order not to
-clutter the output with all Pod connections. This filtering can be adjusted via
-environment variable <code class="language-plaintext highlighter-rouge">INTERFACES_FILTER</code>at nmstate-handler daemonset.</p>
-
-<table>
-  <thead>
-    <tr>
-      <th>Filter</th>
-      <th>Effect</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">"veth*"</code></td>
-      <td>Omit all interfaces starting with <code class="language-plaintext highlighter-rouge">veth</code> from the report (default)</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">""</code></td>
-      <td>Disable the filter, show all interfaces found on the node</td>
-    </tr>
-    <tr>
-      <td><code class="language-plaintext highlighter-rouge">"{veth*,vnet*}"</code></td>
-      <td>Omit all interfaces starting with either <code class="language-plaintext highlighter-rouge">veth</code> or <code class="language-plaintext highlighter-rouge">vnet</code>
-</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>To override the default configuration, use <code class="language-plaintext highlighter-rouge">set env</code> command. Additionally, in
-order for the config to take effect, all handlers will be restarted:</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">kubectl</span><span class="w"> </span><span class="err">set</span><span class="w"> </span><span class="err">env</span><span class="w"> </span><span class="err">-n</span><span class="w"> </span><span class="err">nmstate</span><span class="w"> </span><span class="err">daemonset/nmstate-handler</span><span class="w"> </span><span class="err">INTERFACES_FILTER=</span><span class="s2">""</span><span class="w">
-</span></code></pre></div></div>
-
-<p>The <code class="language-plaintext highlighter-rouge">NodeNetworkState</code> will now list all interfaces seen on the host.</p>
+<p>All unmanaged <code class="language-plaintext highlighter-rouge">veth</code> interfaces are omitted from the report in order to not
+clutter the output with all Pod connections.</p>
 
 <h2 id="continue-reading">Continue reading</h2>
 
