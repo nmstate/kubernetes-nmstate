@@ -11,6 +11,7 @@ require (
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/nmstate/nmstate/rust/src/go/pkg/nmstate v0.0.0
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.13.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2 // indirect
@@ -43,6 +44,7 @@ replace (
 	github.com/containerd/containerd => github.com/containerd/containerd v1.4.3
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.10.0
+	github.com/nmstate/nmstate/rust/src/go/pkg/nmstate => github.com/ffmancera/nmstate/rust/src/go/pkg/nmstate v0.0.0-20211021135040-6bff9e9dfcc5
 	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
 	k8s.io/client-go => k8s.io/client-go v0.21.1
 )

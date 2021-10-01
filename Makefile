@@ -152,7 +152,7 @@ manager: $(GO)
 handler: SKIP_PUSH=true
 handler: push-handler
 
-push-handler: manager
+push-handler:
 	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/Dockerfile --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
 
 operator: SKIP_PUSH=true

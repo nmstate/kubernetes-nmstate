@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	ncl "github.com/nmstate/nmstate/rust/src/go/pkg/nmstate"
 )
 
 var (
@@ -53,7 +53,7 @@ func nmstatectl(arguments []string) (string, error) {
 }
 
 func Show() (string, error) {
-	return nmstatectl([]string{"show"})
+	return ncl.RetrieveNetState(0)
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
@@ -61,7 +61,7 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	go setUnavailableUp(setDoneCh)
 	defer close(setDoneCh)
 
-	setOutput, err := nmstatectlWithInput([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))}, string(desiredState.Raw))
+	setOutput, err := nmstatectlWithInput([]string{"apply"}, string(desiredState.Raw))
 	return setOutput, err
 }
 

@@ -19,5 +19,5 @@ PUSH=--push
 if [ "$SKIP_PUSH" == "true" ]; then
     PUSH=""
 fi
-docker buildx build --platform ${PLATFORM} $@ -t ${IMAGE} $PUSH
+docker buildx build --progress plain --platform ${PLATFORM} $@ -t ${IMAGE} $PUSH
 
