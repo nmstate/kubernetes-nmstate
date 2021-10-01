@@ -68,7 +68,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 		It("[test_id:3795] should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
-				By(fmt.Sprintf("Check %s failing state is reached", node))
+				Byf("Check %s failing state is reached", node)
 				enactmentConditionsStatusEventually(node).Should(
 					SatisfyAny(
 						matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
@@ -87,7 +87,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					By(fmt.Sprintf("Check %s failing state is kept", node))
+					Byf("Check %s failing state is kept", node)
 					enactmentConditionsStatusConsistently(node).Should(
 						SatisfyAny(
 							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
@@ -132,7 +132,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					By(fmt.Sprintf("Check %s failing state is kept", node))
+					Byf("Check %s failing state is kept", node)
 					enactmentConditionsStatusConsistently(node).Should(
 						SatisfyAny(
 							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),

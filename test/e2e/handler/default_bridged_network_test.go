@@ -55,7 +55,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 		addressByNode := map[string]string{}
 
 		BeforeEach(func() {
-			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", primaryNic))
+			Byf("Check %s is the default route interface and has dynamic address", primaryNic)
 			for _, node := range nodes {
 				defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
 				Expect(dhcpFlag(node, primaryNic)).Should(BeTrue())
@@ -85,7 +85,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 			})
 
 			AfterEach(func() {
-				By(fmt.Sprintf("Removing bridge and configuring %s with dhcp", primaryNic))
+				Byf("Removing bridge and configuring %s with dhcp", primaryNic)
 				setDesiredStateWithPolicy(DefaultNetwork, resetDefaultInterface())
 
 				By("Waiting until the node becomes ready again")
@@ -94,14 +94,14 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				By("Wait for policy to be ready")
 				waitForAvailablePolicy(DefaultNetwork)
 
-				By(fmt.Sprintf("Check %s has the default ip address", primaryNic))
+				Byf("Check %s has the default ip address", primaryNic)
 				for _, node := range nodes {
 					Eventually(func() string {
 						return ipv4Address(node, primaryNic)
 					}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 				}
 
-				By(fmt.Sprintf("Check %s is back as the default route interface", primaryNic))
+				Byf("Check %s is back as the default route interface", primaryNic)
 				for _, node := range nodes {
 					defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
 				}
@@ -141,10 +141,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				err := restartNode(nodeToReboot)
 				Expect(err).ToNot(HaveOccurred())
 
-				By(fmt.Sprintf("Wait for nns to be refreshed at %s", nodeToReboot))
+				Byf("Wait for nns to be refreshed at %s", nodeToReboot)
 				waitForNodeNetworkStateUpdate(nodeToReboot)
 
-				By(fmt.Sprintf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot))
+				Byf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot)
 				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot})
 			})
 		})

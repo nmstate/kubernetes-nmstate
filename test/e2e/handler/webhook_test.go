@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"fmt"
 	"strconv"
 
 	. "github.com/onsi/ginkgo"
@@ -69,7 +68,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 			resetDesiredStateForNodes()
 		})
 		It("Should deny updating rolled out policy when it's in progress", func() {
-			By(fmt.Sprintf("Updating the policy %s", TestPolicy))
+			Byf("Updating the policy %s", TestPolicy)
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return setDesiredStateWithPolicyAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), map[string]string{})
 			})

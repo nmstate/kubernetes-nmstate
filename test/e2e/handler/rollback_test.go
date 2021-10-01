@@ -113,12 +113,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 			By("Wait for reconcile to fail")
 			waitForDegradedTestPolicy()
-			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
+			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return dhcpFlag(nodes[0], primaryNic)
 			}, 480*time.Second, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
 
-			By(fmt.Sprintf("Check that %s continue with rolled back state", primaryNic))
+			Byf("Check that %s continue with rolled back state", primaryNic)
 			Consistently(func() bool {
 				return dhcpFlag(nodes[0], primaryNic)
 			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
@@ -140,12 +140,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 			By("Wait for reconcile to fail")
 			waitForDegradedTestPolicy()
-			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
+			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return autoDNS(nodes[0], primaryNic)
 			}, 480*time.Second, ReadInterval).Should(BeTrue(), "should eventually have auto-dns=true")
 
-			By(fmt.Sprintf("Check that %s continue with rolled back state", primaryNic))
+			Byf("Check that %s continue with rolled back state", primaryNic)
 			Consistently(func() bool {
 				return autoDNS(nodes[0], primaryNic)
 			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "should consistently have auto-dns=true")
@@ -168,12 +168,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 			By("Wait for reconcile to fail")
 			waitForDegradedTestPolicy()
-			By(fmt.Sprintf("Check that %s is rolled back", primaryNic))
+			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return autoDNS(nodes[0], primaryNic)
 			}, 480*time.Second, ReadInterval).Should(BeTrue(), "should eventually have auto-dns=true")
 
-			By(fmt.Sprintf("Check that %s continue with rolled back state", primaryNic))
+			Byf("Check that %s continue with rolled back state", primaryNic)
 			Consistently(func() bool {
 				return autoDNS(nodes[0], primaryNic)
 			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "should consistently have auto-dns=true")

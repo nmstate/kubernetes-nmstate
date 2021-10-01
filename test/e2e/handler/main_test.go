@@ -97,9 +97,9 @@ func TestE2E(t *testing.T) {
 
 var _ = BeforeEach(func() {
 	bond1 = nextBond()
-	By(fmt.Sprintf("Setting bond1=%s", bond1))
+	Byf("Setting bond1=%s", bond1)
 	bridge1 = nextBridge()
-	By(fmt.Sprintf("Setting bridge1=%s", bridge1))
+	Byf("Setting bridge1=%s", bridge1)
 	startTime = time.Now()
 
 	By("Getting nodes initial state")
