@@ -40,6 +40,10 @@ var (
 	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DEFAULT_MAXUNAVAILABLE)
 )
 
+func Byf(message string, arguments ...string) {
+	By(fmt.Sprintf(message, arguments))
+}
+
 func interfacesName(interfaces []interface{}) []string {
 	var names []string
 	for _, iface := range interfaces {
@@ -161,7 +165,7 @@ func deleteNodeNeworkStates() {
 }
 
 func deletePolicy(name string) {
-	By(fmt.Sprintf("Deleting policy %s", name))
+	Byf("Deleting policy %s", name)
 	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	err := testenv.Client.Delete(context.TODO(), policy)
@@ -201,7 +205,7 @@ func restartNode(node string) error {
 }
 
 func restartNodeWithoutWaiting(node string) {
-	By(fmt.Sprintf("Restarting node %s", node))
+	Byf("Restarting node %s", node)
 	// Use halt so reboot command does not get stuck also
 	// this command always fail since connection is closed
 	// so let's not check err
@@ -209,7 +213,7 @@ func restartNodeWithoutWaiting(node string) {
 }
 
 func waitFotNodeToStart(node string) error {
-	By(fmt.Sprintf("Waiting till node %s is rebooted", node))
+	Byf("Waiting till node %s is rebooted", node)
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
 	Eventually(func() string {
 		output, err := runner.RunAtNode(node, "uptime", "-p")
@@ -222,7 +226,7 @@ func waitFotNodeToStart(node string) error {
 }
 
 func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
-	By(fmt.Sprintf("Delete bridge %s", bridgeName))
+	Byf("Delete bridge %s", bridgeName)
 	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
 	for _, portName := range ports {
 		_, portErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
@@ -232,7 +236,7 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 }
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {
-	By(fmt.Sprintf("Creating dummy %s", dummyName))
+	Byf("Creating dummy %s", dummyName)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
 	_, upErrs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
@@ -248,13 +252,13 @@ func createDummyConnectionAtAllNodes(dummyName string) []error {
 }
 
 func deleteConnection(nodesToModify []string, name string) []error {
-	By(fmt.Sprintf("Delete connection %s", name))
+	Byf("Delete connection %s", name)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "delete", name)
 	return errs
 }
 
 func deleteDevice(nodesToModify []string, name string) []error {
-	By(fmt.Sprintf("Delete device %s  at nodes %v", name, nodesToModify))
+	Byf("Delete device %s  at nodes %v", name, fmt.Sprint(nodesToModify))
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "device", "delete", name)
 	return errs
 }
@@ -357,7 +361,7 @@ func bridgeVlansAtNode(node string) (string, error) {
 }
 
 func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
-	By(fmt.Sprintf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan))
+	Byf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, fmt.Sprint(vlan))
 	return Eventually(func() []string {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
@@ -399,7 +403,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
 
-	By(fmt.Sprintf("Check %s has %s with vlan filtering vids %d-%d", node, connection, minVlan, maxVlan))
+	Byf("Check %s has %s with vlan filtering vids %d-%d", node, connection, fmt.Sprint(minVlan), fmt.Sprint(maxVlan))
 	return Eventually(func() error {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
@@ -428,7 +432,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 }
 
 func vlansCardinality(node string, connection string) AsyncAssertion {
-	By(fmt.Sprintf("Getting vlan cardinality for node %s connection %s", node, connection))
+	Byf("Getting vlan cardinality for node %s connection %s", node, connection)
 	return Eventually(func() (int, error) {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
