@@ -87,6 +87,13 @@ func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 				validatePolicyNotInProgressHook,
 				validatePolicyNodeSelector,
 			)),
+		),
+	}
+}
+
+func validatePolicyCreateHook(cli client.Client) *webhook.Admission {
+	return &webhook.Admission{
+		Handler: admission.MultiValidatingHandler(
 			admission.HandlerFunc(validatePolicyHandler(
 				cli,
 				onCreate,

@@ -350,16 +350,29 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
-  - name: nodenetworkconfigurationpolicies-progress-validate.nmstate.io
+  - name: nodenetworkconfigurationpolicies-update-validate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
     sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
         namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-progress-validate"
+        path: "/nodenetworkconfigurationpolicies-update-validate"
     rules:
       - operations: ["UPDATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1","v1beta1"]
+        resources: ["nodenetworkconfigurationpolicies"]
+  - name: nodenetworkconfigurationpolicies-create-validate.nmstate.io
+    admissionReviewVersions: [ "v1", "v1beta1" ]
+    sideEffects: None
+    clientConfig:
+      service:
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
+        path: "/nodenetworkconfigurationpolicies-create-validate"
+    rules:
+      - operations: ["CREATE"]
         apiGroups: ["*"]
         apiVersions: ["v1alpha1","v1beta1"]
         resources: ["nodenetworkconfigurationpolicies"]
