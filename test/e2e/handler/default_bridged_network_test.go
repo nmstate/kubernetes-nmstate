@@ -12,6 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -46,7 +47,6 @@ func resetDefaultInterface() nmstate.State {
 `, primaryNic))
 }
 
-// FIXME: We have to fix this test https://github.com/nmstate/kubernetes-nmstate/issues/192
 var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
 	var (
 		DefaultNetwork = "default-network"
@@ -141,8 +141,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				err := restartNode(nodeToReboot)
 				Expect(err).ToNot(HaveOccurred())
 
-				Byf("Wait for nns to be refreshed at %s", nodeToReboot)
-				waitForNodeNetworkStateUpdate(nodeToReboot)
+				By("Wait for policy re-reconciled after node reboot")
+				enactmentConditionsStatusForPolicyEventually(nodeToReboot, DefaultNetwork).Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s after node reboot", nodeToReboot)
+				waitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot)
 				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot})
