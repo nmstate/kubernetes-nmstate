@@ -98,9 +98,6 @@ func ovsBrAndInternalPortAbsent(bridgeName string, internalPortName string) nmst
 }
 
 var _ = Describe("OVS Bridge", func() {
-	BeforeEach(func() {
-		skipIfNotNmstateFuture()
-	})
 	Context("when desiredState is updated with ovs-bridge with link aggregation port", func() {
 		BeforeEach(func() {
 			updateDesiredStateAndWait(ovsBrUpLAGEth1AndEth2(bridge1, bond1))

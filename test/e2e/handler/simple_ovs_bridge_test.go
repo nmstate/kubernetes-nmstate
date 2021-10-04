@@ -6,9 +6,6 @@ import (
 )
 
 var _ = Describe("Simple OVS bridge", func() {
-	BeforeEach(func() {
-		skipIfNotNmstateFuture()
-	})
 	Context("when desiredState is configured with an ovs bridge up", func() {
 		BeforeEach(func() {
 			updateDesiredStateAndWait(ovsBrUp(bridge1))
