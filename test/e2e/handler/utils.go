@@ -40,8 +40,8 @@ var (
 	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DEFAULT_MAXUNAVAILABLE)
 )
 
-func Byf(message string, arguments ...string) {
-	By(fmt.Sprintf(message, arguments))
+func Byf(message string, arguments ...interface{}) {
+	By(fmt.Sprintf(message, arguments...))
 }
 
 func interfacesName(interfaces []interface{}) []string {
@@ -258,7 +258,7 @@ func deleteConnection(nodesToModify []string, name string) []error {
 }
 
 func deleteDevice(nodesToModify []string, name string) []error {
-	Byf("Delete device %s  at nodes %v", name, fmt.Sprint(nodesToModify))
+	Byf("Delete device %s  at nodes %v", name, nodesToModify)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "device", "delete", name)
 	return errs
 }
@@ -361,7 +361,7 @@ func bridgeVlansAtNode(node string) (string, error) {
 }
 
 func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
-	Byf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, fmt.Sprint(vlan))
+	Byf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan)
 	return Eventually(func() []string {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
@@ -403,7 +403,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
 
-	Byf("Check %s has %s with vlan filtering vids %d-%d", node, connection, fmt.Sprint(minVlan), fmt.Sprint(maxVlan))
+	Byf("Check %s has %s with vlan filtering vids %d-%d", node, connection, minVlan, maxVlan)
 	return Eventually(func() error {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
