@@ -56,7 +56,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 		})
 		It("should update it with according to network state refresh duration", func() {
 			for node, originalNNS := range originalNNSs {
-				Byf("Checking timestamp against original one %s", originalNNS.Status.LastSuccessfulUpdateTime.String())
+				Byf("Checking timestamp against original one %s", originalNNS.Status.LastSuccessfulUpdateTime)
 				Eventually(func() time.Time {
 					currentNNS := nodeNetworkState(types.NamespacedName{Name: node})
 					return currentNNS.Status.LastSuccessfulUpdateTime.Time
