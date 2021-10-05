@@ -169,6 +169,9 @@ test-e2e-operator: manifests
 
 test-e2e: test-e2e-operator test-e2e-handler
 
+test-e2e-ocp: 
+	./hack/ocp-e2e-tests.sh
+
 cluster-up:
 	./cluster/up.sh
 
