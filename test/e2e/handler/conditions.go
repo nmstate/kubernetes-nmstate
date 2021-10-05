@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -137,6 +138,14 @@ func containPolicyDegraded() GomegaMatcher {
 		"Reason":  Not(BeEmpty()),
 		"Message": Not(BeEmpty()),
 	}))
+}
+
+func waitForPolicyTransitionUpdate(policy string) {
+	now := time.Now()
+	EventuallyWithOffset(1, func() time.Time {
+		availableCondition := policyConditionsStatus(policy).Find(shared.NodeNetworkConfigurationPolicyConditionAvailable)
+		return availableCondition.LastTransitionTime.Time
+	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Policy %s should have updated transition time", policy))
 }
 
 func waitForAvailableTestPolicy() {
