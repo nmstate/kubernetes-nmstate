@@ -19,6 +19,11 @@ export PRIMARY_NIC=enp2s0
 export FIRST_SECONDARY_NIC=enp3s0
 export SECOND_SECONDARY_NIC=enp4s0
 
+if oc get ns openshift-ovn-kubernetes &> /dev/null; then
+    # We are using OVNKubernetes -> use enp1s0 as primary nic
+    export PRIMARY_NIC=enp1s0
+fi
+
 make cluster-sync-operator
 # Will fail on subsequent runs, this is fine.
 oc create -f build/_output/manifests/scc.yaml || :
