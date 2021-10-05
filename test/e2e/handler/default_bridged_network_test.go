@@ -12,7 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -142,7 +141,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				Expect(err).ToNot(HaveOccurred())
 
 				By("Wait for policy re-reconciled after node reboot")
-				enactmentConditionsStatusForPolicyEventually(nodeToReboot, DefaultNetwork).Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s after node reboot", nodeToReboot)
+				waitForPolicyTransitionUpdate(DefaultNetwork)
 				waitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot)
