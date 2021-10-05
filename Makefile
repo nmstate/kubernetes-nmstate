@@ -185,6 +185,9 @@ test-e2e-operator: manifests $(GINKGO)
 
 test-e2e: test-e2e-operator test-e2e-handler
 
+test-e2e-ocp: 
+	./hack/ocp-e2e-tests.sh
+
 cluster-up:
 	./cluster/up.sh
 
@@ -263,4 +266,5 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build
+	bundle-build \
+	manifests
