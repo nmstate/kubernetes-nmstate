@@ -1,0 +1,52 @@
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 10-nmstate-hack-master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+      - contents: |
+          [Unit]
+          Description=NMState e2e hack
+          Wants=crio.service
+          Before=kubelet.service
+          After=crio.service
+          [Service]
+          Type=oneshot
+          ExecStart=/bin/bash -c "for i in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do nmcli con modify $i match.interface-name '!enp3s0, !enp4s0'; done"
+          [Install]
+          WantedBy=multi-user.target
+        enabled: true
+        name: nmstate-hack.service
+
+---
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: worker
+  name: 10-nmstate-hack-worker
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    systemd:
+      units:
+      - contents: |
+          [Unit]
+          Description=NMState e2e hack
+          Wants=crio.service
+          Before=kubelet.service
+          After=crio.service
+          [Service]
+          Type=oneshot
+          ExecStart=/bin/bash -c "for i in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do nmcli con modify $i match.interface-name '!enp3s0, !enp4s0'; done"
+          [Install]
+          WantedBy=multi-user.target
+        enabled: true
+        name: nmstate-hack.service
