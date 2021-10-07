@@ -1170,8 +1170,8 @@ github.com/prometheus/prometheus v1.8.2-0.20200110114423-1e64d757f711/go.mod h1:
 github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN5vPR5/q/twIROJvdqnQKDdil/s=
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/psampaz/go-mod-outdated v0.8.0/go.mod h1:o/o7wRSQWiSjKw8afZ7hq58J7IucGcSMbLWMG3veaQs=
-github.com/qinqon/kube-admission-webhook v0.16.0 h1:Ew1nn8Tmip4iB+xebFjNvgVyVp88g4Aj5IQY1d/CxQg=
-github.com/qinqon/kube-admission-webhook v0.16.0/go.mod h1:eYJw+S+JSprEMLzGNmE0GFIlSrBQw0lAVES/ZjgM2FI=
+github.com/qinqon/kube-admission-webhook v0.17.0 h1:JeJ3mlFLoSdjT6NfNc8bLp4xDiBEgg51vgmyz0PSq/M=
+github.com/qinqon/kube-admission-webhook v0.17.0/go.mod h1:eYJw+S+JSprEMLzGNmE0GFIlSrBQw0lAVES/ZjgM2FI=
 github.com/quasilyte/go-consistent v0.0.0-20190521200055-c6f3937de18c/go.mod h1:5STLWrekHfjyYwxBRVRXNOSewLJ3PWfDJd1VyTS21fI=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
