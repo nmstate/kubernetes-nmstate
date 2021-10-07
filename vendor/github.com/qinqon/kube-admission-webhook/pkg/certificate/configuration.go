@@ -92,6 +92,7 @@ func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 			}
 		}
 		cas = append(cas, caCert)
+		cas = triple.RemoveOldestCerts(cas, triple.CertsListSizeLimit)
 		return triple.EncodeCertsPEM(cas), nil
 	})
 	if err != nil {

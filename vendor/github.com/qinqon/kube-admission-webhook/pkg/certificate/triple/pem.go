@@ -38,6 +38,8 @@ const (
 	CertificateBlockType = "CERTIFICATE"
 	// CertificateRequestBlockType is a possible value for pem.Block.Type.
 	CertificateRequestBlockType = "CERTIFICATE REQUEST"
+	// CertsListSizeLimit sets the max size of a certs list
+	CertsListSizeLimit = 100
 )
 
 // EncodePublicKeyPEM returns PEM-encoded public data
@@ -79,6 +81,15 @@ func EncodeCertsPEM(certs []*x509.Certificate) []byte {
 		certsPEM = append(certsPEM, certPEM...)
 	}
 	return certsPEM
+}
+
+// RemoveOldestCerts removes old certs to avoid bloating
+func RemoveOldestCerts(certs []*x509.Certificate, maxListSize int) []*x509.Certificate {
+	if len(certs) <= maxListSize {
+		return certs
+	}
+	// oldest certs are in the start
+	return certs[len(certs)-maxListSize:]
 }
 
 // ParsePrivateKeyPEM returns a private key parsed from a PEM block in the supplied data.
