@@ -38,6 +38,8 @@ const (
 	CertificateBlockType = "CERTIFICATE"
 	// CertificateRequestBlockType is a possible value for pem.Block.Type.
 	CertificateRequestBlockType = "CERTIFICATE REQUEST"
+	// CertsListSizeLimit sets the max size of a certs list
+	CertsListSizeLimit = 100
 )
 
 // EncodePublicKeyPEM returns PEM-encoded public data
@@ -188,7 +190,7 @@ func ParseCertsPEM(pemCerts []byte) ([]*x509.Certificate, error) {
 	return certs, nil
 }
 
-func AddCertToPEM(cert *x509.Certificate, pemCerts []byte) ([]byte, error) {
+func AddCertToPEM(cert *x509.Certificate, pemCerts []byte, maxListSize int) ([]byte, error) {
 	certs := []*x509.Certificate{}
 	if len(pemCerts) > 0 {
 		var err error
@@ -200,7 +202,19 @@ func AddCertToPEM(cert *x509.Certificate, pemCerts []byte) ([]byte, error) {
 	// Prepend cert since it's what TLS expects [1]
 	// [1] https://github.com/golang/go/blob/master/src/crypto/tls/tls.go#L292-L294
 	certs = append([]*x509.Certificate{cert}, certs...)
+
+	certs = removeOldestCerts(certs, maxListSize)
+
 	return EncodeCertsPEM(certs), nil
+}
+
+// removeOldestCerts removes old certs to avoid bloating
+func removeOldestCerts(certs []*x509.Certificate, maxListSize int) []*x509.Certificate {
+	if len(certs) <= maxListSize {
+		return certs
+	}
+	// oldest certs are in the end
+	return certs[:maxListSize]
 }
 
 // parseRSAPublicKey parses a single RSA public key from the provided data
