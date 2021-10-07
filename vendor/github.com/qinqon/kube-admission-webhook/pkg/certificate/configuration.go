@@ -83,7 +83,7 @@ func (m *Manager) readyWebhookConfiguration() (client.Object, error) {
 func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 	m.log.Info("Reset CA bundle with one cert for webhook")
 	_, err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
-		return triple.AddCertToPEM(caCert, currentCABundle)
+		return triple.AddCertToPEM(caCert, currentCABundle, triple.CertsListSizeLimit)
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to update webhook CABundle")

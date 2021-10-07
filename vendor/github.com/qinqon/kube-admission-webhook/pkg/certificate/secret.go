@@ -39,7 +39,7 @@ func addTLSCertificate(data map[string][]byte, cert *x509.Certificate) error {
 
 	certsPEM, hasCerts := data[corev1.TLSCertKey]
 	if hasCerts {
-		certsPEMBytes, err := triple.AddCertToPEM(cert, []byte(certsPEM))
+		certsPEMBytes, err := triple.AddCertToPEM(cert, []byte(certsPEM), triple.CertsListSizeLimit)
 		if err != nil {
 			return err
 		}
@@ -110,6 +110,7 @@ func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.
 						Name:        secretKey.Name,
 						Namespace:   secretKey.Namespace,
 						Annotations: map[string]string{},
+						Labels:      m.extraLabels,
 					},
 					Type: secretType,
 				}

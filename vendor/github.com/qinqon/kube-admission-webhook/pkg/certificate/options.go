@@ -40,6 +40,9 @@ type Options struct {
 	// CertOverlapInterval the duration of service certificates at bundle if
 	// not set it will default to CertRotateInterval
 	CertOverlapInterval time.Duration
+
+	// ExtraLabels extra labels that will be added to created secrets
+	ExtraLabels map[string]string
 }
 
 func (o *Options) validate() error {
