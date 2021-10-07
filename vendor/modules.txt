@@ -593,6 +593,7 @@ github.com/sirupsen/logrus
 # github.com/spf13/cobra v1.1.3
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
+## explicit
 github.com/spf13/pflag
 # github.com/spiegel-im-spiegel/errs v1.0.2
 github.com/spiegel-im-spiegel/errs

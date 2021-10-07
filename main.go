@@ -35,12 +35,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	// +kubebuilder:scaffold:imports
 
 	"github.com/gofrs/flock"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -73,11 +75,21 @@ func init() {
 }
 
 func main() {
+	opt := zap.Options{}
+	opt.BindFlags(flag.CommandLine)
 	var logType string
-	flag.StringVar(&logType, "v", "production", "Log type (debug/production).")
-	flag.Parse()
+	pflag.StringVar(&logType, "v", "production", "Log type (debug/production).")
+	pflag.CommandLine.MarkDeprecated("v", "please use the --zap-devel flag for debug logging instead")
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(logType != "production")))
+	if logType == "debug" {
+		// workaround until --v flag got removed
+		flag.CommandLine.Set("zap-devel", "true")
+	}
+
+	logger := zap.New(zap.UseFlagOptions(&opt))
+	ctrl.SetLogger(logger)
 
 	// Lock only for handler, we can run old and new version of
 	// webhook without problems, policy status will be updated
