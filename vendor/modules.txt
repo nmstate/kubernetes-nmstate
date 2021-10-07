@@ -275,16 +275,6 @@ github.com/go-openapi/swag
 github.com/go-task/slim-sprig
 # github.com/gobuffalo/flect v0.2.2
 github.com/gobuffalo/flect
-# github.com/gobwas/glob v0.2.3
-## explicit
-github.com/gobwas/glob
-github.com/gobwas/glob/compiler
-github.com/gobwas/glob/match
-github.com/gobwas/glob/syntax
-github.com/gobwas/glob/syntax/ast
-github.com/gobwas/glob/syntax/lexer
-github.com/gobwas/glob/util/runes
-github.com/gobwas/glob/util/strings
 # github.com/godbus/dbus v4.1.0+incompatible
 github.com/godbus/dbus
 # github.com/gofrs/flock v0.8.0
@@ -583,7 +573,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/qinqon/kube-admission-webhook v0.16.0
+# github.com/qinqon/kube-admission-webhook v0.17.0
 ## explicit
 github.com/qinqon/kube-admission-webhook/pkg/certificate
 github.com/qinqon/kube-admission-webhook/pkg/certificate/triple

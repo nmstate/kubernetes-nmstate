@@ -7,7 +7,6 @@ require (
 	github.com/evanphx/json-patch v4.11.0+incompatible
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.4.0
-	github.com/gobwas/glob v0.2.3
 	github.com/gofrs/flock v0.8.0
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
@@ -19,7 +18,7 @@ require (
 	github.com/operator-framework/operator-registry v1.17.0
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
-	github.com/qinqon/kube-admission-webhook v0.16.0
+	github.com/qinqon/kube-admission-webhook v0.17.0
 	github.com/tidwall/gjson v1.8.0
 	github.com/tidwall/sjson v1.1.7
 	gopkg.in/yaml.v2 v2.4.0
