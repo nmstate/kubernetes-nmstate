@@ -22,6 +22,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.8.0
 	github.com/tidwall/sjson v1.1.7
+	go.uber.org/zap v1.17.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
