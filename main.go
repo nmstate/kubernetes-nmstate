@@ -24,6 +24,7 @@ import (
 	"os"
 	"time"
 
+	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -35,12 +36,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
 	// +kubebuilder:scaffold:imports
 
 	"github.com/gofrs/flock"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/pkg/errors"
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -73,11 +76,20 @@ func init() {
 }
 
 func main() {
+	opt := zap.Options{}
+	opt.BindFlags(flag.CommandLine)
 	var logType string
-	flag.StringVar(&logType, "v", "production", "Log type (debug/production).")
-	flag.Parse()
+	pflag.StringVar(&logType, "v", "production", "Log type (debug/production).")
+	pflag.CommandLine.MarkDeprecated("v", "please use the --zap-devel flag for debug logging instead")
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(logType != "production")))
+	if logType == "debug" {
+		// workaround until --v flag got removed
+		flag.CommandLine.Set("zap-devel", "true")
+	}
+
+	setupLogger(opt)
 
 	// Lock only for handler, we can run old and new version of
 	// webhook without problems, policy status will be updated
@@ -250,6 +262,15 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func setupLogger(opts zap.Options) {
+	opts.EncoderConfigOptions = append(opts.EncoderConfigOptions, func(ec *zapcore.EncoderConfig) {
+		ec.EncodeTime = zapcore.ISO8601TimeEncoder
+	})
+
+	logger := zap.New(zap.UseFlagOptions(&opts))
+	ctrl.SetLogger(logger)
 }
 
 // Start profiler on given port if ENABLE_PROFILER is True
