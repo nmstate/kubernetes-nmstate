@@ -148,7 +148,7 @@ status:
 As you can see, the object is cluster-wide (i.e. does not belong to a
 namespace). Its `name` reflects the name of the Node it represents.
 
-The main part of the object is located in `spec.currentState`. It contains the
+The main part of the object is located in `status.currentState`. It contains the
 DNS configuration, list of interfaces observed on the host and their
 configuration, and routes.
 
