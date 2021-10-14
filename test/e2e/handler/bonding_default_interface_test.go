@@ -106,8 +106,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			err := restartNode(nodeToReboot)
 			Expect(err).ToNot(HaveOccurred())
 
-			Byf("Wait for nns to be refreshed at %s", nodeToReboot)
-			waitForNodeNetworkStateUpdate(nodeToReboot)
+			By("Wait for policy re-reconciled after node reboot")
+			waitForPolicyTransitionUpdate(TestPolicy)
+			waitForAvailablePolicy(TestPolicy)
 
 			Byf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1)
 			verifyBondIsUpWithPrimaryNicIp(nodeToReboot, expectedBond, addressByNode[nodeToReboot])
