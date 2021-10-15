@@ -190,6 +190,8 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-handler
       annotations:
         description: kubernetes-nmstate-handler configures and presents node networking, reconciling declerative NNCP and reports with NNS and NNCE
+      nodeSelector:
+        kubernetes.io/os: linux
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # future nmstate/NM is in place.
