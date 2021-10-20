@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller selectors", func() {
@@ -36,7 +36,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller selectors", func() {
 				},
 			}
 
-			policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{
+			policy := nmstatev1.NodeNetworkConfigurationPolicy{
 				Spec: nmstate.NodeNetworkConfigurationPolicySpec{
 					NodeSelector: c.NodeSelector,
 				},

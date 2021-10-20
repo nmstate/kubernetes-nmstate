@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-func expectConditionsUnknown(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) {
+func expectConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) {
 	numberOfConditionTypes := len(shared.NodeNetworkConfigurationPolicyConditionTypes)
 	ExpectWithOffset(1, policy.Status.Conditions).To(HaveLen(numberOfConditionTypes))
 	for _, conditionType := range shared.NodeNetworkConfigurationPolicyConditionTypes {
@@ -40,12 +40,12 @@ func callHook(hook *webhook.Admission, request webhook.AdmissionRequest) webhook
 	return response
 }
 
-func callDeleteConditions(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) webhook.AdmissionResponse {
+func callDeleteConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) webhook.AdmissionResponse {
 	request := requestForPolicy(policy)
 	return callHook(deleteConditionsHook(), request)
 }
 
-func callSetConditionsUnknown(policy nmstatev1beta1.NodeNetworkConfigurationPolicy) webhook.AdmissionResponse {
+func callSetConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) webhook.AdmissionResponse {
 	request := requestForPolicy(policy)
 	return callHook(setConditionsUnknownHook(), request)
 }
@@ -53,7 +53,7 @@ func callSetConditionsUnknown(policy nmstatev1beta1.NodeNetworkConfigurationPoli
 var _ = Describe("NNCP Conditions Mutating Admission Webhook", func() {
 	var (
 		obtainedResponse webhook.AdmissionResponse
-		policy           = nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		policy           = nmstatev1.NodeNetworkConfigurationPolicy{}
 	)
 	Context("when setConditionsUnknown is called with nil conditions", func() {
 		BeforeEach(func() {

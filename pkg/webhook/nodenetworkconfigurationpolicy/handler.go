@@ -16,17 +16,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-type mutator func(nmstatev1beta1.NodeNetworkConfigurationPolicy) nmstatev1beta1.NodeNetworkConfigurationPolicy
-type validator func(nmstatev1beta1.NodeNetworkConfigurationPolicy, nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause
+type mutator func(nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy
+type validator func(nmstatev1.NodeNetworkConfigurationPolicy, nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause
 
-func mutatePolicyHandler(neededMutationFor func(nmstatev1beta1.NodeNetworkConfigurationPolicy) bool, mutate mutator) admission.HandlerFunc {
+func mutatePolicyHandler(neededMutationFor func(nmstatev1.NodeNetworkConfigurationPolicy) bool, mutate mutator) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/mutator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw
-		policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 		err := json.Unmarshal(original, &policy)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, "failed decoding policy: %s", string(original)))
@@ -48,16 +48,16 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1beta1.NodeNetworkConfig
 	}
 }
 
-func validatePolicyHandler(cli client.Client, neededValidationFor func(admissionv1.Operation, nmstatev1beta1.NodeNetworkConfigurationPolicy, nmstatev1beta1.NodeNetworkConfigurationPolicy) bool, validators ...validator) admission.HandlerFunc {
+func validatePolicyHandler(cli client.Client, neededValidationFor func(admissionv1.Operation, nmstatev1.NodeNetworkConfigurationPolicy, nmstatev1.NodeNetworkConfigurationPolicy) bool, validators ...validator) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/validator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw
-		policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 		err := json.Unmarshal(original, &policy)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, "failed decoding policy: %s", string(original)))
 		}
-		currentPolicy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		currentPolicy := nmstatev1.NodeNetworkConfigurationPolicy{}
 		err = cli.Get(context.TODO(), types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}, &currentPolicy)
 		if err != nil && !apierrors.IsNotFound(err) {
 			errMsg := fmt.Sprintf("failed getting policy %s", string(original))
@@ -88,6 +88,6 @@ func handlePolicyCauses(causes []metav1.StatusCause, name string) string {
 	return errMsg
 }
 
-func always(nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
+func always(nmstatev1.NodeNetworkConfigurationPolicy) bool {
 	return true
 }

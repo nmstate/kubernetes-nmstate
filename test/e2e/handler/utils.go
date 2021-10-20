@@ -21,6 +21,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
@@ -68,7 +69,7 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 }
 
 func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
-	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
 	err := testenv.Client.Get(context.TODO(), key, &policy)
@@ -144,9 +145,9 @@ func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState 
 	return state
 }
 
-func nodeNetworkConfigurationPolicy(policyName string) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+func nodeNetworkConfigurationPolicy(policyName string) nmstatev1.NodeNetworkConfigurationPolicy {
 	key := types.NamespacedName{Name: policyName}
-	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	EventuallyWithOffset(1, func() error {
 		return testenv.Client.Get(context.TODO(), key, &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
@@ -166,7 +167,7 @@ func deleteNodeNeworkStates() {
 
 func deletePolicy(name string) {
 	Byf("Deleting policy %s", name)
-	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	err := testenv.Client.Delete(context.TODO(), policy)
 	if apierrors.IsNotFound(err) {
@@ -176,7 +177,7 @@ func deletePolicy(name string) {
 
 	// Wait for policy to be removed
 	EventuallyWithOffset(1, func() bool {
-		err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1beta1.NodeNetworkConfigurationPolicy{})
+		err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1.NodeNetworkConfigurationPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
 

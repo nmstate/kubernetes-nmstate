@@ -5,7 +5,7 @@ metadata:
   generation: 1
   name: node01.test-policy
   ownerReferences:
-  - apiVersion: nmstate.io/v1beta1
+  - apiVersion: nmstate.io/v1
     kind: NodeNetworkConfigurationPolicy
     name: test-policy
     uid: d7e35a96-6094-4b2e-a899-9ee6a5eef157

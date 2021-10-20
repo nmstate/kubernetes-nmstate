@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
@@ -27,12 +28,12 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	}
 	DescribeTable("testing predicates",
 		func(c predicateCase) {
-			oldNNCP := nmstatev1beta1.NodeNetworkConfigurationPolicy{
+			oldNNCP := nmstatev1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: c.GenerationOld,
 				},
 			}
-			newNNCP := nmstatev1beta1.NodeNetworkConfigurationPolicy{
+			newNNCP := nmstatev1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Generation: c.GenerationNew,
 				},
@@ -80,9 +81,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			reconciler := NodeNetworkConfigurationPolicyReconciler{}
 			s := scheme.Scheme
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			)
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
 			)
 
 			node := corev1.Node{
@@ -90,7 +93,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 					Name: nodeName,
 				},
 			}
-			nncp := nmstatev1beta1.NodeNetworkConfigurationPolicy{
+			nncp := nmstatev1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
 				},
@@ -127,7 +130,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			Expect(err).To(BeNil())
 			Expect(res).To(Equal(c.expectedReconcileResult))
 
-			obtainedNNCP := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+			obtainedNNCP := nmstatev1.NodeNetworkConfigurationPolicy{}
 			cl.Get(context.TODO(), types.NamespacedName{Name: nncp.Name}, &obtainedNNCP)
 			Expect(obtainedNNCP.Status.UnavailableNodeCount).To(Equal(c.expectedUnavailableNodeCount))
 			if c.shouldUpdateUnavailableNodeCount {

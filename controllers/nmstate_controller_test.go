@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
@@ -48,7 +48,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				Operator: "Exists",
 			},
 		}
-		nmstate = nmstatev1beta1.NMState{
+		nmstate = nmstatev1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNMStateName,
 				UID:  "12345",
@@ -68,9 +68,9 @@ var _ = Describe("NMState controller reconcile", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-			&nmstatev1beta1.NMState{},
-			&nmstatev1beta1.NMStateList{},
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NMState{},
+			&nmstatev1.NMStateList{},
 		)
 		objs := []runtime.Object{&nmstate}
 		// Create a fake client to mock API calls.
@@ -104,7 +104,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		It("and should delete the second one", func() {
 			_, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			nmstateList := &nmstatev1beta1.NMStateList{}
+			nmstateList := &nmstatev1.NMStateList{}
 			err = cl.List(context.TODO(), nmstateList, &client.ListOptions{})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(nmstateList.Items)).To(Equal(1))
@@ -147,8 +147,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NMState{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
 			)
 			// set NodeSelector field in operator Spec
 			nmstate.Spec.NodeSelector = handlerNodeSelector
@@ -186,8 +186,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NMState{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
 			)
 			// set Tolerations field in operator Spec
 			nmstate.Spec.Tolerations = handlerTolerations
@@ -221,8 +221,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NMState{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
 			)
 			// set InfraNodeSelector field in operator Spec
 			nmstate.Spec.InfraNodeSelector = infraNodeSelector
@@ -269,8 +269,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NMState{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
 			)
 			// set Tolerations field in operator Spec
 			nmstate.Spec.InfraTolerations = infraTolerations
@@ -311,8 +311,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NMState{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
 			)
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
@@ -340,8 +340,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		BeforeEach(func() {
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NMState{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
 			)
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
