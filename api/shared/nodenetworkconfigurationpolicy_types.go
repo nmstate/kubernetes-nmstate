@@ -1,6 +1,9 @@
 package shared
 
-import "k8s.io/apimachinery/pkg/util/intstr"
+import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+)
 
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicySpec struct {
@@ -28,6 +31,9 @@ type NodeNetworkConfigurationPolicyStatus struct {
 	// processing a NodeNetworkConfigurationPolicy
 	// +optional
 	UnavailableNodeCount int `json:"unavailableNodeCount,omitempty" optional:"true"`
+	// LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount update
+	// +optional
+	LastUnavailableNodeCountUpdate *metav1.Time `json:"lastUnavailableNodeCountUpdate,omitempty" optional:"true"`
 }
 
 const (

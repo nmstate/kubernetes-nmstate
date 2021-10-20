@@ -90,6 +90,11 @@ spec:
                   - type
                   type: object
                 type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
               unavailableNodeCount:
                 description: UnavailableNodeCount represents the total number of potentially
                   unavailable nodes that are processing a NodeNetworkConfigurationPolicy
@@ -172,6 +177,11 @@ spec:
                   - type
                   type: object
                 type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
               unavailableNodeCount:
                 description: UnavailableNodeCount represents the total number of potentially
                   unavailable nodes that are processing a NodeNetworkConfigurationPolicy
