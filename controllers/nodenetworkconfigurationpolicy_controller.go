@@ -53,6 +53,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
 )
 
@@ -180,7 +181,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 		return ctrl.Result{}, nil
 	}
 
-	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
+	if r.shouldIncrementUnavailableNodeCount(instance, previousConditions) {
 		err = r.incrementUnavailableNodeCount(instance)
 		if err != nil {
 			if apierrors.IsConflict(err) {
@@ -335,8 +336,10 @@ func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(poli
 	return nil
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNodeCount(conditions *nmstateapi.ConditionList) bool {
-	return !enactmentstatus.IsProgressing(conditions)
+func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy, conditions *nmstateapi.ConditionList) bool {
+	return !enactmentstatus.IsProgressing(conditions) &&
+		(policy.Status.LastUnavailableNodeCountUpdate == nil ||
+			time.Now().Sub(policy.Status.LastUnavailableNodeCountUpdate.Time) < (nmstate.DesiredStateConfigurationTimeout+probe.ProbesTotalTimeout))
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) error {
@@ -352,6 +355,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	if policy.Status.UnavailableNodeCount >= maxUnavailable {
 		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("maximal number of %d nodes are already processing policy configuration", policy.Status.UnavailableNodeCount))
 	}
+	policy.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now()}
 	policy.Status.UnavailableNodeCount += 1
 	err = r.Client.Status().Update(context.TODO(), policy)
 	if err != nil {
@@ -382,6 +386,7 @@ func tryDecrementingUnavailableNodeCount(statusWriterClient client.StatusClient,
 		if instance.Status.UnavailableNodeCount <= 0 {
 			return fmt.Errorf("no unavailable nodes")
 		}
+		instance.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now()}
 		instance.Status.UnavailableNodeCount -= 1
 		return statusWriterClient.Status().Update(context.TODO(), instance)
 	})
