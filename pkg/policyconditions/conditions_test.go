@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
@@ -39,10 +40,10 @@ func e(node string, policy string, conditionsSetters ...func(*nmstate.ConditionL
 	}
 }
 
-func p(conditionsSetter func(*nmstate.ConditionList, string), message string) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+func p(conditionsSetter func(*nmstate.ConditionList, string), message string) nmstatev1.NodeNetworkConfigurationPolicy {
 	conditions := nmstate.ConditionList{}
 	conditionsSetter(&conditions, message)
-	return nmstatev1beta1.NodeNetworkConfigurationPolicy{
+	return nmstatev1.NodeNetworkConfigurationPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "policy1",
 		},
@@ -52,7 +53,7 @@ func p(conditionsSetter func(*nmstate.ConditionList, string), message string) nm
 	}
 }
 
-func s(nodeSelector map[string]string, policy nmstatev1beta1.NodeNetworkConfigurationPolicy) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+func s(nodeSelector map[string]string, policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
 	policy.Spec.NodeSelector = nodeSelector
 	return policy
 }
@@ -127,7 +128,7 @@ var _ = Describe("Policy Conditions", func() {
 	type ConditionsCase struct {
 		Enactments []nmstatev1beta1.NodeNetworkConfigurationEnactment
 		Nodes      []corev1.Node
-		Policy     nmstatev1beta1.NodeNetworkConfigurationPolicy
+		Policy     nmstatev1.NodeNetworkConfigurationPolicy
 		Pods       []corev1.Pod
 	}
 	DescribeTable("the policy overall condition",
@@ -135,9 +136,11 @@ var _ = Describe("Policy Conditions", func() {
 			objs := []runtime.Object{}
 			s := scheme.Scheme
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			)
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
 			)
 
 			for i, _ := range c.Enactments {

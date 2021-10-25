@@ -13,6 +13,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -106,7 +107,7 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 	// conflict can denote that the calculated policy conditions
 	// are now not accurate.
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 		err := policyReader.Get(context.TODO(), policyKey, policy)
 		if err != nil {
 			return errors.Wrap(err, "getting policy failed")
@@ -169,7 +170,7 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 func Reset(cli client.Client, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 		err := cli.Get(context.TODO(), policyKey, policy)
 		if err != nil {
 			return errors.Wrap(err, "getting policy failed")

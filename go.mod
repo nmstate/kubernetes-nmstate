@@ -31,7 +31,7 @@ require (
 	k8s.io/release v0.9.0
 	kubevirt.io/qe-tools v0.1.7
 	sigs.k8s.io/controller-runtime v0.9.0
-	sigs.k8s.io/controller-tools v0.5.0
+	sigs.k8s.io/controller-tools v0.6.0
 	sigs.k8s.io/yaml v1.2.0
 )
 

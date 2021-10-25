@@ -2,7 +2,7 @@ package node
 
 import (
 	"context"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
@@ -42,7 +42,7 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 	return filteredNodes, nil
 }
 
-func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
+func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1.NodeNetworkConfigurationPolicy) (int, error) {
 	enactmentsTotal, _, err := enactment.CountByPolicy(cli, policy)
 	if err != nil {
 		return 0, err

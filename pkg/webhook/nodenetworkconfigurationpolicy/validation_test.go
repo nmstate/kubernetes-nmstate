@@ -8,14 +8,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 )
 
-func p(nodeSelector map[string]string, conditionsSetter func(*shared.ConditionList, string), message string) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+func p(nodeSelector map[string]string, conditionsSetter func(*shared.ConditionList, string), message string) nmstatev1.NodeNetworkConfigurationPolicy {
 	conditions := shared.ConditionList{}
 	conditionsSetter(&conditions, message)
-	return nmstatev1beta1.NodeNetworkConfigurationPolicy{
+	return nmstatev1.NodeNetworkConfigurationPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "testPolicy",
 		},
@@ -30,7 +30,7 @@ func p(nodeSelector map[string]string, conditionsSetter func(*shared.ConditionLi
 
 var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 	var allNodes = map[string]string{}
-	var testPolicy = nmstatev1beta1.NodeNetworkConfigurationPolicy{
+	var testPolicy = nmstatev1.NodeNetworkConfigurationPolicy{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "testPolicy",
 		},
@@ -38,9 +38,9 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 		Status: shared.NodeNetworkConfigurationPolicyStatus{},
 	}
 	type ValidationWebhookCase struct {
-		policy           nmstatev1beta1.NodeNetworkConfigurationPolicy
-		currentPolicy    nmstatev1beta1.NodeNetworkConfigurationPolicy
-		validationFn     func(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, current nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause
+		policy           nmstatev1.NodeNetworkConfigurationPolicy
+		currentPolicy    nmstatev1.NodeNetworkConfigurationPolicy
+		validationFn     func(policy nmstatev1.NodeNetworkConfigurationPolicy, current nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause
 		validationResult []metav1.StatusCause
 	}
 	DescribeTable("the NNCP conditions", func(v ValidationWebhookCase) {
@@ -108,7 +108,7 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 			validationResult: []metav1.StatusCause{},
 		}),
 		Entry("policy has name with length beyond the limit", ValidationWebhookCase{
-			policy:       nmstatev1beta1.NodeNetworkConfigurationPolicy{ObjectMeta: metav1.ObjectMeta{Name: "this-is-longer-than-sixty-three-characters-hostname-bar-bar-bar.foo.com"}},
+			policy:       nmstatev1.NodeNetworkConfigurationPolicy{ObjectMeta: metav1.ObjectMeta{Name: "this-is-longer-than-sixty-three-characters-hostname-bar-bar-bar.foo.com"}},
 			validationFn: validatePolicyName,
 			validationResult: []metav1.StatusCause{{
 				Type:    metav1.CauseTypeFieldValueInvalid,
@@ -117,7 +117,7 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 			}},
 		}),
 		Entry("policy has name with invalid format", ValidationWebhookCase{
-			policy:       nmstatev1beta1.NodeNetworkConfigurationPolicy{ObjectMeta: metav1.ObjectMeta{Name: "foo+bar"}},
+			policy:       nmstatev1.NodeNetworkConfigurationPolicy{ObjectMeta: metav1.ObjectMeta{Name: "foo+bar"}},
 			validationFn: validatePolicyName,
 			validationResult: []metav1.StatusCause{{
 				Type:    metav1.CauseTypeFieldValueInvalid,

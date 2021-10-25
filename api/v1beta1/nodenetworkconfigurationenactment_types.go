@@ -5,6 +5,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
@@ -33,7 +34,7 @@ type NodeNetworkConfigurationEnactment struct {
 	Status shared.NodeNetworkConfigurationEnactmentStatus `json:"status,omitempty"`
 }
 
-func NewEnactment(node *corev1.Node, policy NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+func NewEnactment(node *corev1.Node, policy nmstatev1.NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: shared.EnactmentKey(node.Name, policy.Name).Name,

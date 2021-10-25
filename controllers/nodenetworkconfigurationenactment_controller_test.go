@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstateenactment "github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
@@ -25,9 +26,9 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 	var (
 		cl         client.Client
 		reconciler NodeNetworkConfigurationEnactmentReconciler
-		policy     = nmstatev1beta1.NodeNetworkConfigurationPolicy{
+		policy     = nmstatev1.NodeNetworkConfigurationPolicy{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "nmstate.io/v1beta1",
+				APIVersion: "nmstate.io/v1",
 				Kind:       "NodeNetworkConfigurationPolicy",
 			},
 			ObjectMeta: metav1.ObjectMeta{
@@ -50,7 +51,9 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 		s := scheme.Scheme
 		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
-			&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
+		)
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NodeNetworkConfigurationPolicy{},
 		)
 
 		objs := []runtime.Object{&policy, &enactment}

@@ -8,13 +8,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
 var _ = Describe("NodeNetworkEnactment", func() {
 	var (
-		nncp = NodeNetworkConfigurationPolicy{
+		nncp = nmstatev1.NodeNetworkConfigurationPolicy{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "nmstate.io/v1beta1",
+				APIVersion: "nmstate.io/v1",
 				Kind:       "NodeNetworkConfigurationPolicy",
 			},
 			ObjectMeta: metav1.ObjectMeta{

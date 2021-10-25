@@ -39,7 +39,7 @@ import (
 	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
@@ -66,12 +66,12 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
 
 	// Fetch the NMState instance
-	instanceList := &nmstatev1beta1.NMStateList{}
+	instanceList := &nmstatev1.NMStateList{}
 	err := r.Client.List(context.TODO(), instanceList, &client.ListOptions{})
 	if err != nil {
 		return ctrl.Result{}, errors.Wrap(err, "failed listing all NMState instances")
 	}
-	instance := &nmstatev1beta1.NMState{}
+	instance := &nmstatev1.NMState{}
 	err = r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -131,23 +131,23 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1beta1.NMState{}).
+		For(&nmstatev1.NMState{}).
 		Complete(r)
 }
 
-func (r *NMStateReconciler) applyCRDs(instance *nmstatev1beta1.NMState) error {
+func (r *NMStateReconciler) applyCRDs(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	return r.renderAndApply(instance, data, "crds", false)
 }
 
-func (r *NMStateReconciler) applyNamespace(instance *nmstatev1beta1.NMState) error {
+func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "namespace", false)
 }
 
-func (r *NMStateReconciler) applyRBAC(instance *nmstatev1beta1.NMState) error {
+func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
@@ -156,7 +156,7 @@ func (r *NMStateReconciler) applyRBAC(instance *nmstatev1beta1.NMState) error {
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
-func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error {
+func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	// Register ToYaml template method
 	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
@@ -224,7 +224,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1beta1.NMState) error
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
-func (r *NMStateReconciler) renderAndApply(instance *nmstatev1beta1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
+func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
 	var err error
 	objs := []*uns.Unstructured{}
 

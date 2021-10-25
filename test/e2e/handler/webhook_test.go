@@ -9,7 +9,7 @@ import (
 
 	"k8s.io/client-go/util/retry"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
@@ -35,7 +35,7 @@ var _ = Describe("Mutating Admission Webhook", func() {
 		})
 		Context("and we updated it", func() {
 			var (
-				oldPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy
+				oldPolicy nmstatev1.NodeNetworkConfigurationPolicy
 			)
 			BeforeEach(func() {
 				oldPolicy = nodeNetworkConfigurationPolicy(TestPolicy)
@@ -80,7 +80,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 	Context("When a policy with too long name is created", func() {
 		const tooLongName = "this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com"
 		It("Should deny creating policy with name longer than 63 characters", func() {
-			policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+			policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 			policy.Name = tooLongName
 			err := testenv.Client.Create(context.TODO(), &policy)
 			Expect(err).To(MatchError("admission webhook \"nodenetworkconfigurationpolicies-create-validate.nmstate.io\" denied the request: failed to admit NodeNetworkConfigurationPolicy this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com: message: invalid policy name: \"this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com\": must be no more than 63 characters. "))

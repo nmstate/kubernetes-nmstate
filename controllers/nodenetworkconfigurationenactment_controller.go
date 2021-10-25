@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
@@ -67,7 +68,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 	}
 
 	policyName := enactmentInstance.Labels[shared.EnactmentPolicyLabel]
-	policyInstance := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	policyInstance := &nmstatev1.NodeNetworkConfigurationPolicy{}
 	err = r.Client.Get(context.TODO(), types.NamespacedName{Name: policyName}, policyInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {

@@ -47,6 +47,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/controllers"
@@ -70,6 +71,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
+	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
