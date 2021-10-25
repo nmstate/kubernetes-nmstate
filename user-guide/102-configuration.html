@@ -367,7 +367,7 @@ NICs <code class="language-plaintext highlighter-rouge">eth1</code> and <code cl
 <p><a href="/kubernetes-nmstate/user-guide/bond0-eth1-eth2_up.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">bond0-eth1-eth2</span>
@@ -595,7 +595,7 @@ interface to <code class="language-plaintext highlighter-rouge">state: absent</c
 <p><a href="/kubernetes-nmstate/user-guide/bond0-eth1-eth2_absent.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">bond0-eth1-eth2</span>
@@ -673,7 +673,7 @@ configuration.</p>
 <p><a href="/kubernetes-nmstate/user-guide/eth1-eth2_up.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
@@ -687,7 +687,7 @@ configuration.</p>
         <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
         <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
 <span class="nn">---</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
@@ -772,7 +772,7 @@ all the key-value pairs in the <code class="language-plaintext highlighter-rouge
 <p><a href="/kubernetes-nmstate/user-guide/vlan100_node01_up.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">vlan100</span>
@@ -829,7 +829,7 @@ can be applying a policy at a time.</p>
 <p>The following policy specifies that up to 3 nodes may be progressing concurrently:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">linux-bridge-maxunavailable</span>
