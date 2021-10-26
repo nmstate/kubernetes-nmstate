@@ -146,22 +146,16 @@ generate: gen-k8s gen-crds gen-rbac
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-handler-manager: $(GO)
-	hack/build-manager.sh handler $(BIN_DIR)
-
-operator-manager: $(GO)
-	hack/build-manager.sh operator $(BIN_DIR)
-
 handler: SKIP_PUSH=true
 handler: push-handler
 
-push-handler: handler-manager
+push-handler:
 	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/Dockerfile --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
-push-operator: operator-manager
+push-operator:
 	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
 
 push: push-handler push-operator

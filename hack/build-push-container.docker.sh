@@ -4,6 +4,7 @@ set -x -o errexit -o nounset -o pipefail
 
 hack/init-buildx.sh
 
+GOVERSION=$(grep "^go " go.mod |awk '{print $2}')
 ARCHS=${ARCHS:-$(go env GOARCH)}
 PLATFORM=""
 
@@ -19,5 +20,5 @@ PUSH=--push
 if [ "$SKIP_PUSH" == "true" ]; then
     PUSH=""
 fi
-docker buildx build --platform ${PLATFORM} $@ -t ${IMAGE} $PUSH
+docker buildx build --build-arg GOVERSION=${GOVERSION} --platform ${PLATFORM} $@ -t ${IMAGE} $PUSH
 

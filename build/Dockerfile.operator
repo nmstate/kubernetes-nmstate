@@ -1,8 +1,21 @@
+ARG GOVERSION
+FROM golang:$GOVERSION as manager
+
+COPY go.* .
+COPY ./api ./api
+COPY ./cmd ./cmd
+COPY ./controllers ./controllers
+COPY ./pkg ./pkg
+COPY ./vendor ./vendor
+
+ENV GOPATH=""
+ENV GOFLAGS=-mod=vendor
+
+RUN go build -o manager ./cmd/operator
+
 FROM registry.access.redhat.com/ubi8/ubi-minimal
-ARG TARGETARCH
 
-COPY build/_output/bin/operator.manager.linux-$TARGETARCH /usr/local/bin/manager
-
+COPY --from=manager /go/manager /usr/local/bin/manager
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
 COPY deploy/handler/namespace.yaml /bindata/kubernetes-nmstate/namespace/
 COPY deploy/handler/operator.yaml /bindata/kubernetes-nmstate/handler/handler.yaml
