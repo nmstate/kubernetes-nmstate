@@ -1,7 +1,7 @@
 FROM registry.svc.ci.openshift.org/openshift/release:golang-1.15 AS builder
 WORKDIR /go/src/github.com/openshift/kubernetes-nmstate
 COPY . .
-RUN GO111MODULE=on go build --mod=vendor -o build/_output/bin/manager main.go
+RUN GO111MODULE=on go build --mod=vendor -o build/_output/bin/manager ./cmd/operator
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 

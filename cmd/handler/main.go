@@ -50,7 +50,7 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	"github.com/nmstate/kubernetes-nmstate/controllers"
+	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
 	"github.com/nmstate/kubernetes-nmstate/pkg/names"
@@ -191,15 +191,6 @@ func main() {
 	} else if environment.IsWebhook() {
 		if err := webhook.AddToManager(mgr); err != nil {
 			setupLog.Error(err, "Cannot initialize webhook")
-			os.Exit(1)
-		}
-	} else if environment.IsOperator() {
-		if err = (&controllers.NMStateReconciler{
-			Client: mgr.GetClient(),
-			Log:    ctrl.Log.WithName("controllers").WithName("NMState"),
-			Scheme: mgr.GetScheme(),
-		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create NMState controller", "controller", "NMState")
 			os.Exit(1)
 		}
 	} else if environment.IsHandler() {
