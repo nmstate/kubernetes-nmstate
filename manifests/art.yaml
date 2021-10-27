@@ -2,8 +2,8 @@ updates:
   - file: "{MAJOR}.{MINOR}/kubernetes-nmstate-operator.v{MAJOR}.{MINOR}.0.clusterserviceversion.yaml" # relative to this file
     update_list:
     # replace metadata.name value
-    - search: "kubernetesnmstateoperator.v{MAJOR}.{MINOR}.0"
-      replace: "kubernetesnmstateoperator.{FULL_VER}"
+    - search: "kubernetes-nmstate-operator.v{MAJOR}.{MINOR}.0"
+      replace: "kubernetes-nmstate-operator.{FULL_VER}"
     # replace entire version line, otherwise would replace {MAJOR}.{MINOR}.0 anywhere
     - search: "version: {MAJOR}.{MINOR}.0"
       replace: "version: {FULL_VER}"
