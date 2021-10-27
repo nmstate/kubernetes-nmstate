@@ -213,8 +213,6 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = corev1.Affinity{}
-	_, enableOVS := os.LookupEnv("ENABLE_OVS")
-	data.Data["EnableOVS"] = enableOVS
 	// TODO: This is just a place holder to make template renderer happy
 	//       proper variable has to be read from env or CR
 	data.Data["CARotateInterval"] = ""
