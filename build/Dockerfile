@@ -5,7 +5,7 @@ ARG TARGETARCH
 
 RUN env
 
-COPY build/_output/bin/manager.linux-$TARGETARCH /usr/local/bin/manager
+COPY build/_output/bin/handler.manager.linux-$TARGETARCH /usr/local/bin/manager
 
 RUN dnf install -b -y dnf-plugins-core && \
     dnf copr enable -y networkmanager/$NM_COPR_REPO && \

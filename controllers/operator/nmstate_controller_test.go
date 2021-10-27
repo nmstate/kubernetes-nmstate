@@ -410,14 +410,14 @@ func copyManifest(src, dst string) error {
 
 func copyManifests(manifestsDir string) error {
 	srcToDest := map[string]string{
-		"../deploy/crds/nmstate.io_nodenetworkconfigurationenactments.yaml": "kubernetes-nmstate/crds/",
-		"../deploy/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml":   "kubernetes-nmstate/crds/",
-		"../deploy/crds/nmstate.io_nodenetworkstates.yaml":                  "kubernetes-nmstate/crds/",
-		"../deploy/handler/namespace.yaml":                                  "kubernetes-nmstate/namespace/",
-		"../deploy/handler/operator.yaml":                                   "kubernetes-nmstate/handler/handler.yaml",
-		"../deploy/handler/service_account.yaml":                            "kubernetes-nmstate/rbac/",
-		"../deploy/handler/role.yaml":                                       "kubernetes-nmstate/rbac/",
-		"../deploy/handler/role_binding.yaml":                               "kubernetes-nmstate/rbac/",
+		"../../deploy/crds/nmstate.io_nodenetworkconfigurationenactments.yaml": "kubernetes-nmstate/crds/",
+		"../../deploy/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml":   "kubernetes-nmstate/crds/",
+		"../../deploy/crds/nmstate.io_nodenetworkstates.yaml":                  "kubernetes-nmstate/crds/",
+		"../../deploy/handler/namespace.yaml":                                  "kubernetes-nmstate/namespace/",
+		"../../deploy/handler/operator.yaml":                                   "kubernetes-nmstate/handler/handler.yaml",
+		"../../deploy/handler/service_account.yaml":                            "kubernetes-nmstate/rbac/",
+		"../../deploy/handler/role.yaml":                                       "kubernetes-nmstate/rbac/",
+		"../../deploy/handler/role_binding.yaml":                               "kubernetes-nmstate/rbac/",
 	}
 
 	for src, dest := range srcToDest {
