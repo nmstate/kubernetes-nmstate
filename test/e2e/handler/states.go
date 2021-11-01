@@ -161,7 +161,7 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstate.State {
 		bridgeName, firstSecondaryNic))
 }
 
-func ifaceUpWithStaticIP(iface string, ipAddress string) nmstate.State {
+func ifaceUpWithStaticIP(iface string, ipAddress string, prefixLen string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
@@ -169,10 +169,24 @@ func ifaceUpWithStaticIP(iface string, ipAddress string) nmstate.State {
       ipv4:
         address:
         - ip: %s
-          prefix-length: 24
+          prefix-length: %s
         dhcp: false
         enabled: true
-`, iface, ipAddress))
+`, iface, ipAddress, prefixLen))
+}
+
+func ifaceUpWithStaticIPAbsent(firstSecondaryNic, ipAddress, prefixLen string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+    ipv4:
+      address:
+      - ip: %s
+        prefix-length: %s
+      state: absent
+      enabled: false
+`, firstSecondaryNic, ipAddress, prefixLen))
 }
 
 func ifaceUpWithVlanUp(iface string, vlanId string) nmstate.State {

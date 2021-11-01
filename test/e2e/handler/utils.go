@@ -316,6 +316,18 @@ func ipAddressForNodeInterfaceEventually(node string, iface string) AsyncAsserti
 	}, ReadTimeout, ReadInterval)
 }
 
+func ipV6AddressForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+	return Eventually(func() string {
+		return ipv6Address(node, iface)
+	}, ReadTimeout, ReadInterval)
+}
+
+func routeDestForNodeInterfaceEventually(node string, destIp string) AsyncAssertion {
+	return Eventually(func() string {
+		return routeDest(node, destIp)
+	}, ReadTimeout, ReadInterval)
+}
+
 func vlanForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
 	return Eventually(func() string {
 		return vlan(node, iface)
@@ -521,6 +533,11 @@ func ipv4Address(node string, iface string) string {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
+func ipv6Address(node string, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv6.address.0.ip", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
 func macAddress(node string, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
@@ -529,6 +546,18 @@ func macAddress(node string, iface string) string {
 func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	return Eventually(func() string {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
+		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+	}, 15*time.Second, 1*time.Second)
+}
+
+func routeDest(node string, destIp string) string {
+	path := fmt.Sprintf("routes.running.#(destination==\"%s\")", destIp)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
+func routeNextHopInterface(node string, destIp string) AsyncAssertion {
+	return Eventually(func() string {
+		path := fmt.Sprintf("routes.running.#(destination==\"%s\").next-hop-interface", destIp)
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
