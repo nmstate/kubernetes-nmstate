@@ -590,3 +590,25 @@ func maxUnavailableNodes() int {
 	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DEFAULT_MAXUNAVAILABLE))
 	return m
 }
+
+func dnsResolverServerForNodeEventually(node string) AsyncAssertion {
+	return Eventually(func() []string {
+		return dnsResolverForNode(node, "dns-resolver.running.server")
+	}, ReadTimeout, ReadInterval)
+}
+
+func dnsResolverSearchForNodeEventually(node string) AsyncAssertion {
+	return Eventually(func() []string {
+		return dnsResolverForNode(node, "dns-resolver.running.search")
+	}, ReadTimeout, ReadInterval)
+}
+
+func dnsResolverForNode(node string, path string) []string {
+	var arr []string
+
+	elemList := gjson.ParseBytes(currentStateJSON(node)).Get(path).Array()
+	for _, elem := range elemList {
+		arr = append(arr, elem.String())
+	}
+	return arr
+}
