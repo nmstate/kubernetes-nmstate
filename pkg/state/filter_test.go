@@ -341,4 +341,32 @@ routes:
 		})
 	})
 
+	Context("With DNS Resolver populated", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`interfaces:
+  - name: eth1
+    state: up
+    type: ethernet
+dns-resolver:
+  config:
+    search:
+    - example.com
+    - example.org
+    server:
+    - 2001:4860:4860::8888
+    - 8.8.8.8
+  running:
+    search:
+    - example.running.com
+    - example.running.org
+    server:
+    - 8.8.4.4`)
+		})
+
+		It("Should keep the DNS Resolver intact", func() {
+			returnedState, err := filterOut(state, ifaceStates)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(state))
+		})
+	})
 })
