@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"fmt"
+
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	. "github.com/onsi/ginkgo"
@@ -15,15 +17,15 @@ func createInterfaceWithMismatchedName() nmstate.State {
 }
 
 func createInterfaceWithInvalidField() nmstate.State {
-	return nmstate.NewState(`interfaces:
-  - name: eth0
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
     type: ethernet
-    invalid_state: up`)
+    invalid_state: up`, primaryNic))
 }
 
 func createInterfaceWithIncorrectIP() nmstate.State {
-	return nmstate.NewState(`interfaces:
-  - name: eth0
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
     type: ethernet
     state: up
     ipv4:
@@ -31,7 +33,7 @@ func createInterfaceWithIncorrectIP() nmstate.State {
       - ip: "192.168.45.33"
         prefix-length: 24
       dhcp: false
-      enabled: true`)
+      enabled: true`, primaryNic))
 }
 
 func createPolicyAndWaitForEnactmentCondition(policy string, desiredState func() nmstate.State, nodeHostname string) {
