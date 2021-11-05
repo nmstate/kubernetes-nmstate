@@ -1,3 +1,14 @@
+## 2.0.0
+
+See [https://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md](https://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md)
+
+## 1.16.5
+
+Ginkgo 2.0 now has a Release Candidate.  1.16.5 advertises the existence of the RC.
+1.16.5 deprecates GinkgoParallelNode in favor of GinkgoParallelProcess
+
+You can silence the RC advertisement by setting an `ACK_GINKG_RC=true` environment variable or creating a file in your home directory called `.ack-ginkgo-rc`
+
 ## 1.16.4
 
 ### Fixes
@@ -28,7 +39,6 @@
 
 - Add slim-sprig template functions to bootstrap/generate (#775) [9162b86]
 
-### Fixes
 - Fix accidental reference to 1488 (#784) [9fb7fe4]
 
 ## 1.15.2

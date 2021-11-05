@@ -11,8 +11,8 @@ require (
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/hashicorp/go-multierror v1.1.0 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.13.0
+	github.com/onsi/ginkgo v1.16.6-0.20211104175244-d43eb1e83628
+	github.com/onsi/gomega v1.15.0
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2 // indirect
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.17.0

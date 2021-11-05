@@ -2,9 +2,14 @@ package formatter
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 )
+
+// ColorableStdOut and ColorableStdErr enable color output support on Windows
+var ColorableStdOut = newColorable(os.Stdout)
+var ColorableStdErr = newColorable(os.Stderr)
 
 const COLS = 80
 
@@ -100,13 +105,13 @@ func (f Formatter) Fiw(indentation uint, maxWidth uint, format string, args ...i
 				outLines = append(outLines, line)
 				continue
 			}
-			outWords := []string{}
-			length := uint(0)
 			words := strings.Split(line, " ")
-			for _, word := range words {
+			outWords := []string{words[0]}
+			length := uint(f.length(words[0]))
+			for _, word := range words[1:] {
 				wordLength := f.length(word)
-				if length+wordLength <= maxWidth {
-					length += wordLength
+				if length+wordLength+1 <= maxWidth {
+					length += wordLength + 1
 					outWords = append(outWords, word)
 					continue
 				}

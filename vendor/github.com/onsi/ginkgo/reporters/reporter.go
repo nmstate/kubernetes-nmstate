@@ -1,15 +1,19 @@
 package reporters
 
 import (
-	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/types"
 )
 
 type Reporter interface {
-	SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary)
-	BeforeSuiteDidRun(setupSummary *types.SetupSummary)
-	SpecWillRun(specSummary *types.SpecSummary)
-	SpecDidComplete(specSummary *types.SpecSummary)
-	AfterSuiteDidRun(setupSummary *types.SetupSummary)
-	SpecSuiteDidEnd(summary *types.SuiteSummary)
+	SuiteWillBegin(report types.Report)
+	WillRun(report types.SpecReport)
+	DidRun(report types.SpecReport)
+	SuiteDidEnd(report types.Report)
 }
+
+type NoopReporter struct{}
+
+func (n NoopReporter) SuiteWillBegin(report types.Report) {}
+func (n NoopReporter) WillRun(report types.SpecReport)    {}
+func (n NoopReporter) DidRun(report types.SpecReport)     {}
+func (n NoopReporter) SuiteDidEnd(report types.Report)    {}
