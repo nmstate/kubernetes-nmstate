@@ -16,6 +16,7 @@ $GO run k8s.io/release/cmd/release-notes \
     --go-template go-template:$script_dir/release-notes.tmpl \
     --required-author "" \
     --org nmstate \
+    --dependencies=false \
     --repo kubernetes-nmstate \
     --start-rev $old_version \
     --end-rev $new_version \
