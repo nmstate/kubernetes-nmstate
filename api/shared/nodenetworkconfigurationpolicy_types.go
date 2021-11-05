@@ -13,6 +13,10 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// +optional
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
+	// Capture contains expressions with an associated name than can be referenced
+	// at the DesiredState.
+	Capture map[string]string `json:"capture,omitempty"`
+
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// The desired configuration of the policy
 	DesiredState State `json:"desiredState,omitempty"`

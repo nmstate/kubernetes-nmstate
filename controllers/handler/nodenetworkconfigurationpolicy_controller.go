@@ -52,6 +52,7 @@ import (
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmpolicy"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
@@ -288,9 +289,18 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 		enactmentConditions := enactmentconditions.New(r.APIClient, enactmentKey)
 		enactmentConditions.Reset()
 	}
+	nns, err := r.readNNS(nodeName)
+	if err != nil {
+		return nil, err
+	}
+	generatedState, err := nmpolicy.GenerateState(desiredStateWithDefaults, policy.Spec, nns.Status.CurrentState, enactment.Status.GeneratedState.Cache)
+	if err != nil {
+		return nil, err
+	}
 
 	return &enactment.Status.Conditions, enactmentstatus.Update(r.APIClient, enactmentKey, func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
-		status.DesiredState = desiredStateWithDefaults
+		status.DesiredState = generatedState.DesiredState
+		status.GeneratedState = generatedState
 		status.PolicyGeneration = policy.Generation
 	})
 }
@@ -397,8 +407,7 @@ func tryDecrementingUnavailableNodeCount(statusWriterClient client.StatusClient,
 func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) {
 	log := r.Log.WithName("forceNNSRefresh").WithValues("node", name)
 	log.Info("forcing NodeNetworkState refresh after NNCP applied")
-	nns := &nmstatev1beta1.NodeNetworkState{}
-	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: name}, nns)
+	nns, err := r.readNNS(name)
 	if err != nil {
 		log.WithValues("error", err).Info("WARNING: failed retrieving NodeNetworkState to force refresh, it will be refreshed after regular period")
 		return
@@ -412,6 +421,15 @@ func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) 
 	if err != nil {
 		log.WithValues("error", err).Info("WARNING: failed forcing NNS refresh, it will be refreshed after regular period")
 	}
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(name string) (*nmstatev1beta1.NodeNetworkState, error) {
+	nns := &nmstatev1beta1.NodeNetworkState{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: name}, nns)
+	if err != nil {
+		return nil, err
+	}
+	return nns, nil
 }
 
 func desiredState(object runtime.Object) (nmstateapi.State, error) {

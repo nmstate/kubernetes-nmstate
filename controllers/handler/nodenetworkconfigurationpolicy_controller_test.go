@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -81,6 +82,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			reconciler := NodeNetworkConfigurationPolicyReconciler{}
 			s := scheme.Scheme
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NodeNetworkState{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
 				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
 			)
@@ -93,6 +95,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 					Name: nodeName,
 				},
 			}
+
+			nns := nmstatev1beta1.NodeNetworkState{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: nodeName,
+				},
+			}
+
 			nncp := nmstatev1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test",
@@ -111,7 +120,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			// simulate NNCE existnce/non-existence by setting conditions
 			c.previousEnactmentConditions(&nnce.Status.Conditions, "")
 
-			objs := []runtime.Object{&nncp, &nnce, &node}
+			objs := []runtime.Object{&nncp, &nnce, &nns, &node}
 
 			// Create a fake client to mock API calls.
 			clb := fake.ClientBuilder{}
