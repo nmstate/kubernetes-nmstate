@@ -13,18 +13,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-func onPolicySpecChange(operation admissionv1.Operation, policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
+func onPolicySpecChange(operation admissionv1.Operation, policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) bool {
 	return !reflect.DeepEqual(policy.Spec, currentPolicy.Spec)
 }
 
-func onCreate(operation admissionv1.Operation, policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) bool {
+func onCreate(operation admissionv1.Operation, policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) bool {
 	return operation == admissionv1.Create
 }
 
-func validatePolicyNotInProgressHook(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyNotInProgressHook(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	currentPolicyAvailableCondition := currentPolicy.Status.Conditions.Find(shared.NodeNetworkConfigurationPolicyConditionAvailable)
 
@@ -38,7 +38,7 @@ func validatePolicyNotInProgressHook(policy nmstatev1beta1.NodeNetworkConfigurat
 	return causes
 }
 
-func validatePolicyNodeSelector(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyNodeSelector(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	nodeSelector := policy.Spec.NodeSelector
 	if nodeSelector == nil {
@@ -65,7 +65,7 @@ func validatePolicyNodeSelector(policy nmstatev1beta1.NodeNetworkConfigurationPo
 	return causes
 }
 
-func validatePolicyName(policy nmstatev1beta1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1beta1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyName(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	validationErrors := validation.IsValidLabelValue(policy.Name)
 	if len(validationErrors) > 0 {
@@ -87,6 +87,13 @@ func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 				validatePolicyNotInProgressHook,
 				validatePolicyNodeSelector,
 			)),
+		),
+	}
+}
+
+func validatePolicyCreateHook(cli client.Client) *webhook.Admission {
+	return &webhook.Admission{
+		Handler: admission.MultiValidatingHandler(
 			admission.HandlerFunc(validatePolicyHandler(
 				cli,
 				onCreate,

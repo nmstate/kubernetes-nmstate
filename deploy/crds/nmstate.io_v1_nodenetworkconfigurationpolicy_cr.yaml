@@ -1,0 +1,25 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: example-nodenetworkconfigurationpolicy
+spec:
+  desiredState:
+    interfaces:
+    - name: br0
+      type: linux-bridge
+      state: up
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: eth1
+    - name: br1
+      type: linux-bridge
+      state: up
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: eth2

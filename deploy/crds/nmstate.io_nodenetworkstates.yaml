@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.5.0
+    controller-gen.kubebuilder.io/version: v0.6.0
   creationTimestamp: null
   name: nodenetworkstates.nmstate.io
 spec:
@@ -18,7 +18,8 @@ spec:
     singular: nodenetworkstate
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: NodeNetworkState is the Schema for the nodenetworkstates API
@@ -49,6 +50,8 @@ spec:
                       format: date-time
                       type: string
                     message:
+                      type: string
+                    messageEncoded:
                       type: string
                     reason:
                       type: string
@@ -107,6 +110,8 @@ spec:
                       format: date-time
                       type: string
                     message:
+                      type: string
+                    messageEncoded:
                       type: string
                     reason:
                       type: string

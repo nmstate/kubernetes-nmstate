@@ -2,7 +2,6 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -29,13 +28,13 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 	)
 	Context("when policy is set with node selector not matching any nodes", func() {
 		BeforeEach(func() {
-			By(fmt.Sprintf("Set policy %s with not matching node selector", bridge1))
+			Byf("Set policy %s with not matching node selector", bridge1)
 			setDesiredStateWithPolicyAndNodeSelectorEventually(bridge1, linuxBrUp(bridge1), testNodeSelector)
 			waitForAvailablePolicy(bridge1)
 		})
 
 		AfterEach(func() {
-			By(fmt.Sprintf("Deleteting linux bridge %s at all nodes", bridge1))
+			Byf("Deleteting linux bridge %s at all nodes", bridge1)
 			setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrAbsent(bridge1))
 			waitForAvailablePolicy(bridge1)
 			deletePolicy(bridge1)
@@ -56,7 +55,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 		Context("and we remove the node selector", func() {
 			BeforeEach(func() {
-				By(fmt.Sprintf("Remove node selector at policy %s", bridge1))
+				Byf("Remove node selector at policy %s", bridge1)
 				setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrUp(bridge1))
 				waitForAvailablePolicy(bridge1)
 			})

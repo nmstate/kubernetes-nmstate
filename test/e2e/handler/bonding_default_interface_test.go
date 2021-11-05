@@ -47,7 +47,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {
-			By(fmt.Sprintf("Check %s is the default route interface and has dynamic address", primaryNic))
+			Byf("Check %s is the default route interface and has dynamic address", primaryNic)
 			for _, node := range nodes {
 				defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
 				Expect(dhcpFlag(node, primaryNic)).Should(BeTrue())
@@ -60,18 +60,18 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 					address = ipv4Address(node, primaryNic)
 					return address
 				}, 15*time.Second, 1*time.Second).ShouldNot(BeEmpty(), fmt.Sprintf("Interface %s has no ipv4 address", primaryNic))
-				By(fmt.Sprintf("Fetching current IP address %s", address))
+				Byf("Fetching current IP address %s", address)
 				addressByNode[node] = address
 			}
-			By(fmt.Sprintf("Reseting state of %s", firstSecondaryNic))
+			Byf("Reseting state of %s", firstSecondaryNic)
 			resetNicStateForNodes(firstSecondaryNic)
-			By(fmt.Sprintf("Creating %s on %s and %s", bond1, primaryNic, firstSecondaryNic))
+			Byf("Creating %s on %s and %s", bond1, primaryNic, firstSecondaryNic)
 			updateDesiredStateAndWait(boundUpWithPrimaryAndSecondary(bond1))
 			By("Done configuring test")
 
 		})
 		AfterEach(func() {
-			By(fmt.Sprintf("Removing bond %s and configuring %s with dhcp", bond1, primaryNic))
+			Byf("Removing bond %s and configuring %s with dhcp", bond1, primaryNic)
 			updateDesiredStateAndWait(bondAbsentWithPrimaryUp(bond1))
 
 			By("Waiting until the node becomes ready again")
@@ -82,7 +82,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 
 			resetDesiredStateForNodes()
 
-			By(fmt.Sprintf("Check %s has the default ip address", primaryNic))
+			Byf("Check %s has the default ip address", primaryNic)
 			for _, node := range nodes {
 				Eventually(func() string {
 					return ipv4Address(node, primaryNic)
@@ -102,14 +102,15 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			}
 			// Restart only first node that it's a control-plane if other node is restarted it will stuck in NotReady state
 			nodeToReboot := nodes[0]
-			By(fmt.Sprintf("Reboot node %s and verify that bond still has ip of primary nic", nodeToReboot))
+			Byf("Reboot node %s and verify that bond still has ip of primary nic", nodeToReboot)
 			err := restartNode(nodeToReboot)
 			Expect(err).ToNot(HaveOccurred())
 
-			By(fmt.Sprintf("Wait for nns to be refreshed at %s", nodeToReboot))
-			waitForNodeNetworkStateUpdate(nodeToReboot)
+			By("Wait for policy re-reconciled after node reboot")
+			waitForPolicyTransitionUpdate(TestPolicy)
+			waitForAvailablePolicy(TestPolicy)
 
-			By(fmt.Sprintf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1))
+			Byf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1)
 			verifyBondIsUpWithPrimaryNicIp(nodeToReboot, expectedBond, addressByNode[nodeToReboot])
 		})
 	})

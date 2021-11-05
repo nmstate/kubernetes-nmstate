@@ -1,9 +1,10 @@
 package state
 
 import (
-	"github.com/gobwas/glob"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	networkmanager "github.com/phoracek/networkmanager-go/src"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
@@ -11,7 +12,7 @@ import (
 var _ = Describe("FilterOut", func() {
 	var (
 		state, filteredState nmstate.State
-		interfacesFilterGlob glob.Glob
+		ifaceStates          map[string]networkmanager.DeviceState
 	)
 
 	Context("when there is a linux bridge with gc-timer and hello-timer", func() {
@@ -64,7 +65,10 @@ routes:
     next-hop-interface: eth1
     table-id: 254
 `)
-
+			ifaceStates = map[string]networkmanager.DeviceState{
+				"eth1": networkmanager.DeviceStateActivated,
+				"br1":  networkmanager.DeviceStateActivated,
+			}
 			filteredState = nmstate.NewState(`
 interfaces:
 - name: eth1
@@ -111,57 +115,20 @@ routes:
     next-hop-interface: eth1
     table-id: 254
 `)
-			interfacesFilterGlob = glob.MustCompile("")
 		})
-		It("should remove them from linux-bridge", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
+		It("should remove dynamic attributes from linux-bridge interface", func() {
+			returnedState, err := filterOut(state, ifaceStates)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
-	Context("when the filter is set to empty and there is a list of interfaces", func() {
-		BeforeEach(func() {
-			state = nmstate.NewState(`
-interfaces:
-- name: eth1
-  state: up
-  type: ethernet
-- name: vethab6030bd
-  state: down
-  type: ethernet
-routes:
-  config: []
-  running:
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: vethab6030bd
-    table-id: 254
-  - destination: 0.0.0.0/0
-    metric: 102
-    next-hop-address: 192.168.66.2
-    next-hop-interface: eth1
-    table-id: 254
-`)
-			interfacesFilterGlob = glob.MustCompile("")
-		})
 
-		It("should keep all interfaces intact", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(state))
-		})
-	})
-
-	Context("when the filter is matching one of the interfaces in the list", func() {
+	Context("when there is managed veth interface", func() {
 		BeforeEach(func() {
 			state = nmstate.NewState(`interfaces:
-- name: eth1
-  state: up
-  type: ethernet
 - name: vethab6030bd
   state: down
-  type: ethernet
+  type: veth
 routes:
   config: []
   running:
@@ -170,48 +137,38 @@ routes:
     next-hop-address: ""
     next-hop-interface: vethab6030bd
     table-id: 254
-  - destination: 0.0.0.0/0
-    metric: 102
-    next-hop-address: 192.168.66.2
-    next-hop-interface: eth1
-    table-id: 254
-
 `)
+			ifaceStates = map[string]networkmanager.DeviceState{
+				"vethab6030bd": networkmanager.DeviceStateActivated,
+			}
 			filteredState = nmstate.NewState(`interfaces:
-- name: eth1
-  state: up
-  type: ethernet
+- name: vethab6030bd
+  state: down
+  type: veth
 routes:
   config: []
   running:
-  - destination: 0.0.0.0/0
-    metric: 102
-    next-hop-address: 192.168.66.2
-    next-hop-interface: eth1
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: vethab6030bd
     table-id: 254
 `)
-			interfacesFilterGlob = glob.MustCompile("veth*")
 		})
 
-		It("should filter out matching interface and keep the others", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
+		It("should keep managed veth interface", func() {
+			returnedState, err := filterOut(state, ifaceStates)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
 
-	Context("when the filter is matching multiple interfaces in the list", func() {
+	Context("when there is unmanaged veth interface", func() {
 		BeforeEach(func() {
 			state = nmstate.NewState(`interfaces:
-- name: eth1
-  state: up
-  type: ethernet
 - name: vethab6030bd
   state: down
-  type: ethernet
-- name: vethjyuftrgv
-  state: down
-  type: ethernet
+  type: veth
 routes:
   config: []
   running:
@@ -219,6 +176,95 @@ routes:
     metric: 1024
     next-hop-address: ""
     next-hop-interface: vethab6030bd
+    table-id: 254
+`)
+			ifaceStates = map[string]networkmanager.DeviceState{
+				"vethab6030bd": networkmanager.DeviceStateUnmanaged,
+			}
+			filteredState = nmstate.NewState(`interfaces: []
+routes:
+  config: []
+  running: []
+`)
+		})
+
+		It("should filter unmanaged veth interface", func() {
+			returnedState, err := filterOut(state, ifaceStates)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
+
+	Context("when there are multiple managed and unmanaged veth interfaces", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+- name: veth101
+  state: down
+  type: veth
+- name: veth102
+  state: down
+  type: veth
+- name: vethjyuftrgv
+  state: down
+  type: veth
+- name: vethvasziovs
+  state: down
+  type: veth
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: veth101
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: veth102
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: vethjyuftrgv
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: vethvasziovs
+    table-id: 254
+  - destination: 0.0.0.0/0
+    metric: 102
+    next-hop-address: 192.168.66.2
+    next-hop-interface: eth1
+    table-id: 254
+`)
+			ifaceStates = map[string]networkmanager.DeviceState{
+				"veth101":      networkmanager.DeviceStateActivated,
+				"veth102":      networkmanager.DeviceStateUnmanaged,
+				"vethjyuftrgv": networkmanager.DeviceStateActivated,
+				"vethvasziovs": networkmanager.DeviceStateUnmanaged,
+			}
+			filteredState = nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+- name: veth101
+  state: down
+  type: veth
+- name: vethjyuftrgv
+  state: down
+  type: veth
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: veth101
     table-id: 254
   - destination: fd10:244::8c40/128
     metric: 1024
@@ -231,156 +277,96 @@ routes:
     next-hop-interface: eth1
     table-id: 254
 `)
-			filteredState = nmstate.NewState(`interfaces:
+		})
+		It("should filter out all unmanaged veth interfaces", func() {
+			returnedState, err := filterOut(state, ifaceStates)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+
+		Context("when we fail to get deviceStates", func() {
+			BeforeEach(func() {
+				ifaceStates = nil
+				filteredState = nmstate.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
+- name: veth101
+  state: down
+  type: veth
+- name: veth102
+  state: down
+  type: veth
+- name: vethjyuftrgv
+  state: down
+  type: veth
+- name: vethvasziovs
+  state: down
+  type: veth
 routes:
   config: []
   running:
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: veth101
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: veth102
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: vethjyuftrgv
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: vethvasziovs
+    table-id: 254
   - destination: 0.0.0.0/0
     metric: 102
     next-hop-address: 192.168.66.2
     next-hop-interface: eth1
     table-id: 254
 `)
-			interfacesFilterGlob = glob.MustCompile("veth*")
-		})
-
-		It("should filter out all matching interfaces and keep the others", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
+			})
+			It("should keep the state intact", func() {
+				returnedState, err := filterOut(state, ifaceStates)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(returnedState).To(MatchYAML(filteredState))
+			})
 		})
 	})
 
-	Context("when the filter is matching multiple prefixes", func() {
+	Context("With DNS Resolver populated", func() {
 		BeforeEach(func() {
 			state = nmstate.NewState(`interfaces:
-- name: eth1
-  state: up
-  type: ethernet
-- name: vethab6030bd
-  state: down
-  type: ethernet
-- name: vnet2b730a2b@if3
-  state: down
-  type: ethernet
-routes:
-  config: []
+  - name: eth1
+    state: up
+    type: ethernet
+dns-resolver:
+  config:
+    search:
+    - example.com
+    - example.org
+    server:
+    - 2001:4860:4860::8888
+    - 8.8.8.8
   running:
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: vethab6030bd
-    table-id: 254
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: vnet2b730a2b
-    table-id: 254
-  - destination: 0.0.0.0/0
-    metric: 102
-    next-hop-address: 192.168.66.2
-    next-hop-interface: eth1
-    table-id: 254
-`)
-			filteredState = nmstate.NewState(`interfaces:
-- name: eth1
-  state: up
-  type: ethernet
-routes:
-  config: []
-  running:
-  - destination: 0.0.0.0/0
-    metric: 102
-    next-hop-address: 192.168.66.2
-    next-hop-interface: eth1
-    table-id: 254
-`)
-			interfacesFilterGlob = glob.MustCompile("{veth*,vnet*}")
+    search:
+    - example.running.com
+    - example.running.org
+    server:
+    - 8.8.4.4`)
 		})
 
-		It("it should filter out all interfaces matching any of these prefixes and keep the others", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
+		It("Should keep the DNS Resolver intact", func() {
+			returnedState, err := filterOut(state, ifaceStates)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
-		})
-	})
-	Context("when there is a linux bridge without 'bridge' options because is down", func() {
-		BeforeEach(func() {
-			state = nmstate.NewState(`
-interfaces:
-- name: br1
-  type: linux-bridge
-  state: down
-`)
-
-			filteredState = nmstate.NewState(`
-interfaces:
-- name: br1
-  type: linux-bridge
-  state: down
-`)
-			interfacesFilterGlob = glob.MustCompile("")
-		})
-		It("should keep the bridge as it is", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
-		})
-	})
-
-	Context("when the interfaces has numeric characters quoted", func() {
-		BeforeEach(func() {
-			state = nmstate.NewState(`
-interfaces:
-- name: eth0
-- name: '0'
-- name: '1101010'
-- name: '0.0'
-- name: '1.0'
-- name: '0xfe'
-- name: '60.e+02'
-`)
-			filteredState = nmstate.NewState(`
-interfaces:
-- name: eth0
-- name: '1101010'
-- name: '1.0'
-- name: '60.e+02'
-`)
-			interfacesFilterGlob = glob.MustCompile("0*")
-		})
-
-		It("should filter out interfaces correctly", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
-		})
-	})
-
-	// See https://github.com/yaml/pyyaml/issues/173 for why this scenario is checked.
-	Context("when the interfaces names have numbers in scientific notation without dot", func() {
-		BeforeEach(func() {
-			state = nmstate.NewState(`
-interfaces:
-- name: eth0
-- name: 10e+02
-- name: 60e+02
-`)
-			filteredState = nmstate.NewState(`
-interfaces:
-- name: eth0
-- name: "60e+02"
-`)
-			interfacesFilterGlob = glob.MustCompile("10e*")
-		})
-
-		It("does not filter out interfaces correctly and does not represent them correctly", func() {
-			returnedState, err := filterOut(state, interfacesFilterGlob)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(returnedState).To(MatchYAML(state))
 		})
 	})
 })

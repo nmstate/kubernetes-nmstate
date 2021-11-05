@@ -21,6 +21,7 @@ type NodeNetworkConfigurationEnactmentStatus struct {
 
 const (
 	EnactmentPolicyLabel                                                = "nmstate.io/policy"
+	EnactmentNodeLabel                                                  = "nmstate.io/node"
 	NodeNetworkConfigurationEnactmentConditionAvailable   ConditionType = "Available"
 	NodeNetworkConfigurationEnactmentConditionFailing     ConditionType = "Failing"
 	NodeNetworkConfigurationEnactmentConditionPending     ConditionType = "Pending"

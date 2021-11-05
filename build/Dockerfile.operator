@@ -1,6 +1,7 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal
+ARG TARGETARCH
 
-COPY build/_output/bin/manager /usr/local/bin/manager
+COPY build/_output/bin/operator.manager.linux-$TARGETARCH /usr/local/bin/manager
 
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
 COPY deploy/handler/namespace.yaml /bindata/kubernetes-nmstate/namespace/

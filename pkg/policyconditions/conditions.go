@@ -3,32 +3,24 @@ package policyconditions
 import (
 	"context"
 	"fmt"
-	"time"
-
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
 var (
-	log               = logf.Log.WithName("policyconditions")
-	StatusUpdateRetry = wait.Backoff{
-		Steps:    20,
-		Duration: 10 * time.Millisecond,
-		Factor:   2.0,
-		Jitter:   0.1,
-	}
+	log = logf.Log.WithName("policyconditions")
 )
 
 func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
@@ -98,12 +90,25 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 
+	err := update(cli, apiReader, cli, policyKey)
+	if err != nil {
+		logger.Error(err, "failed to update policy status using cached client. Retrying with non-cached.")
+		err = update(cli, apiReader, apiReader, policyKey)
+		if err != nil {
+			logger.Error(err, "failed to update policy status using non-cached client.")
+		}
+	}
+	return err
+}
+
+func update(apiWriter client.Client, apiReader client.Reader, policyReader client.Reader, policyKey types.NamespacedName) error {
+	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
 	// conflict can denote that the calculated policy conditions
 	// are now not accurate.
-	return retry.RetryOnConflict(StatusUpdateRetry, func() error {
-		policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
-		err := cli.Get(context.TODO(), policyKey, policy)
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		err := policyReader.Get(context.TODO(), policyKey, policy)
 		if err != nil {
 			return errors.Wrap(err, "getting policy failed")
 		}
@@ -149,7 +154,7 @@ func Update(cli client.Client, apiReader client.Reader, policyKey types.Namespac
 			}
 		}
 
-		err = cli.Status().Update(context.TODO(), policy)
+		err = apiWriter.Status().Update(context.TODO(), policy)
 		if err != nil {
 			if apierrors.IsConflict(err) {
 				logger.Info("conflict updating policy conditions, retrying")
@@ -165,7 +170,7 @@ func Update(cli client.Client, apiReader client.Reader, policyKey types.Namespac
 func Reset(cli client.Client, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 		err := cli.Get(context.TODO(), policyKey, policy)
 		if err != nil {
 			return errors.Wrap(err, "getting policy failed")
