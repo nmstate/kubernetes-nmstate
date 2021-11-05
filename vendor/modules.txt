@@ -462,6 +462,19 @@ github.com/nmstate/kubernetes-nmstate/api/shared
 github.com/nmstate/kubernetes-nmstate/api/v1
 github.com/nmstate/kubernetes-nmstate/api/v1alpha1
 github.com/nmstate/kubernetes-nmstate/api/v1beta1
+# github.com/nmstate/nmpolicy v0.1.0-alpha.3
+## explicit
+github.com/nmstate/nmpolicy/nmpolicy
+github.com/nmstate/nmpolicy/nmpolicy/internal
+github.com/nmstate/nmpolicy/nmpolicy/internal/ast
+github.com/nmstate/nmpolicy/nmpolicy/internal/capture
+github.com/nmstate/nmpolicy/nmpolicy/internal/expander
+github.com/nmstate/nmpolicy/nmpolicy/internal/lexer
+github.com/nmstate/nmpolicy/nmpolicy/internal/lexer/scanner
+github.com/nmstate/nmpolicy/nmpolicy/internal/parser
+github.com/nmstate/nmpolicy/nmpolicy/internal/resolver
+github.com/nmstate/nmpolicy/nmpolicy/internal/types
+github.com/nmstate/nmpolicy/nmpolicy/types
 # github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481
 github.com/nozzle/throttler
 # github.com/nxadm/tail v1.4.8
