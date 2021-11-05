@@ -20,7 +20,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.17.0
 	github.com/spf13/pflag v1.0.5
-	github.com/tidwall/gjson v1.8.0
+	github.com/tidwall/gjson v1.9.3
 	github.com/tidwall/sjson v1.1.7
 	go.uber.org/zap v1.17.0
 	gopkg.in/yaml.v2 v2.4.0
@@ -40,7 +40,7 @@ replace (
 	// Using containerd 1.4.0+ resolves an issue with invalid error logging
 	// from an init function in containerd. This replace can be removed when
 	// one of our direct dependencies begins using containerd v1.4.0+
-	github.com/containerd/containerd => github.com/containerd/containerd v1.4.3
+	github.com/containerd/containerd => github.com/containerd/containerd v1.4.11
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.10.0
 	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
