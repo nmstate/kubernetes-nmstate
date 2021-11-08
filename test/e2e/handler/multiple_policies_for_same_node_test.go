@@ -13,10 +13,11 @@ var _ = Describe("NodeNetworkState", func() {
 			vlanPolicy     = "vlan-policy"
 			ipAddress      = "10.244.0.1"
 			vlanId         = "102"
+			prefixLen      = "24"
 		)
 
 		BeforeEach(func() {
-			setDesiredStateWithPolicy(staticIpPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress))
+			setDesiredStateWithPolicy(staticIpPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
 			waitForAvailablePolicy(staticIpPolicy)
 			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			waitForAvailablePolicy(vlanPolicy)
