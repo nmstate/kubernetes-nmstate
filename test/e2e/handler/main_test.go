@@ -68,6 +68,7 @@ var _ = BeforeSuite(func() {
 	nodeList := corev1.NodeList{}
 	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
 	err = testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
+	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		if containsNode(allNodes, node.Name) {
 			nodes = append(nodes, node.Name)
