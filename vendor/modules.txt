@@ -290,7 +290,7 @@ github.com/godbus/dbus
 # github.com/gofrs/flock v0.8.0
 ## explicit
 github.com/gofrs/flock
-# github.com/gogo/protobuf v1.3.2
+# github.com/gogo/protobuf v1.3.2 => github.com/gogo/protobuf v1.3.2
 github.com/gogo/protobuf/gogoproto
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/protoc-gen-gogo/descriptor
@@ -612,13 +612,16 @@ github.com/spiegel-im-spiegel/go-cvss/v3/metric
 # github.com/stretchr/testify v1.7.0
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
-# github.com/tidwall/gjson v1.6.8
+# github.com/tidwall/gjson v1.8.0
 ## explicit
 github.com/tidwall/gjson
 # github.com/tidwall/match v1.0.3
 github.com/tidwall/match
-# github.com/tidwall/pretty v1.0.2
+# github.com/tidwall/pretty v1.1.0
 github.com/tidwall/pretty
+# github.com/tidwall/sjson v1.1.7
+## explicit
+github.com/tidwall/sjson
 # github.com/tomnomnom/linkheader v0.0.0-20180905144013-02ca5825eb80
 github.com/tomnomnom/linkheader
 # github.com/voxelbrain/goptions v0.0.0-20180630082107-58cddc247ea2
@@ -1275,6 +1278,7 @@ sigs.k8s.io/structured-merge-diff/v4/value
 sigs.k8s.io/yaml
 # github.com/Azure/go-autorest => github.com/Azure/go-autorest v14.2.0+incompatible
 # github.com/containerd/containerd => github.com/containerd/containerd v1.4.3
+# github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 # github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.10.0
 # golang.org/x/text => golang.org/x/text v0.3.3
 # k8s.io/client-go => k8s.io/client-go v0.21.1

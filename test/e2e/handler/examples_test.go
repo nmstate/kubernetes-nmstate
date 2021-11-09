@@ -50,6 +50,12 @@ var _ = Describe("[user-guide] Examples", func() {
 			ifaceNames: []string{"br1"},
 		},
 		exampleSpec{
+			name:       "Linux bridge with custom vlan",
+			fileName:   "linux-bridge-vlan.yaml",
+			policyName: "linux-bridge-vlan",
+			ifaceNames: []string{"br1"},
+		},
+		exampleSpec{
 			name:       "Detach bridge port and restore its configuration",
 			fileName:   "detach-bridge-port-and-restore-eth.yaml",
 			policyName: "detach-bridge-port-and-restore-eth",

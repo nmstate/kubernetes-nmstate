@@ -20,7 +20,8 @@ require (
 	github.com/phoracek/networkmanager-go v0.1.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.17.0
-	github.com/tidwall/gjson v1.6.8
+	github.com/tidwall/gjson v1.8.0
+	github.com/tidwall/sjson v1.1.7
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.21.1
 	k8s.io/apimachinery v0.21.1
@@ -39,6 +40,7 @@ replace (
 	// from an init function in containerd. This replace can be removed when
 	// one of our direct dependencies begins using containerd v1.4.0+
 	github.com/containerd/containerd => github.com/containerd/containerd v1.4.3
+	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.10.0
 	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
 	k8s.io/client-go => k8s.io/client-go v0.21.1
