@@ -1,5 +1,5 @@
 # When updating this file, don't forget to update the tutorial.
-apiVersion: nmstate.io/v1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   name: eth1
@@ -13,7 +13,7 @@ spec:
         dhcp: true
         enabled: true
 ---
-apiVersion: nmstate.io/v1
+apiVersion: nmstate.io/v1beta1
 kind: NodeNetworkConfigurationPolicy
 metadata:
   name: eth2
