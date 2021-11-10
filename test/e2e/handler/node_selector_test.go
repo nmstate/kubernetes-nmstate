@@ -29,7 +29,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 	Context("when policy is set with node selector not matching any nodes", func() {
 		BeforeEach(func() {
 			Byf("Set policy %s with not matching node selector", bridge1)
-			setDesiredStateWithPolicyAndNodeSelectorEventually(bridge1, linuxBrUp(bridge1), testNodeSelector)
+			// use linuxBrUpNoPorts to not affect the nodes secondary interfaces state
+			setDesiredStateWithPolicyAndNodeSelectorEventually(bridge1, linuxBrUpNoPorts(bridge1), testNodeSelector)
 			waitForAvailablePolicy(bridge1)
 		})
 
@@ -38,12 +39,6 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrAbsent(bridge1))
 			waitForAvailablePolicy(bridge1)
 			deletePolicy(bridge1)
-			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
-			waitForAvailableTestPolicy()
-			deletePolicy(TestPolicy)
-
-			By("Remove test label from node")
-			removeLabelsFromNode(nodes[0], testNodeSelector)
 		})
 
 		It("[test_id:3813]should not update any nodes and have not enactments", func() {
@@ -56,7 +51,8 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		Context("and we remove the node selector", func() {
 			BeforeEach(func() {
 				Byf("Remove node selector at policy %s", bridge1)
-				setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrUp(bridge1))
+				// use linuxBrUpNoPorts to not affect the nodes secondary interfaces state
+				setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrUpNoPorts(bridge1))
 				waitForAvailablePolicy(bridge1)
 			})
 
@@ -76,6 +72,10 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				//TODO: Remove this when webhook retest policy status when node labels are changed
 				time.Sleep(3 * time.Second)
 				waitForAvailablePolicy(bridge1)
+			})
+			AfterEach(func() {
+				By("Remove test label from node")
+				removeLabelsFromNode(nodes[0], testNodeSelector)
 			})
 			It("should apply the policy", func() {
 				By("Check that NNCE is created")
