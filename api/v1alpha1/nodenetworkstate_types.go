@@ -9,6 +9,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkstates,shortName=nns,scope=Cluster
+// +kubebuilder:deprecatedversion
 
 // NodeNetworkState is the Schema for the nodenetworkstates API
 type NodeNetworkState struct {

@@ -4,7 +4,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.5.0
+    controller-gen.kubebuilder.io/version: v0.6.0
   creationTimestamp: null
   name: nodenetworkconfigurationpolicies.nmstate.io
 spec:
@@ -23,6 +23,96 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    name: v1
+    schema:
+      openAPIV3Schema:
+        description: NodeNetworkConfigurationPolicy is the Schema for the nodenetworkconfigurationpolicies
+          API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: NodeNetworkConfigurationPolicySpec defines the desired state
+              of NodeNetworkConfigurationPolicy
+            properties:
+              desiredState:
+                description: The desired configuration of the policy
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              maxUnavailable:
+                anyOf:
+                - type: integer
+                - type: string
+                description: MaxUnavailable specifies percentage or number of machines
+                  that can be updating at a time. Default is "50%".
+                x-kubernetes-int-or-string: true
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: 'NodeSelector is a selector which must be true for the
+                  policy to be applied to the node. Selector which must match a node''s
+                  labels for the policy to be scheduled on that node. More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/'
+                type: object
+            type: object
+          status:
+            description: NodeNetworkConfigurationPolicyStatus defines the observed
+              state of NodeNetworkConfigurationPolicy
+            properties:
+              conditions:
+                items:
+                  properties:
+                    lastHearbeatTime:
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    messageEncoded:
+                      type: string
+                    reason:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
+              unavailableNodeCount:
+                description: UnavailableNodeCount represents the total number of potentially
+                  unavailable nodes that are processing a NodeNetworkConfigurationPolicy
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.conditions[?(@.status=="True")].type
+      name: Status
+      type: string
+    deprecated: true
     name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -79,6 +169,8 @@ spec:
                       type: string
                     message:
                       type: string
+                    messageEncoded:
+                      type: string
                     reason:
                       type: string
                     status:
@@ -90,6 +182,11 @@ spec:
                   - type
                   type: object
                 type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
               unavailableNodeCount:
                 description: UnavailableNodeCount represents the total number of potentially
                   unavailable nodes that are processing a NodeNetworkConfigurationPolicy
@@ -105,6 +202,7 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    deprecated: true
     name: v1beta1
     schema:
       openAPIV3Schema:
@@ -161,6 +259,8 @@ spec:
                       type: string
                     message:
                       type: string
+                    messageEncoded:
+                      type: string
                     reason:
                       type: string
                     status:
@@ -172,6 +272,11 @@ spec:
                   - type
                   type: object
                 type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
               unavailableNodeCount:
                 description: UnavailableNodeCount represents the total number of potentially
                   unavailable nodes that are processing a NodeNetworkConfigurationPolicy
@@ -179,7 +284,7 @@ spec:
             type: object
         type: object
     served: true
-    storage: true
+    storage: false
     subresources:
       status: {}
 status:

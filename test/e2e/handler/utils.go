@@ -21,6 +21,7 @@ import (
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
@@ -39,6 +40,10 @@ var (
 	bondConunter   = 0
 	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DEFAULT_MAXUNAVAILABLE)
 )
+
+func Byf(message string, arguments ...interface{}) {
+	By(fmt.Sprintf(message, arguments...))
+}
 
 func interfacesName(interfaces []interface{}) []string {
 	var names []string
@@ -64,7 +69,7 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 }
 
 func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
-	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
 	err := testenv.Client.Get(context.TODO(), key, &policy)
@@ -140,9 +145,9 @@ func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState 
 	return state
 }
 
-func nodeNetworkConfigurationPolicy(policyName string) nmstatev1beta1.NodeNetworkConfigurationPolicy {
+func nodeNetworkConfigurationPolicy(policyName string) nmstatev1.NodeNetworkConfigurationPolicy {
 	key := types.NamespacedName{Name: policyName}
-	policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	EventuallyWithOffset(1, func() error {
 		return testenv.Client.Get(context.TODO(), key, &policy)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
@@ -161,8 +166,8 @@ func deleteNodeNeworkStates() {
 }
 
 func deletePolicy(name string) {
-	By(fmt.Sprintf("Deleting policy %s", name))
-	policy := &nmstatev1beta1.NodeNetworkConfigurationPolicy{}
+	Byf("Deleting policy %s", name)
+	policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	err := testenv.Client.Delete(context.TODO(), policy)
 	if apierrors.IsNotFound(err) {
@@ -172,7 +177,7 @@ func deletePolicy(name string) {
 
 	// Wait for policy to be removed
 	EventuallyWithOffset(1, func() bool {
-		err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1beta1.NodeNetworkConfigurationPolicy{})
+		err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: name}, &nmstatev1.NodeNetworkConfigurationPolicy{})
 		return apierrors.IsNotFound(err)
 	}, 60*time.Second, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Policy %s not deleted", name))
 
@@ -196,12 +201,20 @@ func deletePolicy(name string) {
 }
 
 func restartNode(node string) error {
-	By(fmt.Sprintf("Restarting node %s", node))
+	restartNodeWithoutWaiting(node)
+	return waitFotNodeToStart(node)
+}
+
+func restartNodeWithoutWaiting(node string) {
+	Byf("Restarting node %s", node)
 	// Use halt so reboot command does not get stuck also
 	// this command always fail since connection is closed
 	// so let's not check err
 	runner.RunAtNode(node, "sudo", "halt", "--reboot")
-	By(fmt.Sprintf("Waiting till node %s is rebooted", node))
+}
+
+func waitFotNodeToStart(node string) error {
+	Byf("Waiting till node %s is rebooted", node)
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
 	Eventually(func() string {
 		output, err := runner.RunAtNode(node, "uptime", "-p")
@@ -210,12 +223,11 @@ func restartNode(node string) error {
 		}
 		return output
 	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
-
 	return nil
 }
 
 func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
-	By(fmt.Sprintf("Delete bridge %s", bridgeName))
+	Byf("Delete bridge %s", bridgeName)
 	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
 	for _, portName := range ports {
 		_, portErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
@@ -225,7 +237,7 @@ func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
 }
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {
-	By(fmt.Sprintf("Creating dummy %s", dummyName))
+	Byf("Creating dummy %s", dummyName)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
 	_, upErrs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
@@ -241,13 +253,13 @@ func createDummyConnectionAtAllNodes(dummyName string) []error {
 }
 
 func deleteConnection(nodesToModify []string, name string) []error {
-	By(fmt.Sprintf("Delete connection %s", name))
+	Byf("Delete connection %s", name)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "delete", name)
 	return errs
 }
 
 func deleteDevice(nodesToModify []string, name string) []error {
-	By(fmt.Sprintf("Delete device %s  at nodes %v", name, nodesToModify))
+	Byf("Delete device %s  at nodes %v", name, nodesToModify)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "device", "delete", name)
 	return errs
 }
@@ -350,7 +362,7 @@ func bridgeVlansAtNode(node string) (string, error) {
 }
 
 func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
-	By(fmt.Sprintf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan))
+	Byf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan)
 	return Eventually(func() []string {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
@@ -392,7 +404,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
 
-	By(fmt.Sprintf("Check %s has %s with vlan filtering vids %d-%d", node, connection, minVlan, maxVlan))
+	Byf("Check %s has %s with vlan filtering vids %d-%d", node, connection, minVlan, maxVlan)
 	return Eventually(func() error {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
@@ -421,7 +433,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 }
 
 func vlansCardinality(node string, connection string) AsyncAssertion {
-	By(fmt.Sprintf("Getting vlan cardinality for node %s connection %s", node, connection))
+	Byf("Getting vlan cardinality for node %s connection %s", node, connection)
 	return Eventually(func() (int, error) {
 		bridgeVlans, err := bridgeVlansAtNode(node)
 		if err != nil {
@@ -509,6 +521,11 @@ func ipv4Address(node string, iface string) string {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
+func macAddress(node string, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
 func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	return Eventually(func() string {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
@@ -530,6 +547,13 @@ func skipIfNotKubernetes() {
 	provider := environment.GetVarWithDefault("KUBEVIRT_PROVIDER", "k8s")
 	if !strings.Contains(provider, "k8s") {
 		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
+	}
+}
+
+func skipIfNotNmstateFuture() {
+	nmstatePin := environment.GetVarWithDefault("NMSTATE_PIN", "")
+	if !strings.Contains(nmstatePin, "future") {
+		Skip("Functionality is available/stable only in nmstate future release")
 	}
 }
 

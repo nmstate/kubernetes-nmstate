@@ -26,8 +26,6 @@ spec:
           effect: NoSchedule
       containers:
         - name: nmstate-operator
-          args:
-          - --v=production
           # Replace this with the built image name
           image: {{ .OperatorImage }}
           imagePullPolicy: {{ .OperatorPullPolicy }}

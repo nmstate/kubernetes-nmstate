@@ -34,6 +34,15 @@ type NMStateSpec struct {
 	// If Tolerations is specified, the handler daemonset will be also scheduled on nodes with corresponding taints
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// InfraNodeSelector is an optional selector that will be added to webhook & certmanager Deployment manifests
+	// If InfraNodeSelector is specified, the webhook and certmanager will run only on nodes that have each of the indicated
+	// key-value pairs as labels applied to the node.
+	// +optional
+	InfraNodeSelector map[string]string `json:"infraNodeSelector,omitempty"`
+	// InfraTolerations is an optional list of tolerations to be added to webhook & certmanager Deployment manifests
+	// If InfraTolerations is specified, the handler daemonset will be able to be scheduled on nodes with corresponding taints
+	// +optional
+	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState
@@ -43,8 +52,8 @@ type NMStateStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=nmstates,scope=Cluster
-// +kubebuilder:storageversion
 // +kubebuilder:subresource=status
+// +kubebuilder:deprecatedversion
 
 // NMState is the Schema for the nmstates API
 type NMState struct {

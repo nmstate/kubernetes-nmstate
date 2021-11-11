@@ -22,6 +22,7 @@ type NodeNetworkConfigurationPolicyList struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationpolicies,shortName=nncp,scope=Cluster
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
+// +kubebuilder:deprecatedversion
 
 // NodeNetworkConfigurationPolicy is the Schema for the nodenetworkconfigurationpolicies API
 type NodeNetworkConfigurationPolicy struct {

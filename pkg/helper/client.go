@@ -23,9 +23,14 @@ var (
 	log = logf.Log.WithName("client")
 )
 
-const defaultGwRetrieveTimeout = 120 * time.Second
-const defaultGwProbeTimeout = 120 * time.Second
-const apiServerProbeTimeout = 120 * time.Second
+const (
+	defaultGwProbeTimeout = 120 * time.Second
+	apiServerProbeTimeout = 120 * time.Second
+	// DesiredStateConfigurationTimeout doubles the default gw ping probe and API server
+	// connectivity check timeout to ensure the Checkpoint is alive before rolling it back
+	// https://nmstate.github.io/cli_guide#manual-transaction-control
+	DesiredStateConfigurationTimeout = (defaultGwProbeTimeout + apiServerProbeTimeout) * 2
+)
 
 func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
@@ -104,11 +109,7 @@ func ApplyDesiredState(client client.Client, desiredState shared.State) (string,
 	// working fine after apply
 	probes := probe.Select(client)
 
-	// commit timeout doubles the default gw ping probe and check API server
-	// connectivity timeout, to
-	// ensure the Checkpoint is alive before rolling it back
-	// https://nmstate.github.io/cli_guide#manual-transaction-control
-	setOutput, err := nmstatectl.Set(desiredState, (defaultGwProbeTimeout+apiServerProbeTimeout)*2)
+	setOutput, err := nmstatectl.Set(desiredState, DesiredStateConfigurationTimeout)
 	if err != nil {
 		return setOutput, err
 	}

@@ -2,7 +2,6 @@ package conditions
 
 import (
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/go-logr/logr"
@@ -100,7 +99,14 @@ func (ec *EnactmentConditions) updateEnactmentConditions(
 }
 
 func SetFailedToConfigure(conditions *nmstate.ConditionList, message string) {
-	SetFailed(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, message)
+	strippedMessage := enactmentstatus.FormatErrorString(message)
+	SetFailed(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, strippedMessage)
+	setFailedToConfigureEncodedMessage(conditions, message)
+}
+
+func setFailedToConfigureEncodedMessage(conditions *nmstate.ConditionList, message string) {
+	condition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
+	condition.MessageEncoded = enactmentstatus.CompressAndEncodeMessage(message)
 }
 
 func SetFailed(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {

@@ -36,7 +36,7 @@ var _ = Describe("NodeNetworkState", func() {
 			updateDesiredStateAndWait(ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
 			for index, node := range nodes {
 				ipAddress := fmt.Sprintf(ipAddressTemplate, index)
-				By(fmt.Sprintf("applying static IP %s on node %s", ipAddress, node))
+				Byf("applying static IP %s on node %s", ipAddress, node)
 				updateDesiredStateAtNodeAndWait(node, vlanUpWithStaticIP(fmt.Sprintf("%s.%s", firstSecondaryNic, vlanId), ipAddress))
 			}
 

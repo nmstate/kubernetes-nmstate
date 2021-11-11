@@ -25,14 +25,12 @@ spec:
         description: kubernetes-nmstate-webhook resets NNCP status
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
-      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
-      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .InfraTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
       priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-webhook
-          args:
-          - --v=production
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
@@ -109,14 +107,12 @@ spec:
         description: kubernetes-nmstate-webhook rotate webhook certs
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
-      nodeSelector: {{ toYaml .WebhookNodeSelector | nindent 8 }}
-      tolerations: {{ toYaml .WebhookTolerations | nindent 8 }}
+      nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .InfraTolerations | nindent 8 }}
       affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
       priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-cert-manager
-          args:
-          - --v=production
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
@@ -194,6 +190,8 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-handler
       annotations:
         description: kubernetes-nmstate-handler configures and presents node networking, reconciling declerative NNCP and reports with NNS and NNCE
+      nodeSelector:
+        kubernetes.io/os: linux
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # future nmstate/NM is in place.
@@ -209,8 +207,6 @@ spec:
       priorityClassName: system-node-critical
       containers:
         - name: nmstate-handler
-          args:
-          - --v=production
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
@@ -249,8 +245,6 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
-            - name: INTERFACES_FILTER
-              value: "{veth*,cali*}"
             - name: ENABLE_PROFILER
               value: "False"
             - name: PROFILER_PORT
@@ -262,6 +256,10 @@ spec:
               mountPath: /run/dbus/system_bus_socket
             - name: nmstate-lock
               mountPath: /var/k8s_nmstate
+{{if .EnableOVS}}
+            - name: ovs-socket
+              mountPath: /run/openvswitch/db.sock
+{{end}}
           securityContext:
             privileged: true
           readinessProbe:
@@ -280,6 +278,12 @@ spec:
         - name: nmstate-lock
           hostPath:
             path: /var/k8s_nmstate
+{{if .EnableOVS}}
+        - name: ovs-socket
+          hostPath:
+            path: /run/openvswitch/db.sock
+            type: Socket
+{{end}}
 ---
 apiVersion: v1
 kind: Service
@@ -314,7 +318,7 @@ webhooks:
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
+        apiVersions: ["v1alpha1","v1beta1","v1"]
         resources: ["nodenetworkconfigurationpolicies"]
   - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
@@ -327,7 +331,7 @@ webhooks:
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
+        apiVersions: ["v1alpha1","v1beta1","v1"]
         resources: ["nodenetworkconfigurationpolicies/status"]
   - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
@@ -340,29 +344,42 @@ webhooks:
     rules:
       - operations: ["CREATE", "UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
+        apiVersions: ["v1alpha1","v1beta1","v1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
-  - name: nodenetworkconfigurationpolicies-progress-validate.nmstate.io
+  - name: nodenetworkconfigurationpolicies-update-validate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
     sideEffects: None
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
         namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-progress-validate"
+        path: "/nodenetworkconfigurationpolicies-update-validate"
     rules:
       - operations: ["UPDATE"]
         apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1"]
+        apiVersions: ["v1alpha1","v1beta1","v1"]
+        resources: ["nodenetworkconfigurationpolicies"]
+  - name: nodenetworkconfigurationpolicies-create-validate.nmstate.io
+    admissionReviewVersions: [ "v1", "v1beta1" ]
+    sideEffects: None
+    clientConfig:
+      service:
+        name: {{template "handlerPrefix" .}}nmstate-webhook
+        namespace: {{ .HandlerNamespace }}
+        path: "/nodenetworkconfigurationpolicies-create-validate"
+    rules:
+      - operations: ["CREATE"]
+        apiGroups: ["*"]
+        apiVersions: ["v1alpha1","v1beta1","v1"]
         resources: ["nodenetworkconfigurationpolicies"]
 ---
-apiVersion: policy/v1beta1
+apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   namespace: {{ .HandlerNamespace }}
   name: {{template "handlerPrefix" .}}nmstate-webhook
 spec:
-  minAvailable: 1
+  minAvailable: {{  .WebhookMinReplicas  }}
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook

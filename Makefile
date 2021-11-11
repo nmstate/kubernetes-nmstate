@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-IMAGE_REGISTRY ?= quay.io
+export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
@@ -23,6 +23,7 @@ HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
 HANDLER_PREFIX ?=
+
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
 OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME):$(OPERATOR_IMAGE_TAG)
@@ -32,13 +33,13 @@ export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
-IMAGE_BUILDER ?= docker
+export IMAGE_BUILDER ?= docker
 
 WHAT ?= ./pkg ./controllers ./api
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
-export KUBEVIRT_PROVIDER ?= k8s-1.20
+export KUBEVIRT_PROVIDER ?= k8s-1.21
 export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
@@ -114,13 +115,13 @@ whitespace-format:
 	hack/whitespace.sh format
 
 gofmt: $(GO)
-	$(GOFMT) -w *.go test/ hack/ api/ controllers/ pkg/
+	$(GOFMT) -w cmd/ test/ hack/ api/ controllers/ pkg/
 
 whitespace-check:
 	hack/whitespace.sh check
 
 gofmt-check: $(GO)
-	test -z "`$(GOFMT) -l *.go test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l *.go test/ hack/ api/ controllers/ pkg/ && exit 1)
+	test -z "`$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
 
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
@@ -135,7 +136,7 @@ gen-crds: $(GO)
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
 gen-rbac: $(GO)
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
 
 check-gen: generate
 	./hack/check-gen.sh
@@ -145,24 +146,28 @@ generate: gen-k8s gen-crds gen-rbac
 manifests: $(GO)
 	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-manager: $(GO)
-	$(GO) build -o $(BIN_DIR)/manager main.go
+handler-manager: $(GO)
+	hack/build-manager.sh handler $(BIN_DIR)
 
-handler: manager
-	$(IMAGE_BUILDER) build . -f build/Dockerfile -t ${HANDLER_IMAGE} --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
+operator-manager: $(GO)
+	hack/build-manager.sh operator $(BIN_DIR)
 
-push-handler: handler
-	$(IMAGE_BUILDER) push $(HANDLER_IMAGE)
+handler: SKIP_PUSH=true
+handler: push-handler
 
-operator: manager
-	$(IMAGE_BUILDER) build . -f build/Dockerfile.operator -t $(OPERATOR_IMAGE)
+push-handler: handler-manager
+	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/Dockerfile --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
 
-push-operator: operator
-	$(IMAGE_BUILDER) push $(OPERATOR_IMAGE)
+operator: SKIP_PUSH=true
+operator: push-operator
+
+push-operator: operator-manager
+	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
+
 push: push-handler push-operator
 
 test/unit: $(GO)
-	INTERFACES_FILTER="" NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
+	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
 test-e2e-handler: $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)

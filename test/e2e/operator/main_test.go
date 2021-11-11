@@ -23,7 +23,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/deployment"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
@@ -32,7 +32,7 @@ import (
 
 type operatorTestData struct {
 	ns                                     string
-	nmstate                                nmstatev1beta1.NMState
+	nmstate                                nmstatev1.NMState
 	webhookKey, handlerKey, certManagerKey types.NamespacedName
 	handlerLabels                          map[string]string
 }
@@ -40,7 +40,7 @@ type operatorTestData struct {
 func newOperatorTestData(ns string) operatorTestData {
 	return operatorTestData{
 		ns: ns,
-		nmstate: nmstatev1beta1.NMState{
+		nmstate: nmstatev1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "nmstate",
 				Namespace: ns,
@@ -99,13 +99,13 @@ var _ = AfterSuite(func() {
 	uninstallNMStateAndWaitForDeletion(defaultOperator)
 })
 
-func installNMState(nmstate nmstatev1beta1.NMState) {
+func installNMState(nmstate nmstatev1.NMState) {
 	By(fmt.Sprintf("Creating NMState CR '%s'", nmstate.Name))
 	err := testenv.Client.Create(context.TODO(), &nmstate)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred(), "NMState CR created without error")
 }
 
-func uninstallNMState(nmstate nmstatev1beta1.NMState) {
+func uninstallNMState(nmstate nmstatev1.NMState) {
 	By(fmt.Sprintf("Deleting NMState CR '%s'", nmstate.Name))
 	err := testenv.Client.Delete(context.TODO(), &nmstate, &client.DeleteOptions{})
 	Expect(err).To(SatisfyAny(Succeed(), WithTransform(apierrors.IsNotFound, BeTrue())), "NMState CR successfully removed")

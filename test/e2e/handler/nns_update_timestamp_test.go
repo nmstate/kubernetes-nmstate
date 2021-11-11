@@ -35,7 +35,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 					currentStatus := nodeNetworkState(key).Status
 					originalStatus := originalNNS.Status
 					if currentStatus.CurrentState.String() == originalStatus.CurrentState.String() {
-						By(fmt.Sprintf("Check LastSuccessfulUpdateTime changed at %s", node))
+						Byf("Check LastSuccessfulUpdateTime changed at %s", node)
 						Expect(currentStatus.LastSuccessfulUpdateTime).To(Equal(originalStatus.LastSuccessfulUpdateTime))
 					} else {
 						return fmt.Errorf("Network configuration changed, sending and error to retry")
@@ -56,7 +56,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 		})
 		It("should update it with according to network state refresh duration", func() {
 			for node, originalNNS := range originalNNSs {
-				By(fmt.Sprintf("Checking timestamp against original one %s", originalNNS.Status.LastSuccessfulUpdateTime))
+				Byf("Checking timestamp against original one %s", originalNNS.Status.LastSuccessfulUpdateTime)
 				Eventually(func() time.Time {
 					currentNNS := nodeNetworkState(types.NamespacedName{Name: node})
 					return currentNNS.Status.LastSuccessfulUpdateTime.Time
@@ -67,14 +67,12 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	})
 	Context("when network configuration is changed by a NNCP", func() {
 		BeforeEach(func() {
-			// We want to test all the NNS so we apply policies to control-plane and workers
-			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUp(bridge1))
+			// We want to test all the NNS so we apply policies to control-plane and workers (use linuxBrUpNoPorts to not affect the nodes secondary interfaces state)
+			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1))
 			waitForAvailableTestPolicy()
 		})
 		AfterEach(func() {
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
-			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
 			waitForAvailableTestPolicy()
 			deletePolicy(TestPolicy)
 		})

@@ -4,7 +4,7 @@ metadata:
   annotations:
     alm-examples: |-
       [{
-        "apiVersion": "nmstate.io/v1beta1",
+        "apiVersion": "nmstate.io/v1",
         "kind": "NMState",
         "metadata": {
           "name": "nmstate"
@@ -33,7 +33,7 @@ spec:
     owned:
     - kind: NMState
       name: nmstates.nmstate.io
-      version: v1beta1
+      version: v1
       description: Represents an NMState deployment.
       displayName: NMState
   description: A Kubernetes Operator to install Kubernetes NMState
@@ -106,9 +106,7 @@ spec:
                 name: kubernetes-nmstate-operator
             spec:
               containers:
-              - args:
-                - --v=production
-                command:
+              - command:
                 - manager
                 env:
                 - name: WATCH_NAMESPACE

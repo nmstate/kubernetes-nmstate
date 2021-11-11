@@ -1,8 +1,6 @@
 package handler
 
 import (
-	"fmt"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -24,7 +22,7 @@ var _ = Describe("Enactment DesiredState", func() {
 		It("should have desiredState for node", func() {
 			for _, node := range nodes {
 				enactmentKey := nmstate.EnactmentKey(node, TestPolicy)
-				By(fmt.Sprintf("Check enactment %s has expected desired state", enactmentKey.Name))
+				Byf("Check enactment %s has expected desired state", enactmentKey.Name)
 				nnce := nodeNetworkConfigurationEnactment(enactmentKey)
 				Expect(nnce.Status.DesiredState).To(MatchYAML(linuxBrUpWithDefaults(bridge1)))
 			}

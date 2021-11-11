@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -69,6 +68,7 @@ var _ = BeforeSuite(func() {
 	nodeList := corev1.NodeList{}
 	filterWorkers := client.MatchingLabels{"node-role.kubernetes.io/worker": ""}
 	err = testenv.Client.List(context.TODO(), &nodeList, filterWorkers)
+	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		if containsNode(allNodes, node.Name) {
 			nodes = append(nodes, node.Name)
@@ -98,9 +98,9 @@ func TestE2E(t *testing.T) {
 
 var _ = BeforeEach(func() {
 	bond1 = nextBond()
-	By(fmt.Sprintf("Setting bond1=%s", bond1))
+	Byf("Setting bond1=%s", bond1)
 	bridge1 = nextBridge()
-	By(fmt.Sprintf("Setting bridge1=%s", bridge1))
+	Byf("Setting bridge1=%s", bridge1)
 	startTime = time.Now()
 
 	By("Getting nodes initial state")
@@ -121,21 +121,6 @@ var _ = AfterEach(func() {
 			"to initial state on node %s", node))
 	}
 })
-
-func getMaxFailsFromEnv() int {
-	maxFailsEnv := os.Getenv("REPORTER_MAX_FAILS")
-	if maxFailsEnv == "" {
-		return 10
-	}
-
-	maxFails, err := strconv.Atoi(maxFailsEnv)
-	if err != nil { // if the variable is set with a non int value
-		fmt.Println("Invalid REPORTER_MAX_FAILS variable, defaulting to 10")
-		return 10
-	}
-
-	return maxFails
-}
 
 func containsNode(nodes []string, node string) bool {
 	for _, n := range nodes {
