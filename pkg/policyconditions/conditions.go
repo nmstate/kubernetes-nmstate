@@ -53,6 +53,12 @@ func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionUnknown,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionTrue,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
 		message,
 	)
 }
@@ -71,6 +77,12 @@ func SetPolicySuccess(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
 		message,
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
 }
 
 func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
@@ -86,6 +98,12 @@ func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 		corev1.ConditionTrue,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
 		message,
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
 	)
 }
 
@@ -103,6 +121,20 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 		nmstate.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		"",
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
+}
+
+func IsProgressing(conditions *nmstate.ConditionList) bool {
+	progressingCondition := conditions.Find(nmstate.NodeNetworkConfigurationPolicyConditionProgressing)
+	if progressingCondition == nil {
+		return false
+	}
+	return progressingCondition.Status == corev1.ConditionTrue
 }
 
 func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
