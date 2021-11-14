@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+PWD = $(shell pwd)
+
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
@@ -201,8 +203,9 @@ release: $(GO)
 	hack/release.sh
 
 vendor: $(GO)
-	$(GO) mod tidy
-	$(GO) mod vendor
+	for f in `find . -name go.mod -not -path '*/vendor/*' -not -path '*/build/*'`; do \
+		cd $$(dirname $$f); $(GO) mod tidy; $(GO) mod vendor; cd $(PWD); \
+	done
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: $(OPERATOR_SDK) gen-crds manifests
