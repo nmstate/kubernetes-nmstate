@@ -1,5 +1,7 @@
 SHELL := /bin/bash
 
+PWD = $(shell pwd)
+
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
@@ -27,7 +29,7 @@ HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
 export IMAGE_BUILDER ?= docker
 
-WHAT ?= ./pkg ./controllers ./api
+WHAT ?= ./pkg ./controllers
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
@@ -107,13 +109,13 @@ whitespace-format:
 	hack/whitespace.sh format
 
 gofmt: $(GO)
-	$(GOFMT) -w cmd/ test/ hack/ api/ controllers/ pkg/
+	$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/" | xargs -r $(GOFMT) -w
 
 whitespace-check:
 	hack/whitespace.sh check
 
 gofmt-check: $(GO)
-	test -z "`$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
+	test -z "`$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/"`" || ($(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
 
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
@@ -161,7 +163,10 @@ push-operator: operator-manager
 
 push: push-handler push-operator
 
-test/unit: $(GO)
+test/unit/api: $(GO)
+	cd api && $(GINKGO) $(unit_test_args) ./...
+
+test/unit: $(GO) test/unit/api
 	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
 test-e2e-handler: $(GO)
@@ -195,12 +200,15 @@ version-major:
 	./hack/tag-version.sh major
 
 release-notes: $(GO)
-	hack/render-release-notes.sh $(WHAT)
+	hack/render-release-notes.sh $(WHAT) ./api
 
 release: $(GO)
 	hack/release.sh
 
-vendor: $(GO)
+vendor-api: $(GO)
+	cd api && $(GO) mod tidy && $(GO) mod vendor
+
+vendor: $(GO) vendor-api
 	$(GO) mod tidy
 	$(GO) mod vendor
 

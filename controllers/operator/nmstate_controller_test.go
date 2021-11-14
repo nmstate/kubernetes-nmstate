@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
 var _ = Describe("NMState controller reconcile", func() {

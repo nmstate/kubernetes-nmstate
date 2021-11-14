@@ -46,6 +46,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
@@ -53,7 +54,6 @@ import (
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
-	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )

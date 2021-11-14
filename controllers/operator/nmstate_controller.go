@@ -38,8 +38,8 @@ import (
 	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 
+	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
 
