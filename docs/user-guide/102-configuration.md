@@ -175,7 +175,7 @@ status:
 
 The output contains the `desiredState` applied by the Policy for the given Node.
 It also contains a list of conditions. This list is more detailed than the one
-in Policy. It shows whether the limit of unavailable nods was reached so the
+in Policy. It shows whether the limit of unavailable nodes was reached so the
 node has to wait for other nodes to finish applying network configuration
 (`Pending`), if the `desiredState` is currently being applied on the node
 (`Progressing`), if the configuration failed (`Failing`) or succeeded
@@ -402,7 +402,7 @@ status:
 ## Selecting nodes
 
 All the Policies we used so far were applied on all nodes across the cluster. It
-is however possible to select only a subset of nodes using via a node selector.
+is however possible to select only a subset of nodes using a node selector.
 
 In the following example, we configure a VLAN interface with tag 100 over a NIC
 `eth1`. This configuration will be done only on node which has labels matching
