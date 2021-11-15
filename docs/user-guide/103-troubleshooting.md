@@ -13,11 +13,11 @@ the operator protect the user from breaking the cluster networking.
 If any of the following cases render the configuration faulty, the setup will be
 automatically rolled back and Enactment will report the failure.
 
-* Configuration fails to be applied on the host (due missing interfaces, inability to obtain IP, invalid attributes, ...)
+* Configuration fails to be applied on the host (due to missing interfaces, inability to obtain IP, invalid attributes, ...)
 * Connectivity to the default gateway is broken
 * Connectivity to the API server is broken
 
-In the following example, we will create a Policy configuring and unavailable
+In the following example, we will create a Policy configuring an unavailable
 interface and observe the results:
 
 <!-- When updating following example, don't forget to update respective attached file -->
