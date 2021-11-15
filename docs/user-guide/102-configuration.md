@@ -476,6 +476,22 @@ node05.linux-bridge-maxunavailable   Progressing
 node06.linux-bridge-maxunavailable   Pending
 ```
 
+# Component Placement
+
+In NMState, you can constrain assignment of kubernetes-nmstate components to individual nodes. There are the following options:
+
+- **NodeSelector**
+    - Optional. If specified, handler pods will run only on nodes matching the selector.
+- **Tolerations**
+    - Optional. With tolerations, handler pods will be scheduled onto appropriate nodes.
+- **InfraNodeSelector**
+    - Optional. If specified, webhook and certmanager pods will run only on nodes matching the selector.
+- **InfraTolerations**
+    - Optional. With tolerations, webhook and certmanager pods will be scheduled onto appropriate nodes.
+
+
+See Scheduling chapter of the [Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/) for more information.
+
 ## Continue reading
 
 The following tutorial will guide you through troubleshooting of a failed
