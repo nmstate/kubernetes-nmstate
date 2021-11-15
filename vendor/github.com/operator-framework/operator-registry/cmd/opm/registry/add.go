@@ -10,15 +10,18 @@ import (
 	"github.com/operator-framework/operator-registry/pkg/containertools"
 	"github.com/operator-framework/operator-registry/pkg/lib/registry"
 	reg "github.com/operator-framework/operator-registry/pkg/registry"
+	"github.com/operator-framework/operator-registry/pkg/sqlite"
 )
 
 func newRegistryAddCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "add",
 		Short: "add operator bundle to operator registry DB",
-		Long:  `add operator bundle to operator registry DB`,
+		Long: `add operator bundle to operator registry DB
 
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+` + sqlite.DeprecationMessage,
+
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
 				logrus.SetLevel(logrus.DebugLevel)
 			}
@@ -26,6 +29,7 @@ func newRegistryAddCmd() *cobra.Command {
 		},
 
 		RunE: addFunc,
+		Args: cobra.NoArgs,
 	}
 
 	rootCmd.Flags().Bool("debug", false, "enable debug logging")
@@ -36,11 +40,18 @@ func newRegistryAddCmd() *cobra.Command {
 	rootCmd.Flags().String("ca-file", "", "the root certificates to use when --container-tool=none; see docker/podman docs for certificate loading instructions")
 	rootCmd.Flags().StringP("mode", "", "replaces", "graph update mode that defines how channel graphs are updated. One of: [replaces, semver, semver-skippatch]")
 	rootCmd.Flags().StringP("container-tool", "c", "none", "tool to interact with container images (save, build, etc.). One of: [none, docker, podman]")
-
+	rootCmd.Flags().Bool("overwrite-latest", false, "overwrite the latest bundles (channel heads) with those of the same csv name given by --bundles")
+	if err := rootCmd.Flags().MarkHidden("overwrite-latest"); err != nil {
+		logrus.Panic(err.Error())
+	}
+	rootCmd.Flags().Bool("enable-alpha", false, "enable unsupported alpha features of the OPM CLI")
+	if err := rootCmd.Flags().MarkHidden("enable-alpha"); err != nil {
+		logrus.Panic(err.Error())
+	}
 	return rootCmd
 }
 
-func addFunc(cmd *cobra.Command, args []string) error {
+func addFunc(cmd *cobra.Command, _ []string) error {
 	permissive, err := cmd.Flags().GetBool("permissive")
 	if err != nil {
 		return err
@@ -74,6 +85,15 @@ func addFunc(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	overwrite, err := cmd.Flags().GetBool("overwrite-latest")
+	if err != nil {
+		return err
+	}
+
+	enableAlpha, err := cmd.Flags().GetBool("enable-alpha")
+	if err != nil {
+		return err
+	}
 
 	if caFile != "" {
 		if skipTLS {
@@ -93,7 +113,8 @@ func addFunc(cmd *cobra.Command, args []string) error {
 		Bundles:       bundleImages,
 		Mode:          modeEnum,
 		ContainerTool: containerTool,
-		Overwrite:     false,
+		Overwrite:     overwrite,
+		EnableAlpha:   enableAlpha,
 	}
 
 	logger := logrus.WithFields(logrus.Fields{"bundles": bundleImages})

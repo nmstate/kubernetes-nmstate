@@ -38,6 +38,7 @@ Optional validators. These validators are disabled by default and can be enabled
 See https://olm.operatorframework.io/docs/tasks/validate-package/#validation for more info.`,
 		Example: `$ opm alpha bundle validate --tag quay.io/test/test-operator:latest --image-builder docker`,
 		RunE:    validateFunc,
+		Args:    cobra.NoArgs,
 	}
 
 	bundleValidateCmd.Flags().StringVarP(&tag, "tag", "t", "",
@@ -52,7 +53,7 @@ See https://olm.operatorframework.io/docs/tasks/validate-package/#validation for
 	return bundleValidateCmd
 }
 
-func validateFunc(cmd *cobra.Command, args []string) error {
+func validateFunc(cmd *cobra.Command, _ []string) error {
 	logger := log.WithFields(log.Fields{"container-tool": containerTool})
 	log.SetLevel(log.DebugLevel)
 

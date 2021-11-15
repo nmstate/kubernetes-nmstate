@@ -1,19 +1,21 @@
 package config
 
 import (
-	"github.com/operator-framework/operator-registry/internal/declcfg"
+	"io/fs"
+
+	"github.com/operator-framework/operator-registry/alpha/declcfg"
 )
 
-// ValidateConfig takes a directory containing the declarative config file(s)
+// Validate takes a filesystem containing the declarative config file(s)
 // 1. Validate if declarative config file(s) are valid based on specified schema
 // 2. Validate the `replaces` chains of the upgrade graph
 // Inputs:
-// directory: the directory where declarative config file(s) exist
+// directory: a filesystem where declarative config file(s) exist
 // Outputs:
-// error: a wrapped error that contains a list of error strings
-func ValidateConfig(directory string) error {
+// error: a wrapped error that contains a tree of error strings
+func Validate(root fs.FS) error {
 	// Load config files and convert them to declcfg objects
-	cfg, err := declcfg.LoadDir(directory)
+	cfg, err := declcfg.LoadFS(root)
 	if err != nil {
 		return err
 	}

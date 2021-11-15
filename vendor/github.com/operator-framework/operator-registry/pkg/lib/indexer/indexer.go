@@ -396,6 +396,9 @@ func copyDatabaseTo(databaseFile, targetDir string) (string, error) {
 }
 
 func buildContext(generate bool, requestedDockerfile string) (buildDir, outDockerfile string, cleanup func(), err error) {
+	// set cleanup to a no-op until explicitly set
+	cleanup = func() {}
+
 	if generate {
 		buildDir = "./"
 		if len(requestedDockerfile) == 0 {
@@ -546,7 +549,7 @@ func (i ImageIndexer) ExportFromIndex(request ExportFromIndexRequest) error {
 				bundleDir.bundleVersion = strconv.Itoa(rand.Intn(10000))
 			}
 			exporter := bundle.NewExporterForBundle(bundleImage, filepath.Join(request.DownloadPath, bundleDir.pkgName, bundleDir.bundleVersion), request.ContainerTool)
-			if err := exporter.Export(); err != nil {
+			if err := exporter.Export(request.SkipTLS); err != nil {
 				err = fmt.Errorf("exporting bundle image:%s failed with %s", bundleImage, err)
 				mu.Lock()
 				errs = append(errs, err)
@@ -640,15 +643,16 @@ func generatePackageYaml(dbQuerier pregistry.Query, packageName, downloadPath st
 
 // DeprecateFromIndexRequest defines the parameters to send to the PruneFromIndex API
 type DeprecateFromIndexRequest struct {
-	Generate          bool
-	Permissive        bool
-	BinarySourceImage string
-	FromIndex         string
-	OutDockerfile     string
-	Bundles           []string
-	Tag               string
-	CaFile            string
-	SkipTLS           bool
+	Generate            bool
+	Permissive          bool
+	BinarySourceImage   string
+	FromIndex           string
+	OutDockerfile       string
+	Bundles             []string
+	Tag                 string
+	CaFile              string
+	SkipTLS             bool
+	AllowPackageRemoval bool
 }
 
 // DeprecateFromIndex takes a DeprecateFromIndexRequest and deprecates the requested
@@ -665,14 +669,14 @@ func (i ImageIndexer) DeprecateFromIndex(request DeprecateFromIndexRequest) erro
 		return err
 	}
 
-	// Run opm registry prune on the database
 	deprecateFromRegistryReq := registry.DeprecateFromRegistryRequest{
-		Bundles:       request.Bundles,
-		InputDatabase: databasePath,
-		Permissive:    request.Permissive,
+		Bundles:             request.Bundles,
+		InputDatabase:       databasePath,
+		Permissive:          request.Permissive,
+		AllowPackageRemoval: request.AllowPackageRemoval,
 	}
 
-	// Prune the bundles from the registry
+	// Deprecate the bundles from the registry
 	err = i.RegistryDeprecator.DeprecateFromRegistry(deprecateFromRegistryReq)
 	if err != nil {
 		return err
