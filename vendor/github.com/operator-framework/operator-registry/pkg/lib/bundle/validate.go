@@ -343,6 +343,8 @@ func (i imageValidator) ValidateBundleContent(manifestDir string) error {
 					}
 				}
 			case v1beta1CRDapiVersion:
+				i.logger.Warnf("GroupVersionKind apiextensions.k8s.io/v1beta1, Kind=CustomResourceDefinition was deprecated in Kubernetes 1.16+, removed in 1.22. Support" +
+					"for apiextensions.k8s.io/v1beta1 CustomResourceDefinitions will be removed in the future in favor of apiextensions.k8s.io/v1 CustomResourceDefinitions.")
 				crd := &apiextensionsv1beta1.CustomResourceDefinition{}
 				err := dec.Decode(crd)
 				if err != nil {
