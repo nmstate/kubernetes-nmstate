@@ -41,7 +41,7 @@ type NMStateSpec struct {
 	// +optional
 	InfraNodeSelector map[string]string `json:"infraNodeSelector,omitempty"`
 	// InfraTolerations is an optional list of tolerations to be added to webhook & certmanager Deployment manifests
-	// If InfraTolerations is specified, the handler daemonset will be able to be scheduled on nodes with corresponding taints
+	// If InfraTolerations is specified, the webhook and certmanager will be able to be scheduled on nodes with corresponding taints
 	// +optional
 	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
 }
