@@ -48,7 +48,7 @@ spec:
               infraTolerations:
                 description: InfraTolerations is an optional list of tolerations to
                   be added to webhook & certmanager Deployment manifests If InfraTolerations
-                  is specified, the handler daemonset will be able to be scheduled
+                  is specified, the webhook and certmanager will be able to be scheduled
                   on nodes with corresponding taints
                 items:
                   description: The pod this Toleration is attached to tolerates any
@@ -206,7 +206,7 @@ spec:
               infraTolerations:
                 description: InfraTolerations is an optional list of tolerations to
                   be added to webhook & certmanager Deployment manifests If InfraTolerations
-                  is specified, the handler daemonset will be able to be scheduled
+                  is specified, the webhook and certmanager will be able to be scheduled
                   on nodes with corresponding taints
                 items:
                   description: The pod this Toleration is attached to tolerates any
