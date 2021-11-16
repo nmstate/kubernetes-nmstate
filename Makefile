@@ -4,18 +4,10 @@ export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
-NMSTATE_CURRENT_COPR_REPO=nmstate-1.0
-NM_CURRENT_COPR_REPO=NetworkManager-1.30
-
-NMSTATE_FUTURE_COPR_REPO=nmstate-git
-NM_FUTURE_COPR_REPO=NetworkManager-main
+HANDLER_DOCKERFILE=Dockerfile
 
 ifeq ($(NMSTATE_PIN), future)
-	NMSTATE_COPR_REPO=$(NMSTATE_FUTURE_COPR_REPO)
-	NM_COPR_REPO=$(NM_FUTURE_COPR_REPO)
-else
-	NMSTATE_COPR_REPO=$(NMSTATE_CURRENT_COPR_REPO)
-	NM_COPR_REPO=$(NM_CURRENT_COPR_REPO)
+	HANDLER_DOCKERFILE=Dockerfile.future
 endif
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
@@ -156,7 +148,7 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler: handler-manager
-	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/Dockerfile --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
+	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
 
 operator: SKIP_PUSH=true
 operator: push-operator
