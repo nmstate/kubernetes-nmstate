@@ -17,7 +17,11 @@ type exampleSpec struct {
 // It only checks the top level API, hence it does not verify that the
 // configuration is indeed applied on nodes. That should be tested by dedicated
 // test suites for each feature.
-var _ = Describe("[user-guide] Examples", func() {
+var _ = FDescribe("[user-guide] Examples", func() {
+	var (
+		example exampleSpec
+	)
+
 	beforeTestIfaceExample := func(fileName string) {
 		kubectlAndCheck("apply", "-f", fmt.Sprintf("docs/examples/%s", fileName))
 	}
@@ -123,13 +127,16 @@ var _ = Describe("[user-guide] Examples", func() {
 		},
 	}
 
-	for _, example := range examples {
+	for _, example = range examples {
+		fmt.Printf(" name=%s filename=%s \n", example.name, example.fileName)
 		Context(example.name, func() {
 			BeforeEach(func() {
+				fmt.Printf("BE  name=%s filename=%s \n", example.name, example.fileName)
 				beforeTestIfaceExample(example.fileName)
 			})
 
 			AfterEach(func() {
+				fmt.Printf("AE  name=%s filename=%s \n", example.name, example.fileName)
 				afterIfaceExample(example.policyName, example.ifaceNames)
 			})
 
