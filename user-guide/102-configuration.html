@@ -507,7 +507,7 @@ node02.bond0-eth1-eth2   Available
 
 <p>The output contains the <code class="language-plaintext highlighter-rouge">desiredState</code> applied by the Policy for the given Node.
 It also contains a list of conditions. This list is more detailed than the one
-in Policy. It shows whether the limit of unavailable nods was reached so the
+in Policy. It shows whether the limit of unavailable nodes was reached so the
 node has to wait for other nodes to finish applying network configuration
 (<code class="language-plaintext highlighter-rouge">Pending</code>), if the <code class="language-plaintext highlighter-rouge">desiredState</code> is currently being applied on the node
 (<code class="language-plaintext highlighter-rouge">Progressing</code>), if the configuration failed (<code class="language-plaintext highlighter-rouge">Failing</code>) or succeeded
@@ -761,7 +761,7 @@ configuration.</p>
 <h2 id="selecting-nodes">Selecting nodes</h2>
 
 <p>All the Policies we used so far were applied on all nodes across the cluster. It
-is however possible to select only a subset of nodes using via a node selector.</p>
+is however possible to select only a subset of nodes using a node selector.</p>
 
 <p>In the following example, we configure a VLAN interface with tag 100 over a NIC
 <code class="language-plaintext highlighter-rouge">eth1</code>. This configuration will be done only on node which has labels matching
