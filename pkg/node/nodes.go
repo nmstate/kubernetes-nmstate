@@ -2,6 +2,7 @@ package node
 
 import (
 	"context"
+
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -14,6 +15,7 @@ import (
 
 const (
 	DEFAULT_MAXUNAVAILABLE = "50%"
+	MIN_MAXUNAVAILABLE     = 1
 )
 
 func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
@@ -45,23 +47,31 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1beta1.NodeNetworkConfigurationPolicy) (int, error) {
 	enactmentsTotal, _, err := enactment.CountByPolicy(cli, policy)
 	if err != nil {
-		return 0, err
+		return MIN_MAXUNAVAILABLE, err
 	}
 	intOrPercent := intstr.FromString(DEFAULT_MAXUNAVAILABLE)
 	if policy.Spec.MaxUnavailable != nil {
 		intOrPercent = *policy.Spec.MaxUnavailable
 	}
-	maxUnavailable, err := ScaledMaxUnavailableNodeCount(enactmentsTotal, intOrPercent)
-	return maxUnavailable, nil
+	return ScaledMaxUnavailableNodeCount(enactmentsTotal, intOrPercent)
 }
 
 func ScaledMaxUnavailableNodeCount(matchingNodes int, intOrPercent intstr.IntOrString) (int, error) {
+	correctMaxUnavailable := func(maxUnavailable int) int {
+		if maxUnavailable < 1 {
+			return MIN_MAXUNAVAILABLE
+		}
+		return maxUnavailable
+	}
 	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(&intOrPercent, matchingNodes, true)
 	if err != nil {
-		return 0, err
+		defaultMaxUnavailable := intstr.FromString(DEFAULT_MAXUNAVAILABLE)
+		maxUnavailable, _ = intstr.GetScaledValueFromIntOrPercent(
+			&defaultMaxUnavailable,
+			matchingNodes,
+			true,
+		)
+		return correctMaxUnavailable(maxUnavailable), err
 	}
-	if maxUnavailable < 1 {
-		maxUnavailable = 1
-	}
-	return maxUnavailable, nil
+	return correctMaxUnavailable(maxUnavailable), nil
 }
