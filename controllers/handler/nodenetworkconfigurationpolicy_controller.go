@@ -351,7 +351,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	}
 	maxUnavailable, err := node.MaxUnavailableNodeCount(r.APIClient, policy)
 	if err != nil {
-		return err
+		r.Log.Info(
+			fmt.Sprintf("failed calculating limit of max unavailable nodes, defaulting to %d, err: %s", maxUnavailable, err.Error()),
+		)
 	}
 	if policy.Status.UnavailableNodeCount >= maxUnavailable {
 		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("maximal number of %d nodes are already processing policy configuration", policy.Status.UnavailableNodeCount))
