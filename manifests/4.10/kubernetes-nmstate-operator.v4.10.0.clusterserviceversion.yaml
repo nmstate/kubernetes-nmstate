@@ -9,11 +9,6 @@ metadata:
         "metadata": {
           "name": "nmstate"
         },
-        "spec": {
-          "nodeSelector": {
-            "beta.kubernetes.io/arch": "amd64"
-          }
-        }
       }
     alm-examples: |-
       [{
@@ -41,6 +36,7 @@ metadata:
     repository: https://github.com/openshift/kubernetes-nmstate
   labels:
     operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
   name: kubernetes-nmstate-operator.v4.10.0
   namespace: openshift-nmstate
 spec:
