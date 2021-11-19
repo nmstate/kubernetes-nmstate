@@ -118,6 +118,9 @@ gofmt-check: $(GO)
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
 
+lint: $(GO)
+	hack/lint.sh
+
 $(OPERATOR_SDK):
 	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
