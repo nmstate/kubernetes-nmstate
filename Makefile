@@ -109,13 +109,13 @@ whitespace-format:
 	hack/whitespace.sh format
 
 gofmt: $(GO)
-	$(GOFMT) -w cmd/ test/ hack/ api/ controllers/ pkg/
+	$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/" | xargs -r $(GOFMT) -w
 
 whitespace-check:
 	hack/whitespace.sh check
 
 gofmt-check: $(GO)
-	test -z "`$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
+	test -z "`$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/"`" || ($(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
 
 $(GO):
 	hack/install-go.sh $(BIN_DIR)
