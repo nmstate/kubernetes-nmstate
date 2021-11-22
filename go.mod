@@ -16,7 +16,7 @@ require (
 	github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2 // indirect
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/operator-framework/operator-registry v1.17.0
-	github.com/phoracek/networkmanager-go v0.1.0
+	github.com/phoracek/networkmanager-go v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.17.0
 	github.com/spf13/pflag v1.0.5

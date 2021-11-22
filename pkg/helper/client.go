@@ -1,8 +1,10 @@
 package helper
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"os/exec"
 	"time"
 
 	"github.com/pkg/errors"
@@ -32,6 +34,12 @@ const (
 	DesiredStateConfigurationTimeout = (defaultGwProbeTimeout + apiServerProbeTimeout) * 2
 )
 
+type DependencyVersions struct {
+	HandlerNetworkManagerVersion string
+	HandlerNmstateVersion        string
+	HostNmstateVersion           string
+}
+
 func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
@@ -52,7 +60,7 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmsta
 	return &nodeNetworkState, nil
 }
 
-func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState) error {
+func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState, versions *DependencyVersions) error {
 	if nns == nil {
 		var err error
 		nns, err = InitializeNodeNetworkState(client, node)
@@ -60,15 +68,19 @@ func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, obs
 			return err
 		}
 	}
-	return UpdateCurrentState(client, nns, observedState)
+	return UpdateCurrentState(client, nns, observedState, versions)
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State) error {
+func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State, versions *DependencyVersions) error {
 
 	if observedState.String() == nodeNetworkState.Status.CurrentState.String() {
 		log.Info("Skipping NodeNetworkState update, node network configuration not changed")
 		return nil
 	}
+
+	nodeNetworkState.Status.HandlerNetworkManagerVersion = versions.HandlerNetworkManagerVersion
+	nodeNetworkState.Status.HandlerNmstateVersion = versions.HandlerNmstateVersion
+	nodeNetworkState.Status.HostNetworkManagerVersion = versions.HostNmstateVersion
 
 	nodeNetworkState.Status.CurrentState = observedState
 	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
@@ -83,6 +95,18 @@ func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.N
 	}
 
 	return nil
+}
+
+func ExecuteCommand(command string, arguments ...string) (string, error) {
+	cmd := exec.Command(command, arguments...)
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return "", fmt.Errorf("failed to execute %s: '%s', '%s', '%s'", command, err.Error(), stdout.String(), stderr.String())
+	}
+
+	return string(bytes.Trim(stdout.Bytes(), "\n")), nil
 }
 
 func rollback(client client.Client, probes []probe.Probe, cause error) error {

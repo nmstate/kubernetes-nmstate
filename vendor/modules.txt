@@ -275,8 +275,8 @@ github.com/go-openapi/swag
 github.com/go-task/slim-sprig
 # github.com/gobuffalo/flect v0.2.2
 github.com/gobuffalo/flect
-# github.com/godbus/dbus v4.1.0+incompatible
-github.com/godbus/dbus
+# github.com/godbus/dbus/v5 v5.0.4
+github.com/godbus/dbus/v5
 # github.com/gofrs/flock v0.8.0
 ## explicit
 github.com/gofrs/flock
@@ -551,7 +551,7 @@ github.com/operator-framework/operator-registry/pkg/sqlite
 github.com/operator-framework/operator-registry/pkg/sqlite/migrations
 # github.com/otiai10/copy v1.2.0
 github.com/otiai10/copy
-# github.com/phoracek/networkmanager-go v0.1.0
+# github.com/phoracek/networkmanager-go v0.3.0
 ## explicit
 github.com/phoracek/networkmanager-go/src
 # github.com/pkg/errors v0.9.1

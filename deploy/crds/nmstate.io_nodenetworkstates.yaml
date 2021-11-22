@@ -70,6 +70,12 @@ spec:
                   \n [1] https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml"
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              handlerNetworkManagerVersion:
+                type: string
+              handlerNmstateVersion:
+                type: string
+              hostNetworkManagerVersion:
+                type: string
               lastSuccessfulUpdateTime:
                 format: date-time
                 type: string
@@ -130,6 +136,12 @@ spec:
                   \n [1] https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml"
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              handlerNetworkManagerVersion:
+                type: string
+              handlerNmstateVersion:
+                type: string
+              hostNetworkManagerVersion:
+                type: string
               lastSuccessfulUpdateTime:
                 format: date-time
                 type: string
