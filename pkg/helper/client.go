@@ -103,6 +103,11 @@ func ApplyDesiredState(client client.Client, desiredState shared.State) (string,
 		return "Ignoring empty desired state", nil
 	}
 
+	out, err := EnableVlanFiltering()
+	if err != nil {
+		return out, fmt.Errorf("failed to enable vlan filtering via nmcli: %s", err.Error())
+	}
+
 	// Before apply we get the probes that are working fine, they should be
 	// working fine after apply
 	probes := probe.Select(client)

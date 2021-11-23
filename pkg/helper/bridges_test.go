@@ -286,3 +286,59 @@ var _ = Describe("Network desired state bridge parser", func() {
 		})
 	})
 })
+
+var _ = Describe("test listing linux bridges with ports", func() {
+	currentState := nmstate.NewState(`interfaces:
+  - name: br22
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: test-veth1
+        vlan:
+          enable-native: true
+  - name: br3
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: eth2
+      - name: eth3
+  - name: br4
+    type: linux-bridge
+    state: up
+    bridge:
+      port:
+      - name: eth4
+  - name: br5
+    type: linux-bridge
+    state: up
+    bridge:
+      port: []
+  - name: br6
+    type: linux-bridge
+    state: down
+    bridge:
+      port:
+      - name: eth666
+  - name: br7
+    type: linux-bridge
+    state: absent
+    bridge:
+      port:
+      - name: eth777
+`)
+	It("should list active bridges with at least one port", func() {
+		upBridgesWithPorts, err := GetUpLinuxBridgesWithPorts(currentState)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(upBridgesWithPorts).To(
+			SatisfyAll(
+				HaveKeyWithValue("br3", []string{"eth2", "eth3"}),
+				HaveKeyWithValue("br4", []string{"eth4"}),
+				Not(HaveKey("br22")),
+				Not(HaveKey("br5")),
+				Not(HaveKey("br6")),
+				Not(HaveKey("br7")),
+			))
+	})
+})
