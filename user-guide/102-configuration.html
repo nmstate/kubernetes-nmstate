@@ -367,7 +367,7 @@ NICs <code class="language-plaintext highlighter-rouge">eth1</code> and <code cl
 <p><a href="/kubernetes-nmstate/user-guide/bond0-eth1-eth2_up.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">bond0-eth1-eth2</span>
@@ -507,7 +507,7 @@ node02.bond0-eth1-eth2   Available
 
 <p>The output contains the <code class="language-plaintext highlighter-rouge">desiredState</code> applied by the Policy for the given Node.
 It also contains a list of conditions. This list is more detailed than the one
-in Policy. It shows whether the limit of unavailable nods was reached so the
+in Policy. It shows whether the limit of unavailable nodes was reached so the
 node has to wait for other nodes to finish applying network configuration
 (<code class="language-plaintext highlighter-rouge">Pending</code>), if the <code class="language-plaintext highlighter-rouge">desiredState</code> is currently being applied on the node
 (<code class="language-plaintext highlighter-rouge">Progressing</code>), if the configuration failed (<code class="language-plaintext highlighter-rouge">Failing</code>) or succeeded
@@ -595,7 +595,7 @@ interface to <code class="language-plaintext highlighter-rouge">state: absent</c
 <p><a href="/kubernetes-nmstate/user-guide/bond0-eth1-eth2_absent.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">bond0-eth1-eth2</span>
@@ -673,7 +673,7 @@ configuration.</p>
 <p><a href="/kubernetes-nmstate/user-guide/eth1-eth2_up.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
@@ -687,7 +687,7 @@ configuration.</p>
         <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
         <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
 <span class="nn">---</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">eth2</span>
@@ -761,7 +761,7 @@ configuration.</p>
 <h2 id="selecting-nodes">Selecting nodes</h2>
 
 <p>All the Policies we used so far were applied on all nodes across the cluster. It
-is however possible to select only a subset of nodes using via a node selector.</p>
+is however possible to select only a subset of nodes using a node selector.</p>
 
 <p>In the following example, we configure a VLAN interface with tag 100 over a NIC
 <code class="language-plaintext highlighter-rouge">eth1</code>. This configuration will be done only on node which has labels matching
@@ -772,7 +772,7 @@ all the key-value pairs in the <code class="language-plaintext highlighter-rouge
 <p><a href="/kubernetes-nmstate/user-guide/vlan100_node01_up.yaml">Download example</a></p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">vlan100</span>
@@ -829,7 +829,7 @@ can be applying a policy at a time.</p>
 <p>The following policy specifies that up to 3 nodes may be progressing concurrently:</p>
 
 <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># When updating this file, don't forget to update the tutorial.</span>
-<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1beta1</span>
+<span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
 <span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
 <span class="na">metadata</span><span class="pi">:</span>
   <span class="na">name</span><span class="pi">:</span> <span class="s">linux-bridge-maxunavailable</span>
