@@ -24,6 +24,7 @@ metadata:
         }
       }]
     operatorframework.io/suggested-namespace: openshift-nmstate
+    operators.openshift.io/infrastructure-features: '["disconnected"]'
     capabilities: Basic Install
     certified: "false"
     categories: OpenShift Optional
