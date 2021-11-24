@@ -59,7 +59,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=nmstate.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
-// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces;statefulsets,verbs="*"
+// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces,verbs="*"
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
