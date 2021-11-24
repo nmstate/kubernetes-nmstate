@@ -207,7 +207,7 @@ var _ = Describe("Policy Conditions", func() {
 			Pods:   newNmstatePods(3),
 			Policy: p(SetPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
 		}),
-		Entry("when enactments are failed/progressing/success then policy is progressing", ConditionsCase{
+		Entry("when enactments are failed/progressing/success then policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetProgressing),
@@ -216,7 +216,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(4),
 			Pods:   newNmstatePods(4),
-			Policy: p(SetPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
+			Policy: p(SetPolicyFailedToConfigure, "1/4 nodes failed to configure"),
 		}),
 		Entry("when all the enactments are at failing or success policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{

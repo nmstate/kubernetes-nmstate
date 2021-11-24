@@ -3,6 +3,7 @@ package policyconditions
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
@@ -138,19 +139,17 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 		if numberOfNmstateMatchingNodes == 0 {
 			message := "Policy does not match any node"
 			SetPolicyNotMatching(&policy.Status.Conditions, message)
+		} else if enactmentsCountByCondition.Failed() > 0 || enactmentsCountByCondition.Aborted() > 0 {
+			message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCountByCondition.Failed(), numberOfNmstateMatchingNodes)
+			if enactmentsCountByCondition.Aborted() > 0 {
+				message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCountByCondition.Aborted())
+			}
+			SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
 		} else if numberOfFinishedEnactments < numberOfNmstateMatchingNodes {
 			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateMatchingNodes))
 		} else {
-			if enactmentsCountByCondition.Failed() > 0 || enactmentsCountByCondition.Aborted() > 0 {
-				message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCountByCondition.Failed(), numberOfNmstateMatchingNodes)
-				if enactmentsCountByCondition.Aborted() > 0 {
-					message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCountByCondition.Aborted())
-				}
-				SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
-			} else {
-				message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCountByCondition.Available(), enactmentsCountByCondition.Available())
-				SetPolicySuccess(&policy.Status.Conditions, message)
-			}
+			message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCountByCondition.Available(), enactmentsCountByCondition.Available())
+			SetPolicySuccess(&policy.Status.Conditions, message)
 		}
 
 		err = apiWriter.Status().Update(context.TODO(), policy)
