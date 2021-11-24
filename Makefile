@@ -68,7 +68,7 @@ OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
 GINKGO = go run github.com/onsi/ginkgo/ginkgo
 CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
-OPM = go run github.com/operator-framework/operator-registry/cmd/opm
+OPM = go run -tags=json1 github.com/operator-framework/operator-registry/cmd/opm
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -206,6 +206,7 @@ vendor: $(GO)
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: $(OPERATOR_SDK) gen-crds manifests
+	cp -r deploy/bases $(MANIFESTS_DIR)/bases
 	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
 	$(OPERATOR_SDK) bundle validate ./bundle
 
@@ -215,7 +216,7 @@ bundle-build:
 
 # Build the index
 index-build: $(GO) bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG)
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)

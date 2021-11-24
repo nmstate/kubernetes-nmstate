@@ -7,7 +7,7 @@ source ./cluster/sync-operator.sh
 
 kubectl=./cluster/kubectl.sh
 
-nmstate_cr_manifest=deploy/crds/nmstate.io_v1_nmstate_cr.yaml
+nmstate_cr_manifest=deploy/examples/nmstate.io_v1_nmstate_cr.yaml
 
 function deploy_handler() {
     $kubectl apply -f $nmstate_cr_manifest

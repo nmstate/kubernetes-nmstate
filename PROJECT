@@ -1,7 +1,7 @@
 domain: nmstate.io
 layout:
 - go.kubebuilder.io/v3
-projectName: kubernetes-nmstate
+projectName: kubernetes-nmstate-operator
 repo: github.com/nmstate/kubernetes-nmstate
 resources:
 - api:
