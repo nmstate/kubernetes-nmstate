@@ -415,14 +415,3 @@ func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(name string) 
 		log.WithValues("error", err).Info("WARNING: failed forcing NNS refresh, it will be refreshed after regular period")
 	}
 }
-
-func desiredState(object runtime.Object) (nmstateapi.State, error) {
-	var state nmstateapi.State
-	switch v := object.(type) {
-	default:
-		return nmstateapi.State{}, fmt.Errorf("unexpected type %T", v)
-	case *nmstatev1.NodeNetworkConfigurationPolicy:
-		state = v.Spec.DesiredState
-	}
-	return state, nil
-}

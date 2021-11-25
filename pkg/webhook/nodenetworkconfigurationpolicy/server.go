@@ -6,10 +6,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-const (
-	webhookName = "nmstate"
-)
-
 func Add(mgr manager.Manager) error {
 	// We need two hooks, the update of nncp and nncp/status (it's a subresource) happends
 	// at different times, also if you modify status at nncp webhook it does not modify it

@@ -53,11 +53,8 @@ func newOperatorTestData(ns string) operatorTestData {
 }
 
 var (
-	t               *testing.T
 	nodes           []string
-	startTime       time.Time
 	defaultOperator = newOperatorTestData("nmstate")
-	handlerLabels   = map[string]string{"component": "kubernetes-nmstate-handler"}
 )
 
 func TestE2E(t *testing.T) {

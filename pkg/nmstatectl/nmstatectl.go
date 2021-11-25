@@ -11,13 +11,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
-
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-)
-
-var (
-	log = logf.Log.WithName("nmstatectl")
 )
 
 const nmstateCommand = "nmstatectl"
