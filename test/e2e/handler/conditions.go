@@ -19,19 +19,6 @@ import (
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
-type expectedConditionsStatus struct {
-	Node       string
-	conditions shared.ConditionList
-}
-
-func conditionsToYaml(conditions shared.ConditionList) string {
-	manifest, err := yaml.Marshal(conditions)
-	if err != nil {
-		panic(err)
-	}
-	return string(manifest)
-}
-
 func enactmentsStatusToYaml() string {
 	enactmentsStatus := indexEnactmentStatusByName()
 	manifest, err := yaml.Marshal(enactmentsStatus)
@@ -112,10 +99,6 @@ func policyConditionsStatusForPolicyConsistently(policy string) AsyncAssertion {
 	return Consistently(func() shared.ConditionList {
 		return policyConditionsStatus(policy)
 	}, 5*time.Second, 1*time.Second)
-}
-
-func policyConditionsStatusEventually() AsyncAssertion {
-	return policyConditionsStatusForPolicyEventually(TestPolicy)
 }
 
 func policyConditionsStatusConsistently() AsyncAssertion {

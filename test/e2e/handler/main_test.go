@@ -24,7 +24,6 @@ import (
 )
 
 var (
-	t                    *testing.T
 	allNodes             []string
 	nodes                []string
 	startTime            time.Time

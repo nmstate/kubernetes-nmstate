@@ -50,56 +50,39 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - bodyclose
     - deadcode
     - depguard
     - dogsled
-    - dupl
-    - errcheck
+      #- dupl
+      #- errcheck
     - exportloopref
     - exhaustive
-    - funlen
-    - gochecknoinits
-    - goconst
-    - gocritic
-    - gocyclo
-    - gofmt
-    - goheader
-    - goimports
-    - gomnd
+      #- funlen
+      #- gochecknoinits
+      #- goconst
+      #- gocritic
+      #- gocyclo
+      #- gofmt
+      #- goheader
+      #- goimports
+      #- gomnd
     - goprintffuncname
-    - gosec
-    - gosimple
-    - govet
-    - ineffassign
-    - lll
-    - misspell
+      #- gosec
+      #- gosimple
+      #- govet
+      #- ineffassign
+      #- lll
+      #- misspell
     - nakedret
     - noctx
     - nolintlint
     - rowserrcheck
-    - staticcheck
-    - structcheck
-    - stylecheck
+      #- staticcheck
+      #- structcheck
+      #- stylecheck
     - typecheck
-    - unconvert
-    - unparam
-    - unused
+      #- unconvert
+      #- unparam
+      #- unused
     - varcheck
-    - whitespace
-
-  # don't enable:
-  # - asciicheck
-  # - scopelint
-  # - gochecknoglobals
-  # - gocognit
-  # - godot
-  # - godox
-  # - goerr113
-  # - interfacer
-  # - maligned
-  # - nestif
-  # - prealloc
-  # - testpackage
-  # - revive
-  # - wsl
+      #- whitespace
