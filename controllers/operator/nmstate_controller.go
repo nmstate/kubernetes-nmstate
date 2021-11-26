@@ -33,7 +33,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/openshift/cluster-network-operator/pkg/apply"
@@ -224,10 +223,9 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 
 func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
 	var err error
-	objs := []*uns.Unstructured{}
 
 	sourceFullDirectory := filepath.Join(names.ManifestDir, "kubernetes-nmstate", sourceDirectory)
-	objs, err = render.RenderDir(sourceFullDirectory, &data)
+	objs, err := render.RenderDir(sourceFullDirectory, &data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to render kubernetes-nmstate %s", sourceDirectory)
 	}

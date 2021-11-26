@@ -74,7 +74,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		objs := []runtime.Object{&nmstate}
 		// Create a fake client to mock API calls.
-		cl = fake.NewFakeClientWithScheme(s, objs...)
+		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 		names.ManifestDir = manifestsDir
 		reconciler.Client = cl
 		reconciler.Scheme = s
@@ -154,7 +154,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.NodeSelector = handlerNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -193,7 +193,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.Tolerations = handlerTolerations
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -228,7 +228,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.InfraNodeSelector = infraNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -276,7 +276,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.InfraTolerations = infraTolerations
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
