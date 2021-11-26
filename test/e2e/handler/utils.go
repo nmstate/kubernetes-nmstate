@@ -226,16 +226,6 @@ func waitFotNodeToStart(node string) error {
 	return nil
 }
 
-func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
-	Byf("Delete bridge %s", bridgeName)
-	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
-	for _, portName := range ports {
-		_, portErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
-		errs = append(errs, portErrors...)
-	}
-	return errs
-}
-
 func createDummyConnection(nodesToModify []string, dummyName string) []error {
 	Byf("Creating dummy %s", dummyName)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
@@ -334,12 +324,6 @@ func vlanForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
-func interfacesNameForNodeConsistently(node string) AsyncAssertion {
-	return Consistently(func() []string {
-		return interfacesNameForNode(node)
-	}, 5*time.Second, 1*time.Second)
-}
-
 func interfacesForNode(node string) AsyncAssertion {
 	return Eventually(func() []interface{} {
 		var currentStateYaml nmstate.State
@@ -350,23 +334,6 @@ func interfacesForNode(node string) AsyncAssertion {
 
 		return interfaces
 	}, ReadTimeout, ReadInterval)
-}
-
-func waitForNodeNetworkStateUpdate(node string) {
-	now := time.Now()
-	EventuallyWithOffset(1, func() time.Time {
-		key := types.NamespacedName{Name: node}
-		nnsUpdateTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
-		return nnsUpdateTime.Time
-	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Node %s should have a fresh nns)", node))
-
-}
-
-func toUnstructured(y string) interface{} {
-	var u interface{}
-	err := yaml.Unmarshal([]byte(y), &u)
-	Expect(err).ToNot(HaveOccurred())
-	return u
 }
 
 func bridgeVlansAtNode(node string) (string, error) {
@@ -576,13 +543,6 @@ func skipIfNotKubernetes() {
 	provider := environment.GetVarWithDefault("KUBEVIRT_PROVIDER", "k8s")
 	if !strings.Contains(provider, "k8s") {
 		Skip("Tutorials use interface naming that is available only on Kubernetes providers")
-	}
-}
-
-func skipIfNotNmstateFuture() {
-	nmstatePin := environment.GetVarWithDefault("NMSTATE_PIN", "")
-	if !strings.Contains(nmstatePin, "future") {
-		Skip("Functionality is available/stable only in nmstate future release")
 	}
 }
 
