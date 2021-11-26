@@ -149,7 +149,6 @@ func eventuallyOperandIsNotFound(testData operatorTestData) {
 		err := testenv.Client.List(context.TODO(), &podList, &client.ListOptions{Namespace: testData.ns, LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector()})
 		return podList.Items, err
 	}, 120*time.Second, time.Second).Should(BeEmpty(), "should terminate all the pods")
-
 }
 
 func eventuallyOperandIsFound(testData operatorTestData) {

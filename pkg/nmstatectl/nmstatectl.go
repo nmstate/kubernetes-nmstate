@@ -33,13 +33,11 @@ func nmstatectlWithInput(arguments []string, input string) (string, error) {
 				fmt.Printf("failed to write input into stdin: %v\n", err)
 			}
 		}()
-
 	}
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("failed to execute %s %s: '%v' '%s' '%s'", nmstateCommand, strings.Join(arguments, " "), err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
-
 }
 
 func nmstatectl(arguments []string) (string, error) {

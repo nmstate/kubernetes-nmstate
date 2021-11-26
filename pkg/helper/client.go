@@ -72,7 +72,6 @@ func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, obs
 }
 
 func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State, versions *DependencyVersions) error {
-
 	if observedState.String() == nodeNetworkState.Status.CurrentState.String() {
 		log.Info("Skipping NodeNetworkState update, node network configuration not changed")
 		return nil

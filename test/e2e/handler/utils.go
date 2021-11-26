@@ -197,7 +197,6 @@ func deletePolicy(name string) {
 			return apierrors.IsNotFound(err)
 		}, enactmentsDeleteTimeout, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Enactment %s not deleted", enactmentKey.Name))
 	}
-
 }
 
 func restartNode(node string) error {
@@ -378,7 +377,6 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 }
 
 func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
-
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
@@ -421,7 +419,6 @@ func vlansCardinality(node string, connection string) AsyncAssertion {
 
 		return len(gjson.Parse(bridgeVlans).Get(connection).Array()), nil
 	}, ReadTimeout, ReadInterval)
-
 }
 
 func bridgeDescription(node string, bridgeName string) AsyncAssertion {

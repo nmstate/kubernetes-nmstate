@@ -155,7 +155,6 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 }
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 	r.nmstatectlShow = nmstatectl.Show
 	r.deviceInfo = state.DeviceInfo{}

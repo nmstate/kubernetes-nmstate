@@ -94,7 +94,6 @@ func TestE2E(t *testing.T) {
 	}
 
 	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", reporters)
-
 }
 
 var _ = BeforeEach(func() {
