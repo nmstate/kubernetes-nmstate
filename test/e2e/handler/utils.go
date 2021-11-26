@@ -355,7 +355,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 			// [1] https://bugs.centos.org/view.php?id=16533
 			output, err := cmd.Run("test/e2e/get-bridge-vlans-flags-el8.sh", false, node, connection, strconv.Itoa(vlan))
 			Expect(err).ToNot(HaveOccurred())
-			return strings.Split(string(output), " ")
+			return strings.Split(output, " ")
 		} else {
 			By("Getting vlan filtering from json output")
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
