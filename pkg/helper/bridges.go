@@ -11,7 +11,6 @@ import (
 
 	yaml "sigs.k8s.io/yaml"
 
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
@@ -57,16 +56,21 @@ func ApplyDefaultVlanFiltering(desiredState nmstate.State) (nmstate.State, error
 	return nmstate.State{Raw: resultYaml}, nil
 }
 
-func EnableVlanFiltering() (string, error) {
+func EnableVlanFiltering(desiredState nmstate.State) (string, error) {
 	currentState, err := nmstatectl.Show()
 	if err != nil {
 		return "failed to get currentState", err
 	}
-	upBridgesWithPorts, err := GetUpLinuxBridgesWithPorts(shared.NewState(currentState))
+	upBridgesWithPortsAtCurrentState, err := GetUpLinuxBridgesWithPorts(nmstate.NewState(currentState))
 	if err != nil {
 		return "failed to list bridges with ports", err
 	}
-	out, err := enableVlanFiltering(upBridgesWithPorts)
+	filteredExistingUpBridgesWithPortsAtDesiredState, err := filterExistingLinuxBridgesWithPorts(upBridgesWithPortsAtCurrentState, desiredState)
+	if err != nil {
+		return "failed to filter existing bridges with ports from desiredState", err
+	}
+
+	out, err := enableVlanFiltering(filteredExistingUpBridgesWithPortsAtDesiredState)
 	if err != nil {
 		return fmt.Sprintf("failed to enable vlan-filtering via nmcli: %s", out), err
 	}
@@ -95,6 +99,22 @@ func GetUpLinuxBridgesWithPorts(desiredState nmstate.State) (map[string][]string
 		}
 	}
 	return bridgesWithPorts, nil
+}
+
+func filterExistingLinuxBridgesWithPorts(bridgesAtCurrentState map[string][]string, desiredState nmstate.State) (map[string][]string, error) {
+	filteredBridgesWithPorts := map[string][]string{}
+	bridgesAtDesiredState, err := GetUpLinuxBridgesWithPorts(desiredState)
+	if err != nil {
+		return nil, err
+	}
+
+	for bridge, ports := range bridgesAtDesiredState {
+		if currentBridgePorts, ok := bridgesAtCurrentState[bridge]; ok && len(currentBridgePorts) > 0 {
+			filteredBridgesWithPorts[bridge] = intersectSlices(ports, currentBridgePorts)
+		}
+	}
+
+	return filteredBridgesWithPorts, nil
 }
 
 func enableVlanFiltering(upBridgesWithPorts map[string][]string) (string, error) {
@@ -134,6 +154,23 @@ func runCommand(command string, args []string) (string, error) {
 		return "", fmt.Errorf("failed to execute %s %s: '%v', '%s', '%s'", command, strings.Join(args, " "), err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
+}
+
+func intersectSlices(s1, s2 []string) []string {
+	cache := map[string]bool{}
+	result := []string{}
+
+	for _, e := range s1 {
+		cache[e] = false
+	}
+
+	for _, e := range s2 {
+		if cached, ok := cache[e]; ok && !cached {
+			result = append(result, e)
+			cache[e] = true
+		}
+	}
+	return result
 }
 
 func isLinuxBridgeUp(iface gjson.Result) bool {
