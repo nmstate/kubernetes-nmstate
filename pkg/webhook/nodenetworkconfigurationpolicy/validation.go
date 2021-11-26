@@ -81,12 +81,12 @@ func validatePolicyName(policy nmstatev1.NodeNetworkConfigurationPolicy, current
 func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 	return &webhook.Admission{
 		Handler: admission.MultiValidatingHandler(
-			admission.HandlerFunc(validatePolicyHandler(
+			validatePolicyHandler(
 				cli,
 				onPolicySpecChange,
 				validatePolicyNotInProgressHook,
 				validatePolicyNodeSelector,
-			)),
+			),
 		),
 	}
 }
@@ -94,11 +94,11 @@ func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 func validatePolicyCreateHook(cli client.Client) *webhook.Admission {
 	return &webhook.Admission{
 		Handler: admission.MultiValidatingHandler(
-			admission.HandlerFunc(validatePolicyHandler(
+			validatePolicyHandler(
 				cli,
 				onCreate,
 				validatePolicyName,
-			)),
+			),
 		),
 	}
 }
