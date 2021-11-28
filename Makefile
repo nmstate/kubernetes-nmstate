@@ -163,8 +163,12 @@ push-operator: operator-manager
 
 push: push-handler push-operator
 
-test/unit: $(GO)
-	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
+.PHONY: $(addprefix test-unit-submodules-,$(WHAT))
+$(addprefix test-unit-submodules-,$(WHAT)):
+	# hande unit test for submodule
+	(cd $(subst test-unit-submodules-,,$@) ; NODE_NAME=node01 $(GINKGO) $(unit_test_args) ./...)
+
+test/unit: $(GO) $(addprefix test-unit-submodules-,$(WHAT))
 
 test-e2e-handler: $(GO)
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
