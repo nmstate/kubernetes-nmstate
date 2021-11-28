@@ -132,7 +132,6 @@ func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime
 }
 
 func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time) error {
-
 	// Let's print the pods logs to the GinkgoWriter so
 	// we see the failure directly at prow junit output without opening files
 	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime))

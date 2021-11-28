@@ -54,7 +54,6 @@ func currentStateAsGJson() (gjson.Result, error) {
 		return gjson.Result{}, errors.Wrap(err, "failed to convert current state to JSON")
 	}
 	return gjson.ParseBytes(currentState), nil
-
 }
 
 func ping(target string, timeout time.Duration) (string, error) {
@@ -259,7 +258,6 @@ func Run(client client.Client, probes []Probe) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed runnig probe '%s' with after network reconfiguration -> currentState: %s", p.name, currentState)
 		}
-
 	}
 	return nil
 }

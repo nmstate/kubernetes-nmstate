@@ -30,7 +30,6 @@ func expectConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) {
 }
 
 func callHook(hook *webhook.Admission, request webhook.AdmissionRequest) webhook.AdmissionResponse {
-
 	response := hook.Handle(context.TODO(), request)
 	for _, patch := range response.Patches {
 		_, err := patch.MarshalJSON()
