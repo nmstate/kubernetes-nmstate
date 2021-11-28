@@ -21,8 +21,6 @@ func invalidConfig(bridgeName string) nmstate.State {
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
 	Context("when applying valid config", func() {
-		BeforeEach(func() {
-		})
 		AfterEach(func() {
 			By("Remove the bridge")
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
@@ -179,7 +177,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			}).Should(BeNumerically(">=", 1))
 
 			By("Checking the policy is marked as Degraded")
-			Expect(policyConditionsStatus(TestPolicy)).Should(containPolicyDegraded(), "policy should be marked as Degraded")
+			Eventually(policyConditionsStatus(TestPolicy)).Should(containPolicyDegraded(), "policy should be marked as Degraded")
 		})
 	})
 })
