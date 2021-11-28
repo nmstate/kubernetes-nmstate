@@ -77,7 +77,7 @@ linters:
     - noctx
     - nolintlint
     - rowserrcheck
-      #- staticcheck
+    - staticcheck
       #- structcheck
       #- stylecheck
     - typecheck

@@ -162,7 +162,7 @@ var _ = Describe("Policy Conditions", func() {
 
 			objs = append(objs, updatedPolicy)
 
-			client := fake.NewFakeClientWithScheme(s, objs...)
+			client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			key := types.NamespacedName{Name: updatedPolicy.Name}
 			err := Update(client, client, key)
 			Expect(err).ToNot(HaveOccurred())
