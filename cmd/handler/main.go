@@ -111,10 +111,7 @@ func main() {
 		MetricsBindAddress: "0", // disable metrics
 	}
 
-	if environment.IsWebhook() {
-		ctrlOptions.LeaderElection = true
-		ctrlOptions.LeaderElectionID = "5d2e944a.nmstate.io"
-	} else if environment.IsHandler() {
+	if environment.IsHandler() {
 		// Handler runs as a daemonset and we want that each handler pod will cache/reconcile only resources belongs the node it runs on.
 		nodeName := environment.NodeName()
 		metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": nodeName}.AsSelector()
