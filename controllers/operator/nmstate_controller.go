@@ -242,7 +242,7 @@ func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data ren
 			continue
 		}
 		if setControllerReference {
-			// Set the controller refernce. When the CR is removed, it will remove the CRDs as well
+			// Set the controller reference. When the CR is removed, it will remove the CRDs as well
 			err = controllerutil.SetControllerReference(instance, obj, r.Scheme)
 			if err != nil {
 				return errors.Wrap(err, "failed to set owner reference")

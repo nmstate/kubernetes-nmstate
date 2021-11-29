@@ -31,7 +31,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		It("[test_id:3796]should go from Progressing to Available", func() {
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
@@ -80,7 +80,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			By("Check that the enactment stays in failing state")
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
@@ -119,7 +119,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			By("Wait for enactments to reach failing or aborted state")
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
@@ -139,7 +139,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 
 			By("Check that the enactments stay in failing or aborted state")
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()

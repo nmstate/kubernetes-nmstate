@@ -62,17 +62,17 @@ linters:
       #- goconst
       #- gocritic
       #- gocyclo
-      #- gofmt
+    - gofmt
       #- goheader
       #- goimports
       #- gomnd
     - goprintffuncname
       #- gosec
-      #- gosimple
+    - gosimple
       #- govet
-      #- ineffassign
+    - ineffassign
       #- lll
-      #- misspell
+    - misspell
     - nakedret
     - noctx
     - nolintlint

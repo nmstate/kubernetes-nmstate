@@ -117,7 +117,7 @@ func newNodes(cardinality int) []corev1.Node {
 
 func cleanTimestamps(conditions nmstate.ConditionList) nmstate.ConditionList {
 	dummyTime := metav1.Time{Time: time.Unix(0, 0)}
-	for i, _ := range conditions {
+	for i := range conditions {
 		conditions[i].LastHeartbeatTime = dummyTime
 		conditions[i].LastTransitionTime = dummyTime
 	}
@@ -143,17 +143,17 @@ var _ = Describe("Policy Conditions", func() {
 				&nmstatev1.NodeNetworkConfigurationPolicy{},
 			)
 
-			for i, _ := range c.Enactments {
+			for i := range c.Enactments {
 				// We cannot use the memory from the element
 				// returned by range, since it's has the same
 				// memory address it will be added multiple time
 				// with duplicated values
 				objs = append(objs, &c.Enactments[i])
 			}
-			for i, _ := range c.Nodes {
+			for i := range c.Nodes {
 				objs = append(objs, &c.Nodes[i])
 			}
-			for i, _ := range c.Pods {
+			for i := range c.Pods {
 				objs = append(objs, &c.Pods[i])
 			}
 
