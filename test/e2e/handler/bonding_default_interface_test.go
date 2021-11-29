@@ -103,8 +103,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			// Restart only first node that it's a control-plane if other node is restarted it will stuck in NotReady state
 			nodeToReboot := nodes[0]
 			Byf("Reboot node %s and verify that bond still has ip of primary nic", nodeToReboot)
-			err := restartNode(nodeToReboot)
-			Expect(err).ToNot(HaveOccurred())
+			restartNodeWithoutWaiting(nodeToReboot)
 
 			By("Wait for policy re-reconciled after node reboot")
 			waitForPolicyTransitionUpdate(TestPolicy)
