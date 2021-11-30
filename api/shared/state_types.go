@@ -17,7 +17,7 @@ func NewState(raw string) State {
 	return State{Raw: RawState(raw)}
 }
 
-// This override the State type [1] so we can do a custom marshalling of
+// This overrides the State type [1] so we can do a custom marshaling of
 // nmstate yaml without the need to have golang code representing the
 // nmstate schema
 
