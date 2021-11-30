@@ -42,7 +42,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
   - name: brext
     type: linux-bridge
     state: up
-    mac-address: "{{ capture.base-iface.interfaces.0.mac }}"
+    mac-address: "{{ capture.base-iface.interfaces.0.mac-address }}"
     ipv4:
       dhcp: true
       enabled: true
