@@ -11,7 +11,7 @@ end() {
 
 trap end EXIT SIGINT SIGTERM SIGSTOP
 
-$GO run k8s.io/release/cmd/release-notes \
+go run k8s.io/release/cmd/release-notes \
     --list-v2 \
     --go-template go-template:$script_dir/release-notes.tmpl \
     --required-author "" \
