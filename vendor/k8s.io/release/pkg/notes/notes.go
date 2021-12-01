@@ -19,7 +19,7 @@ package notes
 import (
 	"bufio"
 	"context"
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec // used for file integrity checks, NOT security
 	"fmt"
 	"net/url"
 	"regexp"
@@ -28,15 +28,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
-	gogithub "github.com/google/go-github/v33/github"
+	gogithub "github.com/google/go-github/v39/github"
 	"github.com/nozzle/throttler"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 
-	"k8s.io/release/pkg/github"
 	"k8s.io/release/pkg/notes/options"
+	"sigs.k8s.io/release-sdk/github"
 )
 
 var (
@@ -339,7 +340,7 @@ func (g *Gatherer) ListReleaseNotes() (*ReleaseNotes, error) {
 			}
 
 			for _, noteMap := range noteMaps {
-				if err := note.ApplyMap(noteMap); err != nil {
+				if err := note.ApplyMap(noteMap, g.options.AddMarkdownLinks); err != nil {
 					return nil, errors.Wrapf(err, "applying notemap for PR #%d", result.pullRequest.GetNumber())
 				}
 			}
@@ -476,15 +477,19 @@ func (g *Gatherer) ReleaseNoteFromCommit(result *Result) (*ReleaseNote, error) {
 
 	// TODO: Spin this to sep function
 	indented := strings.ReplaceAll(text, "\n", "\n  ")
-	markdown := fmt.Sprintf("%s ([#%d](%s), [@%s](%s))",
-		indented, pr.GetNumber(), prURL, author, authorURL)
+	markdown := fmt.Sprintf("%s (#%d, @%s)",
+		indented, pr.GetNumber(), author)
+	if g.options.AddMarkdownLinks {
+		markdown = fmt.Sprintf("%s ([#%d](%s), [@%s](%s))",
+			indented, pr.GetNumber(), prURL, author, authorURL)
+	}
 
 	if noteSuffix != "" {
 		markdown = fmt.Sprintf("%s [%s]", markdown, noteSuffix)
 	}
 
 	// Uppercase the first character of the markdown to make it look uniform
-	markdown = strings.ToUpper(string(markdown[0])) + markdown[1:]
+	markdown = capitalizeString(markdown)
 
 	return &ReleaseNote{
 		Commit:         result.commit.GetSHA(),
@@ -1000,7 +1005,7 @@ func prettifySIGList(sigs []string) string {
 
 // ApplyMap Modifies the content of the release using information from
 //  a ReleaseNotesMap
-func (rn *ReleaseNote) ApplyMap(noteMap *ReleaseNotesMap) error {
+func (rn *ReleaseNote) ApplyMap(noteMap *ReleaseNotesMap, markdownLinks bool) error {
 	logrus.WithFields(logrus.Fields{
 		"pr": rn.PrNumber,
 	}).Debugf("Applying map to note")
@@ -1056,10 +1061,14 @@ func (rn *ReleaseNote) ApplyMap(noteMap *ReleaseNotesMap) error {
 	// TODO: Spin this to sep function
 	if reRenderMarkdown {
 		indented := strings.ReplaceAll(rn.Text, "\n", "\n  ")
-		markdown := fmt.Sprintf("%s ([#%d](%s), [@%s](%s))",
-			indented, rn.PrNumber, rn.PrURL, rn.Author, rn.AuthorURL)
+		markdown := fmt.Sprintf("%s (#%d, @%s)",
+			indented, rn.PrNumber, rn.Author)
+		if markdownLinks {
+			markdown = fmt.Sprintf("%s ([#%d](%s), [@%s](%s))",
+				indented, rn.PrNumber, rn.PrURL, rn.Author, rn.AuthorURL)
+		}
 		// Uppercase the first character of the markdown to make it look uniform
-		rn.Markdown = strings.ToUpper(string(markdown[0])) + markdown[1:]
+		rn.Markdown = capitalizeString(markdown)
 	}
 	return nil
 }
@@ -1091,16 +1100,26 @@ func (rn *ReleaseNote) ToNoteMap() (string, error) {
 
 // ContentHash returns a sha1 hash derived from the note's content
 func (rn *ReleaseNote) ContentHash() (string, error) {
-	// Converto the note to a map
+	// Convert the note to a map
 	noteMap, err := rn.ToNoteMap()
 	if err != nil {
 		return "", errors.Wrap(err, "serializing note's content")
 	}
 
+	//nolint:gosec // used for file integrity checks, NOT security
+	// TODO(relnotes): Could we use SHA256 here instead?
 	h := sha1.New()
 	_, err = h.Write([]byte(noteMap))
 	if err != nil {
 		return "", errors.Wrap(err, "calculating content hash from map")
 	}
 	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+// capitalizeString returns a capitalized string of the input string
+func capitalizeString(s string) string {
+	r := []rune(s)
+	r[0] = unicode.ToUpper(r[0])
+
+	return string(r)
 }

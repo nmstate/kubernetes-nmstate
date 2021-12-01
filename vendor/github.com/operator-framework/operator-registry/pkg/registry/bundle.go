@@ -47,7 +47,7 @@ type Bundle struct {
 	v1beta1crds  []*apiextensionsv1beta1.CustomResourceDefinition
 	v1crds       []*apiextensionsv1.CustomResourceDefinition
 	Dependencies []*Dependency
-	Properties   []*Property
+	Properties   []Property
 	Annotations  *Annotations
 	cacheStale   bool
 }
@@ -182,7 +182,7 @@ func (b *Bundle) ProvidedAPIs() (map[APIKey]struct{}, error) {
 	provided := map[APIKey]struct{}{}
 	crds, err := b.CustomResourceDefinitions()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting crds: %s", err)
 	}
 
 	for _, c := range crds {
@@ -210,7 +210,7 @@ func (b *Bundle) ProvidedAPIs() (map[APIKey]struct{}, error) {
 
 	ownedAPIs, _, err := csv.GetApiServiceDefinitions()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting apiservice definitions: %s", err)
 	}
 	for _, api := range ownedAPIs {
 		provided[APIKey{Group: api.Group, Version: api.Version, Kind: api.Kind, Plural: api.Name}] = struct{}{}
@@ -256,6 +256,7 @@ func (b *Bundle) AllProvidedAPIsInBundle() error {
 	if err != nil {
 		return err
 	}
+
 	ownedCRDs, _, err := csv.GetCustomResourceDefintions()
 	if err != nil {
 		return err

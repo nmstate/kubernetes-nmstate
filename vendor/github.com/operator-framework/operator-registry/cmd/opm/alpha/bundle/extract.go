@@ -14,7 +14,7 @@ var extractCmd = &cobra.Command{
 	Short: "Extracts the data in a bundle directory via ConfigMap",
 	Long:  "Extract takes as input a directory containing manifests and writes the per file contents to a ConfipMap",
 
-	PreRunE: func(cmd *cobra.Command, args []string) error {
+	PreRunE: func(cmd *cobra.Command, _ []string) error {
 		if debug, _ := cmd.Flags().GetBool("debug"); debug {
 			logrus.SetLevel(logrus.DebugLevel)
 		}
@@ -22,6 +22,7 @@ var extractCmd = &cobra.Command{
 	},
 
 	RunE: runExtractCmd,
+	Args: cobra.NoArgs,
 }
 
 func init() {
@@ -31,10 +32,11 @@ func init() {
 	extractCmd.Flags().StringP("configmapname", "c", "", "name of configmap to write bundle data")
 	extractCmd.Flags().StringP("namespace", "n", "openshift-operator-lifecycle-manager", "namespace to write configmap data")
 	extractCmd.Flags().Uint64P("datalimit", "l", 1<<20, "maximum limit in bytes for total bundle data")
+	extractCmd.Flags().BoolP("gzip", "z", false, "enable gzip compression of configmap data")
 	extractCmd.MarkPersistentFlagRequired("configmapname")
 }
 
-func runExtractCmd(cmd *cobra.Command, args []string) error {
+func runExtractCmd(cmd *cobra.Command, _ []string) error {
 	manifestsDir, err := cmd.Flags().GetString("manifestsdir")
 	if err != nil {
 		return err
@@ -55,8 +57,12 @@ func runExtractCmd(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	gzip, err := cmd.Flags().GetBool("gzip")
+	if err != nil {
+		return err
+	}
 
-	loader := configmap.NewConfigMapLoaderForDirectory(configmapName, namespace, manifestsDir, kubeconfig)
+	loader := configmap.NewConfigMapLoader(configmapName, namespace, manifestsDir, gzip, kubeconfig)
 	if err := loader.Populate(datalimit); err != nil {
 		return fmt.Errorf("error loading manifests from directory: %s", err)
 	}

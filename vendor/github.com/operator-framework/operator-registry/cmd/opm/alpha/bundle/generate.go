@@ -14,15 +14,15 @@ func newBundleGenerateCmd() *cobra.Command {
 		Use:   "generate",
 		Short: "Generate operator bundle metadata and Dockerfile",
 		Long: `The "opm alpha bundle generate" command will generate operator
-        bundle metadata if needed and a Dockerfile to build Operator bundle image.
+bundle metadata if needed and a Dockerfile to build Operator bundle image.
 
-        $ opm alpha bundle generate --directory /test/0.1.0/ --package test-operator \
-		--channels stable,beta --default stable
+$ opm alpha bundle generate --directory /test/0.1.0/ --package test-operator \
+	--channels stable,beta --default stable
 
-		Note:
-		* All manifests yaml must be in the same directory.
-        `,
+Note:
+* All manifests yaml must be in the same directory.`,
 		RunE: generateFunc,
+		Args: cobra.NoArgs,
 	}
 
 	bundleGenerateCmd.Flags().StringVarP(&buildDir, "directory", "d", "",
@@ -48,7 +48,7 @@ func newBundleGenerateCmd() *cobra.Command {
 	return bundleGenerateCmd
 }
 
-func generateFunc(cmd *cobra.Command, args []string) error {
+func generateFunc(cmd *cobra.Command, _ []string) error {
 	return bundle.GenerateFunc(
 		buildDir,
 		outputDir,

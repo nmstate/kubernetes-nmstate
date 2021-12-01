@@ -130,11 +130,12 @@ func (b *BucketHandle) DefaultObjectACL() *ACLHandle {
 }
 
 // Object returns an ObjectHandle, which provides operations on the named object.
-// This call does not perform any network operations.
+// This call does not perform any network operations such as fetching the object or verifying its existence.
+// Use methods on ObjectHandle to perform network operations.
 //
 // name must consist entirely of valid UTF-8-encoded runes. The full specification
 // for valid object names can be found at:
-//   https://cloud.google.com/storage/docs/bucket-naming
+//   https://cloud.google.com/storage/docs/naming-objects
 func (b *BucketHandle) Object(name string) *ObjectHandle {
 	return &ObjectHandle{
 		c:      b.c,
@@ -244,6 +245,13 @@ type BucketAttrs struct {
 	// for more information.
 	UniformBucketLevelAccess UniformBucketLevelAccess
 
+	// PublicAccessPrevention is the setting for the bucket's
+	// PublicAccessPrevention policy, which can be used to prevent public access
+	// of data in the bucket. See
+	// https://cloud.google.com/storage/docs/public-access-prevention for more
+	// information.
+	PublicAccessPrevention PublicAccessPrevention
+
 	// DefaultObjectACL is the list of access controls to
 	// apply to new objects when no object ACL is provided.
 	DefaultObjectACL []ACLRule
@@ -351,6 +359,41 @@ type UniformBucketLevelAccess struct {
 	// LockedTime specifies the deadline for changing Enabled from true to
 	// false.
 	LockedTime time.Time
+}
+
+// PublicAccessPrevention configures the Public Access Prevention feature, which
+// can be used to disallow public access to any data in a bucket. See
+// https://cloud.google.com/storage/docs/public-access-prevention for more
+// information.
+type PublicAccessPrevention int
+
+const (
+	// PublicAccessPreventionUnknown is a zero value, used only if this field is
+	// not set in a call to GCS.
+	PublicAccessPreventionUnknown PublicAccessPrevention = iota
+
+	// PublicAccessPreventionUnspecified corresponds to a value of "unspecified"
+	// and is the default for buckets.
+	PublicAccessPreventionUnspecified
+
+	// PublicAccessPreventionEnforced corresponds to a value of "enforced". This
+	// enforces Public Access Prevention on the bucket.
+	PublicAccessPreventionEnforced
+
+	publicAccessPreventionUnknown     string = ""
+	publicAccessPreventionUnspecified        = "unspecified"
+	publicAccessPreventionEnforced           = "enforced"
+)
+
+func (p PublicAccessPrevention) String() string {
+	switch p {
+	case PublicAccessPreventionUnspecified:
+		return publicAccessPreventionUnspecified
+	case PublicAccessPreventionEnforced:
+		return publicAccessPreventionEnforced
+	default:
+		return publicAccessPreventionUnknown
+	}
 }
 
 // Lifecycle is the lifecycle configuration for objects in the bucket.
@@ -551,6 +594,7 @@ func newBucket(b *raw.Bucket) (*BucketAttrs, error) {
 		Website:                  toBucketWebsite(b.Website),
 		BucketPolicyOnly:         toBucketPolicyOnly(b.IamConfiguration),
 		UniformBucketLevelAccess: toUniformBucketLevelAccess(b.IamConfiguration),
+		PublicAccessPrevention:   toPublicAccessPrevention(b.IamConfiguration),
 		Etag:                     b.Etag,
 		LocationType:             b.LocationType,
 	}, nil
@@ -578,11 +622,15 @@ func (b *BucketAttrs) toRawBucket() *raw.Bucket {
 		bb = &raw.BucketBilling{RequesterPays: true}
 	}
 	var bktIAM *raw.BucketIamConfiguration
-	if b.UniformBucketLevelAccess.Enabled || b.BucketPolicyOnly.Enabled {
-		bktIAM = &raw.BucketIamConfiguration{
-			UniformBucketLevelAccess: &raw.BucketIamConfigurationUniformBucketLevelAccess{
+	if b.UniformBucketLevelAccess.Enabled || b.BucketPolicyOnly.Enabled || b.PublicAccessPrevention != PublicAccessPreventionUnknown {
+		bktIAM = &raw.BucketIamConfiguration{}
+		if b.UniformBucketLevelAccess.Enabled || b.BucketPolicyOnly.Enabled {
+			bktIAM.UniformBucketLevelAccess = &raw.BucketIamConfigurationUniformBucketLevelAccess{
 				Enabled: true,
-			},
+			}
+		}
+		if b.PublicAccessPrevention != PublicAccessPreventionUnknown {
+			bktIAM.PublicAccessPrevention = b.PublicAccessPrevention.String()
 		}
 	}
 	return &raw.Bucket{
@@ -660,6 +708,21 @@ type BucketAttrsToUpdate struct {
 	// See https://cloud.google.com/storage/docs/uniform-bucket-level-access
 	// for more information.
 	UniformBucketLevelAccess *UniformBucketLevelAccess
+
+	// PublicAccessPrevention is the setting for the bucket's
+	// PublicAccessPrevention policy, which can be used to prevent public access
+	// of data in the bucket. See
+	// https://cloud.google.com/storage/docs/public-access-prevention for more
+	// information.
+	PublicAccessPrevention PublicAccessPrevention
+
+	// StorageClass is the default storage class of the bucket. This defines
+	// how objects in the bucket are stored and determines the SLA
+	// and the cost of storage. Typical values are "STANDARD", "NEARLINE",
+	// "COLDLINE" and "ARCHIVE". Defaults to "STANDARD".
+	// See https://cloud.google.com/storage/docs/storage-classes for all
+	// valid values.
+	StorageClass string
 
 	// If set, updates the retention policy of the bucket. Using
 	// RetentionPolicy.RetentionPeriod = 0 will delete the existing policy.
@@ -763,6 +826,12 @@ func (ua *BucketAttrsToUpdate) toRawBucket() *raw.Bucket {
 			},
 		}
 	}
+	if ua.PublicAccessPrevention != PublicAccessPreventionUnknown {
+		if rb.IamConfiguration == nil {
+			rb.IamConfiguration = &raw.BucketIamConfiguration{}
+		}
+		rb.IamConfiguration.PublicAccessPrevention = ua.PublicAccessPrevention.String()
+	}
 	if ua.Encryption != nil {
 		if ua.Encryption.DefaultKMSKeyName == "" {
 			rb.NullFields = append(rb.NullFields, "Encryption")
@@ -801,6 +870,7 @@ func (ua *BucketAttrsToUpdate) toRawBucket() *raw.Bucket {
 		rb.DefaultObjectAcl = nil
 		rb.ForceSendFields = append(rb.ForceSendFields, "DefaultObjectAcl")
 	}
+	rb.StorageClass = ua.StorageClass
 	if ua.setLabels != nil || ua.deleteLabels != nil {
 		rb.Labels = map[string]string{}
 		for k, v := range ua.setLabels {
@@ -880,8 +950,10 @@ func (b *BucketHandle) LockRetentionPolicy(ctx context.Context) error {
 		metageneration = b.conds.MetagenerationMatch
 	}
 	req := b.c.raw.Buckets.LockRetentionPolicy(b.name, metageneration)
-	_, err := req.Context(ctx).Do()
-	return err
+	return runWithRetry(ctx, func() error {
+		_, err := req.Context(ctx).Do()
+		return err
+	})
 }
 
 // applyBucketConds modifies the provided call using the conditions in conds.
@@ -1130,6 +1202,20 @@ func toUniformBucketLevelAccess(b *raw.BucketIamConfiguration) UniformBucketLeve
 	}
 }
 
+func toPublicAccessPrevention(b *raw.BucketIamConfiguration) PublicAccessPrevention {
+	if b == nil {
+		return PublicAccessPreventionUnknown
+	}
+	switch b.PublicAccessPrevention {
+	case publicAccessPreventionUnspecified:
+		return PublicAccessPreventionUnspecified
+	case publicAccessPreventionEnforced:
+		return PublicAccessPreventionEnforced
+	default:
+		return PublicAccessPreventionUnknown
+	}
+}
+
 // Objects returns an iterator over the objects in the bucket that match the
 // Query q. If q is nil, no filtering is done. Objects will be iterated over
 // lexicographically by name.
@@ -1195,7 +1281,11 @@ func (it *ObjectIterator) Next() (*ObjectAttrs, error) {
 func (it *ObjectIterator) fetch(pageSize int, pageToken string) (string, error) {
 	req := it.bucket.c.raw.Objects.List(it.bucket.name)
 	setClientHeader(req.Header())
-	req.Projection("full")
+	projection := it.query.Projection
+	if projection == ProjectionDefault {
+		projection = ProjectionFull
+	}
+	req.Projection(projection.String())
 	req.Delimiter(it.query.Delimiter)
 	req.Prefix(it.query.Prefix)
 	req.StartOffset(it.query.StartOffset)

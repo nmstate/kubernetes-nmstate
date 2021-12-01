@@ -33,9 +33,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
-	"k8s.io/release/pkg/git"
-	"k8s.io/release/pkg/github"
-	"k8s.io/release/pkg/object"
+	"sigs.k8s.io/release-sdk/git"
+	"sigs.k8s.io/release-sdk/github"
+	"sigs.k8s.io/release-sdk/object"
 	"sigs.k8s.io/release-utils/command"
 	"sigs.k8s.io/release-utils/env"
 	rhash "sigs.k8s.io/release-utils/hash"
@@ -47,6 +47,11 @@ const (
 	DefaultToolRepo = "release"
 	DefaultToolRef  = git.DefaultBranch
 	DefaultToolOrg  = git.DefaultGithubOrg
+
+	DefaultK8sOrg  = git.DefaultGithubOrg
+	DefaultK8sRepo = git.DefaultGithubRepo
+	DefaultK8sRef  = git.DefaultRef
+
 	// TODO(vdf): Need to reference K8s Infra project here
 	DefaultKubernetesStagingProject = "kubernetes-release-test"
 	DefaultRelengStagingProject     = "k8s-staging-releng"
@@ -60,6 +65,9 @@ const (
 	versionDirtyRE     = `(-dirty)`
 
 	KubernetesTar = "kubernetes.tar.gz"
+
+	// name of the kubernetes project
+	Kubernetes = "kubernetes"
 
 	// Staged source code tarball of Kubernetes
 	SourcesTar = "src.tar.gz"
@@ -80,7 +88,7 @@ const (
 	// GCEPath is the directory where GCE scripts are created.
 	GCEPath = ReleaseStagePath + "/full/kubernetes/cluster/gce"
 
-	// GCIPath is the path for the container optimized OS for GCP.
+	// GCIPath is the path for the container optimized OS for gcli.
 	GCIPath = ReleaseStagePath + "/full/kubernetes/cluster/gce/gci"
 
 	// ReleaseTarsPath is the directory where release artifacts are created.
@@ -107,8 +115,11 @@ const (
 	// Production registry root URL
 	GCRIOPathProd = "k8s.gcr.io"
 
+	// Staging registry root URL prefix
+	GCRIOPathStagingPrefix = "gcr.io/k8s-staging-"
+
 	// Staging registry root URL
-	GCRIOPathStaging = "gcr.io/k8s-staging-kubernetes"
+	GCRIOPathStaging = GCRIOPathStagingPrefix + Kubernetes
 
 	// Mock staging registry root URL
 	GCRIOPathMock = GCRIOPathStaging + "/mock"
@@ -128,6 +139,8 @@ const (
 
 	DockerHubEnvKey   = "DOCKERHUB_TOKEN" // Env var containing the docker key
 	DockerHubUserName = "k8sreleng"       // Docker Hub username
+
+	ProvenanceFilename = "provenance.json" // Name of the SLSA provenance file (used in stage and release)
 )
 
 var (
@@ -174,6 +187,32 @@ func GetToolRepo() string {
 // If 'TOOL_REF' is non-empty, it returns the value. Otherwise, it returns DefaultToolRef.
 func GetToolRef() string {
 	return env.Default("TOOL_REF", DefaultToolRef)
+}
+
+// GetK8sOrg checks if the 'K8S_ORG' environment variable is set.
+// If 'K8S_ORG' is non-empty, it returns the value. Otherwise, it returns DefaultK8sOrg.
+func GetK8sOrg() string {
+	return env.Default("K8S_ORG", DefaultK8sOrg)
+}
+
+// GetK8sRepo checks if the 'K8S_REPO' environment variable is set.
+// If 'K8S_REPO' is non-empty, it returns the value. Otherwise, it returns DefaultK8sRepo.
+func GetK8sRepo() string {
+	return env.Default("K8S_REPO", DefaultK8sRepo)
+}
+
+// GetK8sRef checks if the 'K8S_REF' environment variable is set.
+// If 'K8S_REF' is non-empty, it returns the value. Otherwise, it returns DefaultK8sRef.
+func GetK8sRef() string {
+	return env.Default("K8S_REF", DefaultK8sRef)
+}
+
+// IsDefaultK8sUpstream returns true if GetK8sOrg(), GetK8sRepo() and
+// GetK8sRef() point to their default values.
+func IsDefaultK8sUpstream() bool {
+	return GetK8sOrg() == DefaultK8sOrg &&
+		GetK8sRepo() == DefaultK8sRepo &&
+		GetK8sRef() == DefaultK8sRef
 }
 
 // BuiltWithBazel determines whether the most recent Kubernetes release was built with Bazel.
