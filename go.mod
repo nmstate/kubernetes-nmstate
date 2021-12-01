@@ -3,6 +3,7 @@ module github.com/nmstate/kubernetes-nmstate
 go 1.16
 
 require (
+	github.com/containerd/containerd v1.5.8 // indirect
 	github.com/evanphx/json-patch v4.11.0+incompatible
 	github.com/github-release/github-release v0.10.0
 	github.com/go-logr/logr v0.4.0
