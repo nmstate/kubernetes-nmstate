@@ -178,7 +178,7 @@ func ifaceUpWithStaticIPAbsent(firstSecondaryNic, ipAddress, prefixLen string) n
 `, firstSecondaryNic, ipAddress, prefixLen))
 }
 
-func ifaceUpWithVlanUp(iface string, vlanId string) nmstate.State {
+func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -186,10 +186,10 @@ func ifaceUpWithVlanUp(iface string, vlanId string) nmstate.State {
       vlan:
         base-iface: %s
         id: %s
-`, iface, vlanId, iface, vlanId))
+`, iface, vlanID, iface, vlanID))
 }
 
-func vlanAbsent(iface string, vlanId string) nmstate.State {
+func vlanAbsent(iface string, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -197,7 +197,7 @@ func vlanAbsent(iface string, vlanId string) nmstate.State {
       vlan:
         base-iface: %s
         id: %s
-`, iface, vlanId, iface, vlanId))
+`, iface, vlanID, iface, vlanID))
 }
 
 func interfaceAbsent(iface string) nmstate.State {

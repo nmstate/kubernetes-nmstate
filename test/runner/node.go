@@ -9,9 +9,9 @@ import (
 
 func runAtNodeWithExtras(node string, quiet bool, command ...string) (string, error) {
 	ssh := environment.GetVarWithDefault("SSH", "./cluster/ssh.sh")
-	ssh_command := []string{node, "--"}
-	ssh_command = append(ssh_command, command...)
-	output, err := cmd.Run(ssh, quiet, ssh_command...)
+	sshCommand := []string{node, "--"}
+	sshCommand = append(sshCommand, command...)
+	output, err := cmd.Run(ssh, quiet, sshCommand...)
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
 	if len(outputLines) > 2 {

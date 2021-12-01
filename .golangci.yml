@@ -61,7 +61,7 @@ linters:
     - exhaustive
       #- funlen
       #- gochecknoinits
-      #- goconst
+    - goconst
       #- gocritic
       #- gocyclo
     - gofmt
@@ -81,7 +81,7 @@ linters:
     - rowserrcheck
     - staticcheck
       #- structcheck
-      #- stylecheck
+    - stylecheck
     - typecheck
     - unconvert
       #- unparam

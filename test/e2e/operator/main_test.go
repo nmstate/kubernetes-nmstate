@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -85,7 +84,7 @@ var _ = BeforeSuite(func() {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err := testenv.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
+	err := testenv.Client.List(context.TODO(), &nodeList, &client.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)

@@ -20,6 +20,6 @@ var _ = Describe("[nns] NNS Interface filter", func() {
 	It("should not log errors related to NNS interface filtering", func() {
 		combinedHandlerLogs, err := cmd.Kubectl("logs", "-lname=nmstate-handler", "-n", "nmstate")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(combinedHandlerLogs).ToNot(ContainSubstring(state.INTERFACE_FILTER))
+		Expect(combinedHandlerLogs).ToNot(ContainSubstring(state.InterfaceFilter))
 	})
 })

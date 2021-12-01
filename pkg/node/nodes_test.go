@@ -25,14 +25,14 @@ var _ = Describe("MaxUnavailable nodes", func() {
 		Entry("Default maxUnavailable with odd number of nodes",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
-				maxUnavailable:               intstr.FromString(DEFAULT_MAXUNAVAILABLE),
+				maxUnavailable:               intstr.FromString(DefaultMaxunavailable),
 				expectedScaledMaxUnavailable: 3,
 				expectedError:                Not(HaveOccurred()),
 			}),
 		Entry("Default maxUnavailable with even number of nodes",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          6,
-				maxUnavailable:               intstr.FromString(DEFAULT_MAXUNAVAILABLE),
+				maxUnavailable:               intstr.FromString(DefaultMaxunavailable),
 				expectedScaledMaxUnavailable: 3,
 				expectedError:                Not(HaveOccurred()),
 			}),

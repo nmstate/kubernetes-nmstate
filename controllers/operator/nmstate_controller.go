@@ -185,8 +185,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 
 	const (
-		WEBHOOK_REPLICAS     = int32(2)
-		WEBHOOK_MIN_REPLICAS = int32(1)
+		webhookMinReplicas int32 = 1
+		webhookReplicas    int32 = 2
 	)
 	archAndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
 	if archAndCRInfraNodeSelector == nil {
@@ -207,8 +207,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = corev1.Affinity{}
-	data.Data["WebhookReplicas"] = WEBHOOK_REPLICAS
-	data.Data["WebhookMinReplicas"] = WEBHOOK_MIN_REPLICAS
+	data.Data["WebhookReplicas"] = webhookReplicas
+	data.Data["WebhookMinReplicas"] = webhookMinReplicas
 	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = corev1.Affinity{}
@@ -232,7 +232,7 @@ func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data ren
 
 	// If no file found in directory - return error
 	if len(objs) == 0 {
-		return fmt.Errorf("No manifests rendered from %s", sourceFullDirectory)
+		return fmt.Errorf("no manifests rendered from %s", sourceFullDirectory)
 	}
 
 	for _, obj := range objs {

@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	DEFAULT_MAXUNAVAILABLE = "50%"
-	MIN_MAXUNAVAILABLE     = 1
+	DefaultMaxunavailable = "50%"
+	MinMaxunavailable     = 1
 )
 
 func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
@@ -47,9 +47,9 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1.NodeNetworkConfigurationPolicy) (int, error) {
 	enactmentsTotal, _, err := enactment.CountByPolicy(cli, policy)
 	if err != nil {
-		return MIN_MAXUNAVAILABLE, err
+		return MinMaxunavailable, err
 	}
-	intOrPercent := intstr.FromString(DEFAULT_MAXUNAVAILABLE)
+	intOrPercent := intstr.FromString(DefaultMaxunavailable)
 	if policy.Spec.MaxUnavailable != nil {
 		intOrPercent = *policy.Spec.MaxUnavailable
 	}
@@ -59,13 +59,13 @@ func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1.NodeNetworkCon
 func ScaledMaxUnavailableNodeCount(matchingNodes int, intOrPercent intstr.IntOrString) (int, error) {
 	correctMaxUnavailable := func(maxUnavailable int) int {
 		if maxUnavailable < 1 {
-			return MIN_MAXUNAVAILABLE
+			return MinMaxunavailable
 		}
 		return maxUnavailable
 	}
 	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(&intOrPercent, matchingNodes, true)
 	if err != nil {
-		defaultMaxUnavailable := intstr.FromString(DEFAULT_MAXUNAVAILABLE)
+		defaultMaxUnavailable := intstr.FromString(DefaultMaxunavailable)
 		maxUnavailable, _ = intstr.GetScaledValueFromIntOrPercent(
 			&defaultMaxUnavailable,
 			matchingNodes,

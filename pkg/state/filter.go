@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	INTERFACE_FILTER = "interface_filter"
+	InterfaceFilter = "interface_filter"
 )
 
 var (
-	filterLog = logf.Log.WithName(INTERFACE_FILTER)
+	filterLog = logf.Log.WithName(InterfaceFilter)
 )
 
 func init() {
