@@ -15,6 +15,8 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
+const nmcliCommand = "nmcli"
+
 var defaultVlanFiltering = map[string]interface{}{
 	"mode": "trunk",
 	"trunk-tags": []map[string]interface{}{
@@ -134,15 +136,13 @@ func enableVlanFiltering(upBridgesWithPorts map[string][]string) (string, error)
 }
 
 func enableBridgeVlanFiltering(bridgeName string) (string, error) {
-	command := "nmcli"
 	args := []string{"con", "mod", bridgeName, "bridge.vlan-filtering", "yes"}
-	return runCommand(command, args)
+	return runCommand(nmcliCommand, args)
 }
 
 func enableBridgPortVlans(port string) (string, error) {
-	command := "nmcli"
 	args := []string{"con", "mod", port, "bridge-port.vlans", "2-4094"}
-	return runCommand(command, args)
+	return runCommand(nmcliCommand, args)
 }
 
 func runCommand(command string, args []string) (string, error) {

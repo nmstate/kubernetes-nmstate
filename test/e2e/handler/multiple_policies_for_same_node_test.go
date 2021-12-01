@@ -9,26 +9,26 @@ import (
 var _ = Describe("NodeNetworkState", func() {
 	Context("with multiple policies configured", func() {
 		var (
-			staticIpPolicy = "static-ip-policy"
+			staticIPPolicy = "static-ip-policy"
 			vlanPolicy     = "vlan-policy"
 			ipAddress      = "10.244.0.1"
-			vlanId         = "102"
+			vlanID         = "102"
 			prefixLen      = "24"
 		)
 
 		BeforeEach(func() {
-			setDesiredStateWithPolicy(staticIpPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
-			waitForAvailablePolicy(staticIpPolicy)
-			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanId))
+			setDesiredStateWithPolicy(staticIPPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
+			waitForAvailablePolicy(staticIPPolicy)
+			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanID))
 			waitForAvailablePolicy(vlanPolicy)
 		})
 
 		AfterEach(func() {
-			setDesiredStateWithPolicy(staticIpPolicy, ifaceDownIPv4Disabled(firstSecondaryNic))
-			waitForAvailablePolicy(staticIpPolicy)
-			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanId))
+			setDesiredStateWithPolicy(staticIPPolicy, ifaceDownIPv4Disabled(firstSecondaryNic))
+			waitForAvailablePolicy(staticIPPolicy)
+			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanID))
 			waitForAvailablePolicy(vlanPolicy)
-			deletePolicy(staticIpPolicy)
+			deletePolicy(staticIPPolicy)
 			deletePolicy(vlanPolicy)
 			resetDesiredStateForNodes()
 		})
@@ -36,8 +36,8 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should have the IP and vlan interface configured", func() {
 			for _, node := range nodes {
 				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
-				interfacesNameForNodeEventually(node).Should(ContainElement(fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)))
-				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanId)).Should(Equal(vlanId))
+				interfacesNameForNodeEventually(node).Should(ContainElement(fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanID)))
+				vlanForNodeInterfaceEventually(node, fmt.Sprintf(`%s.%s`, firstSecondaryNic, vlanID)).Should(Equal(vlanID))
 			}
 		})
 	})

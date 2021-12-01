@@ -10,11 +10,11 @@ import (
 	gomegatypes "github.com/onsi/gomega/types"
 
 	"k8s.io/apimachinery/pkg/types"
-	yaml "sigs.k8s.io/yaml"
+	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 
-	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )

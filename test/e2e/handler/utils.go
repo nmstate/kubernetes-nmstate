@@ -38,7 +38,7 @@ const TestPolicy = "test-policy"
 var (
 	bridgeCounter  = 0
 	bondCounter    = 0
-	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DEFAULT_MAXUNAVAILABLE)
+	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DefaultMaxunavailable)
 )
 
 func Byf(message string, arguments ...interface{}) {
@@ -311,9 +311,9 @@ func ipV6AddressForNodeInterfaceEventually(node string, iface string) AsyncAsser
 	}, ReadTimeout, ReadInterval)
 }
 
-func routeDestForNodeInterfaceEventually(node string, destIp string) AsyncAssertion {
+func routeDestForNodeInterfaceEventually(node string, destIP string) AsyncAssertion {
 	return Eventually(func() string {
-		return routeDest(node, destIp)
+		return routeDest(node, destIP)
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -399,8 +399,8 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 			gjsonExpression := linuxbridge.BuildGJsonExpression(bridgeVlans)
 			for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
-				vlanByIdAndConection := fmt.Sprintf(gjsonExpression, connection, expectedVlan)
-				if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
+				vlanByIDAndConection := fmt.Sprintf(gjsonExpression, connection, expectedVlan)
+				if !parsedBridgeVlans.Get(vlanByIDAndConection).Exists() {
 					return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
 				}
 			}
@@ -440,9 +440,9 @@ func nextBond() string {
 func currentStateJSON(node string) []byte {
 	key := types.NamespacedName{Name: node}
 	currentState := nodeNetworkState(key).Status.CurrentState
-	currentStateJson, err := yaml.YAMLToJSON(currentState.Raw)
+	currentStateJSON, err := yaml.YAMLToJSON(currentState.Raw)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	return currentStateJson
+	return currentStateJSON
 }
 
 func dhcpFlag(node string, name string) bool {
@@ -514,14 +514,14 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	}, 15*time.Second, 1*time.Second)
 }
 
-func routeDest(node string, destIp string) string {
-	path := fmt.Sprintf("routes.running.#(destination==\"%s\")", destIp)
+func routeDest(node string, destIP string) string {
+	path := fmt.Sprintf("routes.running.#(destination==\"%s\")", destIP)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
-func routeNextHopInterface(node string, destIp string) AsyncAssertion {
+func routeNextHopInterface(node string, destIP string) AsyncAssertion {
 	return Eventually(func() string {
-		path := fmt.Sprintf("routes.running.#(destination==\"%s\").next-hop-interface", destIp)
+		path := fmt.Sprintf("routes.running.#(destination==\"%s\").next-hop-interface", destIP)
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
@@ -544,7 +544,7 @@ func skipIfNotKubernetes() {
 }
 
 func maxUnavailableNodes() int {
-	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DEFAULT_MAXUNAVAILABLE))
+	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DefaultMaxunavailable))
 	return m
 }
 
