@@ -49,7 +49,7 @@ var _ = BeforeSuite(func() {
 	primaryNic = environment.GetVarWithDefault("PRIMARY_NIC", "eth0")
 	firstSecondaryNic = environment.GetVarWithDefault("FIRST_SECONDARY_NIC", "eth1")
 	secondSecondaryNic = environment.GetVarWithDefault("SECOND_SECONDARY_NIC", "eth2")
-	dnsTestNic = environment.GetVarWithDefault("DNS_TEST_NIC", "eth0")
+	dnsTestNic = environment.GetVarWithDefault("DNS_TEST_NIC", primaryNic)
 
 	testenv.Start()
 
