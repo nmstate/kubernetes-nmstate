@@ -56,6 +56,10 @@ var _ = Describe("Dns configuration", func() {
 			server1V6     = "2001:db8::1:2"
 		)
 
+		BeforeEach(func() {
+			Skip("https://github.com/nmstate/kubernetes-nmstate/issues/927")
+		})
+
 		Context("with V4 upstream servers", func() {
 			BeforeEach(func() {
 				// read primary DNS server from one of the nodes
