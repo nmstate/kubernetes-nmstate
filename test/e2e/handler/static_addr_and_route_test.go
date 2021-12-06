@@ -128,6 +128,10 @@ var _ = Describe("Static addresses and routes", func() {
 			nextHopIPAddressV6 = "2001:db8::1:2"
 		)
 
+		BeforeEach(func() {
+			Skip("https://github.com/nmstate/kubernetes-nmstate/issues/927")
+		})
+
 		Context("with static V4 address", func() {
 			BeforeEach(func() {
 				updateDesiredStateAndWait(ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
