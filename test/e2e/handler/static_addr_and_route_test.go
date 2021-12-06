@@ -30,22 +30,18 @@ routes:
 `, firstSecondaryNic, ipAddress, prefixLen, destIPAddress, nextHopIPAddress, firstSecondaryNic))
 }
 
-func ipV4AddrAndRouteAbsent(firstSecondaryNic, ipAddress, prefixLen string) nmstate.State {
+func ipV4AddrAndRouteAbsent(firstSecondaryNic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
     ipv4:
-      address:
-      - ip: %s
-        prefix-length: %s
-      state: absent
       enabled: false
 routes:
     config:
     - next-hop-interface: %s
       state: absent
-`, firstSecondaryNic, ipAddress, prefixLen, firstSecondaryNic))
+`, firstSecondaryNic, firstSecondaryNic))
 }
 
 func ipV6Addr(firstSecondaryNic, ipAddressV6, prefixLenV6 string) nmstate.State {
@@ -62,18 +58,14 @@ func ipV6Addr(firstSecondaryNic, ipAddressV6, prefixLenV6 string) nmstate.State 
 `, firstSecondaryNic, ipAddressV6, prefixLenV6))
 }
 
-func ipV6AddrAbsent(firstSecondaryNic, ipAddressV6, prefixLenV6 string) nmstate.State {
+func ipV6AddrAbsent(firstSecondaryNic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
     ipv6:
-      address:
-      - ip: %s
-        prefix-length: %s
-      state: absent
       enabled: false
-`, firstSecondaryNic, ipAddressV6, prefixLenV6))
+`, firstSecondaryNic))
 }
 
 func ipV6AddrAndRoute(firstSecondaryNic, ipAddressV6, destIPAddressV6, prefixLenV6, nextHopIPAddressV6 string) nmstate.State {
@@ -97,27 +89,24 @@ routes:
 `, firstSecondaryNic, ipAddressV6, prefixLenV6, destIPAddressV6, nextHopIPAddressV6, firstSecondaryNic))
 }
 
-func ipV6AddrAndRouteAbsent(firstSecondaryNic, ipAddressV6, prefixLenV6 string) nmstate.State {
+func ipV6AddrAndRouteAbsent(firstSecondaryNic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
     ipv6:
-      address:
-      - ip: %s
-        prefix-length: %s
-      state: absent
       enabled: false
 routes:
     config:
     - next-hop-interface: %s
       state: absent
-`, firstSecondaryNic, ipAddressV6, prefixLenV6, firstSecondaryNic))
+`, firstSecondaryNic, firstSecondaryNic))
 }
 
 var _ = Describe("Static addresses and routes", func() {
 	Context("when desiredState is configured", func() {
 		var (
+			node               string
 			ipAddress          = "192.0.2.251"
 			destIPAddress      = "198.51.100.0/24"
 			prefixLen          = "24"
@@ -127,84 +116,68 @@ var _ = Describe("Static addresses and routes", func() {
 			destIPAddressV6    = "2001:dc8::/64"
 			nextHopIPAddressV6 = "2001:db8::1:2"
 		)
-
 		BeforeEach(func() {
-			Skip("https://github.com/nmstate/kubernetes-nmstate/issues/927")
+			node = nodes[0]
 		})
-
 		Context("with static V4 address", func() {
 			BeforeEach(func() {
-				updateDesiredStateAndWait(ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
+
+				updateDesiredStateAtNodeAndWait(node, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
+
 			})
 			AfterEach(func() {
-				updateDesiredStateAndWait(ifaceUpWithStaticIPAbsent(firstSecondaryNic, ipAddress, prefixLen))
-				for _, node := range nodes {
-					ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).ShouldNot(Equal(ipAddress))
-				}
+				updateDesiredStateAndWait(ifaceUpWithStaticIPAbsent(firstSecondaryNic))
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(BeEmpty())
 				resetDesiredStateForNodes()
 			})
 			It("should have the static V4 address", func() {
-				for _, node := range nodes {
-					ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
-				}
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
 			})
 		})
 
 		Context("with static V4 address and route", func() {
 			BeforeEach(func() {
-				updateDesiredStateAndWait(ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress))
+				updateDesiredStateAtNodeAndWait(node, ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress))
 			})
 			AfterEach(func() {
-				updateDesiredStateAndWait(ipV4AddrAndRouteAbsent(firstSecondaryNic, ipAddress, prefixLen))
-				for _, node := range nodes {
-					ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).ShouldNot(Equal(ipAddress))
-					routeDestForNodeInterfaceEventually(node, destIPAddress).ShouldNot(Equal(firstSecondaryNic))
-				}
+				updateDesiredStateAndWait(ipV4AddrAndRouteAbsent(firstSecondaryNic))
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(BeEmpty())
+				routeDestForNodeInterfaceEventually(node, destIPAddress).ShouldNot(Equal(firstSecondaryNic))
 				resetDesiredStateForNodes()
 			})
 			It("should have the static V4 address and route  at currentState", func() {
-				for _, node := range nodes {
-					ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
-					routeNextHopInterface(node, destIPAddress).Should(Equal(firstSecondaryNic))
-				}
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
+				routeNextHopInterface(node, destIPAddress).Should(Equal(firstSecondaryNic))
 			})
 		})
 
 		Context("with static V6 address", func() {
 			BeforeEach(func() {
-				updateDesiredStateAndWait(ipV6Addr(firstSecondaryNic, ipAddressV6, prefixLenV6))
+				updateDesiredStateAtNodeAndWait(node, ipV6Addr(firstSecondaryNic, ipAddressV6, prefixLenV6))
 			})
 			AfterEach(func() {
-				updateDesiredStateAndWait(ipV6AddrAbsent(firstSecondaryNic, ipAddressV6, prefixLenV6))
-				for _, node := range nodes {
-					ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).ShouldNot(Equal(ipAddressV6))
-				}
+				updateDesiredStateAndWait(ipV6AddrAbsent(firstSecondaryNic))
+				ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(BeEmpty())
 				resetDesiredStateForNodes()
 			})
 			It("should have the static V6 address", func() {
-				for _, node := range nodes {
-					ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddressV6))
-				}
+				ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddressV6))
 			})
 		})
 
 		Context("with static V6 address and route", func() {
 			BeforeEach(func() {
-				updateDesiredStateAndWait(ipV6AddrAndRoute(firstSecondaryNic, ipAddressV6, destIPAddressV6, prefixLenV6, nextHopIPAddressV6))
+				updateDesiredStateAtNodeAndWait(node, ipV6AddrAndRoute(firstSecondaryNic, ipAddressV6, destIPAddressV6, prefixLenV6, nextHopIPAddressV6))
 			})
 			AfterEach(func() {
-				updateDesiredStateAndWait(ipV6AddrAndRouteAbsent(firstSecondaryNic, ipAddressV6, prefixLenV6))
-				for _, node := range nodes {
-					ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).ShouldNot(Equal(ipAddressV6))
-					routeDestForNodeInterfaceEventually(node, destIPAddressV6).ShouldNot(Equal(firstSecondaryNic))
-				}
+				updateDesiredStateAndWait(ipV6AddrAndRouteAbsent(firstSecondaryNic))
+				ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(BeEmpty())
+				routeDestForNodeInterfaceEventually(node, destIPAddressV6).ShouldNot(Equal(firstSecondaryNic))
 				resetDesiredStateForNodes()
 			})
 			It("should have the static V6 address and route  at currentState", func() {
-				for _, node := range nodes {
-					ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddressV6))
-					routeNextHopInterface(node, destIPAddressV6).Should(Equal(firstSecondaryNic))
-				}
+				ipV6AddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddressV6))
+				routeNextHopInterface(node, destIPAddressV6).Should(Equal(firstSecondaryNic))
 			})
 		})
 	})

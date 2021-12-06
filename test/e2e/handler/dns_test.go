@@ -27,6 +27,8 @@ interfaces:
     enabled: true
     dhcp: true
   %s:
+    enabled: true
+    dhcp: true
     auto-dns: false
 
 `, searchDomain1, searchDomain2, server1, server2, dnsTestNic, ipFamily, ipFamily1))
@@ -41,8 +43,12 @@ interfaces:
   type: ethernet
   state: up
   ipv4:
+    dhcp: true
+    enabled: true
     auto-dns: true
   ipv6:
+    dhcp: true
+    enabled: true
     auto-dns: true
 `, dnsTestNic))
 }
@@ -55,10 +61,6 @@ var _ = Describe("Dns configuration", func() {
 			server1V4     = "8.8.9.9"
 			server1V6     = "2001:db8::1:2"
 		)
-
-		BeforeEach(func() {
-			Skip("https://github.com/nmstate/kubernetes-nmstate/issues/927")
-		})
 
 		Context("with V4 upstream servers", func() {
 			BeforeEach(func() {
