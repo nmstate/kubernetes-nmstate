@@ -8,7 +8,7 @@ metadata:
         "kind": "NMState",
         "metadata": {
           "name": "nmstate"
-        },
+        }
       }
     alm-examples: |-
       [{
