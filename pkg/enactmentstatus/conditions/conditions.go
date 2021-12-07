@@ -29,12 +29,12 @@ func New(client client.Client, enactmentKey types.NamespacedName) EnactmentCondi
 	return conditions
 }
 
-func (ec *EnactmentConditions) NotifyNodeSelectorFailure(err error) {
-	ec.logger.Info("NotifyNodeSelectorFailure")
-	message := fmt.Sprintf("failure checking node selectors : %v", err)
+func (ec *EnactmentConditions) NotifyGenerateFailure(err error) {
+	ec.logger.Info("NotifyGenerateFailure")
+	message := fmt.Sprintf("failure generating desiredState and capturedStates: %v", err)
 	err = ec.updateEnactmentConditions(SetFailedToConfigure, message)
 	if err != nil {
-		ec.logger.Error(err, "Error notifying state NodeSelectorNotMatching with failure")
+		ec.logger.Error(err, "Error notifying state generate captures with failure")
 	}
 }
 

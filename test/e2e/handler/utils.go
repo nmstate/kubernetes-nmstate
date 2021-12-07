@@ -68,12 +68,13 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	return dummy
 }
 
-func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
+func setDesiredStateWithPolicyAndCaptureAndNodeSelector(name string, desiredState nmstate.State, capture map[string]string, nodeSelector map[string]string) error {
 	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
 	err := testenv.Client.Get(context.TODO(), key, &policy)
 	policy.Spec.DesiredState = desiredState
+	policy.Spec.Capture = capture
 	policy.Spec.NodeSelector = nodeSelector
 	maxUnavailableIntOrString := intstr.FromString(maxUnavailable)
 	policy.Spec.MaxUnavailable = &maxUnavailableIntOrString
@@ -90,9 +91,17 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 	return err
 }
 
+func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
+	return setDesiredStateWithPolicyAndCaptureAndNodeSelector(name, desiredState, nil, nodeSelector)
+}
+
 func setDesiredStateWithPolicyAndNodeSelectorEventually(name string, desiredState nmstate.State, nodeSelector map[string]string) {
+	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name, desiredState, nil, nodeSelector)
+}
+
+func setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name string, desiredState nmstate.State, capture map[string]string, nodeSelector map[string]string) {
 	Eventually(func() error {
-		return setDesiredStateWithPolicyAndNodeSelector(name, desiredState, nodeSelector)
+		return setDesiredStateWithPolicyAndCaptureAndNodeSelector(name, desiredState, capture, nodeSelector)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
 	//FIXME: until we don't have webhook we have to wait for reconcile
 	//       to start so we are sure that conditions are reset and we can
@@ -107,6 +116,11 @@ func setDesiredStateWithPolicyWithoutNodeSelector(name string, desiredState nmst
 func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
 	setDesiredStateWithPolicyAndNodeSelectorEventually(name, desiredState, runAtWorkers)
+}
+
+func setDesiredStateWithPolicyAndCapture(name string, desiredState nmstate.State, capture map[string]string) {
+	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
+	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name, desiredState, capture, runAtWorkers)
 }
 
 func updateDesiredState(desiredState nmstate.State) {

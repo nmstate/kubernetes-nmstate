@@ -45,6 +45,12 @@ spec:
             description: NodeNetworkConfigurationPolicySpec defines the desired state
               of NodeNetworkConfigurationPolicy
             properties:
+              capture:
+                additionalProperties:
+                  type: string
+                description: Capture contains expressions with an associated name
+                  than can be referenced at the DesiredState.
+                type: object
               desiredState:
                 description: The desired configuration of the policy
                 type: object
@@ -135,6 +141,12 @@ spec:
             description: NodeNetworkConfigurationPolicySpec defines the desired state
               of NodeNetworkConfigurationPolicy
             properties:
+              capture:
+                additionalProperties:
+                  type: string
+                description: Capture contains expressions with an associated name
+                  than can be referenced at the DesiredState.
+                type: object
               desiredState:
                 description: The desired configuration of the policy
                 type: object
@@ -225,6 +237,12 @@ spec:
             description: NodeNetworkConfigurationPolicySpec defines the desired state
               of NodeNetworkConfigurationPolicy
             properties:
+              capture:
+                additionalProperties:
+                  type: string
+                description: Capture contains expressions with an associated name
+                  than can be referenced at the DesiredState.
+                type: object
               desiredState:
                 description: The desired configuration of the policy
                 type: object

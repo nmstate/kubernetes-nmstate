@@ -46,6 +46,27 @@ spec:
             description: NodeNetworkConfigurationEnactmentStatus defines the observed
               state of NodeNetworkConfigurationEnactment
             properties:
+              capturedStates:
+                additionalProperties:
+                  properties:
+                    metaInfo:
+                      properties:
+                        time:
+                          format: date-time
+                          type: string
+                        version:
+                          type: string
+                      type: object
+                    state:
+                      description: "State contains the namestatectl yaml [1] as string
+                        instead of golang struct so we don't need to be in sync with
+                        the schema. \n [1] https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml"
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  type: object
+                description: A cache containing the resolved captures after processing
+                  the capture at NNCP
+                type: object
               conditions:
                 items:
                   properties:
@@ -75,6 +96,14 @@ spec:
                   the policy desiredState as template
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              desiredStateMetaInfo:
+                properties:
+                  time:
+                    format: date-time
+                    type: string
+                  version:
+                    type: string
+                type: object
               policyGeneration:
                 description: The generation from policy needed to check if an enactment
                   condition status belongs to the same policy version
@@ -113,6 +142,27 @@ spec:
             description: NodeNetworkConfigurationEnactmentStatus defines the observed
               state of NodeNetworkConfigurationEnactment
             properties:
+              capturedStates:
+                additionalProperties:
+                  properties:
+                    metaInfo:
+                      properties:
+                        time:
+                          format: date-time
+                          type: string
+                        version:
+                          type: string
+                      type: object
+                    state:
+                      description: "State contains the namestatectl yaml [1] as string
+                        instead of golang struct so we don't need to be in sync with
+                        the schema. \n [1] https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml"
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  type: object
+                description: A cache containing the resolved captures after processing
+                  the capture at NNCP
+                type: object
               conditions:
                 items:
                   properties:
@@ -142,6 +192,14 @@ spec:
                   the policy desiredState as template
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              desiredStateMetaInfo:
+                properties:
+                  time:
+                    format: date-time
+                    type: string
+                  version:
+                    type: string
+                type: object
               policyGeneration:
                 description: The generation from policy needed to check if an enactment
                   condition status belongs to the same policy version
