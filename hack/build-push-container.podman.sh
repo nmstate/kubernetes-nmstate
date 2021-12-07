@@ -15,7 +15,13 @@ podman manifest create ${IMAGE}
 IMAGES=${IMAGE}
 for arch in $ARCHS; do
     podman build --arch $arch --build-arg TARGETARCH=$arch -t $IMAGE.$arch $@
-    podman push --tls-verify=$TLS_VERIFY ${IMAGE}.$arch
     podman manifest add --tls-verify=$TLS_VERIFY ${IMAGE} docker://${IMAGE}.$arch
+
+    if [ ! "$SKIP_PUSH" == "true" ]; then
+        podman push --tls-verify=$TLS_VERIFY ${IMAGE}.$arch
+    fi
 done
+
+if [ ! "$SKIP_PUSH" == "true" ]; then
 podman manifest push --tls-verify=$TLS_VERIFY ${IMAGE} docker://${IMAGE}
+fi
