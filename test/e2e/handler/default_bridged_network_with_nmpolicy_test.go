@@ -83,6 +83,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 					"brext-bridge": `interfaces.name=="brext"`,
 				}
 
+				Byf("Removeing %s NNCP since capture cannot be modified", DefaultNetwork)
+				deletePolicy(DefaultNetwork)
+
 				Byf("Removing bridge and configuring %s with dhcp", primaryNic)
 				setDesiredStateWithPolicyAndCapture(DefaultNetwork, resetDefaultInterfaceState, capture)
 

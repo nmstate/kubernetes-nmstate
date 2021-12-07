@@ -78,6 +78,18 @@ func validatePolicyName(policy nmstatev1.NodeNetworkConfigurationPolicy, current
 	return causes
 }
 
+func validatePolicyCaptureNotModified(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+	causes := []metav1.StatusCause{}
+	if !reflect.DeepEqual(policy.Spec.Capture, currentPolicy.Spec.Capture) {
+		causes = append(causes, metav1.StatusCause{
+			Type:    metav1.CauseTypeFieldValueNotSupported,
+			Message: "invalid policy operation: capture field cannot be modified",
+			Field:   "capture",
+		})
+	}
+	return causes
+}
+
 func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 	return &webhook.Admission{
 		Handler: admission.MultiValidatingHandler(
@@ -86,6 +98,7 @@ func validatePolicyUpdateHook(cli client.Client) *webhook.Admission {
 				onPolicySpecChange,
 				validatePolicyNotInProgressHook,
 				validatePolicyNodeSelector,
+				validatePolicyCaptureNotModified,
 			),
 		),
 	}
