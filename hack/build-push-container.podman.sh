@@ -2,6 +2,11 @@
 
 set -x -o errexit -o nounset -o pipefail
 
+if [ "$SKIP_IMAGE_BUILD" == "true" ]; then
+    echo "skipping image build"
+    exit 0
+fi
+
 TLS_VERIFY=true
 if [[ $IMAGE_REGISTRY =~ localhost ]]; then
     TLS_VERIFY=false
@@ -23,5 +28,5 @@ for arch in $ARCHS; do
 done
 
 if [ ! "$SKIP_PUSH" == "true" ]; then
-podman manifest push --tls-verify=$TLS_VERIFY ${IMAGE} docker://${IMAGE}
+    podman manifest push --tls-verify=$TLS_VERIFY ${IMAGE} docker://${IMAGE}
 fi
