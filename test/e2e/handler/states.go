@@ -164,18 +164,14 @@ func ifaceUpWithStaticIP(iface string, ipAddress string, prefixLen string) nmsta
 `, iface, ipAddress, prefixLen))
 }
 
-func ifaceUpWithStaticIPAbsent(firstSecondaryNic, ipAddress, prefixLen string) nmstate.State {
+func ifaceUpWithStaticIPAbsent(firstSecondaryNic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
     state: up
     ipv4:
-      address:
-      - ip: %s
-        prefix-length: %s
-      state: absent
       enabled: false
-`, firstSecondaryNic, ipAddress, prefixLen))
+`, firstSecondaryNic))
 }
 
 func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
