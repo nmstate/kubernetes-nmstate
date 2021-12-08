@@ -89,6 +89,8 @@ INDEX_VERSION ?= 1.0.0
 # Default index image tag
 INDEX_IMG ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/kubernetes-nmstate-operator-index:$(INDEX_VERSION)
 
+SKIP_IMAGE_BUILD ?= false
+
 all: check handler
 
 check: vet whitespace-check gofmt-check
@@ -143,13 +145,13 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler: handler-manager
-	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
 push-operator: operator-manager
-	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
 
 push: push-handler push-operator
 
