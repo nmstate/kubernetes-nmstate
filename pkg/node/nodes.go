@@ -18,6 +18,12 @@ const (
 	MinMaxunavailable     = 1
 )
 
+type MaxUnavailableLimitReachedError struct{}
+
+func (f MaxUnavailableLimitReachedError) Error() string {
+	return "maximal number of nodes are already processing policy configuration"
+}
+
 func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
 	nodes := corev1.NodeList{}
 	err := cli.List(context.TODO(), &nodes, client.MatchingLabels(nodeSelector))

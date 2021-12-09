@@ -40,7 +40,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -198,7 +197,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	if r.shouldIncrementUnavailableNodeCount(instance, previousConditions) {
 		err = r.incrementUnavailableNodeCount(instance)
 		if err != nil {
-			if apierrors.IsConflict(err) {
+			if apierrors.IsConflict(err) || errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
 				enactmentConditions.NotifyPending()
 				log.Info(err.Error())
 				return ctrl.Result{RequeueAfter: nodeRunningUpdateRetryTime}, nil
@@ -385,26 +384,24 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNod
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1.NodeNetworkConfigurationPolicy) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
-	err := r.Client.Get(context.TODO(), policyKey, policy)
-	if err != nil {
-		return err
-	}
-	maxUnavailable, err := node.MaxUnavailableNodeCount(r.APIClient, policy)
-	if err != nil {
-		r.Log.Info(
-			fmt.Sprintf("failed calculating limit of max unavailable nodes, defaulting to %d, err: %s", maxUnavailable, err.Error()),
-		)
-	}
-	if policy.Status.UnavailableNodeCount >= maxUnavailable {
-		return apierrors.NewConflict(schema.GroupResource{Resource: "nodenetworkconfigurationpolicies"}, policy.Name, fmt.Errorf("maximal number of %d nodes are already processing policy configuration", policy.Status.UnavailableNodeCount))
-	}
-	policy.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now()}
-	policy.Status.UnavailableNodeCount += 1
-	err = r.Client.Status().Update(context.TODO(), policy)
-	if err != nil {
-		return err
-	}
-	return nil
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := r.Client.Get(context.TODO(), policyKey, policy)
+		if err != nil {
+			return err
+		}
+		maxUnavailable, err := node.MaxUnavailableNodeCount(r.APIClient, policy)
+		if err != nil {
+			r.Log.Info(
+				fmt.Sprintf("failed calculating limit of max unavailable nodes, defaulting to %d, err: %s", maxUnavailable, err.Error()),
+			)
+		}
+		if policy.Status.UnavailableNodeCount >= maxUnavailable {
+			return node.MaxUnavailableLimitReachedError{}
+		}
+		policy.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now()}
+		policy.Status.UnavailableNodeCount += 1
+		return r.Client.Status().Update(context.TODO(), policy)
+	})
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
