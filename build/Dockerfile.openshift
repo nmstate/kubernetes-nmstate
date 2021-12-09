@@ -6,12 +6,12 @@ RUN GO111MODULE=on go build --mod=vendor -o build/_output/bin/manager ./cmd/hand
 FROM ubi8-minimal
 
 RUN \
-    microdnf -y update && \
-    microdnf -y install \
+    dnf -y update && \
+    dnf -y install \
         nmstate \
         iputils \
         iproute && \
-    microdnf clean all
+    dnf clean all
 
 
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/build/_output/bin/manager  /usr/bin/
