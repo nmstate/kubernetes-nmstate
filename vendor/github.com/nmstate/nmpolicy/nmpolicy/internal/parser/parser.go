@@ -76,9 +76,6 @@ func (p *parser) parse() (ast.Node, error) {
 		}
 		p.nextToken()
 	}
-	if p.lastNode == nil {
-		return ast.Node{}, nil
-	}
 	return *p.lastNode, nil
 }
 
@@ -106,9 +103,6 @@ func (p *parser) prevToken() {
 }
 
 func (p *parser) currentToken() *lexer.Token {
-	if len(p.tokens) == 0 || p.currentTokenIdx >= len(p.tokens) {
-		return nil
-	}
 	return &p.tokens[p.currentTokenIdx]
 }
 
