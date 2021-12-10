@@ -173,6 +173,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	err = r.fillInEnactmentStatus(nns, *instance, *enactmentInstance, enactmentConditions)
 	if err != nil {
 		log.Error(err, "failed filling in the NNCE status")
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, nil
 	}
 
@@ -320,18 +323,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(nns *nm
 		return err
 	}
 
-	err = enactmentstatus.Update(r.APIClient, nmstateapi.EnactmentKey(nodeName, policy.Name), func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
+	return enactmentstatus.Update(r.APIClient, nmstateapi.EnactmentKey(nodeName, policy.Name), func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
 		status.DesiredState = desiredStateWithDefaults
 		status.DesiredStateMetaInfo = desiredStateMetaInfo
 		status.CapturedStates = capturedStates
 		status.PolicyGeneration = policy.Generation
 	})
-
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) enactmentForPolicy(policy *nmstatev1.NodeNetworkConfigurationPolicy) (*nmstatev1beta1.NodeNetworkConfigurationEnactment, error) {
