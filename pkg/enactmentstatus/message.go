@@ -51,15 +51,23 @@ func FormatErrorString(errorMessage string) string {
 
 // Loops over all lines in error message and selects lines that should be kept
 func formatLines(index int, errorLines []string, sb *strings.Builder) {
+	shouldFormatLine := true
 	for index < len(errorLines) {
-		formatLine(&errorLines[index], sb)
+		if errorLines[index] == "---" {
+			shouldFormatLine = false
+		}
+		processLine(&errorLines[index], sb, shouldFormatLine)
 		index++
 		index = skipLines(errorLines, index)
 	}
 }
 
 // Simplifies a line that should be kept in the error message
-func formatLine(errorLine *string, sb *strings.Builder) {
+func processLine(errorLine *string, sb *strings.Builder, shouldFormatLine bool) {
+	if !shouldFormatLine {
+		sb.WriteString(*errorLine + "\n")
+		return
+	}
 	lineSplitByColon := strings.Split(strings.TrimRight(*errorLine, " "), ": ")
 	indent := ""
 	for _, lineSection := range lineSplitByColon {
