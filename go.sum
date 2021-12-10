@@ -1191,6 +1191,8 @@ github.com/nmstate/nmpolicy v0.1.0-alpha.2 h1:U57+tmghM7aF9Z/OTwlSiMbwa+wQ0zqjGz
 github.com/nmstate/nmpolicy v0.1.0-alpha.2/go.mod h1:uItjRVdUUTrtIUmG/772gMujJwMTHgUxPkUPjnpy6Is=
 github.com/nmstate/nmpolicy v0.1.0-alpha.3 h1:jBQX+KBCzQBYTrlYnC0kdNKQEIkV0eiFlWTkaHD6G1k=
 github.com/nmstate/nmpolicy v0.1.0-alpha.3/go.mod h1:uItjRVdUUTrtIUmG/772gMujJwMTHgUxPkUPjnpy6Is=
+github.com/nmstate/nmpolicy v0.1.0 h1:WTtyDuxVujAPLer7Fh7kaKPmYYoM2xemn+a0fRdScvw=
+github.com/nmstate/nmpolicy v0.1.0/go.mod h1:uItjRVdUUTrtIUmG/772gMujJwMTHgUxPkUPjnpy6Is=
 github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481 h1:Up6+btDp321ZG5/zdSLo48H9Iaq0UQGthrhWC6pCxzE=
 github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481/go.mod h1:yKZQO8QE2bHlgozqWDiRVqTFlLQSj30K/6SAK8EeYFw=
 github.com/nwaples/rardecode v1.1.0/go.mod h1:5DzqNKiOdpKKBH87u8VlvAnPZMXcGRhxWkRpHbbfGS0=
