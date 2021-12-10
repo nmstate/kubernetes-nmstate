@@ -19,7 +19,7 @@ package enactmentstatus
 
 import (
 	"bytes"
-	"compress/flate"
+	"compress/gzip"
 	b64 "encoding/base64"
 	"io"
 	"regexp"
@@ -129,12 +129,9 @@ func CompressAndEncodeMessage(message string) string {
 
 func compressMessage(message string) (bytes.Buffer, error) {
 	var buf bytes.Buffer
-	writer, err := flate.NewWriter(&buf, flate.BestCompression)
-	if err != nil {
-		return bytes.Buffer{}, err
-	}
+	writer := gzip.NewWriter(&buf)
 
-	_, err = writer.Write([]byte(message))
+	_, err := writer.Write([]byte(message))
 	if err != nil {
 		return bytes.Buffer{}, err
 	}
@@ -162,7 +159,10 @@ func decodeMessage(encodedMessage string) []byte {
 
 func decompressMessage(data []byte) string {
 	bytesReader := bytes.NewReader(data)
-	flateReader := flate.NewReader(bytesReader)
-	decompressedMessage, _ := io.ReadAll(flateReader)
+	gzipReader, err := gzip.NewReader(bytesReader)
+	if err != nil {
+		return ""
+	}
+	decompressedMessage, _ := io.ReadAll(gzipReader)
 	return string(decompressedMessage)
 }
