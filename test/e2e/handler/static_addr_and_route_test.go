@@ -44,6 +44,23 @@ routes:
 `, firstSecondaryNic, firstSecondaryNic))
 }
 
+func ipV4AddrAndRouteAndBridgeAbsent(firstSecondaryNic, bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: false
+  - name: %s
+    type: linux-bridge
+    state: absent
+routes:
+    config:
+    - next-hop-interface: %s
+      state: absent
+`, firstSecondaryNic, bridgeName, bridgeName))
+}
+
 func ipV6Addr(firstSecondaryNic, ipAddressV6, prefixLenV6 string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
@@ -115,6 +132,7 @@ var _ = Describe("Static addresses and routes", func() {
 			prefixLenV6        = "64"
 			destIPAddressV6    = "2001:dc8::/64"
 			nextHopIPAddressV6 = "2001:db8::1:2"
+			bridgeName         = "brext"
 		)
 		BeforeEach(func() {
 			node = nodes[0]
@@ -148,6 +166,35 @@ var _ = Describe("Static addresses and routes", func() {
 			It("should have the static V4 address and route  at currentState", func() {
 				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
 				routeNextHopInterface(node, destIPAddress).Should(Equal(firstSecondaryNic))
+			})
+		})
+
+		Context("with bridge taking over the static networking of the slave", func() {
+			BeforeEach(func() {
+				updateDesiredStateAtNodeAndWait(node, ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress))
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
+				routeNextHopInterface(node, destIPAddress).Should(Equal(firstSecondaryNic))
+				// The policy has to be removed since it is not possible to update capture of an existing policy
+				deletePolicy(TestPolicy)
+
+				capture := map[string]string{
+					"gw":                     fmt.Sprintf(`routes.running.destination=="%s"`, destIPAddress),
+					"secondary-iface":        `interfaces.name==capture.gw.routes.running.0.next-hop-interface`,
+					"secondary-iface-routes": `routes.running.next-hop-interface==capture.secondary-iface.interfaces.0.name`,
+					"bridge-routes":          fmt.Sprintf(`capture.secondary-iface-routes | routes.running.next-hop-interface:="%s"`, bridgeName),
+				}
+				updateDesiredStateWithCaptureAtNodeAndWait(node, bridgeOnTheSecondaryInterfaceState(), capture)
+				deletePolicy(TestPolicy)
+			})
+			AfterEach(func() {
+				updateDesiredStateAndWait(ipV4AddrAndRouteAndBridgeAbsent(firstSecondaryNic, bridgeName))
+				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(BeEmpty())
+				routeDestForNodeInterfaceEventually(node, destIPAddress).ShouldNot(Equal(firstSecondaryNic))
+				routeDestForNodeInterfaceEventually(node, destIPAddress).ShouldNot(Equal(bridgeName))
+				resetDesiredStateForNodes()
+			})
+			It("should have the bridge and the routes created", func() {
+				routeNextHopInterface(node, destIPAddress).Should(Equal(bridgeName))
 			})
 		})
 
