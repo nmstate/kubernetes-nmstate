@@ -37,6 +37,8 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
+    operatorframework.io/arch.ppc64le: supported
+    operatorframework.io/arch.s390x: supported
   name: kubernetes-nmstate-operator.v4.10.0
   namespace: openshift-nmstate
 spec:

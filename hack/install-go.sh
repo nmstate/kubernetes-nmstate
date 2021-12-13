@@ -6,6 +6,8 @@ case $(uname -m) in
     i686)   architecture="386" ;;
     x86_64) architecture="amd64" ;;
     arm)    architecture="arm64" ;;
+    ppc64le)    architecture="ppc64le" ;;
+    s390x)    architecture="s390x" ;;
 esac
 
 destination=$1
