@@ -178,7 +178,9 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			}, 180*time.Second, 1*time.Second).Should(BeNumerically(">=", 1))
 
 			By("Checking the policy is marked as Degraded")
-			Eventually(policyConditionsStatus(TestPolicy)).Should(containPolicyDegraded(), "policy should be marked as Degraded")
+			Eventually(func() nmstate.ConditionList {
+				return policyConditionsStatus(TestPolicy)
+			}, 2*time.Second, 100*time.Millisecond).Should(containPolicyDegraded(), "policy should be marked as Degraded")
 		})
 	})
 })
