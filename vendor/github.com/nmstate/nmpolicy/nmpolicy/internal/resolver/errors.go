@@ -29,3 +29,11 @@ func wrapWithResolveError(err error) error {
 func wrapWithEqFilterError(err error) error {
 	return fmt.Errorf("eqfilter error: %v", err)
 }
+
+func replaceError(format string, a ...interface{}) error {
+	return wrapWithReplaceError(fmt.Errorf(format, a...))
+}
+
+func wrapWithReplaceError(err error) error {
+	return fmt.Errorf("replace error: %v", err)
+}

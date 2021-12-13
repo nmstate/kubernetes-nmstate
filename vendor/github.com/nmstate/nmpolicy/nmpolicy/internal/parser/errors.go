@@ -65,9 +65,23 @@ func invalidEqualityFilterError(msg string) *parserError {
 	}
 }
 
+func invalidReplaceError(msg string) *parserError {
+	return &parserError{
+		prefix: "invalid replace",
+		msg:    msg,
+	}
+}
+
 func invalidExpressionError(msg string) *parserError {
 	return &parserError{
 		prefix: "invalid expression",
+		msg:    msg,
+	}
+}
+
+func invalidPipeError(msg string) *parserError {
+	return &parserError{
+		prefix: "invalid pipe",
 		msg:    msg,
 	}
 }
