@@ -31,6 +31,7 @@ type Terminal struct {
 type Node struct {
 	Meta
 	EqFilter *TernaryOperator  `json:"eqfilter,omitempty"`
+	Replace  *TernaryOperator  `json:"replace,omitempty"`
 	Path     *VariadicOperator `json:"path,omitempty"`
 	Terminal
 }

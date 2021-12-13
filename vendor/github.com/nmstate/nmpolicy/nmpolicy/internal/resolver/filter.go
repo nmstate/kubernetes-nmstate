@@ -23,7 +23,7 @@ import (
 )
 
 func filter(inputState map[string]interface{}, path ast.VariadicOperator, expectedNode ast.Node) (map[string]interface{}, error) {
-	filtered, err := applyFuncOnPath(inputState, path, expectedNode, mapContainsValue, true)
+	filtered, err := applyFuncOnMap(path, inputState, expectedNode, mapContainsValue, true, true)
 
 	if err != nil {
 		return nil, fmt.Errorf("failed applying operation on the path: %v", err)

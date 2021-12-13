@@ -24,12 +24,14 @@ const (
 	NUMBER
 	STRING
 
-	DOT  // .
-	PIPE // |
+	DOT // .
 
+	operatorsBegin
+	PIPE     // |
 	REPLACE  // :=
 	EQFILTER // ==
 	MERGE    // +
+	operatorsEnd
 
 	TRUE  // true
 	FALSE // false
@@ -54,6 +56,10 @@ var tokens = []string{
 
 func (t TokenType) String() string {
 	return tokens[t]
+}
+
+func (t TokenType) IsOperator() bool {
+	return t > operatorsBegin && t < operatorsEnd
 }
 
 type Token struct {

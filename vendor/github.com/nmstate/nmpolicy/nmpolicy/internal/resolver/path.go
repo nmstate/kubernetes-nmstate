@@ -32,7 +32,7 @@ func applyFuncOnPath(inputState interface{},
 	path []ast.Node,
 	expectedNode ast.Node,
 	funcToApply func(map[string]interface{}, string, ast.Node) (interface{}, error),
-	shouldFilterSlice bool) (interface{}, error) {
+	shouldFilterSlice bool, shouldFilterMap bool) (interface{}, error) {
 	if len(path) == 0 {
 		return inputState, nil
 	}
@@ -41,7 +41,7 @@ func applyFuncOnPath(inputState interface{},
 		if len(path) == 1 {
 			return applyFuncOnLastMapOnPath(path, originalMap, expectedNode, inputState, funcToApply)
 		}
-		return applyFuncOnMap(path, originalMap, expectedNode, funcToApply, shouldFilterSlice)
+		return applyFuncOnMap(path, originalMap, expectedNode, funcToApply, shouldFilterSlice, shouldFilterMap)
 	}
 
 	originalSlice, isSlice := inputState.([]interface{})
@@ -57,32 +57,33 @@ func applyFuncOnSlice(originalSlice []interface{},
 	expectedNode ast.Node,
 	funcToApply func(map[string]interface{}, string, ast.Node) (interface{}, error),
 	shouldFilterSlice bool) (interface{}, error) {
-	filteredSlice := []interface{}{}
+	adjustedSlice := []interface{}{}
+	sliceEmptyAfterApply := true
 	for _, valueToCheck := range originalSlice {
-		value, err := applyFuncOnPath(valueToCheck, path, expectedNode, funcToApply, false)
+		valueAfterApply, err := applyFuncOnPath(valueToCheck, path, expectedNode, funcToApply, false, false)
 		if err != nil {
 			return nil, err
 		}
-		if value != nil {
-			filteredSlice = append(filteredSlice, valueToCheck)
+		if valueAfterApply != nil {
+			sliceEmptyAfterApply = false
+			adjustedSlice = append(adjustedSlice, valueAfterApply)
+		} else if !shouldFilterSlice {
+			adjustedSlice = append(adjustedSlice, valueToCheck)
 		}
 	}
 
-	if len(filteredSlice) == 0 {
+	if sliceEmptyAfterApply {
 		return nil, nil
 	}
 
-	if shouldFilterSlice {
-		return filteredSlice, nil
-	}
-	return originalSlice, nil
+	return adjustedSlice, nil
 }
 
 func applyFuncOnMap(path []ast.Node,
 	originalMap map[string]interface{},
 	expectedNode ast.Node,
 	funcToApply func(map[string]interface{}, string, ast.Node) (interface{}, error),
-	shouldFilterSlice bool) (interface{}, error) {
+	shouldFilterSlice bool, shouldFilterMap bool) (interface{}, error) {
 	currentStep := path[0]
 	if currentStep.Identity == nil {
 		return nil, pathError("%v has unsupported fromat", currentStep)
@@ -96,14 +97,22 @@ func applyFuncOnMap(path []ast.Node,
 		return nil, pathError("cannot find key %s in %v", key, originalMap)
 	}
 
-	adjuctedValue, err := applyFuncOnPath(value, nextPath, expectedNode, funcToApply, shouldFilterSlice)
+	adjustedValue, err := applyFuncOnPath(value, nextPath, expectedNode, funcToApply, shouldFilterSlice, shouldFilterMap)
 	if err != nil {
 		return nil, err
 	}
-	if adjuctedValue != nil {
-		return map[string]interface{}{key: adjuctedValue}, nil
+	if adjustedValue == nil {
+		return nil, nil
 	}
-	return nil, nil
+
+	adjustedMap := map[string]interface{}{}
+	if !shouldFilterMap {
+		for k, v := range originalMap {
+			adjustedMap[k] = v
+		}
+	}
+	adjustedMap[key] = adjustedValue
+	return adjustedMap, nil
 }
 
 func applyFuncOnLastMapOnPath(path []ast.Node,

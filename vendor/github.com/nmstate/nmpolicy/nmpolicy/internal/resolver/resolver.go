@@ -93,41 +93,72 @@ func (r *resolver) resolveCaptureEntryName(captureEntryName string) (types.NMSta
 func (r resolver) resolveCaptureASTEntry(captureASTEntry ast.Node) (types.NMState, error) {
 	if captureASTEntry.EqFilter != nil {
 		return r.resolveEqFilter(captureASTEntry.EqFilter)
+	} else if captureASTEntry.Replace != nil {
+		return r.resolveReplace(captureASTEntry.Replace)
 	}
-	return nil, fmt.Errorf("root node has unsupported operation : %v", captureASTEntry)
+	return nil, fmt.Errorf("root node has unsupported operation : %+v", captureASTEntry)
 }
 
 func (r resolver) resolveEqFilter(operator *ast.TernaryOperator) (types.NMState, error) {
-	inputSource, err := r.resolveInputSource((*operator)[0], r.currentState)
-	if err != nil {
-		return nil, wrapWithEqFilterError(err)
-	}
-
-	path, err := r.resolvePath((*operator)[1])
-	if err != nil {
-		return nil, wrapWithEqFilterError(err)
-	}
-	filteredValue, err := r.resolveFilteredValue((*operator)[2])
-	if err != nil {
-		return nil, wrapWithEqFilterError(err)
-	}
-	filteredState, err := filter(inputSource, path.steps, *filteredValue)
+	filteredState, err := r.resolveTernaryOperator(operator, filter)
 	if err != nil {
 		return nil, wrapWithEqFilterError(err)
 	}
 	return filteredState, nil
 }
 
-func (r resolver) resolveInputSource(inputSourceNode ast.Node,
-	currentState types.NMState) (types.NMState, error) {
-	if ast.CurrentStateIdentity().DeepEqual(inputSourceNode.Terminal) {
-		return currentState, nil
+func (r resolver) resolveReplace(operator *ast.TernaryOperator) (types.NMState, error) {
+	replacedState, err := r.resolveTernaryOperator(operator, replace)
+	if err != nil {
+		return nil, wrapWithResolveError(err)
 	}
-
-	return nil, fmt.Errorf("not supported input source %v. Only the current state is supported", inputSourceNode)
+	return replacedState, nil
 }
 
-func (r resolver) resolveFilteredValue(filteredValueNode ast.Node) (*ast.Node, error) {
+func (r resolver) resolveTernaryOperator(operator *ast.TernaryOperator,
+	resolverFunc func(map[string]interface{}, ast.VariadicOperator, ast.Node) (map[string]interface{}, error)) (types.NMState, error) {
+	inputSource, err := r.resolveInputSource((*operator)[0])
+	if err != nil {
+		return nil, err
+	}
+
+	path, err := r.resolvePath((*operator)[1])
+	if err != nil {
+		return nil, err
+	}
+	value, err := r.resolveStringOrCaptureEntryPath((*operator)[2])
+	if err != nil {
+		return nil, err
+	}
+	resolvedState, err := resolverFunc(inputSource, path.steps, *value)
+	if err != nil {
+		return nil, err
+	}
+	return resolvedState, nil
+}
+
+func (r resolver) resolveInputSource(inputSourceNode ast.Node) (types.NMState, error) {
+	if ast.CurrentStateIdentity().DeepEqual(inputSourceNode.Terminal) {
+		return r.currentState, nil
+	} else if inputSourceNode.Path != nil {
+		resolvedPath, err := r.resolvePath(inputSourceNode)
+		if err != nil {
+			return nil, err
+		}
+		if resolvedPath.captureEntryName == "" {
+			return nil, fmt.Errorf("invalid path input source, only capture reference is supported")
+		}
+		capturedState, err := r.resolveCaptureEntryName(resolvedPath.captureEntryName)
+		if err != nil {
+			return nil, err
+		}
+		return capturedState, nil
+	}
+
+	return nil, fmt.Errorf("invalid input source %v, only current state or capture reference is supported", inputSourceNode)
+}
+
+func (r resolver) resolveStringOrCaptureEntryPath(filteredValueNode ast.Node) (*ast.Node, error) {
 	if filteredValueNode.String != nil {
 		return &filteredValueNode, nil
 	} else if filteredValueNode.Path != nil {
@@ -143,7 +174,7 @@ func (r resolver) resolveFilteredValue(filteredValueNode ast.Node) (*ast.Node, e
 			Terminal: *terminal,
 		}, nil
 	} else {
-		return nil, fmt.Errorf("not supported filtered value. Only string or paths are supported")
+		return nil, fmt.Errorf("not supported value. Only string or capture entry path are supported")
 	}
 }
 
