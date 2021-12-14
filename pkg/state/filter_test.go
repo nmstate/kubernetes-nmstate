@@ -30,7 +30,6 @@ interfaces:
       group-forward-mask: 0
       hash-max: 512
       hello-timer: 0
-      mac-ageing-time: 300
       stp:
         enabled: false
     port: []
@@ -80,7 +79,6 @@ interfaces:
       group-addr: 01:80:C2:00:00:00
       group-forward-mask: 0
       hash-max: 512
-      mac-ageing-time: 300
       stp:
         enabled: false
     port: []

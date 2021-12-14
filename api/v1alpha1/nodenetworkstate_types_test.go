@@ -58,10 +58,10 @@ status:
 			err := yaml.Unmarshal([]byte(nnsManifest), &nodeNetworkStateStruct)
 			Expect(err).ToNot(HaveOccurred())
 		})
-		It("should succesfully parse currentState yaml", func() {
+		It("should successfully parse currentState yaml", func() {
 			Expect(string(nodeNetworkStateStruct.Status.CurrentState.Raw)).To(MatchYAML(string(nnsStruct.Status.CurrentState.Raw)))
 		})
-		It("should succesfully parse non state attributes", func() {
+		It("should successfully parse non state attributes", func() {
 			Expect(nodeNetworkStateStruct.TypeMeta).To(Equal(nnsStruct.TypeMeta))
 			Expect(nodeNetworkStateStruct.ObjectMeta).To(Equal(nnsStruct.ObjectMeta))
 		})

@@ -3,14 +3,10 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
-	"strings"
+	"sort"
 
-	"github.com/ghodss/yaml"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	"github.com/operator-framework/operator-registry/internal/model"
-	"github.com/operator-framework/operator-registry/internal/property"
+	"github.com/operator-framework/operator-registry/alpha/model"
+	"github.com/operator-framework/operator-registry/alpha/property"
 )
 
 func ConvertAPIBundleToModelBundle(b *Bundle) (*model.Bundle, error) {
@@ -29,6 +25,7 @@ func ConvertAPIBundleToModelBundle(b *Bundle) (*model.Bundle, error) {
 		Image:         b.BundlePath,
 		Replaces:      b.Replaces,
 		Skips:         b.Skips,
+		SkipRange:     b.SkipRange,
 		CsvJSON:       b.CsvJson,
 		Objects:       b.Object,
 		Properties:    bundleProps,
@@ -38,16 +35,6 @@ func ConvertAPIBundleToModelBundle(b *Bundle) (*model.Bundle, error) {
 
 func convertAPIBundleToModelProperties(b *Bundle) ([]property.Property, error) {
 	var out []property.Property
-
-	for _, skip := range b.Skips {
-		out = append(out, property.MustBuildSkips(skip))
-	}
-
-	if b.SkipRange != "" {
-		out = append(out, property.MustBuildSkipRange(b.SkipRange))
-	}
-
-	out = append(out, property.MustBuildChannel(b.ChannelName, b.Replaces))
 
 	providedGVKs := map[property.GVK]struct{}{}
 	requiredGVKs := map[property.GVKRequired]struct{}{}
@@ -119,9 +106,16 @@ func convertAPIBundleToModelProperties(b *Bundle) ([]property.Property, error) {
 		out = append(out, property.MustBuildGVKRequired(p.Group, p.Version, p.Kind))
 	}
 
-	for i, obj := range b.Object {
-		out = append(out, property.MustBuildBundleObjectRef(filepath.Join("objects", b.CsvName, objectFilename(obj, i))))
+	for _, obj := range b.Object {
+		out = append(out, property.MustBuildBundleObjectData([]byte(obj)))
 	}
+
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Type != out[j].Type {
+			return out[i].Type < out[j].Type
+		}
+		return string(out[i].Value) < string(out[j].Value)
+	})
 
 	return out, nil
 }
@@ -147,20 +141,4 @@ func getRelatedImages(csvJSON string) ([]model.RelatedImage, error) {
 		relatedImages = append(relatedImages, model.RelatedImage(ri))
 	}
 	return relatedImages, nil
-}
-
-func objectFilename(obj string, idx int) string {
-	name, kind := fmt.Sprintf("obj%04d", idx), ""
-	u := unstructured.Unstructured{}
-	if err := yaml.Unmarshal([]byte(obj), &u); err == nil {
-		if u.GetName() != "" {
-			name = u.GetName()
-		}
-		gvk := u.GroupVersionKind()
-		kind = fmt.Sprintf("%s_%s_%s", gvk.Group, gvk.Version, strings.ToLower(gvk.Kind))
-	}
-	if kind == "" {
-		return fmt.Sprintf("%s", name)
-	}
-	return fmt.Sprintf("%s_%s.yaml", name, kind)
 }

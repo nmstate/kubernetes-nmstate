@@ -69,7 +69,7 @@ var _ = Describe("Node controller reconcile", func() {
 		objs := []runtime.Object{&node, &nodenetworkstate}
 
 		// Create a fake client to mock API calls.
-		cl = fake.NewFakeClientWithScheme(s, objs...)
+		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 		reconciler.Client = cl
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("Node")
@@ -120,7 +120,7 @@ routes:
 			reconciler.lastState = filteredOutObservedState
 
 			reconciler.nmstateUpdater = func(client.Client, *corev1.Node,
-				shared.State, *nmstatev1beta1.NodeNetworkState) error {
+				shared.State, *nmstatev1beta1.NodeNetworkState, *nmstate.DependencyVersions) error {
 				return fmt.Errorf("we are not suppose to catch this error")
 			}
 

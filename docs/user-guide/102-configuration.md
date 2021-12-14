@@ -175,7 +175,7 @@ status:
 
 The output contains the `desiredState` applied by the Policy for the given Node.
 It also contains a list of conditions. This list is more detailed than the one
-in Policy. It shows whether the limit of unavailable nods was reached so the
+in Policy. It shows whether the limit of unavailable nodes was reached so the
 node has to wait for other nodes to finish applying network configuration
 (`Pending`), if the `desiredState` is currently being applied on the node
 (`Progressing`), if the configuration failed (`Failing`) or succeeded
@@ -402,7 +402,7 @@ status:
 ## Selecting nodes
 
 All the Policies we used so far were applied on all nodes across the cluster. It
-is however possible to select only a subset of nodes using via a node selector.
+is however possible to select only a subset of nodes using a node selector.
 
 In the following example, we configure a VLAN interface with tag 100 over a NIC
 `eth1`. This configuration will be done only on node which has labels matching
@@ -475,6 +475,22 @@ node04.linux-bridge-maxunavailable   Progressing
 node05.linux-bridge-maxunavailable   Progressing
 node06.linux-bridge-maxunavailable   Pending
 ```
+
+# Component Placement
+
+In NMState, you can constrain assignment of kubernetes-nmstate components to individual nodes. There are the following options:
+
+- **NodeSelector**
+    - Optional. If specified, handler pods will run only on nodes matching the selector.
+- **Tolerations**
+    - Optional. With tolerations, handler pods will be scheduled onto appropriate nodes.
+- **InfraNodeSelector**
+    - Optional. If specified, webhook and certmanager pods will run only on nodes matching the selector.
+- **InfraTolerations**
+    - Optional. With tolerations, webhook and certmanager pods will be scheduled onto appropriate nodes.
+
+
+See Scheduling chapter of the [Kubernetes documentation](https://kubernetes.io/docs/concepts/scheduling-eviction/) for more information.
 
 ## Continue reading
 

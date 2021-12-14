@@ -9,6 +9,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+func createInterfaceWithNonExistingCapture() nmstate.State {
+	return nmstate.NewState(`interfaces:
+  - name: "{{ capture.base-iface.interfaces.0.name }}"
+    type: ethernet
+    state: up`)
+}
+
 func createInterfaceWithMismatchedName() nmstate.State {
 	return nmstate.NewState(`interfaces:
   - name: eth666
@@ -147,6 +154,21 @@ var _ = Describe("NodeNetworkState", func() {
 			for _, desiredMessage := range messagesToKeep {
 				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
 			}
+		})
+	})
+
+	Context("with non existing capture", func() {
+		BeforeEach(func() {
+			createPolicyAndWaitForEnactmentCondition(defaultPolicy, createInterfaceWithNonExistingCapture, nodes[0])
+		})
+
+		AfterEach(func() {
+			By("Remove the policy")
+			deletePolicy(defaultPolicy)
+		})
+
+		It("should contain the error message", func() {
+			Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring("failure generating desiredState and capturedStates"))
 		})
 	})
 })

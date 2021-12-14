@@ -23,8 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 )
 
 var _ = Describe("NMState controller reconcile", func() {
@@ -74,7 +74,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		objs := []runtime.Object{&nmstate}
 		// Create a fake client to mock API calls.
-		cl = fake.NewFakeClientWithScheme(s, objs...)
+		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 		names.ManifestDir = manifestsDir
 		reconciler.Client = cl
 		reconciler.Scheme = s
@@ -154,7 +154,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.NodeSelector = handlerNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -193,7 +193,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.Tolerations = handlerTolerations
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -228,7 +228,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.InfraNodeSelector = infraNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -276,7 +276,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			nmstate.Spec.InfraTolerations = infraTolerations
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
@@ -303,65 +303,6 @@ var _ = Describe("NMState controller reconcile", func() {
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(anyTolerationsPresent(infraTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeFalse())
-		})
-	})
-	Context("when OVS is NOT enabled", func() {
-		var (
-			request ctrl.Request
-		)
-		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
-			objs := []runtime.Object{&nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
-			reconciler.Client = cl
-			request.Name = existingNMStateName
-			result, err := reconciler.Reconcile(context.Background(), request)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
-		})
-		It("should not mount host OVS socket at handler", func() {
-			handlerDs := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
-			err := cl.Get(context.TODO(), handlerKey, handlerDs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(hasOVSSocketMounted(*handlerDs)).To(BeFalse())
-		})
-	})
-	Context("when OVS is enabled", func() {
-		var (
-			request ctrl.Request
-		)
-		BeforeEach(func() {
-			os.Setenv("ENABLE_OVS", "")
-		})
-		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
-			objs := []runtime.Object{&nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewFakeClientWithScheme(s, objs...)
-			reconciler.Client = cl
-			request.Name = existingNMStateName
-			result, err := reconciler.Reconcile(context.Background(), request)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
-		})
-		AfterEach(func() {
-			os.Unsetenv("ENABLE_OVS")
-		})
-
-		It("should not mount host OVS socket at handler", func() {
-			handlerDs := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
-			err := cl.Get(context.TODO(), handlerKey, handlerDs)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(hasOVSSocketMounted(*handlerDs)).To(BeTrue())
 		})
 	})
 })
@@ -470,31 +411,6 @@ func isSuperset(ss, t corev1.Toleration) bool {
 	default:
 		return false
 	}
-}
-
-func hasOVSSocketHostPath(ds appsv1.DaemonSet) bool {
-	for _, v := range ds.Spec.Template.Spec.Volumes {
-		if v.Name == "ovs-socket" &&
-			v.HostPath != nil &&
-			v.HostPath.Path == "/run/openvswitch/db.sock" &&
-			v.HostPath.Type != nil &&
-			*v.HostPath.Type == corev1.HostPathSocket {
-			return true
-		}
-	}
-	return false
-}
-
-func hasOVSSocketMounted(ds appsv1.DaemonSet) bool {
-	if !hasOVSSocketHostPath(ds) {
-		return false
-	}
-	for _, v := range ds.Spec.Template.Spec.Containers[0].VolumeMounts {
-		if v.Name == "ovs-socket" && v.MountPath == "/run/openvswitch/db.sock" {
-			return true
-		}
-	}
-	return false
 }
 
 //allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.

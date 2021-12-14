@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -53,11 +52,8 @@ func newOperatorTestData(ns string) operatorTestData {
 }
 
 var (
-	t               *testing.T
 	nodes           []string
-	startTime       time.Time
 	defaultOperator = newOperatorTestData("nmstate")
-	handlerLabels   = map[string]string{"component": "kubernetes-nmstate-handler"}
 )
 
 func TestE2E(t *testing.T) {
@@ -88,7 +84,7 @@ var _ = BeforeSuite(func() {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err := testenv.Client.List(context.TODO(), &nodeList, &dynclient.ListOptions{})
+	err := testenv.Client.List(context.TODO(), &nodeList, &client.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
@@ -152,7 +148,6 @@ func eventuallyOperandIsNotFound(testData operatorTestData) {
 		err := testenv.Client.List(context.TODO(), &podList, &client.ListOptions{Namespace: testData.ns, LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector()})
 		return podList.Items, err
 	}, 120*time.Second, time.Second).Should(BeEmpty(), "should terminate all the pods")
-
 }
 
 func eventuallyOperandIsFound(testData operatorTestData) {

@@ -15,8 +15,6 @@ COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/manifests /manifests
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/metadata /metadata
 
-ENV ENABLE_OVS=""
-
 ENTRYPOINT ["manager"]
 
 LABEL io.k8s.display-name="kubernetes-nmstate-operator" \

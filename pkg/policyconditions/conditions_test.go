@@ -117,7 +117,7 @@ func newNodes(cardinality int) []corev1.Node {
 
 func cleanTimestamps(conditions nmstate.ConditionList) nmstate.ConditionList {
 	dummyTime := metav1.Time{Time: time.Unix(0, 0)}
-	for i, _ := range conditions {
+	for i := range conditions {
 		conditions[i].LastHeartbeatTime = dummyTime
 		conditions[i].LastTransitionTime = dummyTime
 	}
@@ -143,17 +143,17 @@ var _ = Describe("Policy Conditions", func() {
 				&nmstatev1.NodeNetworkConfigurationPolicy{},
 			)
 
-			for i, _ := range c.Enactments {
+			for i := range c.Enactments {
 				// We cannot use the memory from the element
 				// returned by range, since it's has the same
 				// memory address it will be added multiple time
 				// with duplicated values
 				objs = append(objs, &c.Enactments[i])
 			}
-			for i, _ := range c.Nodes {
+			for i := range c.Nodes {
 				objs = append(objs, &c.Nodes[i])
 			}
-			for i, _ := range c.Pods {
+			for i := range c.Pods {
 				objs = append(objs, &c.Pods[i])
 			}
 
@@ -162,7 +162,7 @@ var _ = Describe("Policy Conditions", func() {
 
 			objs = append(objs, updatedPolicy)
 
-			client := fake.NewFakeClientWithScheme(s, objs...)
+			client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			key := types.NamespacedName{Name: updatedPolicy.Name}
 			err := Update(client, client, key)
 			Expect(err).ToNot(HaveOccurred())
@@ -210,7 +210,7 @@ var _ = Describe("Policy Conditions", func() {
 			Pods:   newNmstatePods(3),
 			Policy: p(SetPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
 		}),
-		Entry("when enactments are failed/progressing/success then policy is progressing", ConditionsCase{
+		Entry("when enactments are failed/progressing/success then policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetProgressing),
@@ -219,7 +219,7 @@ var _ = Describe("Policy Conditions", func() {
 			},
 			Nodes:  newNodes(4),
 			Pods:   newNmstatePods(4),
-			Policy: p(SetPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
+			Policy: p(SetPolicyFailedToConfigure, "1/4 nodes failed to configure"),
 		}),
 		Entry("when all the enactments are at failing or success policy is degraded", ConditionsCase{
 			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{

@@ -1,0 +1,20 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  name: bar.v0.2.0
+  annotations:
+    olm.skipRange: <0.2.0
+spec:
+  customresourcedefinitions:
+    owned:
+      - group: test.bar
+        version: v1alpha1
+        kind: Bar
+        name: bars.test.bar
+  version: 0.2.0
+  skips:
+    - bar.v0.1.0
+  relatedImages:
+    - name: operator
+      image: test.registry/bar-operator/bar:v0.2.0

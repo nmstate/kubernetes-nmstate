@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,8 +22,6 @@ func invalidConfig(bridgeName string) nmstate.State {
 
 var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
 	Context("when applying valid config", func() {
-		BeforeEach(func() {
-		})
 		AfterEach(func() {
 			By("Remove the bridge")
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
@@ -33,7 +32,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 		It("[test_id:3796]should go from Progressing to Available", func() {
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
@@ -82,7 +81,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			By("Check that the enactment stays in failing state")
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
@@ -118,16 +117,30 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				Expect(abortedConditions).To(Equal(len(nodes)-failingConditions), "other nodes should have aborted enactment")
 			}
 
+			By("Wait for enactments to reach failing or aborted state")
+			var wg sync.WaitGroup
+			wg.Add(len(nodes))
+			for i := range nodes {
+				node := nodes[i]
+				go func() {
+					defer wg.Done()
+					defer GinkgoRecover()
+					Byf("Check %s failing state is kept", node)
+					enactmentConditionsStatusEventually(node).Should(
+						SatisfyAny(
+							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+							matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
+						), "should consistently keep failing or aborted conditions at enactments")
+				}()
+			}
+			wg.Wait()
+
 			By("Check policy is at degraded state")
 			waitForDegradedTestPolicy()
 
-			By("Check there is one failing enactment and the rest are aborted")
-			checkEnactmentCounts(TestPolicy)
-
-			By("Check that the enactment stays in failing or aborted state")
-			var wg sync.WaitGroup
+			By("Check that the enactments stay in failing or aborted state")
 			wg.Add(len(nodes))
-			for i, _ := range nodes {
+			for i := range nodes {
 				node := nodes[i]
 				go func() {
 					defer wg.Done()
@@ -142,8 +155,30 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			}
 			wg.Wait()
 
-			By("Check there is still one failing enactment and the rest are aborted")
+			By("Check there is up to maxUnavailable failing enactments and the rest are aborted")
 			checkEnactmentCounts(TestPolicy)
+		})
+
+		It("should mark policy as Degraded as soon as first enactment fails", func() {
+			failingEnactmentsCount := func(policy string) int {
+				failingConditions := 0
+				for _, node := range nodes {
+					conditionList := enactmentConditionsStatus(node, TestPolicy)
+					found, _ := matchConditionsFrom(enactmentconditions.SetFailedToConfigure).Match(conditionList)
+					if found {
+						failingConditions++
+					}
+				}
+				return failingConditions
+			}
+
+			By("Waiting for first enactment to fail")
+			Eventually(func() int {
+				return failingEnactmentsCount(TestPolicy)
+			}, 180*time.Second, 1*time.Second).Should(BeNumerically(">=", 1))
+
+			By("Checking the policy is marked as Degraded")
+			Eventually(policyConditionsStatus(TestPolicy)).Should(containPolicyDegraded(), "policy should be marked as Degraded")
 		})
 	})
 })

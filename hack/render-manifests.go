@@ -66,6 +66,11 @@ func main() {
 		exitWithError(err, "failed parsing top dir operator manifests at %s", *inputDir)
 	}
 
+	tmpl, err = tmpl.ParseGlob(path.Join(*inputDir, "examples/*.yaml"))
+	if err != nil {
+		exitWithError(err, "failed parsing sub dir example manifests at %s", *inputDir)
+	}
+
 	tmpl, err = tmpl.ParseGlob(path.Join(*inputDir, "openshift/*.yaml"))
 	if err != nil {
 		exitWithError(err, "failed parsing sub dir openshift manifests at %s", *inputDir)

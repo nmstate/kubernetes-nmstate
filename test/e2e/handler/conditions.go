@@ -7,30 +7,17 @@ import (
 
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gstruct"
-	. "github.com/onsi/gomega/types"
+	gomegatypes "github.com/onsi/gomega/types"
 
 	"k8s.io/apimachinery/pkg/types"
-	yaml "sigs.k8s.io/yaml"
+	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
 
-	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
-
-type expectedConditionsStatus struct {
-	Node       string
-	conditions shared.ConditionList
-}
-
-func conditionsToYaml(conditions shared.ConditionList) string {
-	manifest, err := yaml.Marshal(conditions)
-	if err != nil {
-		panic(err)
-	}
-	return string(manifest)
-}
 
 func enactmentsStatusToYaml() string {
 	enactmentsStatus := indexEnactmentStatusByName()
@@ -114,15 +101,11 @@ func policyConditionsStatusForPolicyConsistently(policy string) AsyncAssertion {
 	}, 5*time.Second, 1*time.Second)
 }
 
-func policyConditionsStatusEventually() AsyncAssertion {
-	return policyConditionsStatusForPolicyEventually(TestPolicy)
-}
-
 func policyConditionsStatusConsistently() AsyncAssertion {
 	return policyConditionsStatusForPolicyConsistently(TestPolicy)
 }
 
-func containPolicyAvailable() GomegaMatcher {
+func containPolicyAvailable() gomegatypes.GomegaMatcher {
 	return ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":    Equal(shared.NodeNetworkConfigurationPolicyConditionAvailable),
 		"Status":  Equal(corev1.ConditionTrue),
@@ -131,7 +114,7 @@ func containPolicyAvailable() GomegaMatcher {
 	}))
 }
 
-func containPolicyDegraded() GomegaMatcher {
+func containPolicyDegraded() gomegatypes.GomegaMatcher {
 	return ContainElement(MatchFields(IgnoreExtras, Fields{
 		"Type":    Equal(shared.NodeNetworkConfigurationPolicyConditionDegraded),
 		"Status":  Equal(corev1.ConditionTrue),
@@ -164,7 +147,7 @@ func waitForDegradedPolicy(policy string) {
 	waitForPolicy(policy, containPolicyDegraded())
 }
 
-func waitForPolicy(policy string, matcher GomegaMatcher) {
+func waitForPolicy(policy string, matcher gomegatypes.GomegaMatcher) {
 	policyConditionsStatusForPolicyEventually(policy).Should(matcher, "should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml())
 }
 
@@ -180,7 +163,7 @@ func filterOutMessageAndTimestampFromConditions(conditions shared.ConditionList)
 	return modifiedConditions
 }
 
-func matchConditionsFrom(conditionsSetter func(*shared.ConditionList, string)) GomegaMatcher {
+func matchConditionsFrom(conditionsSetter func(*shared.ConditionList, string)) gomegatypes.GomegaMatcher {
 	expectedConditions := shared.ConditionList{}
 	conditionsSetter(&expectedConditions, "")
 	expectedConditions = filterOutMessageAndTimestampFromConditions(expectedConditions)

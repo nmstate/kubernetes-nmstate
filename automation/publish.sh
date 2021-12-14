@@ -39,4 +39,6 @@ publish_docs() {
 }
 
 push_knmstate_containers
-publish_docs
+if [ "$PULL_BASE_REF" == main ]; then
+    publish_docs
+fi

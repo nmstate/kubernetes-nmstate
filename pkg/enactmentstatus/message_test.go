@@ -18,6 +18,7 @@ var _ = Describe("Error messages formatting", func() {
 		pingInvalidOutput      = "      \n  failed to retrieve default gw at runProbes\n    timed out waiting for the condition\n"
 		pingValidInput         = "rolling back desired state configuration: failed runnig probes after network changes: failed runnig probe 'ping' with after network reconfiguration.\nThe rest of the message should be kept.\n"
 		pingValidOutput        = "rolling back desired state configuration\n  failed runnig probes after network changes\n    failed runnig probe 'ping' with after network reconfiguration.\nThe rest of the message should be kept.\n"
+		desiredStateYaml       = "libnmstate.error.NmstateVerificationError:\n      desired\n      =======\n---\n      name: eth1\n      type: ethernet\n      state: up\n"
 	)
 
 	Context("With DEBUG text", func() {
@@ -50,6 +51,11 @@ var _ = Describe("Error messages formatting", func() {
 		})
 		It("Should keep message", func() {
 			Expect(FormatErrorString(pingValidInput)).To(Equal(pingValidOutput))
+		})
+	})
+	Context("With yaml states", func() {
+		It("Should keep the original message", func() {
+			Expect(FormatErrorString(desiredStateYaml)).To(Equal(desiredStateYaml))
 		})
 	})
 

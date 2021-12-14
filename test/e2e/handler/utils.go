@@ -37,8 +37,8 @@ const TestPolicy = "test-policy"
 
 var (
 	bridgeCounter  = 0
-	bondConunter   = 0
-	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DEFAULT_MAXUNAVAILABLE)
+	bondCounter    = 0
+	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DefaultMaxunavailable)
 )
 
 func Byf(message string, arguments ...interface{}) {
@@ -68,12 +68,13 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	return dummy
 }
 
-func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
+func setDesiredStateWithPolicyAndCaptureAndNodeSelector(name string, desiredState nmstate.State, capture map[string]string, nodeSelector map[string]string) error {
 	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
 	err := testenv.Client.Get(context.TODO(), key, &policy)
 	policy.Spec.DesiredState = desiredState
+	policy.Spec.Capture = capture
 	policy.Spec.NodeSelector = nodeSelector
 	maxUnavailableIntOrString := intstr.FromString(maxUnavailable)
 	policy.Spec.MaxUnavailable = &maxUnavailableIntOrString
@@ -90,9 +91,17 @@ func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.
 	return err
 }
 
+func setDesiredStateWithPolicyAndNodeSelector(name string, desiredState nmstate.State, nodeSelector map[string]string) error {
+	return setDesiredStateWithPolicyAndCaptureAndNodeSelector(name, desiredState, nil, nodeSelector)
+}
+
 func setDesiredStateWithPolicyAndNodeSelectorEventually(name string, desiredState nmstate.State, nodeSelector map[string]string) {
+	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name, desiredState, nil, nodeSelector)
+}
+
+func setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name string, desiredState nmstate.State, capture map[string]string, nodeSelector map[string]string) {
 	Eventually(func() error {
-		return setDesiredStateWithPolicyAndNodeSelector(name, desiredState, nodeSelector)
+		return setDesiredStateWithPolicyAndCaptureAndNodeSelector(name, desiredState, capture, nodeSelector)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
 	//FIXME: until we don't have webhook we have to wait for reconcile
 	//       to start so we are sure that conditions are reset and we can
@@ -107,6 +116,11 @@ func setDesiredStateWithPolicyWithoutNodeSelector(name string, desiredState nmst
 func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
 	setDesiredStateWithPolicyAndNodeSelectorEventually(name, desiredState, runAtWorkers)
+}
+
+func setDesiredStateWithPolicyAndCapture(name string, desiredState nmstate.State, capture map[string]string) {
+	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
+	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name, desiredState, capture, runAtWorkers)
 }
 
 func updateDesiredState(desiredState nmstate.State) {
@@ -197,7 +211,6 @@ func deletePolicy(name string) {
 			return apierrors.IsNotFound(err)
 		}, enactmentsDeleteTimeout, 1*time.Second).Should(BeTrue(), fmt.Sprintf("Enactment %s not deleted", enactmentKey.Name))
 	}
-
 }
 
 func restartNode(node string) error {
@@ -224,16 +237,6 @@ func waitFotNodeToStart(node string) error {
 		return output
 	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
 	return nil
-}
-
-func deleteBridgeAtNodes(bridgeName string, ports ...string) []error {
-	Byf("Delete bridge %s", bridgeName)
-	_, errs := runner.RunAtNodes(nodes, "sudo", "ip", "link", "del", bridgeName)
-	for _, portName := range ports {
-		_, portErrors := runner.RunAtNodes(nodes, "sudo", "nmcli", "con", "delete", bridgeName+"-"+portName)
-		errs = append(errs, portErrors...)
-	}
-	return errs
 }
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {
@@ -316,16 +319,22 @@ func ipAddressForNodeInterfaceEventually(node string, iface string) AsyncAsserti
 	}, ReadTimeout, ReadInterval)
 }
 
+func ipV6AddressForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+	return Eventually(func() string {
+		return ipv6Address(node, iface)
+	}, ReadTimeout, ReadInterval)
+}
+
+func routeDestForNodeInterfaceEventually(node string, destIP string) AsyncAssertion {
+	return Eventually(func() string {
+		return routeDest(node, destIP)
+	}, ReadTimeout, ReadInterval)
+}
+
 func vlanForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
 	return Eventually(func() string {
 		return vlan(node, iface)
 	}, ReadTimeout, ReadInterval)
-}
-
-func interfacesNameForNodeConsistently(node string) AsyncAssertion {
-	return Consistently(func() []string {
-		return interfacesNameForNode(node)
-	}, 5*time.Second, 1*time.Second)
 }
 
 func interfacesForNode(node string) AsyncAssertion {
@@ -338,23 +347,6 @@ func interfacesForNode(node string) AsyncAssertion {
 
 		return interfaces
 	}, ReadTimeout, ReadInterval)
-}
-
-func waitForNodeNetworkStateUpdate(node string) {
-	now := time.Now()
-	EventuallyWithOffset(1, func() time.Time {
-		key := types.NamespacedName{Name: node}
-		nnsUpdateTime := nodeNetworkState(key).Status.LastSuccessfulUpdateTime
-		return nnsUpdateTime.Time
-	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Node %s should have a fresh nns)", node))
-
-}
-
-func toUnstructured(y string) interface{} {
-	var u interface{}
-	err := yaml.Unmarshal([]byte(y), &u)
-	Expect(err).ToNot(HaveOccurred())
-	return u
 }
 
 func bridgeVlansAtNode(node string) (string, error) {
@@ -376,7 +368,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 			// [1] https://bugs.centos.org/view.php?id=16533
 			output, err := cmd.Run("test/e2e/get-bridge-vlans-flags-el8.sh", false, node, connection, strconv.Itoa(vlan))
 			Expect(err).ToNot(HaveOccurred())
-			return strings.Split(string(output), " ")
+			return strings.Split(output, " ")
 		} else {
 			By("Getting vlan filtering from json output")
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
@@ -399,7 +391,6 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 }
 
 func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
-
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
@@ -422,8 +413,8 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 			parsedBridgeVlans := gjson.Parse(bridgeVlans)
 			gjsonExpression := linuxbridge.BuildGJsonExpression(bridgeVlans)
 			for expectedVlan := minVlan; expectedVlan <= maxVlan; expectedVlan++ {
-				vlanByIdAndConection := fmt.Sprintf(gjsonExpression, connection, expectedVlan)
-				if !parsedBridgeVlans.Get(vlanByIdAndConection).Exists() {
+				vlanByIDAndConection := fmt.Sprintf(gjsonExpression, connection, expectedVlan)
+				if !parsedBridgeVlans.Get(vlanByIDAndConection).Exists() {
 					return fmt.Errorf("bridge connection %s has no vlan %d, obtainedVlans: \n %s", connection, expectedVlan, bridgeVlans)
 				}
 			}
@@ -442,7 +433,6 @@ func vlansCardinality(node string, connection string) AsyncAssertion {
 
 		return len(gjson.Parse(bridgeVlans).Get(connection).Array()), nil
 	}, ReadTimeout, ReadInterval)
-
 }
 
 func bridgeDescription(node string, bridgeName string) AsyncAssertion {
@@ -457,16 +447,16 @@ func nextBridge() string {
 }
 
 func nextBond() string {
-	bridgeCounter++
-	return fmt.Sprintf("bond%d", bondConunter)
+	bondCounter++
+	return fmt.Sprintf("bond%d", bondCounter)
 }
 
 func currentStateJSON(node string) []byte {
 	key := types.NamespacedName{Name: node}
 	currentState := nodeNetworkState(key).Status.CurrentState
-	currentStateJson, err := yaml.YAMLToJSON(currentState.Raw)
+	currentStateJSON, err := yaml.YAMLToJSON(currentState.Raw)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	return currentStateJson
+	return currentStateJSON
 }
 
 func dhcpFlag(node string, name string) bool {
@@ -521,6 +511,11 @@ func ipv4Address(node string, iface string) string {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
+func ipv6Address(node string, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv6.address.0.ip", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
 func macAddress(node string, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
@@ -529,6 +524,18 @@ func macAddress(node string, iface string) string {
 func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	return Eventually(func() string {
 		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
+		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+	}, 15*time.Second, 1*time.Second)
+}
+
+func routeDest(node string, destIP string) string {
+	path := fmt.Sprintf("routes.running.#(destination==\"%s\")", destIP)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
+func routeNextHopInterface(node string, destIP string) AsyncAssertion {
+	return Eventually(func() string {
+		path := fmt.Sprintf("routes.running.#(destination==\"%s\").next-hop-interface", destIP)
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
@@ -550,14 +557,29 @@ func skipIfNotKubernetes() {
 	}
 }
 
-func skipIfNotNmstateFuture() {
-	nmstatePin := environment.GetVarWithDefault("NMSTATE_PIN", "")
-	if !strings.Contains(nmstatePin, "future") {
-		Skip("Functionality is available/stable only in nmstate future release")
-	}
+func maxUnavailableNodes() int {
+	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DefaultMaxunavailable))
+	return m
 }
 
-func maxUnavailableNodes() int {
-	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DEFAULT_MAXUNAVAILABLE))
-	return m
+func dnsResolverServerForNodeEventually(node string) AsyncAssertion {
+	return Eventually(func() []string {
+		return dnsResolverForNode(node, "dns-resolver.running.server")
+	}, ReadTimeout, ReadInterval)
+}
+
+func dnsResolverSearchForNodeEventually(node string) AsyncAssertion {
+	return Eventually(func() []string {
+		return dnsResolverForNode(node, "dns-resolver.running.search")
+	}, ReadTimeout, ReadInterval)
+}
+
+func dnsResolverForNode(node string, path string) []string {
+	var arr []string
+
+	elemList := gjson.ParseBytes(currentStateJSON(node)).Get(path).Array()
+	for _, elem := range elemList {
+		arr = append(arr, elem.String())
+	}
+	return arr
 }

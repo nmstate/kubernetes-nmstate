@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/blang/semver"
+	"github.com/blang/semver/v4"
 )
 
 var (
@@ -160,19 +160,25 @@ type Annotations struct {
 	DefaultChannelName string `json:"operators.operatorframework.io.bundle.channel.default.v1" yaml:"operators.operatorframework.io.bundle.channel.default.v1"`
 }
 
-// DependenciesFile holds dependency information about a bundle
+// DependenciesFile holds dependency information about a bundle.
 type DependenciesFile struct {
 	// Dependencies is a list of dependencies for a given bundle
 	Dependencies []Dependency `json:"dependencies" yaml:"dependencies"`
 }
 
-// Dependency specifies a single constraint that can be satisfied by a property on another bundle..
+// Dependency specifies a single constraint that can be satisfied by a property on another bundle.
 type Dependency struct {
 	// The type of dependency. This field is required.
 	Type string `json:"type" yaml:"type"`
 
 	// The serialized value of the dependency
 	Value json.RawMessage `json:"value" yaml:"value"`
+}
+
+// PropertiesFile holds the properties associated with a bundle.
+type PropertiesFile struct {
+	// Properties is a list of properties.
+	Properties []Property `json:"properties" yaml:"properties"`
 }
 
 // Property defines a single piece of the public interface for a bundle. Dependencies are specified over properties.
@@ -184,6 +190,10 @@ type Property struct {
 
 	// The serialized value of the propertuy
 	Value json.RawMessage `json:"value" yaml:"value"`
+}
+
+func (p Property) String() string {
+	return fmt.Sprintf("type: %s, value: %s", p.Type, p.Value)
 }
 
 type GVKDependency struct {
@@ -349,11 +359,16 @@ func (a *AnnotationsFile) GetDefaultChannelName() string {
 // SelectDefaultChannel returns the first item in channel list that is sorted
 // in lexicographic order.
 func (a *AnnotationsFile) SelectDefaultChannel() string {
-	if a.Annotations.Channels != "" {
-		channels := strings.Split(a.Annotations.Channels, ",")
-		sort.Strings(channels)
-		return channels[0]
+	return a.Annotations.SelectDefaultChannel()
+}
+
+func (a Annotations) SelectDefaultChannel() string {
+	if len(a.Channels) < 1 {
+		return ""
 	}
 
-	return ""
+	channels := strings.Split(a.Channels, ",")
+	sort.Strings(channels)
+
+	return channels[0]
 }

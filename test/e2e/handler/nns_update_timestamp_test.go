@@ -13,6 +13,8 @@ import (
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
+const expectedDummyName = "dummy0"
+
 var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	var (
 		originalNNSs map[string]nmstatev1beta1.NodeNetworkState
@@ -46,8 +48,6 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 		})
 	})
 	Context("when network configuration is changed externally", func() {
-		expectedDummyName := "dummy0"
-
 		BeforeEach(func() {
 			createDummyConnectionAtAllNodes(expectedDummyName)
 		})

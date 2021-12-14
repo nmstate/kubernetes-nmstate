@@ -2,15 +2,11 @@ package nodenetworkconfigurationpolicy
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	shared "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
-
-var log = logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/conditions")
 
 func deleteConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
 	policy.Status.Conditions = shared.ConditionList{}
@@ -35,20 +31,18 @@ func atEmptyConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) bool {
 
 func deleteConditionsHook() *webhook.Admission {
 	return &webhook.Admission{
-		Handler: admission.HandlerFunc(
-			mutatePolicyHandler(
-				always,
-				deleteConditions,
-			)),
+		Handler: mutatePolicyHandler(
+			always,
+			deleteConditions,
+		),
 	}
 }
 
 func setConditionsUnknownHook() *webhook.Admission {
 	return &webhook.Admission{
-		Handler: admission.HandlerFunc(
-			mutatePolicyHandler(
-				atEmptyConditions,
-				setConditionsUnknown,
-			)),
+		Handler: mutatePolicyHandler(
+			atEmptyConditions,
+			setConditionsUnknown,
+		),
 	}
 }

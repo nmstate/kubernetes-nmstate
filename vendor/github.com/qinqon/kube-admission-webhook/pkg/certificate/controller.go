@@ -43,19 +43,48 @@ func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return object.GetName() == m.webhookName
 	}
 
+	isCASecret := func(object client.Object) bool {
+		return object.GetName() == m.caSecretKey().Name
+	}
+
+	isServiceSecret := func(object client.Object) bool {
+		webhookConf, err := m.readyWebhookConfiguration()
+		if err != nil {
+			m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration: %v", err))
+			return false
+		}
+
+		services, err := m.getServicesFromConfiguration(webhookConf)
+		if err != nil {
+			m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration services: %v", err))
+			return false
+		}
+
+		for service, _ := range services {
+			if object.GetName() == service.Name {
+				return true
+			}
+		}
+		return false
+	}
+
+	isGeneratedSecret := func(object client.Object) bool {
+		return isCASecret(object) || isServiceSecret(object)
+	}
+
 	// Watch only events for selected m.webhookName
 	onEventForThisWebhook := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return isWebhookConfig(createEvent.Object) || isAnnotatedResource(createEvent.Object)
+			return isWebhookConfig(createEvent.Object) || (isAnnotatedResource(createEvent.Object) && isGeneratedSecret(createEvent.Object))
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return isAnnotatedResource(deleteEvent.Object)
+			return isAnnotatedResource(deleteEvent.Object) && isGeneratedSecret(deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return isWebhookConfig(updateEvent.ObjectOld) || isAnnotatedResource(updateEvent.ObjectOld)
+			return isWebhookConfig(updateEvent.ObjectOld) || (isAnnotatedResource(updateEvent.ObjectOld) && isGeneratedSecret(updateEvent.ObjectOld))
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return isWebhookConfig(genericEvent.Object) || isAnnotatedResource(genericEvent.Object)
+			return isWebhookConfig(genericEvent.Object) || (isAnnotatedResource(genericEvent.Object) && isGeneratedSecret(genericEvent.Object))
 		},
 	}
 

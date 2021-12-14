@@ -5,15 +5,19 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/operator-framework/operator-registry/pkg/mirror"
+	"github.com/operator-framework/operator-registry/pkg/sqlite"
 )
 
 func MirrorCmd() *cobra.Command {
+	// TODO(joelanford): MirrorCmd is unused. Delete it and any other code used only by it.
 	o := mirror.DefaultImageIndexMirrorerOptions()
 	cmd := &cobra.Command{
 		Hidden: true,
 		Use:    "mirror [src image] [dest image]",
 		Short:  "mirror an operator-registry catalog",
-		Long:   `mirror an operator-registry catalog image from one registry to another`,
+		Long: `mirror an operator-registry catalog image from one registry to another
+
+` + sqlite.DeprecationMessage,
 
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
@@ -36,6 +40,7 @@ func MirrorCmd() *cobra.Command {
 			}
 			return nil
 		},
+		Args: cobra.ExactArgs(2),
 	}
 	flags := cmd.Flags()
 
