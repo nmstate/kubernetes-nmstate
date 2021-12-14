@@ -1,19 +1,22 @@
 package registry
 
 import (
-	"github.com/operator-framework/operator-registry/pkg/lib/registry"
-
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/operator-framework/operator-registry/pkg/lib/registry"
+	"github.com/operator-framework/operator-registry/pkg/sqlite"
 )
 
 func newRegistryRmCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "rm",
 		Short: "remove operator from operator registry DB",
-		Long:  `Remove operator from operator registry DB`,
+		Long: `Remove operator from operator registry DB
 
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+` + sqlite.DeprecationMessage,
+
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
 				logrus.SetLevel(logrus.DebugLevel)
 			}
@@ -21,6 +24,7 @@ func newRegistryRmCmd() *cobra.Command {
 		},
 
 		RunE: rmFunc,
+		Args: cobra.NoArgs,
 	}
 
 	rootCmd.Flags().Bool("debug", false, "enable debug logging")
@@ -34,7 +38,7 @@ func newRegistryRmCmd() *cobra.Command {
 	return rootCmd
 }
 
-func rmFunc(cmd *cobra.Command, args []string) error {
+func rmFunc(cmd *cobra.Command, _ []string) error {
 	fromFilename, err := cmd.Flags().GetString("database")
 	if err != nil {
 		return err

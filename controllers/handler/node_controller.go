@@ -39,11 +39,12 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
+	networkmanager "github.com/phoracek/networkmanager-go/src"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // Added for test purposes
-type NmstateUpdater func(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState) error
+type NmstateUpdater func(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState, versions *nmstate.DependencyVersions) error
 type NmstatectlShow func() (string, error)
 
 // NodeReconciler reconciles a Node object
@@ -103,7 +104,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-	err = r.nmstateUpdater(r.Client, nodeInstance, currentState, nnsInstance)
+	err = r.nmstateUpdater(r.Client, nodeInstance, currentState, nnsInstance, r.getDependencyVersions())
 	if err != nil {
 		err = errors.Wrap(err, "error at node reconcile creating NodeNetworkState")
 		return ctrl.Result{}, err
@@ -115,8 +116,45 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 	return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 }
 
-func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
+	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("NetworkManager", "--version")
+	if err != nil {
+		r.Log.Info("error retrieving handler NetworkManager version: %s", err.Error())
+	}
 
+	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
+	if err != nil {
+		r.Log.Info("error retrieving handler nmstate version: %s", err.Error())
+	}
+
+	hostNmstateVersion := ""
+	nmClient, err := networkmanager.NewClientPrivate()
+
+	if err != nil {
+		r.Log.Info("error retrieving new client: %s", err.Error())
+
+		return &nmstate.DependencyVersions{
+			HandlerNetworkManagerVersion: handlerNetworkManagerVersion,
+			HandlerNmstateVersion:        handlerNmstateVersion,
+			HostNmstateVersion:           hostNmstateVersion,
+		}
+	}
+
+	defer nmClient.Close()
+
+	hostNmstateVersion, err = nmClient.GetVersion()
+	if err != nil {
+		r.Log.Error(err, "error retrieving host nmstate version")
+	}
+
+	return &nmstate.DependencyVersions{
+		HandlerNetworkManagerVersion: handlerNetworkManagerVersion,
+		HandlerNmstateVersion:        handlerNmstateVersion,
+		HostNmstateVersion:           hostNmstateVersion,
+	}
+}
+
+func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 	r.nmstatectlShow = nmstatectl.Show
 	r.deviceInfo = state.DeviceInfo{}

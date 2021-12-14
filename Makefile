@@ -1,21 +1,15 @@
 SHELL := /bin/bash
 
+PWD = $(shell pwd)
+
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
-NMSTATE_CURRENT_COPR_REPO=nmstate-1.0
-NM_CURRENT_COPR_REPO=NetworkManager-1.30
-
-NMSTATE_FUTURE_COPR_REPO=nmstate-git
-NM_FUTURE_COPR_REPO=NetworkManager-main
+HANDLER_DOCKERFILE=Dockerfile
 
 ifeq ($(NMSTATE_PIN), future)
-	NMSTATE_COPR_REPO=$(NMSTATE_FUTURE_COPR_REPO)
-	NM_COPR_REPO=$(NM_FUTURE_COPR_REPO)
-else
-	NMSTATE_COPR_REPO=$(NMSTATE_CURRENT_COPR_REPO)
-	NM_COPR_REPO=$(NM_CURRENT_COPR_REPO)
+	HANDLER_DOCKERFILE=Dockerfile.future
 endif
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
@@ -35,7 +29,7 @@ HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
 export IMAGE_BUILDER ?= docker
 
-WHAT ?= ./pkg ./controllers ./api
+WHAT ?= ./pkg ./controllers
 
 unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
 
@@ -58,20 +52,13 @@ export SECOND_SECONDARY_NIC ?= ens9
 endif
 BIN_DIR = $(CURDIR)/build/_output/bin/
 
-export GOPROXY=direct
-export GOSUMDB=off
 export GOFLAGS=-mod=vendor
-export GOROOT=$(BIN_DIR)/go/
-export GOBIN=$(GOROOT)/bin/
-export PATH := $(GOROOT)/bin:$(PATH)
 
 export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
 export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-GOFMT := $(GOBIN)/gofmt
-export GO := $(GOBIN)/go
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
 GINKGO = go run github.com/onsi/ginkgo/ginkgo
@@ -102,40 +89,42 @@ INDEX_VERSION ?= 1.0.0
 # Default index image tag
 INDEX_IMG ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/kubernetes-nmstate-operator-index:$(INDEX_VERSION)
 
+SKIP_IMAGE_BUILD ?= false
+
 all: check handler
 
 check: vet whitespace-check gofmt-check
 
 format: whitespace-format gofmt
 
-vet: $(GO)
-	$(GO) vet ./...
+vet:
+	go vet ./...
 
 whitespace-format:
 	hack/whitespace.sh format
 
-gofmt: $(GO)
-	$(GOFMT) -w cmd/ test/ hack/ api/ controllers/ pkg/
+gofmt:
+	gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/" | xargs -r gofmt -w
 
 whitespace-check:
 	hack/whitespace.sh check
 
-gofmt-check: $(GO)
-	test -z "`$(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/`" || ($(GOFMT) -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
+gofmt-check:
+	test -z "`gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/"`" || (gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
 
-$(GO):
-	hack/install-go.sh $(BIN_DIR)
+lint:
+	hack/lint.sh
 
 $(OPERATOR_SDK):
-	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.7.1/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
+	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
-gen-k8s: $(GO)
+gen-k8s:
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
-gen-crds: $(GO)
+gen-crds:
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
 
-gen-rbac: $(GO)
+gen-rbac:
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
 
 check-gen: generate
@@ -143,42 +132,42 @@ check-gen: generate
 
 generate: gen-k8s gen-crds gen-rbac
 
-manifests: $(GO)
-	$(GO) run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+manifests:
+	go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-handler-manager: $(GO)
+handler-manager:
 	hack/build-manager.sh handler $(BIN_DIR)
 
-operator-manager: $(GO)
+operator-manager:
 	hack/build-manager.sh operator $(BIN_DIR)
 
 handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler: handler-manager
-	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/Dockerfile --build-arg NMSTATE_COPR_REPO=$(NMSTATE_COPR_REPO) --build-arg NM_COPR_REPO=$(NM_COPR_REPO)
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
 push-operator: operator-manager
-	SKIP_PUSH=$(SKIP_PUSH) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
 
 push: push-handler push-operator
 
-test/unit: $(GO)
+test/unit/api:
+	cd api && $(GINKGO) $(unit_test_args) ./...
+
+test/unit: test/unit/api
 	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
 
-test-e2e-handler: $(GO)
+test-e2e-handler:
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
 
-test-e2e-operator: manifests $(GO)
+test-e2e-operator: manifests
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
-
-test-e2e-ocp: 
-	./hack/ocp-e2e-tests.sh
 
 cluster-up:
 	./cluster/up.sh
@@ -202,18 +191,22 @@ version-minor:
 version-major:
 	./hack/tag-version.sh major
 
-release-notes: $(GO)
-	hack/render-release-notes.sh $(WHAT)
+release-notes:
+	hack/render-release-notes.sh $(WHAT) ./api
 
-release: $(GO)
+release:
 	hack/release.sh
 
-vendor: $(GO)
-	$(GO) mod tidy
-	$(GO) mod vendor
+vendor-api:
+	cd api && go mod tidy && go mod vendor
+
+vendor: vendor-api
+	go mod tidy
+	go mod vendor
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: $(OPERATOR_SDK) gen-crds manifests
+	cp -r deploy/bases $(MANIFESTS_DIR)/bases
 	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
 	$(OPERATOR_SDK) bundle validate ./bundle
 
@@ -222,7 +215,7 @@ bundle-build:
 	$(IMAGE_BUILDER) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 # Build the index
-index-build: $(GO) bundle-build
+index-build: bundle-build
 	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
 
 bundle-push: bundle-build
@@ -258,5 +251,4 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build \
-	manifests
+	bundle-build

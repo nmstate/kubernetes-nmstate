@@ -6,7 +6,10 @@ import (
 
 	"github.com/operator-framework/operator-registry/cmd/opm/alpha"
 	"github.com/operator-framework/operator-registry/cmd/opm/index"
+	initcmd "github.com/operator-framework/operator-registry/cmd/opm/init"
+	"github.com/operator-framework/operator-registry/cmd/opm/migrate"
 	"github.com/operator-framework/operator-registry/cmd/opm/registry"
+	"github.com/operator-framework/operator-registry/cmd/opm/render"
 	"github.com/operator-framework/operator-registry/cmd/opm/serve"
 	"github.com/operator-framework/operator-registry/cmd/opm/validate"
 	"github.com/operator-framework/operator-registry/cmd/opm/version"
@@ -17,15 +20,16 @@ func NewCmd() *cobra.Command {
 		Use:   "opm",
 		Short: "operator package manager",
 		Long:  "CLI to interact with operator-registry and build indexes of operator content",
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
 				logrus.SetLevel(logrus.DebugLevel)
 			}
 			return nil
 		},
+		Args: cobra.NoArgs,
 	}
 
-	cmd.AddCommand(registry.NewOpmRegistryCmd(), alpha.NewCmd(), serve.NewCmd(), validate.NewCmd())
+	cmd.AddCommand(registry.NewOpmRegistryCmd(), alpha.NewCmd(), initcmd.NewCmd(), migrate.NewCmd(), serve.NewCmd(), render.NewCmd(), validate.NewCmd())
 	index.AddCommand(cmd)
 	version.AddCommand(cmd)
 

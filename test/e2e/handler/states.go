@@ -35,17 +35,6 @@ func ethernetNicsUp(nics ...string) nmstate.State {
 	return ethernetNicsState(states)
 }
 
-func linuxBrBadYaml(name string) nmstate.State {
-	return nmstate.NewState(fmt.Sprintf(`interfaces:
-  - name: %s
-    type: linux-bridge
-    state: badstate
-    bridge:
-      port:
-        - name: eth1
-`, name))
-}
-
 func linuxBrUp(bridgeName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
@@ -161,7 +150,7 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstate.State {
 		bridgeName, firstSecondaryNic))
 }
 
-func ifaceUpWithStaticIP(iface string, ipAddress string) nmstate.State {
+func ifaceUpWithStaticIP(iface string, ipAddress string, prefixLen string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
@@ -169,13 +158,23 @@ func ifaceUpWithStaticIP(iface string, ipAddress string) nmstate.State {
       ipv4:
         address:
         - ip: %s
-          prefix-length: 24
+          prefix-length: %s
         dhcp: false
         enabled: true
-`, iface, ipAddress))
+`, iface, ipAddress, prefixLen))
 }
 
-func ifaceUpWithVlanUp(iface string, vlanId string) nmstate.State {
+func ifaceUpWithStaticIPAbsent(firstSecondaryNic string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: false
+`, firstSecondaryNic))
+}
+
+func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -183,10 +182,10 @@ func ifaceUpWithVlanUp(iface string, vlanId string) nmstate.State {
       vlan:
         base-iface: %s
         id: %s
-`, iface, vlanId, iface, vlanId))
+`, iface, vlanID, iface, vlanID))
 }
 
-func vlanAbsent(iface string, vlanId string) nmstate.State {
+func vlanAbsent(iface string, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -194,7 +193,7 @@ func vlanAbsent(iface string, vlanId string) nmstate.State {
       vlan:
         base-iface: %s
         id: %s
-`, iface, vlanId, iface, vlanId))
+`, iface, vlanID, iface, vlanID))
 }
 
 func interfaceAbsent(iface string) nmstate.State {

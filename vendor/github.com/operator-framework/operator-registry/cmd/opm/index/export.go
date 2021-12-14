@@ -9,6 +9,7 @@ import (
 
 	"github.com/operator-framework/operator-registry/pkg/containertools"
 	"github.com/operator-framework/operator-registry/pkg/lib/indexer"
+	"github.com/operator-framework/operator-registry/pkg/sqlite"
 )
 
 var exportLong = templates.LongDesc(`
@@ -18,7 +19,7 @@ var exportLong = templates.LongDesc(`
 	the --package option) and export the operator metadata into an appregistry compliant format (a package.yaml file). 
 
 	Note: the appregistry format is being deprecated in favor of the new index image and image bundle format. 
-	`)
+	`) + "\n\n" + sqlite.DeprecationMessage
 
 func newIndexExportCmd() *cobra.Command {
 	indexCmd := &cobra.Command{
@@ -26,7 +27,7 @@ func newIndexExportCmd() *cobra.Command {
 		Short: "Export an operator from an index into the appregistry format",
 		Long:  exportLong,
 
-		PreRunE: func(cmd *cobra.Command, args []string) error {
+		PreRunE: func(cmd *cobra.Command, _ []string) error {
 			if debug, _ := cmd.Flags().GetBool("debug"); debug {
 				logrus.SetLevel(logrus.DebugLevel)
 			}
@@ -34,6 +35,7 @@ func newIndexExportCmd() *cobra.Command {
 		},
 
 		RunE: runIndexExportCmdFunc,
+		Args: cobra.NoArgs,
 	}
 	indexCmd.Flags().Bool("debug", false, "enable debug logging")
 	indexCmd.Flags().StringP("index", "i", "", "index to get package from")
@@ -57,7 +59,7 @@ func newIndexExportCmd() *cobra.Command {
 
 }
 
-func runIndexExportCmdFunc(cmd *cobra.Command, args []string) error {
+func runIndexExportCmdFunc(cmd *cobra.Command, _ []string) error {
 	index, err := cmd.Flags().GetString("index")
 	if err != nil {
 		return err

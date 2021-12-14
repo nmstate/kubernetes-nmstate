@@ -98,25 +98,24 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 
 			By("Checking that bond was configured and obtained the same IP address")
 			for _, node := range nodes {
-				verifyBondIsUpWithPrimaryNicIp(node, expectedBond, addressByNode[node])
+				verifyBondIsUpWithPrimaryNicIP(node, expectedBond, addressByNode[node])
 			}
 			// Restart only first node that it's a control-plane if other node is restarted it will stuck in NotReady state
 			nodeToReboot := nodes[0]
 			Byf("Reboot node %s and verify that bond still has ip of primary nic", nodeToReboot)
-			err := restartNode(nodeToReboot)
-			Expect(err).ToNot(HaveOccurred())
+			restartNodeWithoutWaiting(nodeToReboot)
 
 			By("Wait for policy re-reconciled after node reboot")
 			waitForPolicyTransitionUpdate(TestPolicy)
 			waitForAvailablePolicy(TestPolicy)
 
 			Byf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1)
-			verifyBondIsUpWithPrimaryNicIp(nodeToReboot, expectedBond, addressByNode[nodeToReboot])
+			verifyBondIsUpWithPrimaryNicIP(nodeToReboot, expectedBond, addressByNode[nodeToReboot])
 		})
 	})
 })
 
-func verifyBondIsUpWithPrimaryNicIp(node string, expectedBond map[string]interface{}, ip string) {
+func verifyBondIsUpWithPrimaryNicIP(node string, expectedBond map[string]interface{}, ip string) {
 	interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
 
 	Eventually(func() string {

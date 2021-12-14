@@ -14,4 +14,5 @@ export E2E_LOGS=${TMP_PROJECT_PATH}/test_logs/e2e
 export ARTIFACTS=${ARTIFACTS-$tmp_dir/artifacts}
 mkdir -p $ARTIFACTS
 
+
 rsync -rt --links $(pwd)/ $TMP_PROJECT_PATH

@@ -59,7 +59,7 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 		objs := []runtime.Object{&policy, &enactment}
 
 		// Create a fake client to mock API calls.
-		cl = fake.NewFakeClientWithScheme(s, objs...)
+		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 		reconciler.Client = cl
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("Enactment")

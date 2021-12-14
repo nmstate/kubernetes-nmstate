@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
-	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
@@ -25,10 +24,9 @@ func setTimestampAnnotation(policy nmstatev1.NodeNetworkConfigurationPolicy) nms
 
 func setTimestampAnnotationHook() *webhook.Admission {
 	return &webhook.Admission{
-		Handler: admission.HandlerFunc(
-			mutatePolicyHandler(
-				always,
-				setTimestampAnnotation,
-			)),
+		Handler: mutatePolicyHandler(
+			always,
+			setTimestampAnnotation,
+		),
 	}
 }

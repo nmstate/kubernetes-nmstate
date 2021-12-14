@@ -112,40 +112,21 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				resetDesiredStateForNodes()
 			})
 
-			checkThatBridgeTookOverTheDefaultIP := func(nodesToCheck []string) {
-				By("Verifying that the bridge obtained node's default IP")
-				for _, node := range nodesToCheck {
-					Eventually(func() string {
-						return ipv4Address(node, "brext")
-					}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface brext has not take over the %s address", primaryNic))
-				}
-
-				By("Verify that next-hop-interface for default route is brext")
-				for _, node := range nodesToCheck {
-					defaultRouteNextHopInterface(node).Should(Equal("brext"))
-
-					By("Verify that VLAN configuration is done properly")
-					hasVlans(node, primaryNic, 2, 4094).Should(Succeed())
-					getVLANFlagsEventually(node, "brext", 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-				}
-			}
-
 			It("should successfully move default IP address on top of the bridge", func() {
-				checkThatBridgeTookOverTheDefaultIP(nodes)
+				checkThatBridgeTookOverTheDefaultIP(nodes, "brext", addressByNode)
 			})
 
 			It("should keep the default IP address after node reboot", func() {
 				nodeToReboot := nodes[0]
 
-				err := restartNode(nodeToReboot)
-				Expect(err).ToNot(HaveOccurred())
+				restartNodeWithoutWaiting(nodeToReboot)
 
 				By("Wait for policy re-reconciled after node reboot")
 				waitForPolicyTransitionUpdate(DefaultNetwork)
 				waitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot)
-				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot})
+				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot}, "brext", addressByNode)
 			})
 		})
 	})
@@ -178,5 +159,23 @@ func waitForNodesReady() {
 		EventuallyWithOffset(1, func() (corev1.ConditionStatus, error) {
 			return nodeReadyConditionStatus(node)
 		}, 5*time.Minute, 10*time.Second).Should(Equal(corev1.ConditionTrue))
+	}
+}
+
+func checkThatBridgeTookOverTheDefaultIP(nodesToCheck []string, bridgeName string, addressByNode map[string]string) {
+	By("Verifying that the bridge obtained node's default IP")
+	for _, node := range nodesToCheck {
+		Eventually(func() string {
+			return ipv4Address(node, bridgeName)
+		}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s has not take over the %s address", bridgeName, primaryNic))
+	}
+
+	By("Verify that next-hop-interface for default route is the bridge")
+	for _, node := range nodesToCheck {
+		defaultRouteNextHopInterface(node).Should(Equal(bridgeName))
+
+		By("Verify that VLAN configuration is done properly")
+		hasVlans(node, primaryNic, 2, 4094).Should(Succeed())
+		getVLANFlagsEventually(node, bridgeName, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 	}
 }

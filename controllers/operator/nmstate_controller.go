@@ -33,14 +33,13 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	uns "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 
+	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/names"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
 
@@ -59,7 +58,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=nmstate.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
-// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces;statefulsets,verbs="*"
+// +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces,verbs="*"
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -150,7 +149,7 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "rbac", true)
@@ -186,8 +185,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 
 	const (
-		WEBHOOK_REPLICAS     = int32(2)
-		WEBHOOK_MIN_REPLICAS = int32(1)
+		webhookMinReplicas int32 = 1
+		webhookReplicas    int32 = 2
 	)
 	archAndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
 	if archAndCRInfraNodeSelector == nil {
@@ -202,19 +201,17 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = corev1.Affinity{}
-	data.Data["WebhookReplicas"] = WEBHOOK_REPLICAS
-	data.Data["WebhookMinReplicas"] = WEBHOOK_MIN_REPLICAS
+	data.Data["WebhookReplicas"] = webhookReplicas
+	data.Data["WebhookMinReplicas"] = webhookMinReplicas
 	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = corev1.Affinity{}
-	_, enableOVS := os.LookupEnv("ENABLE_OVS")
-	data.Data["EnableOVS"] = enableOVS
 	// TODO: This is just a place holder to make template renderer happy
 	//       proper variable has to be read from env or CR
 	data.Data["CARotateInterval"] = ""
@@ -226,17 +223,16 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 
 func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
 	var err error
-	objs := []*uns.Unstructured{}
 
 	sourceFullDirectory := filepath.Join(names.ManifestDir, "kubernetes-nmstate", sourceDirectory)
-	objs, err = render.RenderDir(sourceFullDirectory, &data)
+	objs, err := render.RenderDir(sourceFullDirectory, &data)
 	if err != nil {
 		return errors.Wrapf(err, "failed to render kubernetes-nmstate %s", sourceDirectory)
 	}
 
 	// If no file found in directory - return error
 	if len(objs) == 0 {
-		return fmt.Errorf("No manifests rendered from %s", sourceFullDirectory)
+		return fmt.Errorf("no manifests rendered from %s", sourceFullDirectory)
 	}
 
 	for _, obj := range objs {
@@ -246,7 +242,7 @@ func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data ren
 			continue
 		}
 		if setControllerReference {
-			// Set the controller refernce. When the CR is removed, it will remove the CRDs as well
+			// Set the controller reference. When the CR is removed, it will remove the CRDs as well
 			err = controllerutil.SetControllerReference(instance, obj, r.Scheme)
 			if err != nil {
 				return errors.Wrap(err, "failed to set owner reference")

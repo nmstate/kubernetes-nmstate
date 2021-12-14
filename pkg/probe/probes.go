@@ -37,10 +37,10 @@ type Probe struct {
 const (
 	defaultGwRetrieveTimeout  = 120 * time.Second
 	defaultGwProbeTimeout     = 120 * time.Second
-	defaultDnsProbeTimeout    = 120 * time.Second
+	defaultDNSProbeTimeout    = 120 * time.Second
 	apiServerProbeTimeout     = 120 * time.Second
 	nodeReadinessProbeTimeout = 120 * time.Second
-	ProbesTotalTimeout        = defaultGwRetrieveTimeout + defaultDnsProbeTimeout + defaultDnsProbeTimeout + apiServerProbeTimeout + nodeReadinessProbeTimeout
+	ProbesTotalTimeout        = defaultGwRetrieveTimeout + defaultDNSProbeTimeout + defaultDNSProbeTimeout + apiServerProbeTimeout + nodeReadinessProbeTimeout
 )
 
 func currentStateAsGJson() (gjson.Result, error) {
@@ -54,7 +54,6 @@ func currentStateAsGJson() (gjson.Result, error) {
 		return gjson.Result{}, errors.Wrap(err, "failed to convert current state to JSON")
 	}
 	return gjson.ParseBytes(currentState), nil
-
 }
 
 func ping(target string, timeout time.Duration) (string, error) {
@@ -75,7 +74,7 @@ func ping(target string, timeout time.Duration) (string, error) {
 
 // This probes use its own client to bypass cache that
 // why we wrap it to ignore the one it's passed
-func checkApiServerConnectivity(timeout time.Duration) error {
+func checkAPIServerConnectivity(timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
 		// Create new custom client to bypass cache [1]
 		// [1] https://github.com/operator-framework/operator-sdk/blob/master/doc/user/client.md#non-default-client
@@ -192,7 +191,7 @@ func runDNS(client client.Client, timeout time.Duration) error {
 
 	errs := []error{}
 	for _, runningNameServer := range runningNameServers {
-		err = lookupRootNS(runningNameServer.String(), defaultDnsProbeTimeout)
+		err = lookupRootNS(runningNameServer.String(), defaultDNSProbeTimeout)
 		if err != nil {
 			errs = append(errs, err)
 		} else {
@@ -221,7 +220,7 @@ func Select(cli client.Client) []Probe {
 	if err == nil {
 		probes = append(probes, Probe{
 			name:    "dns",
-			timeout: defaultDnsProbeTimeout,
+			timeout: defaultDNSProbeTimeout,
 			run:     runDNS,
 		})
 	} else {
@@ -232,7 +231,7 @@ func Select(cli client.Client) []Probe {
 		name:    "api-server",
 		timeout: apiServerProbeTimeout,
 		run: func(_ client.Client, timeout time.Duration) error {
-			return checkApiServerConnectivity(timeout)
+			return checkAPIServerConnectivity(timeout)
 		},
 	})
 
@@ -259,7 +258,6 @@ func Run(client client.Client, probes []Probe) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed runnig probe '%s' with after network reconfiguration -> currentState: %s", p.name, currentState)
 		}
-
 	}
 	return nil
 }

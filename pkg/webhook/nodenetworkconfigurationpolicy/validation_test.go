@@ -125,5 +125,61 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 				Field:   "name",
 			}},
 		}),
+		Entry("policy cannot create capture field", ValidationWebhookCase{
+			currentPolicy: nmstatev1.NodeNetworkConfigurationPolicy{},
+			policy: nmstatev1.NodeNetworkConfigurationPolicy{
+				Spec: shared.NodeNetworkConfigurationPolicySpec{
+					Capture: map[string]string{
+						"foo": "bar",
+					},
+				},
+			},
+			validationFn: validatePolicyCaptureNotModified,
+			validationResult: []metav1.StatusCause{{
+				Type:    metav1.CauseTypeFieldValueNotSupported,
+				Message: "invalid policy operation: capture field cannot be modified",
+				Field:   "capture",
+			}},
+		}),
+		Entry("policy cannot modify capture field", ValidationWebhookCase{
+			currentPolicy: nmstatev1.NodeNetworkConfigurationPolicy{
+				Spec: shared.NodeNetworkConfigurationPolicySpec{
+					Capture: map[string]string{
+						"foo": "bar",
+						"bar": "dar",
+					},
+				},
+			},
+			policy: nmstatev1.NodeNetworkConfigurationPolicy{
+				Spec: shared.NodeNetworkConfigurationPolicySpec{
+					Capture: map[string]string{
+						"foo": "bar",
+					},
+				},
+			},
+			validationFn: validatePolicyCaptureNotModified,
+			validationResult: []metav1.StatusCause{{
+				Type:    metav1.CauseTypeFieldValueNotSupported,
+				Message: "invalid policy operation: capture field cannot be modified",
+				Field:   "capture",
+			}},
+		}),
+		Entry("policy cannot delete capture field", ValidationWebhookCase{
+			currentPolicy: nmstatev1.NodeNetworkConfigurationPolicy{
+				Spec: shared.NodeNetworkConfigurationPolicySpec{
+					Capture: map[string]string{
+						"foo": "bar",
+						"bar": "dar",
+					},
+				},
+			},
+			policy:       nmstatev1.NodeNetworkConfigurationPolicy{},
+			validationFn: validatePolicyCaptureNotModified,
+			validationResult: []metav1.StatusCause{{
+				Type:    metav1.CauseTypeFieldValueNotSupported,
+				Message: "invalid policy operation: capture field cannot be modified",
+				Field:   "capture",
+			}},
+		}),
 	)
 })

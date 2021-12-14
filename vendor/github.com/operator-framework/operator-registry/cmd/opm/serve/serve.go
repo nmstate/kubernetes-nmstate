@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/operator-framework/operator-registry/internal/declcfg"
+	"github.com/operator-framework/operator-registry/alpha/declcfg"
 	"github.com/operator-framework/operator-registry/pkg/api"
 	health "github.com/operator-framework/operator-registry/pkg/api/grpc_health_v1"
 	"github.com/operator-framework/operator-registry/pkg/lib/dns"
@@ -38,8 +39,13 @@ func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "serve <source_path>",
 		Short: "serve declarative configs",
-		Long:  `serve declarative configs via grpc`,
-		Args:  cobra.ExactArgs(1),
+		Long: `This command serves declarative configs via a GRPC server.
+
+NOTE: The declarative config directory is loaded by the serve command at
+startup. Changes made to the declarative config after the this command starts
+will not be reflected in the served content.
+`,
+		Args: cobra.ExactArgs(1),
 		PreRunE: func(_ *cobra.Command, args []string) error {
 			s.configDir = args[0]
 			if s.debug {
@@ -72,7 +78,7 @@ func (s *serve) run(ctx context.Context) error {
 
 	s.logger = s.logger.WithFields(logrus.Fields{"configs": s.configDir, "port": s.port})
 
-	cfg, err := declcfg.LoadDir(s.configDir)
+	cfg, err := declcfg.LoadFS(os.DirFS(s.configDir))
 	if err != nil {
 		return fmt.Errorf("load declarative config directory: %v", err)
 	}
@@ -81,7 +87,11 @@ func (s *serve) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("could not build index model from declarative config: %v", err)
 	}
-	store := registry.NewQuerier(m)
+	store, err := registry.NewQuerier(m)
+	defer store.Close()
+	if err != nil {
+		return err
+	}
 
 	lis, err := net.Listen("tcp", ":"+s.port)
 	if err != nil {

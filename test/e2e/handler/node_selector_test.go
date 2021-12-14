@@ -122,7 +122,7 @@ func removeLabelsFromNode(nodeName string, labelsToRemove map[string]string) {
 		return
 	}
 
-	for k, _ := range labelsToRemove {
+	for k := range labelsToRemove {
 		delete(node.Labels, k)
 	}
 

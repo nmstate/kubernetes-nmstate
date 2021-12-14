@@ -12,7 +12,6 @@ rules:
   - configmaps
   - namespaces
   - serviceaccounts
-  - statefulsets
   verbs:
   - '*'
 - apiGroups:

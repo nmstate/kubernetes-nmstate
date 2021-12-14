@@ -6,6 +6,7 @@ name=$1
 destdir=$2
 
 export GOOS=linux
+export CGO_ENABLED=0
 
 if [ "$ARCHS" == "" ]; then
     go build -o $destdir/$name.manager.$GOOS-$(go env GOARCH) ./cmd/$name

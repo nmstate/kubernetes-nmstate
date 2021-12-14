@@ -1,0 +1,11 @@
+---
+dependencies:
+  - type: olm.package
+    value:
+      packageName: bar
+      version: <0.1.0
+  - type: olm.gvk
+    value:
+      group: "test.bar"
+      version: "v1alpha1"
+      kind: "Bar"

@@ -54,7 +54,7 @@ func writeDeviceStatus(writer io.Writer, nodes []string) {
 func writeNetworkManagerLogs(writer io.Writer, nodes []string, sinceTime time.Time) {
 	for _, node := range nodes {
 		output, err := runner.RunQuietAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
-			"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Now().Sub(sinceTime).Seconds())))
+			"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Since(sinceTime).Seconds())))
 		Expect(err).ToNot(HaveOccurred())
 		writeMessage(writer, banner("Journalctl for NetworkManager on node %s"), node)
 		writeMessage(writer, banner("\n %s"), output)

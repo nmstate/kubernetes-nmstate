@@ -50,7 +50,7 @@ const (
 	description = "description"
 
 	// The yaml attribute that specifies the version of the ClusterServiceVersion
-	// expected to be semver and parseable by blang/semver
+	// expected to be semver and parseable by blang/semver/v4
 	version = "version"
 
 	// The yaml attribute that specifies the related images of the ClusterServiceVersion
@@ -263,7 +263,7 @@ func (csv *ClusterServiceVersion) GetApiServiceDefinitions() (owned []*Definitio
 	var objmap map[string]*json.RawMessage
 
 	if err = json.Unmarshal(csv.Spec, &objmap); err != nil {
-		return
+		return nil, nil, fmt.Errorf("error unmarshaling into object map: %s", err)
 	}
 
 	rawValue, ok := objmap[apiServiceDefinitions]

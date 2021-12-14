@@ -19,9 +19,9 @@ package enactmentstatus
 
 import (
 	"bytes"
-	"compress/flate"
+	"compress/gzip"
 	b64 "encoding/base64"
-	"io/ioutil"
+	"io"
 	"regexp"
 	"strings"
 )
@@ -49,22 +49,30 @@ func FormatErrorString(errorMessage string) string {
 	return sb.String()
 }
 
-//Loops over all lines in error message and selects lines that should be kept
+// Loops over all lines in error message and selects lines that should be kept
 func formatLines(index int, errorLines []string, sb *strings.Builder) {
+	shouldFormatLine := true
 	for index < len(errorLines) {
-		formatLine(&errorLines[index], sb)
+		if errorLines[index] == "---" {
+			shouldFormatLine = false
+		}
+		processLine(&errorLines[index], sb, shouldFormatLine)
 		index++
 		index = skipLines(errorLines, index)
 	}
 }
 
-//Simplifies a line that should be kept in the error message
-func formatLine(errorLine *string, sb *strings.Builder) {
+// Simplifies a line that should be kept in the error message
+func processLine(errorLine *string, sb *strings.Builder, shouldFormatLine bool) {
+	if !shouldFormatLine {
+		sb.WriteString(*errorLine + "\n")
+		return
+	}
 	lineSplitByColon := strings.Split(strings.TrimRight(*errorLine, " "), ": ")
 	indent := ""
 	for _, lineSection := range lineSplitByColon {
 		sb.WriteString(indent + lineSection + "\n")
-		indent = indent + "  "
+		indent += "  "
 	}
 }
 
@@ -73,12 +81,12 @@ func skipLines(lines []string, index int) int {
 		return index
 	}
 
-	regexMatchFileTrace := `\A\s*File "\S*",\sline\s\d*,\sin`
-	regexTraceback := `\A\s*Traceback\s\(most\srecent\scall\slast\):`
-	regexWithDateTime := `\A\s*\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}`
-	regexCurrentState := `.*->\scurrentState:\s---`
-	regexUnhandledMessage := `\AUnhandled\s.*\sfor\s`
-	regexKeywords := `DEBUG|WARNING|UserWarning:|warnings\.warn\(`
+	regexMatchFileTrace := regexp.MustCompile(`\A\s*File "\S*",\sline\s\d*,\sin`)
+	regexTraceback := regexp.MustCompile(`\A\s*Traceback\s\(most\srecent\scall\slast\):`)
+	regexWithDateTime := regexp.MustCompile(`\A\s*\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}`)
+	regexCurrentState := regexp.MustCompile(`.*->\scurrentState:\s---`)
+	regexUnhandledMessage := regexp.MustCompile(`\AUnhandled\s.*\sfor\s`)
+	regexKeywords := regexp.MustCompile(`DEBUG|WARNING|UserWarning:|warnings\.warn\(`)
 
 	trimmedLine := strings.Trim(lines[index], ": ")
 
@@ -86,28 +94,28 @@ func skipLines(lines []string, index int) int {
 		index++
 		return skipLines(lines, index)
 	}
-	if matched, _ := regexp.MatchString(regexTraceback, lines[index]); matched == true {
+	if matched := regexTraceback.MatchString(lines[index]); matched {
 		index++
-		isTraceback, _ := regexp.MatchString(regexMatchFileTrace, lines[index])
+		isTraceback := regexMatchFileTrace.MatchString(lines[index])
 		for isTraceback {
 			index += 2
-			isTraceback, _ = regexp.MatchString(regexMatchFileTrace, lines[index])
+			isTraceback = regexMatchFileTrace.MatchString(lines[index])
 		}
 		return skipLines(lines, index)
 	}
-	if matched, _ := regexp.MatchString(regexWithDateTime, lines[index]); matched == true {
+	if matched := regexWithDateTime.MatchString(lines[index]); matched {
 		index++
 		return skipLines(lines, index)
 	}
-	if matched, _ := regexp.MatchString(regexUnhandledMessage, lines[index]); matched == true {
+	if matched := regexUnhandledMessage.MatchString(lines[index]); matched {
 		index++
 		return skipLines(lines, index)
 	}
-	if matched, _ := regexp.MatchString(regexKeywords, lines[index]); matched == true {
+	if matched := regexKeywords.MatchString(lines[index]); matched {
 		index++
 		return skipLines(lines, index)
 	}
-	if matched, _ := regexp.MatchString(regexCurrentState, lines[index]); matched == true {
+	if matched := regexCurrentState.MatchString(lines[index]); matched {
 		index = len(lines) - 1
 		return skipLines(lines, index)
 	}
@@ -129,12 +137,9 @@ func CompressAndEncodeMessage(message string) string {
 
 func compressMessage(message string) (bytes.Buffer, error) {
 	var buf bytes.Buffer
-	writer, err := flate.NewWriter(&buf, flate.BestCompression)
-	if err != nil {
-		return bytes.Buffer{}, err
-	}
+	writer := gzip.NewWriter(&buf)
 
-	_, err = writer.Write([]byte(message))
+	_, err := writer.Write([]byte(message))
 	if err != nil {
 		return bytes.Buffer{}, err
 	}
@@ -162,7 +167,10 @@ func decodeMessage(encodedMessage string) []byte {
 
 func decompressMessage(data []byte) string {
 	bytesReader := bytes.NewReader(data)
-	flateReader := flate.NewReader(bytesReader)
-	decompressedMessage, _ := ioutil.ReadAll(flateReader)
+	gzipReader, err := gzip.NewReader(bytesReader)
+	if err != nil {
+		return ""
+	}
+	decompressedMessage, _ := io.ReadAll(gzipReader)
 	return string(decompressedMessage)
 }

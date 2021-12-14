@@ -9,11 +9,11 @@
 set -e
 
 function format() {
-    git ls-files | grep -v "^vendor/" | grep -v "logo/" | xargs sed --follow-symlinks -i 's/[[:space:]]*$//'
+    git ls-files | grep -v "^vendor/" | grep -v "^api/vendor/" | grep -v "logo/" | xargs sed --follow-symlinks -i 's/[[:space:]]*$//'
 }
 
 function check() {
-    invalid_files=$(git ls-files | grep -v "^vendor/" | xargs egrep -Hn " +$" || true)
+    invalid_files=$(git ls-files | grep -v "^vendor/" | grep -v "^api/vendor/" | xargs egrep -Hn " +$" || true)
     if [[ $invalid_files ]]; then
         echo 'Found trailing whitespaces. Please remove trailing whitespaces using `make format`:'
         echo "$invalid_files"
