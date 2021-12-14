@@ -133,12 +133,20 @@ func updateDesiredStateAndWait(desiredState nmstate.State) {
 }
 
 func updateDesiredStateAtNode(node string, desiredState nmstate.State) {
+	updateDesiredStateWithCaptureAtNode(node, desiredState, nil)
+}
+
+func updateDesiredStateWithCaptureAtNode(node string, desiredState nmstate.State, capture map[string]string) {
 	nodeSelector := map[string]string{"kubernetes.io/hostname": node}
-	setDesiredStateWithPolicyAndNodeSelectorEventually(TestPolicy, desiredState, nodeSelector)
+	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(TestPolicy, desiredState, capture, nodeSelector)
 }
 
 func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
-	updateDesiredStateAtNode(node, desiredState)
+	updateDesiredStateWithCaptureAtNodeAndWait(node, desiredState, nil)
+}
+
+func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstate.State, capture map[string]string) {
+	updateDesiredStateWithCaptureAtNode(node, desiredState, capture)
 	waitForAvailableTestPolicy()
 }
 

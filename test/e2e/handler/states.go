@@ -250,6 +250,23 @@ func resetPrimaryAndSecondaryNICs() nmstate.State {
 `, primaryNic, firstSecondaryNic, secondSecondaryNic))
 }
 
+func bridgeOnTheSecondaryInterfaceState() nmstate.State {
+	return nmstate.NewState(`interfaces:
+  - name: brext
+    type: linux-bridge
+    state: up
+    ipv4: "{{ capture.secondary-iface.interfaces.0.ipv4 }}"
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+      - name: "{{ capture.secondary-iface.interfaces.0.name }}"
+routes:
+  config: "{{ capture.bridge-routes.routes.running }}"
+`)
+}
+
 func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]interface{})
 	expectedOptions := expectedLinkAggregation["options"].(map[string]interface{})
