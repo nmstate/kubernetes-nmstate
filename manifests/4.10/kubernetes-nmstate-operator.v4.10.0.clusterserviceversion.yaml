@@ -16,11 +16,6 @@ metadata:
         "kind": "NMState",
         "metadata": {
           "name": "nmstate"
-        },
-        "spec": {
-          "nodeSelector": {
-            "beta.kubernetes.io/arch": "amd64"
-          }
         }
       }]
     operatorframework.io/suggested-namespace: openshift-nmstate
