@@ -65,7 +65,7 @@ linters:
       #- gocritic
       #- gocyclo
     - gofmt
-      #- goheader
+    - goheader
       #- goimports
       #- gomnd
     - goprintffuncname
