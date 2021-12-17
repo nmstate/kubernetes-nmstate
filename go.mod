@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/mux v1.7.4 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0
-	github.com/nmstate/nmpolicy v0.1.0
+	github.com/nmstate/nmpolicy v0.1.1
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
 	github.com/opencontainers/image-spec v1.0.2 // indirect
