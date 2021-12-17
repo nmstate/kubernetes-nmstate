@@ -14,12 +14,18 @@ export KUBEVIRT_PROVIDER=external
 export IMAGE_BUILDER=podman
 export DEV_IMAGE_REGISTRY=quay.io
 export KUBEVIRTCI_RUNTIME=podman
-export SSH=./hack/ssh.sh
 export PRIMARY_NIC=enp2s0
 export FIRST_SECONDARY_NIC=enp3s0
 export SECOND_SECONDARY_NIC=enp4s0
 
 SKIPPED_TESTS="user-guide|bridged"
+
+if [ "${CI}" == "true" ]; then
+    source ${SHARED_DIR}/fix-uid.sh
+    export SSH=./hack/ssh-ci.sh
+else
+    export SSH=./hack/ssh.sh
+fi
 
 if oc get ns openshift-ovn-kubernetes &> /dev/null; then
     # We are using OVNKubernetes -> use enp1s0 as primary nic
