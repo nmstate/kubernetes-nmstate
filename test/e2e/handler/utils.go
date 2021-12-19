@@ -141,11 +141,19 @@ func setDesiredStateWithPolicyAndCapture(name string, desiredState nmstate.State
 }
 
 func updateDesiredState(desiredState nmstate.State) {
-	setDesiredStateWithPolicy(TestPolicy, desiredState)
+	updateDesiredStateWithCapture(desiredState, nil)
+}
+
+func updateDesiredStateWithCapture(desiredState nmstate.State, capture map[string]string) {
+	setDesiredStateWithPolicyAndCapture(TestPolicy, desiredState, capture)
 }
 
 func updateDesiredStateAndWait(desiredState nmstate.State) {
-	updateDesiredState(desiredState)
+	updateDesiredStateWithCaptureAndWait(desiredState, nil)
+}
+
+func updateDesiredStateWithCaptureAndWait(desiredState nmstate.State, capture map[string]string) {
+	updateDesiredStateWithCapture(desiredState, capture)
 	waitForAvailableTestPolicy()
 }
 
