@@ -19,7 +19,7 @@ package helper
 
 import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
-	"k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // Return true if the event name is the name of
