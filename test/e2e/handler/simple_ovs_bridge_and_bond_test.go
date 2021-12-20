@@ -44,7 +44,7 @@ func ovsBrUpLAGEth1AndEth2(bridgeName, bondName, port1Name, port2Name string) nm
 `, bridgeName, bondName, port1Name, port2Name))
 }
 
-func ovsBrUpLAGEth1Eth2WithInternalPort(bridgeName string, internalPortName string, internalPortMac string) nmstate.State {
+func ovsBrUpLAGEth1Eth2WithInternalPort(bridgeName, internalPortName, internalPortMac, port1Name, port2Name string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ovs-interface
@@ -66,7 +66,7 @@ func ovsBrUpLAGEth1Eth2WithInternalPort(bridgeName string, internalPortName stri
           - name: %s
           - name: %s
       - name: %s
-`, internalPortName, internalPortMac, bridgeName, firstSecondaryNic, secondSecondaryNic, internalPortName))
+`, internalPortName, internalPortMac, bridgeName, port1Name, port2Name, internalPortName))
 }
 
 func ovsBrUpLinuxBondEth1AndEth2(bridgeName string, bondName string) nmstate.State {
@@ -196,25 +196,8 @@ var _ = Describe("OVS Bridge", func() {
 			designatedNode string
 			macAddr        = ""
 		)
-		BeforeEach(func() {
-			designatedNode = nodes[0]
 
-			By(fmt.Sprintf("Getting mac address of %s on %s", firstSecondaryNic, designatedNode))
-			macAddr = macAddress(designatedNode, firstSecondaryNic)
-
-			By("Creating policy with desiredState")
-			updateDesiredStateAndWait(ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr))
-		})
-		AfterEach(func() {
-			updateDesiredStateAndWait(ovsBrAndInternalPortAbsent(bridge1, ovsPortName))
-			for _, node := range nodes {
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(ovsPortName))
-			}
-			resetDesiredStateForNodes()
-		})
-
-		It("should have the ovs-bridge and internal port at currentState", func() {
+		verifyInterfaces := func() {
 			By("Verify all required interfaces are present at currentState")
 			interfacesForNode(designatedNode).Should(SatisfyAll(
 				ContainElement(SatisfyAll(
@@ -227,6 +210,57 @@ var _ = Describe("OVS Bridge", func() {
 					HaveKeyWithValue("type", "ovs-interface"),
 					HaveKeyWithValue("state", "up"),
 				))))
+		}
+
+		BeforeEach(func() {
+			designatedNode = nodes[0]
+		})
+
+		AfterEach(func() {
+			updateDesiredStateAtNodeAndWait(designatedNode, ovsBrAndInternalPortAbsent(bridge1, ovsPortName))
+			for _, node := range nodes {
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(ovsPortName))
+			}
+			resetDesiredStateForNodes()
+		})
+
+		Context("without capture", func() {
+			BeforeEach(func() {
+				By(fmt.Sprintf("Getting mac address of %s on %s", firstSecondaryNic, designatedNode))
+				macAddr = macAddress(designatedNode, firstSecondaryNic)
+
+				By("Creating policy with desiredState")
+				updateDesiredStateAtNodeAndWait(designatedNode, ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, firstSecondaryNic, secondSecondaryNic))
+			})
+
+			It("should have the ovs-bridge and internal port at currentState", func() {
+				By("Verify all required interfaces are present at currentState")
+				verifyInterfaces()
+			})
+		})
+
+		Context("with capture", func() {
+			BeforeEach(func() {
+				By("Creating policy with desiredState")
+				capture := map[string]string{
+					"first-secondary-iface": fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
+					"ethernet-ifaces":       `interfaces.type=="ethernet"`,
+					"secondary-ifaces":      `capture.ethernet-ifaces | interfaces.state=="down"`,
+				}
+
+				macAddr = `"{{ capture.first-secondary-iface.interfaces.0.mac-address }}"`
+				port1 := `"{{ capture.secondary-ifaces.interfaces.0.name }}"`
+				port2 := `"{{ capture.secondary-ifaces.interfaces.1.name }}"`
+
+				updateDesiredStateWithCaptureAtNodeAndWait(designatedNode, ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, port1, port2), capture)
+				deletePolicy(TestPolicy)
+			})
+
+			It("should have the ovs-bridge and internal port at currentState", func() {
+				By("Verify all required interfaces are present at currentState")
+				verifyInterfaces()
+			})
 		})
 	})
 })
