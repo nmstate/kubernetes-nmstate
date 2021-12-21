@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -46,11 +47,12 @@ import (
 
 var _ = Describe("NMState controller reconcile", func() {
 	var (
-		cl                  client.Client
-		reconciler          NMStateReconciler
-		existingNMStateName = "nmstate"
-		handlerNodeSelector = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
-		handlerTolerations  = []corev1.Toleration{
+		cl                         client.Client
+		reconciler                 NMStateReconciler
+		existingNMStateName        = "nmstate"
+		defaultHandlerNodeSelector = map[string]string{"kubernetes.io/os": "linux", "beta.kubernetes.io/arch": goruntime.GOARCH}
+		customHandlerNodeSelector  = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
+		handlerTolerations         = []corev1.Toleration{
 			{
 				Effect:   "NoSchedule",
 				Key:      "node.kubernetes.io/special-toleration",
@@ -168,7 +170,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set NodeSelector field in operator Spec
-			nmstate.Spec.NodeSelector = handlerNodeSelector
+			nmstate.Spec.NodeSelector = customHandlerNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
@@ -178,12 +180,21 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
+		It("should add default NodeSelector to handler daemonset", func() {
+			ds := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range defaultHandlerNodeSelector {
+				Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+			}
+		})
 		It("should add NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
 			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
-			for k, v := range handlerNodeSelector {
+			for k, v := range customHandlerNodeSelector {
 				Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
 			}
 		})
@@ -192,7 +203,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
-			for k, v := range handlerNodeSelector {
+			for k, v := range customHandlerNodeSelector {
 				Expect(deployment.Spec.Template.Spec.NodeSelector).ToNot(HaveKeyWithValue(k, v))
 			}
 		})
