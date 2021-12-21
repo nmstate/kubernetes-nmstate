@@ -22,8 +22,9 @@ import (
 	"time"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmpolicytypes "github.com/nmstate/nmpolicy/nmpolicy/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	nmpolicytypes "github.com/nmstate/nmpolicy/nmpolicy/types"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

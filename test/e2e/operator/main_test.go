@@ -50,7 +50,6 @@ type operatorTestData struct {
 	ns                                     string
 	nmstate                                nmstatev1.NMState
 	webhookKey, handlerKey, certManagerKey types.NamespacedName
-	handlerLabels                          map[string]string
 }
 
 func newOperatorTestData(ns string) operatorTestData {
