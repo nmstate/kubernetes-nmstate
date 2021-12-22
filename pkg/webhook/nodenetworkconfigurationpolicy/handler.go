@@ -65,7 +65,11 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1.NodeNetworkConfigurati
 	}
 }
 
-func validatePolicyHandler(cli client.Client, neededValidationFor func(admissionv1.Operation, nmstatev1.NodeNetworkConfigurationPolicy, nmstatev1.NodeNetworkConfigurationPolicy) bool, validators ...validator) admission.HandlerFunc {
+func validatePolicyHandler(
+	cli client.Client,
+	neededValidationFor func(admissionv1.Operation, nmstatev1.NodeNetworkConfigurationPolicy, nmstatev1.NodeNetworkConfigurationPolicy) bool,
+	validators ...validator,
+) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/validator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw

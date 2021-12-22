@@ -33,15 +33,26 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-func onPolicySpecChange(operation admissionv1.Operation, policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) bool {
+func onPolicySpecChange(
+	operation admissionv1.Operation,
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy nmstatev1.NodeNetworkConfigurationPolicy,
+) bool {
 	return !reflect.DeepEqual(policy.Spec, currentPolicy.Spec)
 }
 
-func onCreate(operation admissionv1.Operation, policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) bool {
+func onCreate(
+	operation admissionv1.Operation,
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy nmstatev1.NodeNetworkConfigurationPolicy,
+) bool {
 	return operation == admissionv1.Create
 }
 
-func validatePolicyNotInProgressHook(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyNotInProgressHook(
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy nmstatev1.NodeNetworkConfigurationPolicy,
+) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	currentPolicyAvailableCondition := currentPolicy.Status.Conditions.Find(shared.NodeNetworkConfigurationPolicyConditionAvailable)
 
@@ -55,7 +66,10 @@ func validatePolicyNotInProgressHook(policy nmstatev1.NodeNetworkConfigurationPo
 	return causes
 }
 
-func validatePolicyNodeSelector(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyNodeSelector(
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy nmstatev1.NodeNetworkConfigurationPolicy,
+) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	nodeSelector := policy.Spec.NodeSelector
 	if nodeSelector == nil {
@@ -82,7 +96,10 @@ func validatePolicyNodeSelector(policy nmstatev1.NodeNetworkConfigurationPolicy,
 	return causes
 }
 
-func validatePolicyName(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyName(
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy nmstatev1.NodeNetworkConfigurationPolicy,
+) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	validationErrors := validation.IsValidLabelValue(policy.Name)
 	if len(validationErrors) > 0 {
@@ -95,7 +112,10 @@ func validatePolicyName(policy nmstatev1.NodeNetworkConfigurationPolicy, current
 	return causes
 }
 
-func validatePolicyCaptureNotModified(policy nmstatev1.NodeNetworkConfigurationPolicy, currentPolicy nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause {
+func validatePolicyCaptureNotModified(
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy nmstatev1.NodeNetworkConfigurationPolicy,
+) []metav1.StatusCause {
 	causes := []metav1.StatusCause{}
 	if !reflect.DeepEqual(policy.Spec.Capture, currentPolicy.Spec.Capture) {
 		causes = append(causes, metav1.StatusCause{

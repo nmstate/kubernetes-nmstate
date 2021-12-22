@@ -57,7 +57,11 @@ const (
 	defaultDNSProbeTimeout    = 120 * time.Second
 	apiServerProbeTimeout     = 120 * time.Second
 	nodeReadinessProbeTimeout = 120 * time.Second
-	ProbesTotalTimeout        = defaultGwRetrieveTimeout + defaultDNSProbeTimeout + defaultDNSProbeTimeout + apiServerProbeTimeout + nodeReadinessProbeTimeout
+	ProbesTotalTimeout        = defaultGwRetrieveTimeout +
+		defaultDNSProbeTimeout +
+		defaultDNSProbeTimeout +
+		apiServerProbeTimeout +
+		nodeReadinessProbeTimeout
 )
 
 func currentStateAsGJson() (gjson.Result, error) {
@@ -273,7 +277,10 @@ func Run(client client.Client, probes []Probe) error {
 		log.Info(fmt.Sprintf("Running '%s' probe", p.name))
 		err = p.run(client, p.timeout)
 		if err != nil {
-			return errors.Wrapf(err, "failed runnig probe '%s' with after network reconfiguration -> currentState: %s", p.name, currentState)
+			return errors.Wrapf(
+				err,
+				"failed runnig probe '%s' with after network reconfiguration -> currentState: %s", p.name, currentState,
+			)
 		}
 	}
 	return nil

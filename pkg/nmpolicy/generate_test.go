@@ -33,10 +33,13 @@ import (
 var _ = Describe("NMPolicy GenerateState", func() {
 	When("fails", func() {
 		It("Should return an error", func() {
-			capturedState, desiredStateMetaInfo, desiredState, err := GenerateStateWithStateGenerator(nmpolicyStub{shouldFail: true}, nmstateapi.State{},
+			capturedState, desiredStateMetaInfo, desiredState, err := GenerateStateWithStateGenerator(
+				nmpolicyStub{shouldFail: true},
+				nmstateapi.State{},
 				nmstateapi.NodeNetworkConfigurationPolicySpec{},
 				nmstateapi.State{},
-				map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{})
+				map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+			)
 			Expect(err).To(HaveOccurred())
 			Expect(capturedState).To(Equal(map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{}))
 			Expect(desiredStateMetaInfo).To(Equal(nmstateapi.NodeNetworkConfigurationEnactmentMetaInfo{}))
@@ -68,10 +71,13 @@ var _ = Describe("NMPolicy GenerateState", func() {
 			},
 		}
 
-		capturedStates, desiredStateMetaInfo, desiredState, err := GenerateStateWithStateGenerator(nmpolicyStub{output: generatedState}, nmstateapi.State{},
+		capturedStates, desiredStateMetaInfo, desiredState, err := GenerateStateWithStateGenerator(
+			nmpolicyStub{output: generatedState},
+			nmstateapi.State{},
 			nmstateapi.NodeNetworkConfigurationPolicySpec{},
 			nmstateapi.State{},
-			map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{})
+			map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+		)
 
 		Expect(err).NotTo(HaveOccurred())
 
@@ -96,7 +102,11 @@ type nmpolicyStub struct {
 	output     nmpolicytypes.GeneratedState
 }
 
-func (n nmpolicyStub) GenerateState(nmpolicySpec nmpolicytypes.PolicySpec, currentState []byte, cache nmpolicytypes.CachedState) (nmpolicytypes.GeneratedState, error) {
+func (n nmpolicyStub) GenerateState(
+	nmpolicySpec nmpolicytypes.PolicySpec,
+	currentState []byte,
+	cache nmpolicytypes.CachedState,
+) (nmpolicytypes.GeneratedState, error) {
 	if n.shouldFail {
 		return nmpolicytypes.GeneratedState{}, fmt.Errorf("GenerateStateFailed")
 	}

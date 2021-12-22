@@ -39,7 +39,11 @@ func (matcher *BeReadyMatcher) Match(obtained interface{}) (success bool, err er
 	obtainedDaemonset, ok := obtained.(v1.DaemonSet)
 
 	if !ok {
-		return false, fmt.Errorf("daemonset.IsReady matcher expects a v1.DaemonSet %v %v", reflect.TypeOf(obtained), reflect.TypeOf(obtainedDaemonset))
+		return false, fmt.Errorf(
+			"daemonset.IsReady matcher expects a v1.DaemonSet %v %v",
+			reflect.TypeOf(obtained),
+			reflect.TypeOf(obtainedDaemonset),
+		)
 	}
 
 	matcher.obtainedDaemonSet = &obtainedDaemonset
@@ -55,7 +59,11 @@ func (matcher *BeReadyMatcher) NegatedFailureMessage(actual interface{}) (messag
 }
 
 func (matcher *BeReadyMatcher) message(message string) string {
-	return format.Message(matcher.expectedNumberOfPods(), fmt.Sprintf("daemonset.Status.DesiredNumberScheduled %v daemonset.Status.NumberAvailable", message), matcher.availableNumberOfPods())
+	return format.Message(
+		matcher.expectedNumberOfPods(),
+		fmt.Sprintf("daemonset.Status.DesiredNumberScheduled %v daemonset.Status.NumberAvailable", message),
+		matcher.availableNumberOfPods(),
+	)
 }
 
 func (matcher *BeReadyMatcher) expectedNumberOfPods() int32 {

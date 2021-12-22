@@ -111,7 +111,14 @@ func (c ConditionCount) NotAborted() int {
 }
 
 func (c ConditionCount) String() string {
-	return fmt.Sprintf("{failed: %s, progressing: %s, pending: %s, available: %s, aborted: %s}", c.failed(), c.progressing(), c.pending(), c.available(), c.aborted())
+	return fmt.Sprintf(
+		"{failed: %s, progressing: %s, pending: %s, available: %s, aborted: %s}",
+		c.failed(),
+		c.progressing(),
+		c.pending(),
+		c.available(),
+		c.aborted(),
+	)
 }
 
 func (c CountByConditionStatus) String() string {

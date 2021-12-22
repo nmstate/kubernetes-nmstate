@@ -150,8 +150,14 @@ var _ = Describe("OVS Bridge", func() {
 					"secondary-ifaces": `capture.ethernet-ifaces | interfaces.state=="down"`,
 				}
 				updateDesiredStateWithCaptureAndWait(
-					ovsBrUpLAGEth1AndEth2(bridge1, bond1, `"{{ capture.secondary-ifaces.interfaces.0.name }}"`, `"{{ capture.secondary-ifaces.interfaces.1.name }}"`),
-					capture)
+					ovsBrUpLAGEth1AndEth2(
+						bridge1,
+						bond1,
+						`"{{ capture.secondary-ifaces.interfaces.0.name }}"`,
+						`"{{ capture.secondary-ifaces.interfaces.1.name }}"`,
+					),
+					capture,
+				)
 				deletePolicy(TestPolicy)
 			})
 
@@ -161,35 +167,38 @@ var _ = Describe("OVS Bridge", func() {
 			})
 		})
 	})
-	PContext("when desiredState is updated with ovs-bridge with linux bond as port [BZ: https://bugzilla.redhat.com/show_bug.cgi?id=2005240]", func() {
-		BeforeEach(func() {
-			updateDesiredStateAndWait(ovsBrUpLinuxBondEth1AndEth2(bridge1, bond1))
-		})
-		AfterEach(func() {
-			updateDesiredStateAndWait(ovsBrAndBondAbsent(bridge1, bond1))
-			for _, node := range nodes {
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
-			}
-			resetDesiredStateForNodes()
-		})
-		It("should have the ovs-bridge and bond at currentState", func() {
-			By("Verify all required interfaces are present at currentState")
-			for _, node := range nodes {
-				interfacesForNode(node).Should(SatisfyAll(
-					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", bridge1),
-						HaveKeyWithValue("type", "ovs-bridge"),
-						HaveKeyWithValue("state", "up"),
-					)),
-					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", bond1),
-						HaveKeyWithValue("type", "bond"),
-						HaveKeyWithValue("state", "up"),
-					))))
-			}
-		})
-	})
+	PContext(
+		"when desiredState is updated with ovs-bridge with linux bond as port [BZ: https://bugzilla.redhat.com/show_bug.cgi?id=2005240]",
+		func() {
+			BeforeEach(func() {
+				updateDesiredStateAndWait(ovsBrUpLinuxBondEth1AndEth2(bridge1, bond1))
+			})
+			AfterEach(func() {
+				updateDesiredStateAndWait(ovsBrAndBondAbsent(bridge1, bond1))
+				for _, node := range nodes {
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
+				}
+				resetDesiredStateForNodes()
+			})
+			It("should have the ovs-bridge and bond at currentState", func() {
+				By("Verify all required interfaces are present at currentState")
+				for _, node := range nodes {
+					interfacesForNode(node).Should(SatisfyAll(
+						ContainElement(SatisfyAll(
+							HaveKeyWithValue("name", bridge1),
+							HaveKeyWithValue("type", "ovs-bridge"),
+							HaveKeyWithValue("state", "up"),
+						)),
+						ContainElement(SatisfyAll(
+							HaveKeyWithValue("name", bond1),
+							HaveKeyWithValue("type", "bond"),
+							HaveKeyWithValue("state", "up"),
+						))))
+				}
+			})
+		},
+	)
 	Context("when desiredState is updated with ovs-bridge with link aggregation port and ovs-interface port", func() {
 		const ovsPortName = "ovs1"
 		var (
@@ -231,7 +240,10 @@ var _ = Describe("OVS Bridge", func() {
 				macAddr = macAddress(designatedNode, firstSecondaryNic)
 
 				By("Creating policy with desiredState")
-				updateDesiredStateAtNodeAndWait(designatedNode, ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, firstSecondaryNic, secondSecondaryNic))
+				updateDesiredStateAtNodeAndWait(
+					designatedNode,
+					ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, firstSecondaryNic, secondSecondaryNic),
+				)
 			})
 
 			It("should have the ovs-bridge and internal port at currentState", func() {
@@ -253,7 +265,11 @@ var _ = Describe("OVS Bridge", func() {
 				port1 := `"{{ capture.secondary-ifaces.interfaces.0.name }}"`
 				port2 := `"{{ capture.secondary-ifaces.interfaces.1.name }}"`
 
-				updateDesiredStateWithCaptureAtNodeAndWait(designatedNode, ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, port1, port2), capture)
+				updateDesiredStateWithCaptureAtNodeAndWait(
+					designatedNode,
+					ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, port1, port2),
+					capture,
+				)
 				deletePolicy(TestPolicy)
 			})
 

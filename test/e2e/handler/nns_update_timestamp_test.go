@@ -74,17 +74,24 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 		It("should update it with according to network state refresh duration", func() {
 			for node, originalNNS := range originalNNSs {
 				Byf("Checking timestamp against original one %s", originalNNS.Status.LastSuccessfulUpdateTime)
-				Eventually(func() time.Time {
-					currentNNS := nodeNetworkState(types.NamespacedName{Name: node})
-					return currentNNS.Status.LastSuccessfulUpdateTime.Time
-				}, 2*nmstatenode.NetworkStateRefresh, 10*time.Second).Should(BeTemporally(">", originalNNS.Status.LastSuccessfulUpdateTime.Time), "should update it at %s", node)
+				Eventually(
+					func() time.Time {
+						currentNNS := nodeNetworkState(types.NamespacedName{Name: node})
+						return currentNNS.Status.LastSuccessfulUpdateTime.Time
+					},
+					2*nmstatenode.NetworkStateRefresh,
+					10*time.Second,
+				).Should(
+					BeTemporally(">", originalNNS.Status.LastSuccessfulUpdateTime.Time), "should update it at %s", node,
+				)
 			}
 		})
 
 	})
 	Context("when network configuration is changed by a NNCP", func() {
 		BeforeEach(func() {
-			// We want to test all the NNS so we apply policies to control-plane and workers (use linuxBrUpNoPorts to not affect the nodes secondary interfaces state)
+			// We want to test all the NNS so we apply policies to control-plane and workers
+			//(use linuxBrUpNoPorts to not affect the nodes secondary interfaces state)
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1))
 			waitForAvailableTestPolicy()
 		})

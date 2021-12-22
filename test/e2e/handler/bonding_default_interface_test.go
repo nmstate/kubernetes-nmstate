@@ -101,9 +101,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 
 			Byf("Check %s has the default ip address", primaryNic)
 			for _, node := range nodes {
-				Eventually(func() string {
-					return ipv4Address(node, primaryNic)
-				}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
+				Eventually(
+					func() string {
+						return ipv4Address(node, primaryNic)
+					},
+					30*time.Second,
+					1*time.Second,
+				).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 			}
 
 		})

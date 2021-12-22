@@ -35,6 +35,8 @@ var _ = BeforeSuite(func() {
 
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter("junit.controller-nodenetworkconfigurationpolicy-policyconditions-policyconditions_suite_test.xml")
+	junitReporter := reporters.NewJUnitReporter(
+		"junit.controller-nodenetworkconfigurationpolicy-policyconditions-policyconditions_suite_test.xml",
+	)
 	RunSpecsWithDefaultAndCustomReporters(t, "Conditions Test Suite", []Reporter{junitReporter})
 }

@@ -61,7 +61,11 @@ func ApplyDefaultVlanFiltering(desiredState nmstate.State) (nmstate.State, error
 			if hasVlanConfiguration(port) {
 				continue
 			}
-			result, err = sjson.SetBytes(result, fmt.Sprintf("interfaces.%d.bridge.port.%d.vlan", ifaceIndex, portIndex), defaultVlanFiltering)
+			result, err = sjson.SetBytes(
+				result,
+				fmt.Sprintf("interfaces.%d.bridge.port.%d.vlan", ifaceIndex, portIndex),
+				defaultVlanFiltering,
+			)
 			if err != nil {
 				return desiredState, err
 			}
@@ -84,7 +88,10 @@ func EnableVlanFiltering(desiredState nmstate.State) (string, error) {
 	if err != nil {
 		return "failed to list bridges with ports", err
 	}
-	filteredExistingUpBridgesWithPortsAtDesiredState, err := filterExistingLinuxBridgesWithPorts(upBridgesWithPortsAtCurrentState, desiredState)
+	filteredExistingUpBridgesWithPortsAtDesiredState, err := filterExistingLinuxBridgesWithPorts(
+		upBridgesWithPortsAtCurrentState,
+		desiredState,
+	)
 	if err != nil {
 		return "failed to filter existing bridges with ports from desiredState", err
 	}
@@ -120,7 +127,10 @@ func GetUpLinuxBridgesWithPorts(desiredState nmstate.State) (map[string][]string
 	return bridgesWithPorts, nil
 }
 
-func filterExistingLinuxBridgesWithPorts(bridgesAtCurrentState map[string][]string, desiredState nmstate.State) (map[string][]string, error) {
+func filterExistingLinuxBridgesWithPorts(
+	bridgesAtCurrentState map[string][]string,
+	desiredState nmstate.State,
+) (map[string][]string, error) {
 	filteredBridgesWithPorts := map[string][]string{}
 	bridgesAtDesiredState, err := GetUpLinuxBridgesWithPorts(desiredState)
 	if err != nil {
@@ -168,7 +178,8 @@ func runCommand(command string, args []string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s %s: '%v', '%s', '%s'", command, strings.Join(args, " "), err, stdout.String(), stderr.String())
+		return "",
+			fmt.Errorf("failed to execute %s %s: '%v', '%s', '%s'", command, strings.Join(args, " "), err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
 }

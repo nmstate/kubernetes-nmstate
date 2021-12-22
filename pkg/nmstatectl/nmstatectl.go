@@ -52,7 +52,14 @@ func nmstatectlWithInput(arguments []string, input string) (string, error) {
 		}()
 	}
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s %s: '%v' '%s' '%s'", nmstateCommand, strings.Join(arguments, " "), err, stdout.String(), stderr.String())
+		return "", fmt.Errorf(
+			"failed to execute %s %s: '%v' '%s' '%s'",
+			nmstateCommand,
+			strings.Join(arguments, " "),
+			err,
+			stdout.String(),
+			stderr.String(),
+		)
 	}
 	return stdout.String(), nil
 }
@@ -70,7 +77,10 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	go setUnavailableUp(setDoneCh)
 	defer close(setDoneCh)
 
-	setOutput, err := nmstatectlWithInput([]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))}, string(desiredState.Raw))
+	setOutput, err := nmstatectlWithInput(
+		[]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
+		string(desiredState.Raw),
+	)
 	return setOutput, err
 }
 

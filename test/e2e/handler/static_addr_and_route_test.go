@@ -172,7 +172,10 @@ var _ = Describe("Static addresses and routes", func() {
 
 		Context("with static V4 address and route", func() {
 			BeforeEach(func() {
-				updateDesiredStateAtNodeAndWait(node, ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress))
+				updateDesiredStateAtNodeAndWait(
+					node,
+					ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress),
+				)
 			})
 			AfterEach(func() {
 				updateDesiredStateAndWait(ipV4AddrAndRouteAbsent(firstSecondaryNic))
@@ -188,7 +191,10 @@ var _ = Describe("Static addresses and routes", func() {
 
 		Context("with bridge taking over the static networking of the slave", func() {
 			BeforeEach(func() {
-				updateDesiredStateAtNodeAndWait(node, ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress))
+				updateDesiredStateAtNodeAndWait(
+					node,
+					ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress),
+				)
 				ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
 				routeNextHopInterface(node, destIPAddress).Should(Equal(firstSecondaryNic))
 				// The policy has to be removed since it is not possible to update capture of an existing policy
@@ -198,7 +204,9 @@ var _ = Describe("Static addresses and routes", func() {
 					"gw":                     fmt.Sprintf(`routes.running.destination=="%s"`, destIPAddress),
 					"secondary-iface":        `interfaces.name==capture.gw.routes.running.0.next-hop-interface`,
 					"secondary-iface-routes": `routes.running.next-hop-interface==capture.secondary-iface.interfaces.0.name`,
-					"bridge-routes":          fmt.Sprintf(`capture.secondary-iface-routes | routes.running.next-hop-interface:="%s"`, bridgeName),
+					"bridge-routes": fmt.Sprintf(
+						`capture.secondary-iface-routes | routes.running.next-hop-interface:="%s"`, bridgeName,
+					),
 				}
 				updateDesiredStateWithCaptureAtNodeAndWait(node, bridgeOnTheSecondaryInterfaceState(), capture)
 				deletePolicy(TestPolicy)
@@ -231,7 +239,10 @@ var _ = Describe("Static addresses and routes", func() {
 
 		Context("with static V6 address and route", func() {
 			BeforeEach(func() {
-				updateDesiredStateAtNodeAndWait(node, ipV6AddrAndRoute(firstSecondaryNic, ipAddressV6, destIPAddressV6, prefixLenV6, nextHopIPAddressV6))
+				updateDesiredStateAtNodeAndWait(
+					node,
+					ipV6AddrAndRoute(firstSecondaryNic, ipAddressV6, destIPAddressV6, prefixLenV6, nextHopIPAddressV6),
+				)
 			})
 			AfterEach(func() {
 				updateDesiredStateAndWait(ipV6AddrAndRouteAbsent(firstSecondaryNic))

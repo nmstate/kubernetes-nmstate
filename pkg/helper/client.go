@@ -77,7 +77,13 @@ func InitializeNodeNetworkState(client client.Client, node *corev1.Node) (*nmsta
 	return &nodeNetworkState, nil
 }
 
-func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState, versions *DependencyVersions) error {
+func CreateOrUpdateNodeNetworkState(
+	client client.Client,
+	node *corev1.Node,
+	observedState shared.State,
+	nns *nmstatev1beta1.NodeNetworkState,
+	versions *DependencyVersions,
+) error {
 	if nns == nil {
 		var err error
 		nns, err = InitializeNodeNetworkState(client, node)
@@ -88,7 +94,12 @@ func CreateOrUpdateNodeNetworkState(client client.Client, node *corev1.Node, obs
 	return UpdateCurrentState(client, nns, observedState, versions)
 }
 
-func UpdateCurrentState(client client.Client, nodeNetworkState *nmstatev1beta1.NodeNetworkState, observedState shared.State, versions *DependencyVersions) error {
+func UpdateCurrentState(
+	client client.Client,
+	nodeNetworkState *nmstatev1beta1.NodeNetworkState,
+	observedState shared.State,
+	versions *DependencyVersions,
+) error {
 	if observedState.String() == nodeNetworkState.Status.CurrentState.String() {
 		log.Info("Skipping NodeNetworkState update, node network configuration not changed")
 		return nil

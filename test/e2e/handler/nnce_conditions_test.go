@@ -54,9 +54,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					enactmentConditionsStatusEventually(node).Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
-					enactmentConditionsStatusEventually(node).Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
-					enactmentConditionsStatusConsistently(node).Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
+					enactmentConditionsStatusEventually(node).
+						Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
+					enactmentConditionsStatusEventually(node).
+						Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
+					enactmentConditionsStatusConsistently(node).
+						Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
 				}()
 			}
 			// Run the policy after we set the nnce conditions assert so we

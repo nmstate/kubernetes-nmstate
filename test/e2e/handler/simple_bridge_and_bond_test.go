@@ -169,7 +169,8 @@ var _ = Describe("NodeNetworkState", func() {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 0"))
 
-					getVLANFlagsEventually(node, firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					getVLANFlagsEventually(node, firstSecondaryNic, 1).
+						Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					vlansCardinality(node, firstSecondaryNic).Should(Equal(0))
 				}
 			})
@@ -195,9 +196,11 @@ var _ = Describe("NodeNetworkState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-					getVLANFlagsEventually(node, firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					getVLANFlagsEventually(node, firstSecondaryNic, 1).
+						Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, firstSecondaryNic, 2, 4094).Should(Succeed())
-					getVLANFlagsEventually(node, secondSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					getVLANFlagsEventually(node, secondSecondaryNic, 1).
+						Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})
