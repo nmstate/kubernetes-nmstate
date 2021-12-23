@@ -56,7 +56,7 @@ func isEqual(obtainedValue interface{}, desiredValue ast.Node) (bool, error) {
 func mapContainsValue(mapToFilter map[string]interface{}, filterKey string, expectedNode ast.Node) (interface{}, error) {
 	obtainedValue, ok := mapToFilter[filterKey]
 	if !ok {
-		return nil, fmt.Errorf("cannot find key %s in %v", filterKey, mapToFilter)
+		return nil, nil
 	}
 	valueIsEqual, err := isEqual(obtainedValue, expectedNode)
 	if err != nil {
