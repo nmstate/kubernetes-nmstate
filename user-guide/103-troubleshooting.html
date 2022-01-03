@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  Minimal Mistakes Jekyll Theme 4.20.2 by Michael Rose
+  Minimal Mistakes Jekyll Theme 4.24.0 by Michael Rose
   Copyright 2013-2020 Michael Rose - mademistakes.com | @mmistakes
   Free for personal and commercial use under the MIT license
   https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
@@ -55,10 +55,13 @@
 
 
 
+
 <!-- end _includes/seo.html -->
 
 
-<link href="/kubernetes-nmstate/feed.xml" type="application/atom+xml" rel="alternate" title="The Kubernetes NMState project Feed">
+
+  <link href="/kubernetes-nmstate/feed.xml" type="application/atom+xml" rel="alternate" title="The Kubernetes NMState project Feed">
+
 
 <!-- https://t.co/dKP3o1e -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -69,22 +72,8 @@
 
 <!-- For all browsers -->
 <link rel="stylesheet" href="/kubernetes-nmstate/assets/css/main.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css">
-
-<!--[if IE]>
-  <style>
-    /* old IE unsupported flexbox fixes */
-    .greedy-nav .site-title {
-      padding-right: 3em;
-    }
-    .greedy-nav button {
-      position: absolute;
-      top: 0;
-      right: 0;
-      height: 100%;
-    }
-  </style>
-<![endif]-->
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5/css/all.min.css"></noscript>
 
 
 
@@ -98,7 +87,6 @@
 
   <body class="layout--single">
     <nav class="skip-links">
-  <h2 class="screen-reader-text">Skip links</h2>
   <ul>
     <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
     <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
@@ -117,7 +105,7 @@
     <div class="masthead__menu">
       <nav id="site-nav" class="greedy-nav">
         
-          <a class="site-logo" href="/kubernetes-nmstate/"><img src="/kubernetes-nmstate/assets/images/logo/fullcolor.png" alt=""></a>
+          <a class="site-logo" href="/kubernetes-nmstate/"><img src="/kubernetes-nmstate/assets/images/logo/fullcolor.png" alt="The Kubernetes NMState project"></a>
         
         <a class="site-title" href="/kubernetes-nmstate/">
           The Kubernetes NMState project
@@ -466,6 +454,7 @@ in the <a href="/kubernetes-nmstate/deployment.html">Deployment</a> or <a href="
 
         
 
+
       </footer>
 
       
@@ -501,11 +490,13 @@ in the <a href="/kubernetes-nmstate/deployment.html">Deployment</a> or <a href="
       
     
 
-    <li><a href="/kubernetes-nmstate/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
+      <li><a href="/kubernetes-nmstate/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+    
   </ul>
 </div>
 
-<div class="page__footer-copyright">© 2021 The Kubernetes NMState team. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+<div class="page__footer-copyright">© 2022 The Kubernetes NMState team. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
 
       </footer>
     </div>
