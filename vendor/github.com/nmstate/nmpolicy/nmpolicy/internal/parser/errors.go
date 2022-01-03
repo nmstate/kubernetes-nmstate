@@ -58,17 +58,17 @@ func invalidPathError(msg string) *parserError {
 	}
 }
 
-func invalidEqualityFilterError(msg string) *parserError {
+func wrapWithInvalidEqualityFilterError(err error) *parserError {
 	return &parserError{
 		prefix: "invalid equality filter",
-		msg:    msg,
+		inner:  err,
 	}
 }
 
-func invalidReplaceError(msg string) *parserError {
+func wrapWithInvalidReplaceError(err error) *parserError {
 	return &parserError{
 		prefix: "invalid replace",
-		msg:    msg,
+		inner:  err,
 	}
 }
 

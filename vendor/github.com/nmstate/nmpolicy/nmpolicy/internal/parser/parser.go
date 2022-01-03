@@ -21,6 +21,7 @@ import (
 	"strconv"
 
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
+	"github.com/nmstate/nmpolicy/nmpolicy/internal/expression"
 
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/lexer"
 )
@@ -28,6 +29,7 @@ import (
 type Parser struct{}
 
 type parser struct {
+	expression      string
 	tokens          []lexer.Token
 	currentTokenIdx int
 	lastNode        *ast.Node
@@ -38,18 +40,18 @@ func New() Parser {
 	return Parser{}
 }
 
-func newParser(tokens []lexer.Token) *parser {
-	return &parser{tokens: tokens}
+func newParser(expr string, tokens []lexer.Token) *parser {
+	return &parser{expression: expr, tokens: tokens}
 }
 
-func (Parser) Parse(tokens []lexer.Token) (ast.Node, error) {
-	return newParser(tokens).Parse()
+func (Parser) Parse(expr string, tokens []lexer.Token) (ast.Node, error) {
+	return newParser(expr, tokens).Parse()
 }
 
 func (p *parser) Parse() (ast.Node, error) {
 	node, err := p.parse()
 	if err != nil {
-		return ast.Node{}, err
+		return ast.Node{}, expression.WrapError(err, p.expression, p.currentToken().Position)
 	}
 	return node, nil
 }
@@ -198,34 +200,8 @@ func (p *parser) parseEqFilter() error {
 		Meta:     ast.Meta{Position: p.currentToken().Position},
 		EqFilter: &ast.TernaryOperator{},
 	}
-	if p.lastNode == nil {
-		return invalidEqualityFilterError("missing left hand argument")
-	}
-	if p.lastNode.Path == nil {
-		return invalidEqualityFilterError("left hand argument is not a path")
-	}
-
-	p.fillInPipedInOrCurrentState(&operator.EqFilter[0])
-
-	operator.EqFilter[1] = *p.lastNode
-
-	p.nextToken()
-
-	if p.currentToken().Type == lexer.STRING {
-		if err := p.parseString(); err != nil {
-			return err
-		}
-		operator.EqFilter[2] = *p.lastNode
-	} else if p.currentToken().Type == lexer.IDENTITY {
-		err := p.parsePath()
-		if err != nil {
-			return err
-		}
-		operator.EqFilter[2] = *p.lastNode
-	} else if p.currentToken().Type == lexer.EOF {
-		return invalidEqualityFilterError("missing right hand argument")
-	} else {
-		return invalidEqualityFilterError("right hand argument is not a string or identity")
+	if err := p.fillInTernaryOperator(operator.EqFilter); err != nil {
+		return wrapWithInvalidEqualityFilterError(err)
 	}
 	p.lastNode = operator
 	return nil
@@ -236,29 +212,42 @@ func (p *parser) parseReplace() error {
 		Meta:    ast.Meta{Position: p.currentToken().Position},
 		Replace: &ast.TernaryOperator{},
 	}
+	if err := p.fillInTernaryOperator(operator.Replace); err != nil {
+		return wrapWithInvalidReplaceError(err)
+	}
+	p.lastNode = operator
+	return nil
+}
+
+func (p *parser) fillInTernaryOperator(operator *ast.TernaryOperator) error {
 	if p.lastNode == nil {
-		return invalidReplaceError("missing left hand argument")
+		return fmt.Errorf("missing left hand argument")
 	}
 	if p.lastNode.Path == nil {
-		return invalidReplaceError("left hand argument is not a path")
+		return fmt.Errorf("left hand argument is not a path")
 	}
 
-	p.fillInPipedInOrCurrentState(&operator.Replace[0])
+	p.fillInPipedInOrCurrentState(&operator[0])
 
-	operator.Replace[1] = *p.lastNode
+	operator[1] = *p.lastNode
 
 	p.nextToken()
 	if p.currentToken().Type == lexer.STRING {
 		if err := p.parseString(); err != nil {
 			return err
 		}
-		operator.Replace[2] = *p.lastNode
+		operator[2] = *p.lastNode
+	} else if p.currentToken().Type == lexer.IDENTITY {
+		err := p.parsePath()
+		if err != nil {
+			return err
+		}
+		operator[2] = *p.lastNode
 	} else if p.currentToken().Type == lexer.EOF {
-		return invalidReplaceError("missing right hand argument")
+		return fmt.Errorf("missing right hand argument")
 	} else {
-		return invalidReplaceError("right hand argument is not a string")
+		return fmt.Errorf("right hand argument is not a string or identity")
 	}
-	p.lastNode = operator
 	return nil
 }
 
