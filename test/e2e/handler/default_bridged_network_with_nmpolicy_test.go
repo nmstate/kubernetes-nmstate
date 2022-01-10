@@ -138,8 +138,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 			It("should keep the default IP address after node reboot", func() {
 				nodeToReboot := nodes[0]
 
-				err := restartNode(nodeToReboot)
-				Expect(err).ToNot(HaveOccurred())
+				restartNodeWithoutWaiting(nodeToReboot)
 
 				By("Wait for policy re-reconciled after node reboot")
 				waitForPolicyTransitionUpdate(DefaultNetwork)
