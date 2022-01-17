@@ -135,7 +135,7 @@ func rollback(client client.Client, probes []probe.Probe, cause error) error {
 	// wait for system to settle after rollback
 	probesErr := probe.Run(client, probes)
 	if probesErr != nil {
-		return errors.Wrap(errors.Wrap(err, "failed running probes after rollback"), message)
+		return errors.Wrap(errors.Wrap(probesErr, "failed running probes after rollback"), message)
 	}
 	return errors.New(message)
 }
