@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -117,10 +118,13 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
-	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("NetworkManager", "--version")
+	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("nmcli", "--version")
 	if err != nil {
 		r.Log.Info("error retrieving handler NetworkManager version: %s", err.Error())
 	}
+	// remove leading characters up to last space
+	split := strings.Split(handlerNetworkManagerVersion, " ")
+	handlerNetworkManagerVersion = split[len(split)-1]
 
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
