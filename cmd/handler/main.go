@@ -76,6 +76,15 @@ func init() {
 }
 
 func main() {
+	if mainHandler() == 1 {
+		os.Exit(1)
+	}
+}
+
+// The code from main() has to be extracted into another function in order to properly handle defer.
+// Otherwise, defer may never execute because of eventual os.Exit().
+// return 1 indicates that program should exit with status code 1
+func mainHandler() int {
 	opt := zap.Options{}
 	opt.BindFlags(flag.CommandLine)
 	var logType string
@@ -98,7 +107,7 @@ func main() {
 		handlerLock, err := lockHandler()
 		if err != nil {
 			setupLog.Error(err, "Failed to run lockHandler")
-			os.Exit(1)
+			return 1
 		}
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
@@ -131,7 +140,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return 1
 	}
 
 	if environment.IsCertManager() {
@@ -145,44 +154,44 @@ func main() {
 		certManagerOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving ca rotate interval")
-			os.Exit(1)
+			return 1
 		}
 
 		certManagerOpts.CAOverlapInterval, err = environment.LookupAsDuration("CA_OVERLAP_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving ca overlap interval")
-			os.Exit(1)
+			return 1
 		}
 
 		certManagerOpts.CertRotateInterval, err = environment.LookupAsDuration("CERT_ROTATE_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving cert rotate interval")
-			os.Exit(1)
+			return 1
 		}
 
 		certManagerOpts.CertOverlapInterval, err = environment.LookupAsDuration("CERT_OVERLAP_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving cert overlap interval")
-			os.Exit(1)
+			return 1
 		}
 
 		var certManager *certificate.Manager
 		certManager, err = certificate.NewManager(mgr.GetClient(), certManagerOpts)
 		if err != nil {
 			setupLog.Error(err, "unable to create cert-manager", "controller", "cert-manager")
-			os.Exit(1)
+			return 1
 		}
 
 		err = certManager.Add(mgr)
 		if err != nil {
 			setupLog.Error(err, "unable to add cert-manager to controller-runtime manager", "controller", "cert-manager")
-			os.Exit(1)
+			return 1
 		}
 		// Runs only webhook controllers if it's specified
 	} else if environment.IsWebhook() {
 		if err = webhook.AddToManager(mgr); err != nil {
 			setupLog.Error(err, "Cannot initialize webhook")
-			os.Exit(1)
+			return 1
 		}
 	} else if environment.IsHandler() {
 		if err = (&controllers.NodeReconciler{
@@ -191,14 +200,14 @@ func main() {
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create Node controller", "controller", "NMState")
-			os.Exit(1)
+			return 1
 		}
 
 		var apiClient client.Client
 		apiClient, err = client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 		if err != nil {
 			setupLog.Error(err, "failed creating non cached client")
-			os.Exit(1)
+			return 1
 		}
 
 		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
@@ -208,7 +217,7 @@ func main() {
 			Scheme:    mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
-			os.Exit(1)
+			return 1
 		}
 
 		if err = (&controllers.NodeNetworkConfigurationEnactmentReconciler{
@@ -217,14 +226,14 @@ func main() {
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationEnactment controller", "controller", "NMState")
-			os.Exit(1)
+			return 1
 		}
 
 		// Check that nmstatectl is working
 		_, err = nmstatectl.Show()
 		if err != nil {
 			setupLog.Error(err, "failed checking nmstatectl health")
-			os.Exit(1)
+			return 1
 		}
 
 		// Handler runs with host networking so opening ports is problematic
@@ -236,7 +245,7 @@ func main() {
 		err = file.Touch(healthyFile)
 		if err != nil {
 			setupLog.Error(err, "failed marking handler as healthy")
-			os.Exit(1)
+			return 1
 		}
 	}
 
@@ -245,8 +254,10 @@ func main() {
 	setupLog.Info("starting manager")
 	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return 1
 	}
+
+	return 0
 }
 
 // Start profiler on given port if ENABLE_PROFILER is True

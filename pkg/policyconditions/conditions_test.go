@@ -96,7 +96,7 @@ func newNode(idx int) corev1.Node {
 	return node
 }
 
-func newPodAtNode(idx int, name string, namespace string, component string) corev1.Pod {
+func newPodAtNode(idx int, name, namespace, component string) corev1.Pod {
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%d", name, idx),

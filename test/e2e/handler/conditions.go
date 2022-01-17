@@ -63,17 +63,17 @@ func indexEnactmentStatusByName() map[string]shared.NodeNetworkConfigurationEnac
 	return enactmentStatusByName
 }
 
-func enactmentConditionsStatus(node string, policy string) shared.ConditionList {
+func enactmentConditionsStatus(node, policy string) shared.ConditionList {
 	return nodeNetworkConfigurationEnactment(shared.EnactmentKey(node, policy)).Status.Conditions
 }
 
-func enactmentConditionsStatusForPolicyEventually(node string, policy string) AsyncAssertion {
+func enactmentConditionsStatusForPolicyEventually(node, policy string) AsyncAssertion {
 	return Eventually(func() shared.ConditionList {
 		return enactmentConditionsStatus(node, policy)
 	}, 180*time.Second, 1*time.Second)
 }
 
-func enactmentConditionsStatusForPolicyConsistently(node string, policy string) AsyncAssertion {
+func enactmentConditionsStatusForPolicyConsistently(node, policy string) AsyncAssertion {
 	return Consistently(func() shared.ConditionList {
 		return enactmentConditionsStatus(node, policy)
 	}, 5*time.Second, 1*time.Second)

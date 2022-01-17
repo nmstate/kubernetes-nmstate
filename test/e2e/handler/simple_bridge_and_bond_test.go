@@ -34,7 +34,7 @@ func bondAbsent(bondName string) nmstate.State {
 `, bondName))
 }
 
-func brAndBondAbsent(bridgeName string, bondName string) nmstate.State {
+func brAndBondAbsent(bridgeName, bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
@@ -59,7 +59,7 @@ func bondUp(bondName string) nmstate.State {
 `, bondName, portFieldName, firstSecondaryNic, fmt.Sprintf(miimonFormat, 120)))
 }
 
-func brWithBondUp(bridgeName string, bondName string) nmstate.State {
+func brWithBondUp(bridgeName, bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond

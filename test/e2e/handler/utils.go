@@ -33,7 +33,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	yaml "sigs.k8s.io/yaml"
+	"sigs.k8s.io/yaml"
 
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -45,7 +45,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
-	runner "github.com/nmstate/kubernetes-nmstate/test/runner"
+	"github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
 const ReadTimeout = 180 * time.Second
@@ -380,25 +380,25 @@ func interfacesNameForNodeEventually(node string) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
-func ipAddressForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+func ipAddressForNodeInterfaceEventually(node, iface string) AsyncAssertion {
 	return Eventually(func() string {
 		return ipv4Address(node, iface)
 	}, ReadTimeout, ReadInterval)
 }
 
-func ipV6AddressForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+func ipV6AddressForNodeInterfaceEventually(node, iface string) AsyncAssertion {
 	return Eventually(func() string {
 		return ipv6Address(node, iface)
 	}, ReadTimeout, ReadInterval)
 }
 
-func routeDestForNodeInterfaceEventually(node string, destIP string) AsyncAssertion {
+func routeDestForNodeInterfaceEventually(node, destIP string) AsyncAssertion {
 	return Eventually(func() string {
 		return routeDest(node, destIP)
 	}, ReadTimeout, ReadInterval)
 }
 
-func vlanForNodeInterfaceEventually(node string, iface string) AsyncAssertion {
+func vlanForNodeInterfaceEventually(node, iface string) AsyncAssertion {
 	return Eventually(func() string {
 		return vlan(node, iface)
 	}, ReadTimeout, ReadInterval)
@@ -420,7 +420,7 @@ func bridgeVlansAtNode(node string) (string, error) {
 	return runner.RunAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 
-func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion { //nolint:unparam
+func getVLANFlagsEventually(node, connection string, vlan int) AsyncAssertion { //nolint:unparam
 	Byf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan)
 	return Eventually(func() []string {
 		bridgeVlans, err := bridgeVlansAtNode(node)
@@ -457,7 +457,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 	}, ReadTimeout, ReadInterval)
 }
 
-func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion { //nolint:unparam
+func hasVlans(node, connection string, minVlan, maxVlan int) AsyncAssertion { //nolint:unparam
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))
@@ -497,7 +497,7 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 	}, ReadTimeout, ReadInterval)
 }
 
-func vlansCardinality(node string, connection string) AsyncAssertion {
+func vlansCardinality(node, connection string) AsyncAssertion {
 	Byf("Getting vlan cardinality for node %s connection %s", node, connection)
 	return Eventually(func() (int, error) {
 		bridgeVlans, err := bridgeVlansAtNode(node)
@@ -509,7 +509,7 @@ func vlansCardinality(node string, connection string) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
-func bridgeDescription(node string, bridgeName string) AsyncAssertion {
+func bridgeDescription(node, bridgeName string) AsyncAssertion {
 	return Eventually(func() (string, error) {
 		return runner.RunAtNode(node, "sudo", "ip", "-d", "link", "show", "type", "bridge", bridgeName)
 	}, ReadTimeout, ReadInterval)
@@ -533,12 +533,12 @@ func currentStateJSON(node string) []byte {
 	return currentStateJSON
 }
 
-func dhcpFlag(node string, name string) bool {
+func dhcpFlag(node, name string) bool {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.dhcp", name)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
 
-func autoDNS(node string, name string) bool {
+func autoDNS(node, name string) bool {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.auto-dns", name)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
 }
@@ -553,7 +553,7 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 }
 
 // return a json with all node interfaces and their state e.g.
-//{"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
+// {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
 // use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) []byte {
 	var currentStateYaml nmstate.State
@@ -585,17 +585,17 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	return ret
 }
 
-func ipv4Address(node string, iface string) string {
+func ipv4Address(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
-func ipv6Address(node string, iface string) string {
+func ipv6Address(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv6.address.0.ip", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
-func macAddress(node string, iface string) string {
+func macAddress(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
@@ -607,19 +607,19 @@ func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	}, 15*time.Second, 1*time.Second)
 }
 
-func routeDest(node string, destIP string) string {
-	path := fmt.Sprintf("routes.running.#(destination==\"%s\")", destIP)
+func routeDest(node, destIP string) string {
+	path := fmt.Sprintf("routes.running.#(destination==%q)", destIP)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
-func routeNextHopInterface(node string, destIP string) AsyncAssertion {
+func routeNextHopInterface(node, destIP string) AsyncAssertion {
 	return Eventually(func() string {
-		path := fmt.Sprintf("routes.running.#(destination==\"%s\").next-hop-interface", destIP)
+		path := fmt.Sprintf("routes.running.#(destination==%q).next-hop-interface", destIP)
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
 
-func vlan(node string, iface string) string {
+func vlan(node, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
 }
@@ -653,7 +653,7 @@ func dnsResolverSearchForNodeEventually(node string) AsyncAssertion {
 	}, ReadTimeout, ReadInterval)
 }
 
-func dnsResolverForNode(node string, path string) []string {
+func dnsResolverForNode(node, path string) []string {
 	var arr []string
 
 	elemList := gjson.ParseBytes(currentStateJSON(node)).Get(path).Array()

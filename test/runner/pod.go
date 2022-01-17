@@ -46,8 +46,8 @@ func nmstateHandlerPods() ([]string, error) {
 
 func runAtPod(pod string, arguments ...string) string {
 	exec := []string{"exec", "-n", testenv.OperatorNamespace, pod, "--"}
-	execArguments := append(exec, arguments...)
-	output, err := cmd.Kubectl(execArguments...)
+	exec = append(exec, arguments...)
+	output, err := cmd.Kubectl(exec...)
 	ExpectWithOffset(2, err).ToNot(HaveOccurred())
 	return output
 }

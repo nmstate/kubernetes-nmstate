@@ -62,7 +62,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller selectors", func() {
 			// Objects to track in the fake client
 			objs := []runtime.Object{&node}
 			fakeClient := fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
-			selectorsRequest := NewFromPolicy(fakeClient, policy)
+			selectorsRequest := NewFromPolicy(fakeClient, &policy)
 
 			unmatchedNodeLabels, err := selectorsRequest.UnmatchedNodeLabels(expectedNode)
 			Expect(err).To(c.MatchResult)

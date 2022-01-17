@@ -201,7 +201,7 @@ var _ = Describe("Static addresses and routes", func() {
 				deletePolicy(TestPolicy)
 
 				capture := map[string]string{
-					"gw":                     fmt.Sprintf(`routes.running.destination=="%s"`, destIPAddress),
+					"gw":                     fmt.Sprintf(`routes.running.destination==%q`, destIPAddress),
 					"secondary-iface":        `interfaces.name==capture.gw.routes.running.0.next-hop-interface`,
 					"secondary-iface-routes": `routes.running.next-hop-interface==capture.secondary-iface.interfaces.0.name`,
 					"bridge-routes": fmt.Sprintf(

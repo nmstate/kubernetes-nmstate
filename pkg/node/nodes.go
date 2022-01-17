@@ -56,10 +56,10 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 	}
 
 	filteredNodes := []corev1.Node{}
-	for _, node := range nodes.Items {
-		for _, pod := range pods.Items {
-			if node.Name == pod.Spec.NodeName {
-				filteredNodes = append(filteredNodes, node)
+	for nodeIndex := range nodes.Items {
+		for podIndex := range pods.Items {
+			if nodes.Items[nodeIndex].Name == pods.Items[podIndex].Spec.NodeName {
+				filteredNodes = append(filteredNodes, nodes.Items[nodeIndex])
 				break
 			}
 		}

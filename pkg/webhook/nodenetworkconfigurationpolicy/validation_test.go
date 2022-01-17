@@ -62,13 +62,13 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 		policy        nmstatev1.NodeNetworkConfigurationPolicy
 		currentPolicy nmstatev1.NodeNetworkConfigurationPolicy
 		validationFn  func(
-			policy nmstatev1.NodeNetworkConfigurationPolicy,
-			current nmstatev1.NodeNetworkConfigurationPolicy,
+			policy *nmstatev1.NodeNetworkConfigurationPolicy,
+			current *nmstatev1.NodeNetworkConfigurationPolicy,
 		) []metav1.StatusCause
 		validationResult []metav1.StatusCause
 	}
 	DescribeTable("the NNCP conditions", func(v ValidationWebhookCase) {
-		validationResult := v.validationFn(v.policy, v.currentPolicy)
+		validationResult := v.validationFn(&v.policy, &v.currentPolicy)
 		Expect(validationResult).To(Equal(v.validationResult))
 	},
 		Entry("current policy in progress", ValidationWebhookCase{

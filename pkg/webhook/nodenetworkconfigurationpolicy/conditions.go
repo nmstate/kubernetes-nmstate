@@ -25,12 +25,11 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-func deleteConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
+func deleteConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 	policy.Status.Conditions = shared.ConditionList{}
-	return policy
 }
 
-func setConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
+func setConditionsUnknown(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 	unknownConditions := shared.ConditionList{}
 	for _, conditionType := range shared.NodeNetworkConfigurationPolicyConditionTypes {
 		unknownConditions.Set(
@@ -39,10 +38,9 @@ func setConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) nmsta
 			"", "")
 	}
 	policy.Status.Conditions = unknownConditions
-	return policy
 }
 
-func atEmptyConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) bool {
+func atEmptyConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) bool {
 	return policy.Status.Conditions == nil || len(policy.Status.Conditions) == 0
 }
 

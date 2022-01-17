@@ -38,9 +38,9 @@ type EnactmentConditions struct {
 	logger       logr.Logger
 }
 
-func New(client client.Client, enactmentKey types.NamespacedName) EnactmentConditions {
+func New(cli client.Client, enactmentKey types.NamespacedName) EnactmentConditions {
 	conditions := EnactmentConditions{
-		client:       client,
+		client:       cli,
 		enactmentKey: enactmentKey,
 		logger:       logf.Log.WithName("enactmentconditions").WithValues("enactment", enactmentKey.Name),
 	}

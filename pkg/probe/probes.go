@@ -99,19 +99,19 @@ func checkAPIServerConnectivity(timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
 		// Create new custom client to bypass cache [1]
 		// [1] https://github.com/operator-framework/operator-sdk/blob/master/doc/user/client.md#non-default-client
-		config, err := config.GetConfig()
+		currentConfig, err := config.GetConfig()
 		if err != nil {
 			return false, errors.Wrap(err, "getting config")
 		}
 		// Since we are going to retrieve Nodes default schema is good
 		// enough, also align timeout with poll
-		config.Timeout = timeout
-		client, err := client.New(config, client.Options{})
+		currentConfig.Timeout = timeout
+		cli, err := client.New(currentConfig, client.Options{})
 		if err != nil {
 			log.Error(err, "failed to creating new custom client")
 			return false, nil
 		}
-		err = client.Get(context.TODO(), types.NamespacedName{Name: metav1.NamespaceDefault}, &corev1.Namespace{})
+		err = cli.Get(context.TODO(), types.NamespacedName{Name: metav1.NamespaceDefault}, &corev1.Namespace{})
 		if err != nil {
 			log.Error(err, "failed reaching the apiserver")
 			return false, nil
@@ -120,11 +120,11 @@ func checkAPIServerConnectivity(timeout time.Duration) error {
 	})
 }
 
-func checkNodeReadiness(client client.Client, timeout time.Duration) error {
+func checkNodeReadiness(cli client.Client, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
 		nodeName := environment.NodeName()
 		node := corev1.Node{}
-		err := client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+		err := cli.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
 		if err != nil {
 			return false, errors.Wrapf(err, "failed retrieving pod's node %s", nodeName)
 		}
@@ -164,7 +164,7 @@ func defaultGw() (string, error) {
 	})
 }
 
-func runPing(client client.Client, timeout time.Duration) error {
+func runPing(_ client.Client, timeout time.Duration) error {
 	defaultGw, err := defaultGw()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve default gw at runProbes")
@@ -197,7 +197,7 @@ func lookupRootNS(nameServer string, timeout time.Duration) error {
 	return nil
 }
 
-func runDNS(client client.Client, timeout time.Duration) error {
+func runDNS(_ client.Client, _ time.Duration) error {
 	currentStateAsGJson, err := currentStateAsGJson()
 	if err != nil {
 		return errors.Wrap(err, "failed retrieving current state to get name resolving config")
@@ -248,26 +248,26 @@ func Select(cli client.Client) []Probe {
 		log.Info("WARNING not selecting 'dns' probe")
 	}
 
-	probes = append(probes, Probe{
-		name:    "api-server",
-		timeout: apiServerProbeTimeout,
-		run: func(_ client.Client, timeout time.Duration) error {
-			return checkAPIServerConnectivity(timeout)
+	probes = append(probes,
+		Probe{
+			name:    "api-server",
+			timeout: apiServerProbeTimeout,
+			run: func(_ client.Client, timeout time.Duration) error {
+				return checkAPIServerConnectivity(timeout)
+			},
 		},
-	})
-
-	probes = append(probes, Probe{
-		name:    "node-readiness",
-		timeout: nodeReadinessProbeTimeout,
-		run:     checkNodeReadiness,
-	})
+		Probe{
+			name:    "node-readiness",
+			timeout: nodeReadinessProbeTimeout,
+			run:     checkNodeReadiness,
+		})
 
 	return probes
 }
 
 // Run will run the externalConnectivityProbes and also some internal
 // kubernetes cluster connectivity and node readiness probes
-func Run(client client.Client, probes []Probe) error {
+func Run(cli client.Client, probes []Probe) error {
 	currentState, err := nmstatectl.Show()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve currentState at runProbes")
@@ -275,7 +275,7 @@ func Run(client client.Client, probes []Probe) error {
 
 	for _, p := range probes {
 		log.Info(fmt.Sprintf("Running '%s' probe", p.name))
-		err = p.run(client, p.timeout)
+		err = p.run(cli, p.timeout)
 		if err != nil {
 			return errors.Wrapf(
 				err,

@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -93,7 +92,8 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 	Expect(err).ToNot(HaveOccurred())
 	podsClientset := testenv.KubeClient.CoreV1().Pods(namespace)
 
-	for _, pod := range podList.Items {
+	for podIndex := range podList.Items {
+		pod := &podList.Items[podIndex]
 		appLabel, hasAppLabel := pod.Labels["app"]
 		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
 			continue
@@ -105,7 +105,7 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 			continue
 		}
 		defer podLogs.Close()
-		rawLogs, err := ioutil.ReadAll(podLogs)
+		rawLogs, err := io.ReadAll(podLogs)
 		if err != nil {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
 			continue

@@ -167,7 +167,7 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstate.State {
 		bridgeName, firstSecondaryNic))
 }
 
-func ifaceUpWithStaticIP(iface string, ipAddress string, prefixLen string) nmstate.State {
+func ifaceUpWithStaticIP(iface, ipAddress, prefixLen string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
@@ -191,7 +191,7 @@ func ifaceUpWithStaticIPAbsent(firstSecondaryNic string) nmstate.State {
 `, firstSecondaryNic))
 }
 
-func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
+func ifaceUpWithVlanUp(iface, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -202,7 +202,7 @@ func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
 `, iface, vlanID, iface, vlanID))
 }
 
-func vlanAbsent(iface string, vlanID string) nmstate.State {
+func vlanAbsent(iface, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -230,7 +230,7 @@ func ifaceDownIPv4Disabled(iface string) nmstate.State {
 `, iface))
 }
 
-func vlanUpWithStaticIP(iface string, ipAddress string) nmstate.State {
+func vlanUpWithStaticIP(iface, ipAddress string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: vlan
