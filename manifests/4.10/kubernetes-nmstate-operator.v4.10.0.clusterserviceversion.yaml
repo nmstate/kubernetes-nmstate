@@ -2,14 +2,6 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    operatorframework.io/initialization-resource: |-
-      {
-        "apiVersion": "nmstate.io/v1",
-        "kind": "NMState",
-        "metadata": {
-          "name": "nmstate"
-        }
-      }
     alm-examples: |-
       [{
         "apiVersion": "nmstate.io/v1",
