@@ -25,13 +25,13 @@ import (
 )
 
 type rootState struct {
-	Interfaces  []interfaceState `json:"interfaces" yaml:"interfaces"`
-	Routes      *routesState     `json:"routes,omitempty" yaml:"routes,omitempty"`
+	Interfaces  []interfaceState `json:"interfaces"             yaml:"interfaces"`
+	Routes      *routesState     `json:"routes,omitempty"       yaml:"routes,omitempty"`
 	DNSResolver *dnsResolver     `json:"dns-resolver,omitempty" yaml:"dns-resolver,omitempty"`
 }
 
 type routesState struct {
-	Config  []interface{} `json:"config" yaml:"config"`
+	Config  []interface{} `json:"config"  yaml:"config"`
 	Running []interface{} `json:"running" yaml:"running"`
 }
 
@@ -41,7 +41,7 @@ type interfaceState struct {
 }
 
 type dnsResolver struct {
-	Config  *DNSResolverData `json:"config,omitempty" yaml:"config,omitempty"`
+	Config  *DNSResolverData `json:"config,omitempty"  yaml:"config,omitempty"`
 	Running *DNSResolverData `json:"running,omitempty" yaml:"running,omitempty"`
 }
 

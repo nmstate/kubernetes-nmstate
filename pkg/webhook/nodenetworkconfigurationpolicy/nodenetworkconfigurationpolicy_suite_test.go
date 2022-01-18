@@ -47,7 +47,10 @@ func requestForPolicy(policy nmstatev1.NodeNetworkConfigurationPolicy) webhook.A
 	return request
 }
 
-func patchPolicy(policy nmstatev1.NodeNetworkConfigurationPolicy, response webhook.AdmissionResponse) nmstatev1.NodeNetworkConfigurationPolicy {
+func patchPolicy(
+	policy nmstatev1.NodeNetworkConfigurationPolicy,
+	response webhook.AdmissionResponse,
+) nmstatev1.NodeNetworkConfigurationPolicy {
 	patch, err := jsonpatch.DecodePatch(response.Patch)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 

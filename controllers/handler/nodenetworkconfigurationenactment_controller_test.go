@@ -60,7 +60,14 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 			},
 		}
 		expectRequeueAfterIsSetWithEnactmentRefresh = func(result ctrl.Result) {
-			ExpectWithOffset(1, result.RequeueAfter).To(BeNumerically("~", nmstateenactment.EnactmentRefresh, float64(nmstateenactment.EnactmentRefresh)*nmstateenactment.EnactmentRefreshMaxFactor))
+			ExpectWithOffset(1, result.RequeueAfter).
+				To(
+					BeNumerically(
+						"~",
+						nmstateenactment.EnactmentRefresh,
+						float64(nmstateenactment.EnactmentRefresh)*nmstateenactment.EnactmentRefreshMaxFactor,
+					),
+				)
 		}
 	)
 	BeforeEach(func() {

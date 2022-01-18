@@ -35,7 +35,10 @@ func expectTimestampAnnotationAtPolicy(policy nmstatev1.NodeNetworkConfiguration
 	annotation := policy.ObjectMeta.Annotations[TimestampLabelKey]
 	mutationTimestamp, err := strconv.ParseInt(annotation, 10, 64)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred(), "mutation timestamp should have int64 value")
-	ExpectWithOffset(1, mutationTimestamp).To(BeNumerically(">", testStartTime.UnixNano()), "mutation timestamp should be updated by the webhook")
+	ExpectWithOffset(1, mutationTimestamp).
+		To(
+			BeNumerically(">", testStartTime.UnixNano()), "mutation timestamp should be updated by the webhook",
+		)
 }
 
 var _ = Describe("NNCP Conditions Mutating Admission Webhook", func() {

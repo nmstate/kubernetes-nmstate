@@ -27,12 +27,20 @@ import (
 )
 
 type NMPolicyGenerator interface {
-	GenerateState(nmpolicySpec nmpolicytypes.PolicySpec, currentState []byte, cache nmpolicytypes.CachedState) (nmpolicytypes.GeneratedState, error)
+	GenerateState(
+		nmpolicySpec nmpolicytypes.PolicySpec,
+		currentState []byte,
+		cache nmpolicytypes.CachedState,
+	) (nmpolicytypes.GeneratedState, error)
 }
 
 type GenerateStateWithNMPolicy struct{}
 
-func (GenerateStateWithNMPolicy) GenerateState(nmpolicySpec nmpolicytypes.PolicySpec, currentState []byte, cache nmpolicytypes.CachedState) (nmpolicytypes.GeneratedState, error) {
+func (GenerateStateWithNMPolicy) GenerateState(
+	nmpolicySpec nmpolicytypes.PolicySpec,
+	currentState []byte,
+	cache nmpolicytypes.CachedState,
+) (nmpolicytypes.GeneratedState, error) {
 	return nmpolicy.GenerateState(nmpolicySpec, currentState, cache)
 }
 
@@ -61,9 +69,15 @@ func GenerateStateWithStateGenerator(stateGenerator NMPolicyGenerator,
 		Capture:      policySpec.Capture,
 		DesiredState: []byte(desiredState.Raw),
 	}
-	nmpolicyGeneratedState, err := stateGenerator.GenerateState(nmpolicySpec, currentState.Raw, convertCachedStateFromEnactment(cachedState))
+	nmpolicyGeneratedState, err := stateGenerator.GenerateState(
+		nmpolicySpec,
+		currentState.Raw,
+		convertCachedStateFromEnactment(cachedState),
+	)
 	if err != nil {
-		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{}, nmstateapi.NodeNetworkConfigurationEnactmentMetaInfo{}, nmstateapi.State{}, err
+		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+			nmstateapi.NodeNetworkConfigurationEnactmentMetaInfo{},
+			nmstateapi.State{}, err
 	}
 
 	capturedStates, desiredStateMetaInfo, desiredState := convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState)
@@ -88,7 +102,9 @@ func convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState nmpolicytypes
 	return capturedStates, desireStateMetaInfo, nmstateapi.State{Raw: nmpolicyGeneratedState.DesiredState}
 }
 
-func convertCachedStateFromEnactment(enactmentCachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState) nmpolicytypes.CachedState {
+func convertCachedStateFromEnactment(
+	enactmentCachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState,
+) nmpolicytypes.CachedState {
 	cachedState := nmpolicytypes.CachedState{Capture: make(map[string]nmpolicytypes.CaptureState)}
 	for captureKey, capturedState := range enactmentCachedState {
 		capturedState := nmpolicytypes.CaptureState{

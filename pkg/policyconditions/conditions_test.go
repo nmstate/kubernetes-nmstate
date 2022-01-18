@@ -39,7 +39,11 @@ import (
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
-func e(node string, policy string, conditionsSetters ...func(*nmstate.ConditionList, string)) nmstatev1beta1.NodeNetworkConfigurationEnactment {
+func e(
+	node string,
+	policy string,
+	conditionsSetters ...func(*nmstate.ConditionList, string),
+) nmstatev1beta1.NodeNetworkConfigurationEnactment {
 	conditions := nmstate.ConditionList{}
 	for _, conditionsSetter := range conditionsSetters {
 		conditionsSetter(&conditions, "")

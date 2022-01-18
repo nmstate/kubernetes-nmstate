@@ -66,7 +66,12 @@ func interfacesName(interfaces []interface{}) []string {
 	var names []string
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml")
+		Expect(hasName).
+			To(
+				BeTrue(),
+				"should have name field in the interfaces, "+
+					"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
+			)
 		names = append(names, name.(string))
 	}
 	return names
@@ -76,7 +81,12 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	var dummy map[string]interface{}
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml")
+		Expect(hasName).
+			To(
+				BeTrue(),
+				"should have name field in the interfaces, "+
+					"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
+			)
 		if name == searchedName {
 			return iface.(map[string]interface{})
 		}
@@ -85,7 +95,12 @@ func interfaceByName(interfaces []interface{}, searchedName string) map[string]i
 	return dummy
 }
 
-func setDesiredStateWithPolicyAndCaptureAndNodeSelector(name string, desiredState nmstate.State, capture map[string]string, nodeSelector map[string]string) error {
+func setDesiredStateWithPolicyAndCaptureAndNodeSelector(
+	name string,
+	desiredState nmstate.State,
+	capture map[string]string,
+	nodeSelector map[string]string,
+) error {
 	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 	policy.Name = name
 	key := types.NamespacedName{Name: name}
@@ -116,7 +131,12 @@ func setDesiredStateWithPolicyAndNodeSelectorEventually(name string, desiredStat
 	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name, desiredState, nil, nodeSelector)
 }
 
-func setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name string, desiredState nmstate.State, capture map[string]string, nodeSelector map[string]string) {
+func setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(
+	name string,
+	desiredState nmstate.State,
+	capture map[string]string,
+	nodeSelector map[string]string,
+) {
 	Eventually(func() error {
 		return setDesiredStateWithPolicyAndCaptureAndNodeSelector(name, desiredState, capture, nodeSelector)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred(), fmt.Sprintf("Failed updating desired state : %s", desiredState))
@@ -274,7 +294,21 @@ func waitFotNodeToStart(node string) error {
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {
 	Byf("Creating dummy %s", dummyName)
-	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "add", "type", "dummy", "con-name", dummyName, "ifname", dummyName, "ip4", "192.169.1.50/24")
+	_, errs := runner.RunAtNodes(
+		nodesToModify,
+		"sudo",
+		"nmcli",
+		"con",
+		"add",
+		"type",
+		"dummy",
+		"con-name",
+		dummyName,
+		"ifname",
+		dummyName,
+		"ip4",
+		"192.169.1.50/24",
+	)
 	_, upErrs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "up", dummyName)
 	errs = append(errs, upErrs...)
 	return errs
@@ -438,7 +472,14 @@ func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAss
 			// There is a bug [1] at centos8 and output is and invalid json
 			// so it parses the non json output
 			// [1] https://bugs.centos.org/view.php?id=16533
-			_, err := cmd.Run("test/e2e/check-bridge-has-vlans-el8.sh", false, node, connection, strconv.Itoa(minVlan), strconv.Itoa(maxVlan))
+			_, err := cmd.Run(
+				"test/e2e/check-bridge-has-vlans-el8.sh",
+				false,
+				node,
+				connection,
+				strconv.Itoa(minVlan),
+				strconv.Itoa(maxVlan),
+			)
 			if err != nil {
 				return err
 			}
@@ -522,7 +563,12 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	ifacesState := make(map[string]string)
 	for _, iface := range interfaces {
 		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).To(BeTrue(), "should have name field in the interfaces, https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml")
+		Expect(hasName).
+			To(
+				BeTrue(),
+				"should have name field in the interfaces, "+
+					"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
+			)
 		if ifaceInSlice(name.(string), exclude) {
 			continue
 		}

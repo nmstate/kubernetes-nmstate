@@ -24,18 +24,29 @@ import (
 
 var _ = Describe("Error messages formatting", func() {
 	var (
-		debugInvalidInput      = "      2021-04-15 08:17:35,057 root         DEBUG    Async action: Create checkpoint started\n      2021-04-15 08:17:35,060 root         DEBUG    Checkpoint None created for all devices\n"
-		debugValidInput        = "A message containing debug that should not be removed.\n"
-		tracebackInvalidInput  = "      Traceback (most recent call last):\n        File \"/usr/bin/nmstatectl\", line 11, in <module>\n          load_entry_point('nmstate==0.3.6', 'console_scripts', 'nmstatectl')()\n      File \"/usr/lib/python3.6/site-packages/nmstatectl/nmstatectl.py\", line 69, in main\n     f\"Interface {iface.name} has unknown slave: \"\n      libnmstate.error.NmstateValueError: Interface bond1 has unknown slave: eth10\n      "
+		debugInvalidInput = "      2021-04-15 08:17:35,057 root         DEBUG    Async action: Create checkpoint started\n      " +
+			"2021-04-15 08:17:35,060 root         DEBUG    Checkpoint None created for all devices\n"
+		debugValidInput       = "A message containing debug that should not be removed.\n"
+		tracebackInvalidInput = "      Traceback (most recent call last):\n        File \"/usr/bin/nmstatectl\", line 11, in <module>\n " +
+			"         load_entry_point('nmstate==0.3.6', 'console_scripts', 'nmstatectl')()\n      File \"/usr/lib/python3.6/" +
+			"site-packages/nmstatectl/nmstatectl.py\", line 69, in main\n     f\"Interface {iface.name} has unknown slave: \"\n      " +
+			"libnmstate.error.NmstateValueError: Interface bond1 has unknown slave: eth10\n      "
 		tracebackInvalidOutput = "      libnmstate.error.NmstateValueError\n  Interface bond1 has unknown slave\n    eth10\n"
 		tracebackValidInput    = "A message containing File \"/usr/bin/nmstatectl\" that should not be removed.\n"
-		failedToExecuteInput   = " failed to execute nmstatectl set --no-commit --timeout 480: 'exit status 1' '' '2021-02-22 11:10:08,962 root         WARNING  libnm version 1.26.7 mismatches NetworkManager version 1.29.9\n"
-		failedToExecuteOutput  = "failed to execute nmstatectl set --no-commit --timeout 480: 'exit status 1'\n"
-		pingInvalidInput       = "rolling back desired state configuration: failed runnig probes after network changes: failed runnig probe 'ping' with after network reconfiguration -> currentState: ---\n      dns-resolver:\n      config:\n          search: []\n          server: []\n        running: {}\n      route-rules:\n        config: []\n      : failed to retrieve default gw at runProbes: timed out waiting for the condition"
-		pingInvalidOutput      = "      \n  failed to retrieve default gw at runProbes\n    timed out waiting for the condition\n"
-		pingValidInput         = "rolling back desired state configuration: failed runnig probes after network changes: failed runnig probe 'ping' with after network reconfiguration.\nThe rest of the message should be kept.\n"
-		pingValidOutput        = "rolling back desired state configuration\n  failed runnig probes after network changes\n    failed runnig probe 'ping' with after network reconfiguration.\nThe rest of the message should be kept.\n"
-		desiredStateYaml       = "libnmstate.error.NmstateVerificationError:\n      desired\n      =======\n---\n      name: eth1\n      type: ethernet\n      state: up\n"
+		failedToExecuteInput   = " failed to execute nmstatectl set --no-commit --timeout 480: 'exit status 1' '' '2021-02-22 " +
+			"11:10:08,962 root         WARNING  libnm version 1.26.7 mismatches NetworkManager version 1.29.9\n"
+		failedToExecuteOutput = "failed to execute nmstatectl set --no-commit --timeout 480: 'exit status 1'\n"
+		pingInvalidInput      = "rolling back desired state configuration: failed runnig probes after network changes: failed runnig " +
+			"probe 'ping' with after network reconfiguration -> currentState: ---\n      dns-resolver:\n      config:\n          " +
+			"search: []\n          server: []\n        running: {}\n      route-rules:\n        config: []\n      : failed to retrieve " +
+			"default gw at runProbes: timed out waiting for the condition"
+		pingInvalidOutput = "      \n  failed to retrieve default gw at runProbes\n    timed out waiting for the condition\n"
+		pingValidInput    = "rolling back desired state configuration: failed runnig probes after network changes: failed runnig " +
+			"probe 'ping' with after network reconfiguration.\nThe rest of the message should be kept.\n"
+		pingValidOutput = "rolling back desired state configuration\n  failed runnig probes after network changes\n    failed " +
+			"runnig probe 'ping' with after network reconfiguration.\nThe rest of the message should be kept.\n"
+		desiredStateYaml = "libnmstate.error.NmstateVerificationError:\n      desired\n      =======\n---\n      name: eth1\n      " +
+			"type: ethernet\n      state: up\n"
 	)
 
 	Context("With DEBUG text", func() {

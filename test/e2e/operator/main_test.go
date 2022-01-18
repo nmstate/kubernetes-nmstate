@@ -161,7 +161,11 @@ func eventuallyOperandIsNotFound(testData operatorTestData) {
 	By("Wait for operand pods to terminate")
 	Eventually(func() ([]corev1.Pod, error) {
 		podList := corev1.PodList{}
-		err := testenv.Client.List(context.TODO(), &podList, &client.ListOptions{Namespace: testData.ns, LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector()})
+		err := testenv.Client.List(
+			context.TODO(),
+			&podList,
+			&client.ListOptions{Namespace: testData.ns, LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector()},
+		)
 		return podList.Items, err
 	}, 120*time.Second, time.Second).Should(BeEmpty(), "should terminate all the pods")
 }

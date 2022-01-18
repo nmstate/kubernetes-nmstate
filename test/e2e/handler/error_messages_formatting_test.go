@@ -106,13 +106,25 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should discard disarranged parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).NotTo(ContainSubstring(unwantedMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).NotTo(ContainSubstring(unwantedMessage))
 			}
 		})
 
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).To(ContainSubstring(desiredMessage))
 			}
 		})
 	})
@@ -132,13 +144,25 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should discard disarranged parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).NotTo(ContainSubstring(unwantedMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).NotTo(ContainSubstring(unwantedMessage))
 			}
 		})
 
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).To(ContainSubstring(desiredMessage))
 			}
 		})
 	})
@@ -163,13 +187,25 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should discard disarranged parts of the message", func() {
 
 			for _, unwantedMessage := range messagesToRemove {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).NotTo(ContainSubstring(unwantedMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).NotTo(ContainSubstring(unwantedMessage))
 			}
 		})
 
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).To(ContainSubstring(desiredMessage))
 			}
 		})
 	})
@@ -185,7 +221,9 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 
 		It("should contain the error message", func() {
-			Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring("failure generating desiredState and capturedStates"))
+			Expect(
+				enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message,
+			).To(ContainSubstring("failure generating desiredState and capturedStates"))
 		})
 	})
 })

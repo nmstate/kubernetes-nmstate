@@ -73,7 +73,14 @@ var _ = Describe("Node controller reconcile", func() {
 			},
 		}
 		expectRequeueAfterIsSetWithNetworkStateRefresh = func(result ctrl.Result) {
-			ExpectWithOffset(1, result.RequeueAfter).To(BeNumerically("~", nmstatenode.NetworkStateRefresh, float64(nmstatenode.NetworkStateRefresh)*nmstatenode.NetworkStateRefreshMaxFactor))
+			ExpectWithOffset(1, result.RequeueAfter).
+				To(
+					BeNumerically(
+						"~",
+						nmstatenode.NetworkStateRefresh,
+						float64(nmstatenode.NetworkStateRefresh)*nmstatenode.NetworkStateRefreshMaxFactor,
+					),
+				)
 		}
 	)
 	BeforeEach(func() {
@@ -216,20 +223,24 @@ routes:
 				By("Set last state")
 				reconciler.lastState = filteredOutObservedState
 			})
-			It("should create a new nodenetworkstate with node as owner reference, making sure the nodenetworkstate will be removed when the node is deleted", func() {
-				_, err := reconciler.Reconcile(context.Background(), request)
-				Expect(err).ToNot(HaveOccurred())
+			It(
+				"should create a new nodenetworkstate with node as owner reference, making sure "+
+					"the nodenetworkstate will be removed when the node is deleted",
+				func() {
+					_, err := reconciler.Reconcile(context.Background(), request)
+					Expect(err).ToNot(HaveOccurred())
 
-				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
-				nnsKey := types.NamespacedName{Name: existingNodeName}
-				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(obtainedNNS.Name).To(Equal(nnsKey.Name))
-				Expect(obtainedNNS.ObjectMeta.OwnerReferences).To(HaveLen(1))
-				Expect(obtainedNNS.ObjectMeta.OwnerReferences[0]).To(Equal(
-					metav1.OwnerReference{Name: existingNodeName, Kind: "Node", APIVersion: "v1", UID: node.UID},
-				))
-			})
+					obtainedNNS := nmstatev1beta1.NodeNetworkState{}
+					nnsKey := types.NamespacedName{Name: existingNodeName}
+					err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(obtainedNNS.Name).To(Equal(nnsKey.Name))
+					Expect(obtainedNNS.ObjectMeta.OwnerReferences).To(HaveLen(1))
+					Expect(obtainedNNS.ObjectMeta.OwnerReferences[0]).To(Equal(
+						metav1.OwnerReference{Name: existingNodeName, Kind: "Node", APIVersion: "v1", UID: node.UID},
+					))
+				},
+			)
 			It("should return a Result with RequeueAfter set (trigger re-reconciliation)", func() {
 				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())

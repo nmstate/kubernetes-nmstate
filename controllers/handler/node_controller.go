@@ -45,7 +45,13 @@ import (
 )
 
 // Added for test purposes
-type NmstateUpdater func(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState, versions *nmstate.DependencyVersions) error
+type NmstateUpdater func(
+	client client.Client,
+	node *corev1.Node,
+	observedState shared.State,
+	nns *nmstatev1beta1.NodeNetworkState,
+	versions *nmstate.DependencyVersions,
+) error
 type NmstatectlShow func() (string, error)
 
 // NodeReconciler reconciles a Node object
@@ -207,7 +213,11 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkState{}).
-		Watches(&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}}, &handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}}, builder.WithPredicates(onDeleteOrForceUpdateForThisNode)).
+		Watches(
+			&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}},
+			&handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}},
+			builder.WithPredicates(onDeleteOrForceUpdateForThisNode),
+		).
 		Complete(r)
 	if err != nil {
 		return errors.Wrap(err, "failed to add controller to Node Reconciler listening Node Network State events")

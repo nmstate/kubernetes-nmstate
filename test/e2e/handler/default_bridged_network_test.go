@@ -112,9 +112,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 				Byf("Check %s has the default ip address", primaryNic)
 				for _, node := range nodes {
-					Eventually(func() string {
-						return ipv4Address(node, primaryNic)
-					}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
+					Eventually(
+						func() string {
+							return ipv4Address(node, primaryNic)
+						},
+						30*time.Second,
+						1*time.Second,
+					).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 				}
 
 				Byf("Check %s is back as the default route interface", primaryNic)
@@ -182,9 +186,13 @@ func waitForNodesReady() {
 func checkThatBridgeTookOverTheDefaultIP(nodesToCheck []string, bridgeName string, addressByNode map[string]string) {
 	By("Verifying that the bridge obtained node's default IP")
 	for _, node := range nodesToCheck {
-		Eventually(func() string {
-			return ipv4Address(node, bridgeName)
-		}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s has not take over the %s address", bridgeName, primaryNic))
+		Eventually(
+			func() string {
+				return ipv4Address(node, bridgeName)
+			},
+			15*time.Second,
+			1*time.Second,
+		).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s has not take over the %s address", bridgeName, primaryNic))
 	}
 
 	By("Verify that next-hop-interface for default route is the bridge")

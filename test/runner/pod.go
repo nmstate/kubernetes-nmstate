@@ -28,7 +28,17 @@ import (
 )
 
 func nmstateHandlerPods() ([]string, error) {
-	output, err := cmd.Kubectl("get", "pod", "-n", testenv.OperatorNamespace, "--no-headers=true", "-o", "custom-columns=:metadata.name", "-l", "component=kubernetes-nmstate-handler")
+	output, err := cmd.Kubectl(
+		"get",
+		"pod",
+		"-n",
+		testenv.OperatorNamespace,
+		"--no-headers=true",
+		"-o",
+		"custom-columns=:metadata.name",
+		"-l",
+		"component=kubernetes-nmstate-handler",
+	)
 	ExpectWithOffset(2, err).ToNot(HaveOccurred())
 	names := strings.Split(strings.TrimSpace(output), "\n")
 	return names, err

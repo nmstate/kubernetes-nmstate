@@ -109,7 +109,14 @@ var _ = Describe("NMState operator", func() {
 
 func installOperator(operator operatorTestData) error {
 	By(fmt.Sprintf("Creating NMState operator with namespace '%s'", operator.ns))
-	_, err := cmd.Run("make", false, fmt.Sprintf("OPERATOR_NAMESPACE=%s", operator.ns), fmt.Sprintf("HANDLER_NAMESPACE=%s", operator.ns), "IMAGE_REGISTRY=registry:5000", "manifests")
+	_, err := cmd.Run(
+		"make",
+		false,
+		fmt.Sprintf("OPERATOR_NAMESPACE=%s", operator.ns),
+		fmt.Sprintf("HANDLER_NAMESPACE=%s", operator.ns),
+		"IMAGE_REGISTRY=registry:5000",
+		"manifests",
+	)
 	Expect(err).ToNot(HaveOccurred())
 
 	manifestsDir := "build/_output/manifests/"
