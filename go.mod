@@ -20,7 +20,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.9.3
 	github.com/tidwall/sjson v1.1.7
-	go.uber.org/zap v1.19.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.23.1
 	k8s.io/apimachinery v0.23.1
@@ -185,6 +184,7 @@ require (
 	go.starlark.net v0.0.0-20200306205701-8dd3e2ee1dd5 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
 	golang.org/x/mod v0.5.1 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 // indirect
