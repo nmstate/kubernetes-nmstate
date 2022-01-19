@@ -31,7 +31,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
-const nmstateCommand = "nmstatectl"
+const nmstateCommand = "nmstatectl-rust"
 
 func nmstatectlWithInput(arguments []string, input string) (string, error) {
 	cmd := exec.Command(nmstateCommand, arguments...)
