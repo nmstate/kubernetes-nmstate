@@ -24,7 +24,6 @@ import (
 	"os"
 	"time"
 
-	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -91,7 +90,7 @@ func main() {
 		flag.CommandLine.Set("zap-devel", "true")
 	}
 
-	setupLogger(opt)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opt)))
 
 	// Lock only for handler, we can run old and new version of
 	// webhook without problems, policy status will be updated
@@ -247,15 +246,6 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func setupLogger(opts zap.Options) {
-	opts.EncoderConfigOptions = append(opts.EncoderConfigOptions, func(ec *zapcore.EncoderConfig) {
-		ec.EncodeTime = zapcore.ISO8601TimeEncoder
-	})
-
-	logger := zap.New(zap.UseFlagOptions(&opts))
-	ctrl.SetLogger(logger)
 }
 
 // Start profiler on given port if ENABLE_PROFILER is True

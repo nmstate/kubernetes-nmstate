@@ -31,6 +31,8 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-webhook
+          args:
+          - --zap-time-encoding=iso8601
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
@@ -113,6 +115,8 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-cert-manager
+          args:
+          - --zap-time-encoding=iso8601
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
@@ -205,6 +209,8 @@ spec:
       priorityClassName: system-node-critical
       containers:
         - name: nmstate-handler
+          args:
+          - --zap-time-encoding=iso8601
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
