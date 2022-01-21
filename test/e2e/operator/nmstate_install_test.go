@@ -114,7 +114,6 @@ func installOperator(operator operatorTestData) {
 		false,
 		fmt.Sprintf("OPERATOR_NAMESPACE=%s", operator.ns),
 		fmt.Sprintf("HANDLER_NAMESPACE=%s", operator.ns),
-		"IMAGE_REGISTRY=registry:5000",
 		"manifests",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -125,6 +124,8 @@ func installOperator(operator operatorTestData) {
 		_, err = cmd.Kubectl("apply", "-f", manifestsDir+manifest)
 		Expect(err).ToNot(HaveOccurred())
 	}
+	cmd.Kubectl("apply", "-f", fmt.Sprintf("%s/scc.yaml", manifestsDir)) //ignore the error to be able to run the test against none OCP clusters as well
+
 	deployment.GetEventually(types.NamespacedName{Namespace: operator.ns, Name: "nmstate-operator"}).Should(deployment.BeReady())
 }
 
