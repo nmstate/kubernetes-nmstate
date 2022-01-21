@@ -1,7 +1,15 @@
-FROM registry.access.redhat.com/ubi8/ubi-minimal
-ARG TARGETARCH
+FROM quay.io/centos/centos:stream8 AS build
 
-COPY build/_output/bin/operator.manager.linux-$TARGETARCH /usr/local/bin/manager
+RUN dnf install -y make golang-1.17.*
+
+COPY . /workdir
+WORKDIR /workdir
+
+RUN --mount=type=cache,target=/root/.cache/go-build go build -o /manager ./cmd/operator
+
+FROM registry.access.redhat.com/ubi8/ubi-minimal
+
+COPY --from=build /manager /usr/local/bin/manager
 
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
 COPY deploy/handler/namespace.yaml /bindata/kubernetes-nmstate/namespace/
