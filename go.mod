@@ -26,6 +26,7 @@ require (
 	k8s.io/client-go v12.0.0+incompatible
 	k8s.io/kubectl v0.23.1
 	k8s.io/release v0.12.0
+	nmstate.io/go/nmstate v0.0.0
 	sigs.k8s.io/controller-runtime v0.11.0
 	sigs.k8s.io/controller-tools v0.6.0
 	sigs.k8s.io/yaml v1.3.0
@@ -231,6 +232,7 @@ replace (
 	github.com/nmstate/kubernetes-nmstate/api => ./api
 	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
 	k8s.io/client-go => k8s.io/client-go v0.23.1
+	nmstate.io/go/nmstate => github.com/nmstate/nmstate/rust/src/go/nmstate v0.0.0-20220411120213-64e310b5e86a
 )
 
 exclude github.com/spf13/viper v1.3.2 // Required to fix CVE-2018-1098

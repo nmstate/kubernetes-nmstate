@@ -1167,6 +1167,8 @@ github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nmstate/nmpolicy v0.2.1 h1:DGUKjQV8GI0qeae2Uch9yoY0V87uTALyNnqsBuiOJ9Y=
 github.com/nmstate/nmpolicy v0.2.1/go.mod h1:uItjRVdUUTrtIUmG/772gMujJwMTHgUxPkUPjnpy6Is=
+github.com/nmstate/nmstate/rust/src/go/nmstate v0.0.0-20220411120213-64e310b5e86a h1:MxT5FlECnjuvsezWv3wmLDQZLpDGtHRwZosIMGbxqdk=
+github.com/nmstate/nmstate/rust/src/go/nmstate v0.0.0-20220411120213-64e310b5e86a/go.mod h1:+V7mCwK24P5oGufZaSOl2707IiCbgJYpGohmKupvwBw=
 github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481 h1:Up6+btDp321ZG5/zdSLo48H9Iaq0UQGthrhWC6pCxzE=
 github.com/nozzle/throttler v0.0.0-20180817012639-2ea982251481/go.mod h1:yKZQO8QE2bHlgozqWDiRVqTFlLQSj30K/6SAK8EeYFw=
 github.com/nwaples/rardecode v1.1.0/go.mod h1:5DzqNKiOdpKKBH87u8VlvAnPZMXcGRhxWkRpHbbfGS0=

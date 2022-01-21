@@ -1522,6 +1522,9 @@ k8s.io/utils/net
 k8s.io/utils/path
 k8s.io/utils/pointer
 k8s.io/utils/trace
+# nmstate.io/go/nmstate v0.0.0 => github.com/nmstate/nmstate/rust/src/go/nmstate v0.0.0-20220411120213-64e310b5e86a
+## explicit; go 1.16
+nmstate.io/go/nmstate
 # sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.25
 ## explicit; go 1.17
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
@@ -1713,3 +1716,4 @@ sigs.k8s.io/yaml
 # github.com/nmstate/kubernetes-nmstate/api => ./api
 # golang.org/x/text => golang.org/x/text v0.3.3
 # k8s.io/client-go => k8s.io/client-go v0.23.1
+# nmstate.io/go/nmstate => github.com/nmstate/nmstate/rust/src/go/nmstate v0.0.0-20220411120213-64e310b5e86a

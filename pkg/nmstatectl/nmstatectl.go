@@ -18,80 +18,43 @@ limitations under the License.
 package nmstatectl
 
 import (
-	"bytes"
-	"fmt"
-	"io"
-	"os/exec"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
+	"sigs.k8s.io/yaml"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"nmstate.io/go/nmstate"
 )
 
-const nmstateCommand = "nmstatectl"
-
-func nmstatectlWithInput(arguments []string, input string) (string, error) {
-	cmd := exec.Command(nmstateCommand, arguments...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
-	if input != "" {
-		stdin, err := cmd.StdinPipe()
-		if err != nil {
-			return "", fmt.Errorf("failed to create pipe for writing into %s: %v", nmstateCommand, err)
-		}
-		go func() {
-			defer stdin.Close()
-			_, err = io.WriteString(stdin, input)
-			if err != nil {
-				fmt.Printf("failed to write input into stdin: %v\n", err)
-			}
-		}()
-	}
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf(
-			"failed to execute %s %s: '%v' '%s' '%s'",
-			nmstateCommand,
-			strings.Join(arguments, " "),
-			err,
-			stdout.String(),
-			stderr.String(),
-		)
-	}
-	return stdout.String(), nil
-}
-
-func nmstatectl(arguments []string) (string, error) {
-	return nmstatectlWithInput(arguments, "")
-}
-
 func Show() (string, error) {
-	return nmstatectl([]string{"show"})
+	return nmstate.New().RetrieveNetState()
 }
 
-func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
+func Set(desiredState nmstateapi.State, timeout time.Duration) (string, error) {
 	var setDoneCh = make(chan struct{})
 	go setUnavailableUp(setDoneCh)
 	defer close(setDoneCh)
 
-	setOutput, err := nmstatectlWithInput(
-		[]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
-		string(desiredState.Raw),
-	)
-	return setOutput, err
+	stateJSON, err := yaml.YAMLToJSON([]byte(desiredState.Raw))
+	if err != nil {
+		return "", err
+	}
+
+	nmstateLog := strings.Builder{}
+	nmstatectl := nmstate.New(nmstate.WithLogsWritter(&nmstateLog), nmstate.WithTimeout(timeout), nmstate.WithNoCommit())
+	output, err := nmstatectl.ApplyNetState(string(stateJSON))
+	if err != nil {
+		return nmstateLog.String(), err
+	}
+	nmstateLog.WriteString(output)
+	return nmstateLog.String(), err
 }
 
 func Commit() (string, error) {
-	return nmstatectl([]string{"commit"})
+	return nmstate.New().CommitCheckpoint("")
 }
 
-func Rollback() error {
-	_, err := nmstatectl([]string{"rollback"})
-	if err != nil {
-		return errors.Wrapf(err, "failed calling nmstatectl rollback")
-	}
-	return nil
+func Rollback() (string, error) {
+	return nmstate.New().RollbackCheckpoint("")
 }

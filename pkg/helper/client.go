@@ -138,7 +138,7 @@ func ExecuteCommand(command string, arguments ...string) (string, error) {
 
 func rollback(cli client.Client, probes []probe.Probe, cause error) error {
 	message := fmt.Sprintf("rolling back desired state configuration: %s", cause)
-	err := nmstatectl.Rollback()
+	_, err := nmstatectl.Rollback()
 	if err != nil {
 		return errors.Wrap(err, message)
 	}

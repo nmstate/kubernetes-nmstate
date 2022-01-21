@@ -6,9 +6,12 @@ ARG TARGETARCH
 RUN mkdir /workdir
 
 COPY go.mod /workdir
+
 WORKDIR /workdir
 
-RUN dnf install -y golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).*
+RUN dnf install -b -y dnf-plugins-core && \
+    dnf copr enable -y nmstate/nmstate-git && \
+    dnf install -b -y make golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).* nmstate-devel
 
 COPY . .
 
