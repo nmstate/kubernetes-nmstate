@@ -19,6 +19,10 @@ function deploy_operator() {
     $kubectl apply -f $MANIFESTS_DIR/role_binding.yaml
     $kubectl apply -f deploy/crds/nmstate.io_nmstates.yaml
     $kubectl apply -f $MANIFESTS_DIR/operator.yaml
+
+    if isOpenshift; then
+        $kubectl apply -f $MANIFESTS_DIR/scc.yaml
+    fi
 }
 
 function wait_ready_operator() {
