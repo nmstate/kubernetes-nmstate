@@ -49,8 +49,6 @@ fi
 while ! oc wait mcp --all --for=condition=Updated --timeout -1s; do sleep 1; done
 
 make cluster-sync-operator
-# Will fail on subsequent runs, this is fine.
-oc create -f build/_output/manifests/scc.yaml || :
 oc create -f test/e2e/nmstate.yaml
 # On first deployment, it can take a while for all of the pods to come up
 # First wait for the handler pods to be created
