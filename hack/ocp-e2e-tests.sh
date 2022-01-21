@@ -38,8 +38,6 @@ when name servers are wrong after state configuration"
 fi
 
 make cluster-sync-operator
-# Will fail on subsequent runs, this is fine.
-oc create -f build/_output/manifests/scc.yaml || :
 oc create -f test/e2e/nmstate.yaml
 # On first deployment, it can take a while for all of the pods to come up
 # First wait for the handler pods to be created
