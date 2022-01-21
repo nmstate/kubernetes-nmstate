@@ -11,10 +11,9 @@
 set -ex
 
 export KUBEVIRT_PROVIDER=external
-export IMAGE_BUILDER="${IMAGE_BUILDER:-podman}"
-export DEV_IMAGE_REGISTRY="${DEV_IMAGE_REGISTRY:-quay.io}"
-export KUBEVIRTCI_RUNTIME="${KUBEVIRTCI_RUNTIME:-podman}"
-export FLAKE_ATTEMPTS="${FLAKE_ATTEMPTS:-3}"
+export IMAGE_BUILDER=podman
+export DEV_IMAGE_REGISTRY=quay.io
+export KUBEVIRTCI_RUNTIME=podman
 
 if [ "${CI}" == "true" ]; then
     source ${SHARED_DIR}/fix-uid.sh
@@ -24,4 +23,4 @@ else
 fi
 
 make cluster-sync-operator
-make test-e2e-operator E2E_TEST_ARGS="--flake-attempts=${FLAKE_ATTEMPTS}"
+make test-e2e-operator
