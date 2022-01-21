@@ -197,8 +197,13 @@ test-e2e-upgrade: manifests
 
 test-e2e: test-e2e-operator test-e2e-handler
 
-test-e2e-ocp: 
-	./hack/ocp-e2e-tests.sh
+test-e2e-ocp: test-e2e-handler-ocp # deprecated. Use test-e2e-handler-ocp instead
+
+test-e2e-handler-ocp:
+	./hack/ocp-e2e-tests-handler.sh
+
+test-e2e-operator-ocp:
+	./hack/ocp-e2e-tests-operator.sh
 
 cluster-up:
 	./cluster/up.sh
