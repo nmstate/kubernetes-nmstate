@@ -73,7 +73,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Policy is not found, removing the enactment")
-			err := r.Client.Delete(context.TODO(), enactmentInstance)
+			err = r.Client.Delete(context.TODO(), enactmentInstance)
 			return ctrl.Result{}, err
 		}
 		log.Error(err, "Error retrieving policy")

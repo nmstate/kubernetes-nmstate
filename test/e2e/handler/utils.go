@@ -226,8 +226,8 @@ func deleteNodeNeworkStates() {
 	err := testenv.Client.List(context.TODO(), nodeNetworkStateList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	var deleteErrors []error
-	for _, nodeNetworkState := range nodeNetworkStateList.Items {
-		deleteErrors = append(deleteErrors, testenv.Client.Delete(context.TODO(), &nodeNetworkState))
+	for i := range nodeNetworkStateList.Items {
+		deleteErrors = append(deleteErrors, testenv.Client.Delete(context.TODO(), &nodeNetworkStateList.Items[i]))
 	}
 	Expect(deleteErrors).ToNot(ContainElement(HaveOccurred()))
 }
@@ -420,7 +420,7 @@ func bridgeVlansAtNode(node string) (string, error) {
 	return runner.RunAtNode(node, "sudo", "bridge", "-j", "vlan", "show")
 }
 
-func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion {
+func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAssertion { //nolint:unparam
 	Byf("Getting vlan filtering flags for node %s connection %s and vlan %d", node, connection, vlan)
 	return Eventually(func() []string {
 		bridgeVlans, err := bridgeVlansAtNode(node)
@@ -457,7 +457,7 @@ func getVLANFlagsEventually(node string, connection string, vlan int) AsyncAsser
 	}, ReadTimeout, ReadInterval)
 }
 
-func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion {
+func hasVlans(node string, connection string, minVlan int, maxVlan int) AsyncAssertion { //nolint:unparam
 	ExpectWithOffset(1, minVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">", 0))
 	ExpectWithOffset(1, maxVlan).To(BeNumerically(">=", minVlan))

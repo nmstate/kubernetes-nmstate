@@ -25,7 +25,8 @@ import (
 func Touch(fileName string) error {
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
-		file, err := os.Create(fileName)
+		var file *os.File
+		file, err = os.Create(fileName)
 		if err != nil {
 			return err
 		}

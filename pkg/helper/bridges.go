@@ -33,14 +33,16 @@ import (
 )
 
 const nmcliCommand = "nmcli"
+const minVlanID = 2
+const maxVlanID = 4094
 
 var defaultVlanFiltering = map[string]interface{}{
 	"mode": "trunk",
 	"trunk-tags": []map[string]interface{}{
 		{
 			"id-range": map[string]interface{}{
-				"min": 2,
-				"max": 4094,
+				"min": minVlanID,
+				"max": maxVlanID,
 			},
 		},
 	},
@@ -153,7 +155,7 @@ func enableVlanFiltering(upBridgesWithPorts map[string][]string) (string, error)
 			return out, err
 		}
 		for _, port := range ports {
-			out, err = enableBridgPortVlans(port)
+			out, err = enableBridgePortVlans(port)
 			if err != nil {
 				return out, err
 			}
@@ -167,8 +169,8 @@ func enableBridgeVlanFiltering(bridgeName string) (string, error) {
 	return runCommand(nmcliCommand, args)
 }
 
-func enableBridgPortVlans(port string) (string, error) {
-	args := []string{"con", "mod", port, "bridge-port.vlans", "2-4094"}
+func enableBridgePortVlans(port string) (string, error) {
+	args := []string{"con", "mod", port, "bridge-port.vlans", fmt.Sprintf("%d-%d", minVlanID, maxVlanID)}
 	return runCommand(nmcliCommand, args)
 }
 
