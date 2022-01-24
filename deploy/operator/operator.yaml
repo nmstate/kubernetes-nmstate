@@ -33,6 +33,10 @@ spec:
           imagePullPolicy: {{ .OperatorPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: 60m
+              memory: 30Mi
           env:
             - name: WATCH_NAMESPACE
               value: ""
