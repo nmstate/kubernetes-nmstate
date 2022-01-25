@@ -24,6 +24,7 @@ spec:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-operator
           args:
