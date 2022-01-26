@@ -184,8 +184,7 @@ var _ = Describe("NodeNetworkState", func() {
 			deletePolicy("test-policy")
 		})
 
-		It("should discard disarranged parts of the message", func() {
-
+		It("should discard disarranged parts of the message and keep desired parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
 				Expect(
 					enactmentConditionsStatus(
@@ -195,9 +194,6 @@ var _ = Describe("NodeNetworkState", func() {
 						Message,
 				).NotTo(ContainSubstring(unwantedMessage))
 			}
-		})
-
-		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
 				Expect(
 					enactmentConditionsStatus(
