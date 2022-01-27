@@ -16,18 +16,39 @@
 
 package resolver
 
-import "fmt"
+import (
+	"fmt"
 
-func pathError(format string, a ...interface{}) error {
-	return fmt.Errorf("invalid path: %v", fmt.Errorf(format, a...))
+	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
+)
+
+type PathError struct {
+	inner     error
+	errorNode *ast.Node
+}
+
+func (r PathError) Unwrap() error {
+	return r.inner
+}
+
+func (r PathError) Error() string {
+	return r.inner.Error()
+}
+
+func pathError(currentStepNode *ast.Node, format string, a ...interface{}) PathError {
+	return wrapWithPathError(currentStepNode, fmt.Errorf(format, a...))
+}
+
+func wrapWithPathError(currentStepNode *ast.Node, err error) PathError {
+	return PathError{inner: fmt.Errorf("invalid path: %v", err), errorNode: currentStepNode}
 }
 
 func wrapWithResolveError(err error) error {
-	return fmt.Errorf("resolve error: %v", err)
+	return fmt.Errorf("resolve error: %w", err)
 }
 
 func wrapWithEqFilterError(err error) error {
-	return fmt.Errorf("eqfilter error: %v", err)
+	return fmt.Errorf("eqfilter error: %w", err)
 }
 
 func replaceError(format string, a ...interface{}) error {
@@ -35,5 +56,5 @@ func replaceError(format string, a ...interface{}) error {
 }
 
 func wrapWithReplaceError(err error) error {
-	return fmt.Errorf("replace error: %v", err)
+	return fmt.Errorf("replace error: %w", err)
 }

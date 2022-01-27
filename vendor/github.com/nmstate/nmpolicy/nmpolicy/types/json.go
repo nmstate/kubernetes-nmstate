@@ -1,5 +1,5 @@
 /*
- * Copyright 2001 NMPolicy Authors.
+ * Copyright 2021 NMPolicy Authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package resolver
+package types
 
-import (
-	"fmt"
+import "sigs.k8s.io/yaml"
 
-	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
-)
-
-func newTerminalFromInterface(iface interface{}) (*ast.Terminal, error) {
-	switch v := iface.(type) {
-	case string:
-		return &ast.Terminal{String: &v}, nil
-	default:
-		return nil, fmt.Errorf("unexpected terminal type %T", v)
+func (s *NMState) UnmarshalJSON(b []byte) error {
+	output, err := yaml.JSONToYAML(b)
+	if err != nil {
+		return err
 	}
+	*s = output
+	return nil
+}
+
+func (s NMState) MarshalJSON() ([]byte, error) {
+	return yaml.YAMLToJSON([]byte(s))
 }
