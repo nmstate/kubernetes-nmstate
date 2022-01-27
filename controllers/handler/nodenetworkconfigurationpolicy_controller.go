@@ -28,8 +28,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-	builder "sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -258,13 +258,19 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 
 	// Reconcile all NNCPs if Node is updated (for example labels are changed), node creation event
 	// is not needed since all NNCPs are going to be Reconcile at node startup.
-	err = ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Node{}).
-		Watches(&source.Kind{Type: &corev1.Node{}}, handler.EnqueueRequestsFromMapFunc(allPolicies), builder.WithPredicates(onLabelsUpdatedForThisNode)).
-		Complete(r)
+	c, err := controller.New("node_labels", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening Node events")
+		return errors.Wrap(err, "failed to create node_labels controller to NNCP Reconciler watching node label changes")
 	}
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Node{}},
+		handler.EnqueueRequestsFromMapFunc(allPolicies),
+		onLabelsUpdatedForThisNode,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to add watch to enqueue NNCPs reconcile on node label change")
+	}
+
 	return nil
 }
 

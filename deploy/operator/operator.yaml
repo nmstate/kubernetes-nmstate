@@ -24,6 +24,7 @@ spec:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-operator
           # Replace this with the built image name
@@ -31,6 +32,10 @@ spec:
           imagePullPolicy: {{ .OperatorPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: 60m
+              memory: 30Mi
           env:
             - name: WATCH_NAMESPACE
               value: ""
