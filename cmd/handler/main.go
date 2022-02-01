@@ -20,7 +20,6 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"time"
 
@@ -167,7 +166,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		certManager, err := certificate.NewManager(mgr.GetClient(), certManagerOpts)
+		var certManager *certificate.Manager
+		certManager, err = certificate.NewManager(mgr.GetClient(), certManagerOpts)
 		if err != nil {
 			setupLog.Error(err, "unable to create cert-manager", "controller", "cert-manager")
 			os.Exit(1)
@@ -180,7 +180,7 @@ func main() {
 		}
 		// Runs only webhook controllers if it's specified
 	} else if environment.IsWebhook() {
-		if err := webhook.AddToManager(mgr); err != nil {
+		if err = webhook.AddToManager(mgr); err != nil {
 			setupLog.Error(err, "Cannot initialize webhook")
 			os.Exit(1)
 		}
@@ -194,7 +194,8 @@ func main() {
 			os.Exit(1)
 		}
 
-		apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+		var apiClient client.Client
+		apiClient, err = client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 		if err != nil {
 			setupLog.Error(err, "failed creating non cached client")
 			os.Exit(1)
@@ -242,7 +243,7 @@ func main() {
 	setProfiler()
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
@@ -272,7 +273,7 @@ func lockHandler() (*flock.Flock, error) {
 	}
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
 	handlerLock := flock.New(lockFilePath)
-	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
+	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) { //nolint:gomnd
 		locked, err := handlerLock.TryLock()
 		if err != nil {
 			setupLog.Error(err, "retrying to lock handler")

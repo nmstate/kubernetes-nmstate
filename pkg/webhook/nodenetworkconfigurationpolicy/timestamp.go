@@ -31,7 +31,7 @@ const (
 )
 
 func setTimestampAnnotation(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
-	value := strconv.FormatInt(time.Now().UnixNano(), 10)
+	value := strconv.FormatInt(time.Now().UnixNano(), 10) //nolint:gomnd
 	if policy.ObjectMeta.Annotations == nil {
 		policy.ObjectMeta.Annotations = map[string]string{}
 	}

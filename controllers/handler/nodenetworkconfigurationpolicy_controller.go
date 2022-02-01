@@ -118,7 +118,7 @@ func init() {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
+func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	log := r.Log.WithValues("nodenetworkconfigurationpolicy", request.NamespacedName)
 
@@ -366,7 +366,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) enactmentForPolicy(
 
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
 	var enactment nmstatev1beta1.NodeNetworkConfigurationEnactment
-	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) {
+	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) { //nolint:gomnd
 		err := r.APIClient.Get(context.TODO(), enactmentKey, &enactment)
 		if err != nil {
 			if apierrors.IsNotFound(err) {

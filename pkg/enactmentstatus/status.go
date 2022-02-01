@@ -60,7 +60,7 @@ func Update(client client.Client, key types.NamespacedName, statusSetter func(*n
 
 		// Wait until enactment has being updated at the node
 		expectedStatus := instance.Status
-		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) {
+		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) { //nolint:gomnd
 			err = client.Get(context.TODO(), key, instance)
 			if err != nil {
 				return false, err

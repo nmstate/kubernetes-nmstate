@@ -107,7 +107,7 @@ var _ = Describe("NMState operator", func() {
 	})
 })
 
-func installOperator(operator operatorTestData) error {
+func installOperator(operator operatorTestData) {
 	By(fmt.Sprintf("Creating NMState operator with namespace '%s'", operator.ns))
 	_, err := cmd.Run(
 		"make",
@@ -126,8 +126,6 @@ func installOperator(operator operatorTestData) error {
 		Expect(err).ToNot(HaveOccurred())
 	}
 	deployment.GetEventually(types.NamespacedName{Namespace: operator.ns, Name: "nmstate-operator"}).Should(deployment.BeReady())
-
-	return nil
 }
 
 func uninstallOperator(operator operatorTestData) {

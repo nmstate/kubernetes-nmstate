@@ -38,7 +38,7 @@ func FormatErrorString(errorMessage string) string {
 
 	re := regexp.MustCompile(`\s*(failed to execute.*'exit status \d+') '{2}\s'`)
 	matches := re.FindStringSubmatch(errorLines[index])
-	if len(matches) == 2 {
+	if len(matches) == 2 { //nolint:gomnd
 		sb.WriteString(strings.TrimRight(matches[1], " ") + "\n")
 		index++
 	}

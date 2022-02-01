@@ -349,8 +349,8 @@ func copyManifest(src, dst string) error {
 	}
 
 	// create dst directory if needed
-	if _, err := os.Stat(dstDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dstDir, os.ModePerm); err != nil {
+	if _, err = os.Stat(dstDir); os.IsNotExist(err) {
+		if err = os.MkdirAll(dstDir, os.ModePerm); err != nil {
 			return err
 		}
 	}
