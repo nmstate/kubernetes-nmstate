@@ -92,6 +92,35 @@ func newNode(idx int) corev1.Node {
 				"kubernetes.io/hostname": nodeName,
 			},
 		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
+	}
+	return node
+}
+
+func newNotReadyNode(idx int) corev1.Node {
+	nodeName := nodeName(idx)
+	node := corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+			Labels: map[string]string{
+				"kubernetes.io/hostname": nodeName,
+			},
+		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeReady,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
 	}
 	return node
 }
@@ -307,6 +336,21 @@ var _ = Describe("Policy Conditions", func() {
 				newNonNmstatePodAtNode(4),
 			},
 			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
+		}),
+		Entry("when there is a NotReady node, ignore it for policy conditions calculations", ConditionsCase{
+			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
+			},
+			Nodes: []corev1.Node{
+				newNode(1),
+				newNode(2),
+				newNode(3),
+				newNotReadyNode(4),
+			},
+			Pods:   newNmstatePods(4),
+			Policy: p(SetPolicySuccess, "3/4 nodes successfully configured, 1 nodes ignored due to NotReady state"),
 		}),
 	)
 })
