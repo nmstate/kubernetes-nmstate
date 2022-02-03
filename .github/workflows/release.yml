@@ -25,9 +25,9 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - name: Check out code from ${{ github.event.inputs.baseBranch }}                         
-      uses: actions/checkout@v2                                                 
-      with:                                                                     
+    - name: Check out code from ${{ github.event.inputs.baseBranch }}
+      uses: actions/checkout@v2
+      with:
         ref: ${{ github.event.inputs.baseBranch }}
         fetch-depth: 0
     - name: Retrieve last tag
