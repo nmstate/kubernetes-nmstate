@@ -1,5 +1,4 @@
 name: Cut a release
-
 on:
   workflow_dispatch:
     inputs:
@@ -12,11 +11,25 @@ on:
         - major
         - minor
         - patch
+      baseBranch:
+        description: 'Branch to release from'
+        required: true
+        type: choice
+        default: 'main'
+        options:
+        - main
+        - release-0.64
+        - release-0.52
+        - release-0.47
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code into the Go module directory                         
-      uses: actions/checkout@v2       
+      uses: actions/checkout@v2                                                 
+      with:                                                                     
+        ref: ${{ github.event.inputs.baseBranch }}                                               
+    - name: Pull latest of latest branch                                        
+      run:  git pull --ff-only --rebase origin ${{ github.event.inputs.baseBranch }}             
     - name: Tag a ${{ github.event.inputs.versionLevel }} version
       run: make version-${{ github.event.inputs.versionLevel }}
