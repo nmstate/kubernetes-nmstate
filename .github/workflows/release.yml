@@ -1,0 +1,21 @@
+name: Cut a release
+
+on:
+  workflow_dispatch:
+    inputs:
+      versionLevel:
+        description: 'The semVer level of the version'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+        - major
+        - minor
+        - patch
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    # Runs a single command using the runners shell
+    - name: Tag a ${{ github.event.inputs.versionLevel }} version
+      run: make version-${{ github.event.inputs.versonLevel }}
