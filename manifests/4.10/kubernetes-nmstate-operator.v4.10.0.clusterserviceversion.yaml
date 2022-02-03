@@ -103,6 +103,8 @@ spec:
         serviceAccountName: nmstate-operator
       deployments:
       - name: nmstate-operator
+        label:
+          app: kubernetes-nmstate-operator
         spec:
           replicas: 1
           selector:
