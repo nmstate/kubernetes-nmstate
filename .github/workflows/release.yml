@@ -25,12 +25,21 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - name: Check out code into the Go module directory                         
+    - name: Check out code from ${{ github.event.inputs.baseBranch }}                         
       uses: actions/checkout@v2                                                 
       with:                                                                     
         ref: ${{ github.event.inputs.baseBranch }}
         fetch-depth: 0
-    - name: Pull latest of latest branch                                        
-      run:  git pull --ff-only --rebase origin ${{ github.event.inputs.baseBranch }}             
-    - name: Tag a ${{ github.event.inputs.versionLevel }} version
-      run: make version-${{ github.event.inputs.versionLevel }}
+    - name: Retrieve last tag
+      uses: actions-ecosystem/action-get-latest-tag@v1
+      id: get-latest-tag
+    - name: Bump version with level ${{ github.event.inputs.baseBranch }}
+      uses: actions-ecosystem/action-bump-semver@v1
+      id: bump-semver
+      with:
+        current_version: ${{ steps.get-latest-tag.outputs.tag }}
+        level:  ${{ github.event.inputs.versionLevel }}
+    - name: Push the new version
+      uses: actions-ecosystem/action-push-tag@v1
+      with:
+        tag: ${{ steps.bump-semver.outputs.new_version }}
