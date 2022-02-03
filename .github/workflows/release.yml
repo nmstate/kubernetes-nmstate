@@ -16,6 +16,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    # Runs a single command using the runners shell
+    - name: Check out code into the Go module directory                         
+      uses: actions/checkout@v2       
     - name: Tag a ${{ github.event.inputs.versionLevel }} version
       run: make version-${{ github.event.inputs.versionLevel }}
