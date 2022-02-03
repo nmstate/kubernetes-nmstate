@@ -18,4 +18,4 @@ jobs:
     steps:
     # Runs a single command using the runners shell
     - name: Tag a ${{ github.event.inputs.versionLevel }} version
-      run: make version-${{ github.event.inputs.versonLevel }}
+      run: make version-${{ github.event.inputs.versionLevel }}
