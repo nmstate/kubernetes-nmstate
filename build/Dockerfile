@@ -5,7 +5,7 @@ RUN dnf install -y golang-1.17.*
 COPY . /workdir
 WORKDIR /workdir
 
-RUN --mount=type=cache,target=/root/.cache/go-build go build -o /manager ./cmd/handler
+RUN --mount=type=cache,target=/root/.cache/go-build go build -v -o /manager ./cmd/handler
 
 FROM quay.io/centos/centos:stream8
 
