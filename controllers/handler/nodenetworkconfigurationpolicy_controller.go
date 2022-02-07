@@ -136,7 +136,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 		return ctrl.Result{}, err
 	}
 
-	policyconditions.Reset(r.Client, request.NamespacedName)
+	if !policyconditions.IsProgressing(&instance.Status.Conditions) {
+		policyconditions.Reset(r.Client, request.NamespacedName)
+	}
 
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
