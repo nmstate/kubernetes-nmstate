@@ -38,7 +38,8 @@ func Count(enactments nmstatev1beta1.NodeNetworkConfigurationEnactmentList, poli
 			corev1.ConditionFalse:   0,
 			corev1.ConditionUnknown: 0,
 		}
-		for _, enactment := range enactments.Items {
+		for enactmentIndex := range enactments.Items {
+			enactment := enactments.Items[enactmentIndex]
 			condition := enactment.Status.Conditions.Find(conditionType)
 			// If there is a condition status and it's from the current policy update
 			if condition != nil && enactment.Status.PolicyGeneration == policyGeneration {

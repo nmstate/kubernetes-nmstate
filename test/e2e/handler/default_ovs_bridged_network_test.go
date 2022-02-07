@@ -27,7 +27,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
-func ovsBridgeWithTheDefaultInterface(ovsBridgeName string, defaultInterfaceMac string) nmstate.State {
+func ovsBridgeWithTheDefaultInterface(ovsBridgeName, defaultInterfaceMac string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
 - name: ovs0
   type: ovs-interface
@@ -48,7 +48,7 @@ func ovsBridgeWithTheDefaultInterface(ovsBridgeName string, defaultInterfaceMac 
 `, defaultInterfaceMac, ovsBridgeName, primaryNic))
 }
 
-func ovsBridgeWithTheDefaultInterfaceAbsent(ovsBridgeName string, ovsBridgeInternalPortName string) nmstate.State {
+func ovsBridgeWithTheDefaultInterfaceAbsent(ovsBridgeName, ovsBridgeInternalPortName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
 - name: %s
   type: ethernet

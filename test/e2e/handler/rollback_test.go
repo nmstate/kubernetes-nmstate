@@ -29,7 +29,7 @@ import (
 
 // We cannot change routes at nmstate if the interface is with dhcp true
 // that's why we need to set it static with the same ip it has previously.
-func badDefaultGw(address string, nic string) nmstate.State {
+func badDefaultGw(address, nic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet

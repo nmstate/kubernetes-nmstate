@@ -36,7 +36,7 @@ func Run(command string, quiet bool, arguments ...string) (string, error) {
 	cmd.Stdout = &stdout
 	err := cmd.Run()
 	if !quiet {
-		GinkgoWriter.Write([]byte(fmt.Sprintf("stdout: %.500s...\n, stderr %s\n", stdout.String(), stderr.String())))
+		fmt.Fprintf(GinkgoWriter, "stdout: %.500s...,\nstderr: %s\n", stdout.String(), stderr.String())
 	}
 	return stdout.String(), err
 }

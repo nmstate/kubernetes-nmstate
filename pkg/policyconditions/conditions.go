@@ -119,6 +119,7 @@ func Update(cli client.Client, apiReader client.Reader, policyKey types.Namespac
 	return err
 }
 
+//nolint:gocritic
 func update(apiWriter client.Client, apiReader client.Reader, policyReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the

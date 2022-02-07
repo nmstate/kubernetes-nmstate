@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-func unmatchingLabels(nodeSelector map[string]string, labels map[string]string) map[string]string {
+func unmatchingLabels(nodeSelector, labels map[string]string) map[string]string {
 	unmatchingLabels := map[string]string{}
 	for key, value := range nodeSelector {
 		if foundValue, hasKey := labels[key]; !hasKey || foundValue != value {

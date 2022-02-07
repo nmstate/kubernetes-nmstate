@@ -69,7 +69,7 @@ func ovsBrUpLAGEth1Eth2WithInternalPort(bridgeName, internalPortName, internalPo
 `, internalPortName, internalPortMac, bridgeName, port1Name, port2Name, internalPortName))
 }
 
-func ovsBrUpLinuxBondEth1AndEth2(bridgeName string, bondName string) nmstate.State {
+func ovsBrUpLinuxBondEth1AndEth2(bridgeName, bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
@@ -92,7 +92,7 @@ func ovsBrUpLinuxBondEth1AndEth2(bridgeName string, bondName string) nmstate.Sta
 `, bondName, fmt.Sprintf(miimonFormat, 140), portFieldName, firstSecondaryNic, secondSecondaryNic, bridgeName, bondName))
 }
 
-func ovsBrAndBondAbsent(bridgeName string, bondName string) nmstate.State {
+func ovsBrAndBondAbsent(bridgeName, bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
@@ -103,7 +103,7 @@ func ovsBrAndBondAbsent(bridgeName string, bondName string) nmstate.State {
 `, bondName, bridgeName))
 }
 
-func ovsBrAndInternalPortAbsent(bridgeName string, internalPortName string) nmstate.State {
+func ovsBrAndInternalPortAbsent(bridgeName, internalPortName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ovs-interface

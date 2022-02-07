@@ -21,9 +21,9 @@ import (
 	"os"
 )
 
-func GetVarWithDefault(name string, defaultValue string) string {
+func GetVarWithDefault(name, defaultValue string) string {
 	value := os.Getenv(name)
-	if len(value) == 0 {
+	if value == "" {
 		value = defaultValue
 	}
 	return value

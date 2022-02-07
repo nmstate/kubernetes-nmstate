@@ -30,13 +30,12 @@ const (
 	TimestampLabelKey = "nmstate.io/webhook-mutating-timestamp"
 )
 
-func setTimestampAnnotation(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
+func setTimestampAnnotation(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 	value := strconv.FormatInt(time.Now().UnixNano(), 10) //nolint:gomnd
 	if policy.ObjectMeta.Annotations == nil {
 		policy.ObjectMeta.Annotations = map[string]string{}
 	}
 	policy.ObjectMeta.Annotations[TimestampLabelKey] = value
-	return policy
 }
 
 func setTimestampAnnotationHook() *webhook.Admission {

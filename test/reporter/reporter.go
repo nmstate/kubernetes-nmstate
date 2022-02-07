@@ -20,7 +20,6 @@ package reporter
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -38,7 +37,7 @@ type KubernetesNMStateReporter struct {
 	nodes                []string
 }
 
-func New(artifactsDir string, namespace string, nodes []string) *KubernetesNMStateReporter {
+func New(artifactsDir, namespace string, nodes []string) *KubernetesNMStateReporter {
 	return &KubernetesNMStateReporter{
 		artifactsDir: artifactsDir,
 		namespace:    namespace,
@@ -46,10 +45,10 @@ func New(artifactsDir string, namespace string, nodes []string) *KubernetesNMSta
 	}
 }
 
-func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
+func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config.GinkgoConfigType, *types.SuiteSummary) {
 }
 
-func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
+func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(*types.SetupSummary) {
 	r.Cleanup()
 }
 
@@ -72,10 +71,10 @@ func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSumma
 	r.dumpStateAfterEach(name, since, passed)
 }
 
-func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
+func (r *KubernetesNMStateReporter) AfterSuiteDidRun(*types.SetupSummary) {
 }
 
-func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
+func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(*types.SuiteSummary) {
 }
 
 func (r *KubernetesNMStateReporter) storeStateBeforeEach() {
@@ -134,12 +133,12 @@ func (r *KubernetesNMStateReporter) Cleanup() {
 				panic(err)
 			}
 		}
-		names, err := ioutil.ReadDir(r.artifactsDir)
+		names, err := os.ReadDir(r.artifactsDir)
 		if err != nil {
 			panic(err)
 		}
-		for _, entery := range names {
-			os.RemoveAll(path.Join([]string{r.artifactsDir, entery.Name()}...))
+		for _, entry := range names {
+			os.RemoveAll(path.Join([]string{r.artifactsDir, entry.Name()}...))
 		}
 	}
 }
@@ -154,7 +153,7 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime))
 }
 
-func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
+func (r *KubernetesNMStateReporter) OpenTestLogFile(logType, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
 	err := os.MkdirAll(r.artifactsDir, 0755)
 	if err != nil {
 		fmt.Println(err)

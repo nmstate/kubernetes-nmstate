@@ -40,11 +40,11 @@ var (
 	log = logf.Log.WithName("enactmentstatus")
 )
 
-func Update(client client.Client, key types.NamespacedName, statusSetter func(*nmstate.NodeNetworkConfigurationEnactmentStatus)) error {
+func Update(cli client.Client, key types.NamespacedName, statusSetter func(*nmstate.NodeNetworkConfigurationEnactmentStatus)) error {
 	logger := log.WithValues("enactment", key.Name)
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-		err := client.Get(context.TODO(), key, instance)
+		err := cli.Get(context.TODO(), key, instance)
 		if err != nil {
 			return errors.Wrap(err, "getting enactment failed")
 		}
@@ -53,7 +53,7 @@ func Update(client client.Client, key types.NamespacedName, statusSetter func(*n
 
 		logger.Info(fmt.Sprintf("status: %+v", instance.Status))
 
-		err = client.Status().Update(context.TODO(), instance)
+		err = cli.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func Update(client client.Client, key types.NamespacedName, statusSetter func(*n
 		// Wait until enactment has being updated at the node
 		expectedStatus := instance.Status
 		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) { //nolint:gomnd
-			err = client.Get(context.TODO(), key, instance)
+			err = cli.Get(context.TODO(), key, instance)
 			if err != nil {
 				return false, err
 			}

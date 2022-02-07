@@ -148,8 +148,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			request.Name = existingNMStateName
-			crdsPath := filepath.Join(manifestsDir, "kubernetes-nmstate/crds/")
-			dir, err := ioutil.ReadDir(crdsPath)
+			crdsPath := filepath.Join(manifestsDir, "kubernetes-nmstate", "crds")
+			dir, err := os.ReadDir(crdsPath)
 			Expect(err).ToNot(HaveOccurred())
 			for _, d := range dir {
 				os.RemoveAll(filepath.Join(crdsPath, d.Name()))
@@ -441,8 +441,8 @@ func isSuperset(ss, t corev1.Toleration) bool {
 	}
 }
 
-//allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
-func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
+// allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
+func allTolerationsPresent(toBeCheckedTolerations, actualTolerations []corev1.Toleration) bool {
 	tolerationsFound := true
 	for _, toleration := range toBeCheckedTolerations {
 		tolerationsFound = tolerationsFound && checkTolerationInList(toleration, actualTolerations)
@@ -450,8 +450,8 @@ func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTol
 	return tolerationsFound
 }
 
-//anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
-func anyTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
+// anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
+func anyTolerationsPresent(toBeCheckedTolerations, actualTolerations []corev1.Toleration) bool {
 	tolerationsFound := false
 	for _, toleration := range toBeCheckedTolerations {
 		tolerationsFound = tolerationsFound || checkTolerationInList(toleration, actualTolerations)

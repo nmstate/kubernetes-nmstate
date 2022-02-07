@@ -91,7 +91,7 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	Context("when network configuration is changed by a NNCP", func() {
 		BeforeEach(func() {
 			// We want to test all the NNS so we apply policies to control-plane and workers
-			//(use linuxBrUpNoPorts to not affect the nodes secondary interfaces state)
+			// (use linuxBrUpNoPorts to not affect the nodes secondary interfaces state)
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1))
 			waitForAvailableTestPolicy()
 		})
