@@ -11,9 +11,9 @@
 set -ex
 
 export KUBEVIRT_PROVIDER=external
-export IMAGE_BUILDER=podman
-export DEV_IMAGE_REGISTRY=quay.io
-export KUBEVIRTCI_RUNTIME=podman
+export IMAGE_BUILDER="${IMAGE_BUILDER:-podman}"
+export DEV_IMAGE_REGISTRY="${DEV_IMAGE_REGISTRY:-quay.io}"
+export KUBEVIRTCI_RUNTIME="${KUBEVIRTCI_RUNTIME:-podman}"
 export PRIMARY_NIC=enp2s0
 export FIRST_SECONDARY_NIC=enp3s0
 export SECOND_SECONDARY_NIC=enp4s0
