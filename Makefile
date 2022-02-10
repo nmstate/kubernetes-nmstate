@@ -160,6 +160,9 @@ test-e2e-handler:
 test-e2e-operator: manifests
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
 
+test-e2e-upgrade: manifests
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) GINKGO="$(GINKGO)" ./hack/run-e2e-test-upgrade.sh $(e2e_test_args) $(E2E_TEST_SUITE_ARGS)
+
 test-e2e: test-e2e-operator test-e2e-handler
 
 cluster-up:
