@@ -183,14 +183,14 @@ func WaitForDegradedPolicy(policy string) {
 func WaitForPolicy(policy string, matcher gomegatypes.GomegaMatcher) {
 	StatusForPolicyEventually(policy).
 		Should(
-			SatisfyAny(containPolicyAvailable(), containPolicyDegraded()),
+			SatisfyAny(ContainPolicyAvailable(), ContainPolicyDegraded()),
 			func() string {
 				return fmt.Sprintf("should reach terminal status at NNCP '%s', \n current enactments statuses:\n%s",
-					policy, enactmentsStatusToYaml())
+					policy, EnactmentsStatusToYaml())
 			},
 		)
-	Expect(policyConditionsStatus(policy)).To(matcher, "should reach expected status at NNCP '%s', \n current enactments statuses:\n%s",
-		policy, enactmentsStatusToYaml())
+	Expect(Status(policy)).To(matcher, "should reach expected status at NNCP '%s', \n current enactments statuses:\n%s",
+		policy, EnactmentsStatusToYaml())
 }
 
 func filterOutMessageAndTimestampFromConditions(conditions shared.ConditionList) shared.ConditionList {

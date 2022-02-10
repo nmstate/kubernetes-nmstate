@@ -29,10 +29,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
@@ -155,11 +157,11 @@ var _ = Describe("NMState operator", func() {
 				"should success creating a clusterrolebinding")
 
 			By("Install NMState for the first time")
-			installNMState(defaultOperator.nmstate)
-			eventuallyOperandIsReady(defaultOperator)
+			InstallNMState(defaultOperator.Nmstate)
+			EventuallyOperandIsReady(defaultOperator)
 		})
 		AfterEach(func() {
-			uninstallNMStateAndWaitForDeletion(defaultOperator)
+			UninstallNMStateAndWaitForDeletion(defaultOperator)
 		})
 		AfterEach(func() {
 			Expect(deleteTestUserCRB(testUserBindingName)).To(Succeed())
