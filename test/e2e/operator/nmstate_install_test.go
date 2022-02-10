@@ -24,18 +24,16 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
-	"github.com/nmstate/kubernetes-nmstate/test/e2e/deployment"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -56,9 +54,9 @@ var _ = Describe("NMState operator", func() {
 				Skip("cluster control-plane size should be < 2")
 			}
 
-			installNMState(defaultOperator.nmstate)
-			defer uninstallNMStateAndWaitForDeletion(defaultOperator)
-			eventuallyOperandIsReady(defaultOperator)
+			InstallNMState(defaultOperator.Nmstate)
+			defer UninstallNMStateAndWaitForDeletion(defaultOperator)
+			EventuallyOperandIsReady(defaultOperator)
 
 			By("Check webhook is distributed across control-plane nodes")
 			podsShouldBeDistributedAtNodes(controlPlaneNodes(), client.MatchingLabels{"component": "kubernetes-nmstate-webhook"})
@@ -69,17 +67,20 @@ var _ = Describe("NMState operator", func() {
 	Context("when installed for the first time", func() {
 		BeforeEach(func() {
 			By("Install NMState for the first time")
-			installNMState(defaultOperator.nmstate)
+			InstallNMState(defaultOperator.Nmstate)
+		})
+		It("should deploy a ready operand", func() {
+			EventuallyOperandIsReady(defaultOperator)
 		})
 		AfterEach(func() {
-			uninstallNMStateAndWaitForDeletion(defaultOperator)
+			UninstallNMStateAndWaitForDeletion(defaultOperator)
 		})
 		Context("and another CR is created with different name", func() {
-			var differentNMState = defaultOperator.nmstate
+			var differentNMState = defaultOperator.Nmstate
 			differentNMState.Name = "different-name"
 			BeforeEach(func() {
-				eventuallyOperandIsReady(defaultOperator)
-				installNMState(differentNMState)
+				EventuallyOperandIsReady(defaultOperator)
+				InstallNMState(differentNMState)
 			})
 			It("should remove NMState with different name", func() {
 				Eventually(func() error {
@@ -90,44 +91,44 @@ var _ = Describe("NMState operator", func() {
 		})
 		Context("and uninstalled", func() {
 			BeforeEach(func() {
-				uninstallNMState(defaultOperator.nmstate)
+				UninstallNMState(defaultOperator.Nmstate)
 			})
 			It("should uninstall handler and webhook", func() {
-				eventuallyOperandIsNotFound(defaultOperator)
+				EventuallyOperandIsNotFound(defaultOperator)
 			})
 		})
 		Context("and another handler is installed with different namespace", func() {
 			var (
-				altOperator = newOperatorTestData("nmstate-alt")
+				altOperator = NewOperatorTestData("nmstate-alt", manifestsDir, manifestFiles)
 			)
 			BeforeEach(func() {
 				By("Wait for operand to be ready")
-				eventuallyOperandIsReady(defaultOperator)
+				EventuallyOperandIsReady(defaultOperator)
 
 				By("Install other operator at alternative namespace")
-				installOperator(altOperator)
+				InstallOperator(altOperator)
 			})
 			AfterEach(func() {
-				uninstallOperator(altOperator)
-				eventuallyOperandIsNotFound(altOperator)
-				uninstallNMStateAndWaitForDeletion(defaultOperator)
-				installOperator(defaultOperator)
+				UninstallOperator(altOperator)
+				EventuallyOperandIsNotFound(altOperator)
+				UninstallNMStateAndWaitForDeletion(defaultOperator)
+				InstallOperator(defaultOperator)
 			})
 			It("should wait for defaultOperator handler to be deleted before deploying new altOperator handler", func() {
 				By("Check alt handler has being created")
 				Eventually(func() error {
 					daemonSet := appsv1.DaemonSet{}
-					return testenv.Client.Get(context.TODO(), altOperator.handlerKey, &daemonSet)
+					return testenv.Client.Get(context.TODO(), altOperator.HandlerKey, &daemonSet)
 				}, 180*time.Second, 1*time.Second).Should(Succeed())
 
 				By("Checking alt handler is locked")
-				daemonset.GetConsistently(altOperator.handlerKey).ShouldNot(daemonset.BeReady())
+				daemonset.GetConsistently(altOperator.HandlerKey).ShouldNot(daemonset.BeReady())
 
 				By("Uninstall default operator")
-				uninstallOperator(defaultOperator)
+				UninstallOperator(defaultOperator)
 
 				By("Checking alt handler is unlocked after deleting default one")
-				daemonset.GetEventually(altOperator.handlerKey).Should(daemonset.BeReady())
+				daemonset.GetEventually(altOperator.HandlerKey).Should(daemonset.BeReady())
 			})
 		})
 	})
@@ -180,38 +181,6 @@ var _ = Describe("NMState operator", func() {
 		})
 	})
 })
-
-func installOperator(operator operatorTestData) {
-	By(fmt.Sprintf("Creating NMState operator with namespace '%s'", operator.ns))
-	_, err := cmd.Run(
-		"make",
-		false,
-		fmt.Sprintf("OPERATOR_NAMESPACE=%s", operator.ns),
-		fmt.Sprintf("HANDLER_NAMESPACE=%s", operator.ns),
-		"IMAGE_REGISTRY=registry:5000",
-		"manifests",
-	)
-	Expect(err).ToNot(HaveOccurred())
-
-	manifestsDir := "build/_output/manifests/"
-	manifests := []string{"namespace.yaml", "service_account.yaml", "operator.yaml", "role.yaml", "role_binding.yaml"}
-	for _, manifest := range manifests {
-		_, err = cmd.Kubectl("apply", "-f", manifestsDir+manifest)
-		Expect(err).ToNot(HaveOccurred())
-	}
-	deployment.GetEventually(types.NamespacedName{Namespace: operator.ns, Name: "nmstate-operator"}).Should(deployment.BeReady())
-}
-
-func uninstallOperator(operator operatorTestData) {
-	By(fmt.Sprintf("Deleting namespace '%s'", operator.ns))
-	ns := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: operator.ns,
-		},
-	}
-	Expect(testenv.Client.Delete(context.TODO(), &ns)).To(SatisfyAny(Succeed(), WithTransform(apierrors.IsNotFound, BeTrue())))
-	eventuallyIsNotFound(types.NamespacedName{Name: operator.ns}, &ns, "should delete the namespace")
-}
 
 func increaseKubevirtciControlPlane() func() {
 	secondNodeName := "node02"
