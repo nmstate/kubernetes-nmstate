@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 // TODO: When https://bugzilla.redhat.com/show_bug.cgi?id=1906307 is resolved, add firstSecondaryNic to the bond again
@@ -127,8 +128,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			restartNodeWithoutWaiting(nodeToReboot)
 
 			By("Wait for policy re-reconciled after node reboot")
-			waitForPolicyTransitionUpdate(TestPolicy)
-			waitForAvailablePolicy(TestPolicy)
+			policy.WaitForPolicyTransitionUpdate(TestPolicy)
+			policy.WaitForAvailablePolicy(TestPolicy)
 
 			Byf("Node %s was rebooted, verifying %s exists and ip was not changed", nodeToReboot, bond1)
 			verifyBondIsUpWithPrimaryNicIP(nodeToReboot, expectedBond, addressByNode[nodeToReboot])

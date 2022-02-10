@@ -20,10 +20,12 @@ package handler
 import (
 	"fmt"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
+	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 func createInterfaceWithNonExistingCapture() nmstate.State {
@@ -71,7 +73,7 @@ func createPolicyAndWaitForEnactmentCondition(policy string, desiredState func()
 	waitForNodesReady()
 
 	By("Waiting for enactment to be failing")
-	enactmentConditionsStatusEventually(nodes[0]).Should(matchConditionsFrom(enactmentconditions.SetFailedToConfigure))
+	policyconditions.EnactmentConditionsStatusEventually(nodes[0]).Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure))
 }
 
 var _ = Describe("NodeNetworkState", func() {
@@ -107,7 +109,7 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should discard disarranged parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
 				Expect(
-					enactmentConditionsStatus(
+					policyconditions.EnactmentConditionsStatus(
 						nodes[0],
 						defaultPolicy,
 					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
@@ -119,7 +121,7 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
 				Expect(
-					enactmentConditionsStatus(
+					policyconditions.EnactmentConditionsStatus(
 						nodes[0],
 						defaultPolicy,
 					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
@@ -145,7 +147,7 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should discard disarranged parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
 				Expect(
-					enactmentConditionsStatus(
+					policyconditions.EnactmentConditionsStatus(
 						nodes[0],
 						defaultPolicy,
 					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
@@ -157,7 +159,7 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
 				Expect(
-					enactmentConditionsStatus(
+					policyconditions.EnactmentConditionsStatus(
 						nodes[0],
 						defaultPolicy,
 					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
@@ -187,7 +189,7 @@ var _ = Describe("NodeNetworkState", func() {
 		It("should discard disarranged parts of the message and keep desired parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
 				Expect(
-					enactmentConditionsStatus(
+					policyconditions.EnactmentConditionsStatus(
 						nodes[0],
 						defaultPolicy,
 					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
@@ -196,7 +198,7 @@ var _ = Describe("NodeNetworkState", func() {
 			}
 			for _, desiredMessage := range messagesToKeep {
 				Expect(
-					enactmentConditionsStatus(
+					policyconditions.EnactmentConditionsStatus(
 						nodes[0],
 						defaultPolicy,
 					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
@@ -218,7 +220,7 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should contain the error message", func() {
 			Expect(
-				enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message,
+				policyconditions.EnactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message,
 			).To(ContainSubstring("failure generating desiredState and capturedStates"))
 		})
 	})

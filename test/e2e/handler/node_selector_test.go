@@ -27,6 +27,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -48,13 +49,13 @@ var _ = Describe("NodeSelector", func() {
 			Byf("Set policy %s with not matching node selector", bridge1)
 			// use linuxBrUpNoPorts to not affect the nodes secondary interfaces state
 			setDesiredStateWithPolicyAndNodeSelectorEventually(bridge1, linuxBrUpNoPorts(bridge1), testNodeSelector)
-			waitForAvailablePolicy(bridge1)
+			policy.WaitForAvailablePolicy(bridge1)
 		})
 
 		AfterEach(func() {
 			Byf("Deleteting linux bridge %s at all nodes", bridge1)
 			setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrAbsent(bridge1))
-			waitForAvailablePolicy(bridge1)
+			policy.WaitForAvailablePolicy(bridge1)
 			deletePolicy(bridge1)
 		})
 
@@ -70,7 +71,7 @@ var _ = Describe("NodeSelector", func() {
 				Byf("Remove node selector at policy %s", bridge1)
 				// use linuxBrUpNoPorts to not affect the nodes secondary interfaces state
 				setDesiredStateWithPolicyWithoutNodeSelector(bridge1, linuxBrUpNoPorts(bridge1))
-				waitForAvailablePolicy(bridge1)
+				policy.WaitForAvailablePolicy(bridge1)
 			})
 
 			It("should update all nodes and have Matching enactment state", func() {
@@ -88,7 +89,7 @@ var _ = Describe("NodeSelector", func() {
 				addLabelsToNode(nodes[0], testNodeSelector)
 				//TODO: Remove this when webhook retest policy status when node labels are changed
 				time.Sleep(3 * time.Second)
-				waitForAvailablePolicy(bridge1)
+				policy.WaitForAvailablePolicy(bridge1)
 			})
 			AfterEach(func() {
 				By("Remove test label from node")
@@ -96,7 +97,7 @@ var _ = Describe("NodeSelector", func() {
 			})
 			It("should apply the policy", func() {
 				By("Check that NNCE is created")
-				nodeNetworkConfigurationEnactment(shared.EnactmentKey(nodes[0], bridge1))
+				policy.NodeNetworkConfigurationEnactment(shared.EnactmentKey(nodes[0], bridge1))
 				interfacesNameForNodeEventually(nodes[0]).Should(ContainElement(bridge1))
 			})
 			Context("and remove the label again", func() {
@@ -104,7 +105,7 @@ var _ = Describe("NodeSelector", func() {
 					removeLabelsFromNode(nodes[0], testNodeSelector)
 					//TODO: Remove this when webhook retest policy status when node labels are changed
 					time.Sleep(3 * time.Second)
-					waitForAvailablePolicy(bridge1)
+					policy.WaitForAvailablePolicy(bridge1)
 				})
 				It("should remove the not matching enactment", func() {
 					Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(0), "should remove the not matching enactment")

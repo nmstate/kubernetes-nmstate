@@ -43,6 +43,7 @@ import (
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	"github.com/nmstate/kubernetes-nmstate/test/runner"
@@ -174,7 +175,7 @@ func updateDesiredStateAndWait(desiredState nmstate.State) {
 
 func updateDesiredStateWithCaptureAndWait(desiredState nmstate.State, capture map[string]string) {
 	updateDesiredStateWithCapture(desiredState, capture)
-	waitForAvailableTestPolicy()
+	policy.WaitForAvailableTestPolicy()
 }
 
 func updateDesiredStateAtNode(node string, desiredState nmstate.State) {
@@ -192,7 +193,7 @@ func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
 
 func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstate.State, capture map[string]string) {
 	updateDesiredStateWithCaptureAtNode(node, desiredState, capture)
-	waitForAvailableTestPolicy()
+	policy.WaitForAvailableTestPolicy()
 }
 
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
@@ -201,7 +202,7 @@ func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
 	defer deletePolicy(TestPolicy)
-	waitForAvailableTestPolicy()
+	policy.WaitForAvailableTestPolicy()
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState {
