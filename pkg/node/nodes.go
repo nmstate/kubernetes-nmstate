@@ -67,6 +67,25 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 	return filteredNodes, nil
 }
 
+func FilterReady(nodes []corev1.Node) []corev1.Node {
+	filteredNodes := []corev1.Node{}
+	for _, node := range nodes {
+		if isReady(node) {
+			filteredNodes = append(filteredNodes, node)
+		}
+	}
+	return filteredNodes
+}
+
+func isReady(node corev1.Node) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
 func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1.NodeNetworkConfigurationPolicy) (int, error) {
 	enactmentsTotal, _, err := enactment.CountByPolicy(cli, policy)
 	if err != nil {
