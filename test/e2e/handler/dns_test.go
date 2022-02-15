@@ -230,7 +230,7 @@ var _ = Describe("Dns configuration", func() {
 				})
 			})
 		})
-		Context("with DHCP unaware interface", func() {
+		XContext("with DHCP unaware interface, Skip Reason: https://bugzilla.redhat.com/show_bug.cgi?id=2054726", func() {
 			var (
 				designatedNode   string
 				designatedNodeIP string
