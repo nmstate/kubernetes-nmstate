@@ -69,15 +69,15 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 
 func FilterReady(nodes []corev1.Node) []corev1.Node {
 	filteredNodes := []corev1.Node{}
-	for _, node := range nodes {
-		if isReady(node) {
-			filteredNodes = append(filteredNodes, node)
+	for i := range nodes {
+		if isReady(&nodes[i]) {
+			filteredNodes = append(filteredNodes, nodes[i])
 		}
 	}
 	return filteredNodes
 }
 
-func isReady(node corev1.Node) bool {
+func isReady(node *corev1.Node) bool {
 	for _, condition := range node.Status.Conditions {
 		if condition.Type == corev1.NodeReady {
 			return condition.Status == corev1.ConditionTrue
