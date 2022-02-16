@@ -78,11 +78,11 @@ func FilterOut(currentState shared.State, deviceInfo DeviceInfoer) (shared.State
 	return filterOut(currentState, devStates)
 }
 
-func filterOutRoutes(routes []interface{}, filteredInterfaces []interfaceState) []interface{} {
-	filteredRoutes := []interface{}{}
+func filterOutRoutes(routes []routeState, filteredInterfaces []interfaceState) []routeState {
+	filteredRoutes := []routeState{}
 	for _, route := range routes {
-		name := route.(map[string]interface{})["next-hop-interface"]
-		if isInInterfaces(name.(string), filteredInterfaces) {
+		name := route.NextHopInterface
+		if isInInterfaces(name, filteredInterfaces) {
 			filteredRoutes = append(filteredRoutes, route)
 		}
 	}
@@ -150,7 +150,6 @@ func filterOut(currentState shared.State, deviceStates map[string]networkmanager
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
-
 	if err := normalizeInterfacesNames(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
@@ -176,8 +175,18 @@ func normalizeInterfacesNames(rawState []byte, state *rootState) error {
 	if err := goyaml.Unmarshal(rawState, &stateForNormalization); err != nil {
 		return err
 	}
+
 	for i, iface := range stateForNormalization.Interfaces {
 		state.Interfaces[i].Name = iface.Name
+	}
+
+	if stateForNormalization.Routes != nil {
+		for i, route := range stateForNormalization.Routes.Config {
+			state.Routes.Config[i].NextHopInterface = route.NextHopInterface
+		}
+		for i, route := range stateForNormalization.Routes.Running {
+			state.Routes.Running[i].NextHopInterface = route.NextHopInterface
+		}
 	}
 	return nil
 }
