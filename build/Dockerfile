@@ -1,4 +1,4 @@
-FROM centos:8
+FROM quay.io/centos/centos:stream8
 ARG NMSTATE_COPR_REPO
 ARG NM_COPR_REPO
 RUN dnf install -b -y dnf-plugins-core && \
