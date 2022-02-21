@@ -1,45 +1,84 @@
 package state
 
 import (
-	"os"
+	networkmanager "github.com/phoracek/networkmanager-go/src"
 
-	"github.com/gobwas/glob"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
 	goyaml "gopkg.in/yaml.v2"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	yaml "sigs.k8s.io/yaml"
 )
 
+const (
+	INTERFACE_FILTER = "interface_filter"
+)
+
 var (
-	interfacesFilterGlobFromEnv glob.Glob
+	filterLog = logf.Log.WithName(INTERFACE_FILTER)
 )
 
 func init() {
 	if !environment.IsHandler() {
 		return
 	}
-	interfacesFilter, isSet := os.LookupEnv("INTERFACES_FILTER")
-	if !isSet {
-		panic("INTERFACES_FILTER is mandatory")
+}
+
+type DeviceInfoer interface {
+	DeviceStates() (map[string]networkmanager.DeviceState, error)
+}
+
+type DeviceInfo struct{}
+
+func (d DeviceInfo) DeviceStates() (map[string]networkmanager.DeviceState, error) {
+	nmClient, err := networkmanager.NewClientPrivate()
+	if err != nil {
+		filterLog.Error(err, "failed to initialize NetworkManager client")
+		return nil, err
 	}
-	interfacesFilterGlobFromEnv = glob.MustCompile(interfacesFilter)
+	defer nmClient.Close()
+
+	devices, err := nmClient.GetDevices()
+	if err != nil {
+		filterLog.Error(err, "failed to list NetworkManager devices")
+		return nil, err
+	}
+
+	ifaceStates := map[string]networkmanager.DeviceState{}
+	for _, device := range devices {
+		ifaceStates[device.Interface] = device.State
+	}
+	return ifaceStates, nil
 }
 
-func FilterOut(currentState shared.State) (shared.State, error) {
-	return filterOut(currentState, interfacesFilterGlobFromEnv)
+func FilterOut(currentState shared.State, deviceInfo DeviceInfoer) (shared.State, error) {
+	devStates, err := deviceInfo.DeviceStates()
+	if err != nil {
+		filterLog.Error(err, "failed getting interface states, cannot filter managed interfaces")
+		return currentState, nil
+	}
+	return filterOut(currentState, devStates)
 }
 
-func filterOutRoutes(routes []interface{}, interfacesFilterGlob glob.Glob) []interface{} {
-	filteredRoutes := []interface{}{}
+func filterOutRoutes(routes []routeState, filteredInterfaces []interfaceState) []routeState {
+	filteredRoutes := []routeState{}
 	for _, route := range routes {
-		name := route.(map[string]interface{})["next-hop-interface"]
-		if !interfacesFilterGlob.Match(name.(string)) {
+		name := route.NextHopInterface
+		if isInInterfaces(name, filteredInterfaces) {
 			filteredRoutes = append(filteredRoutes, route)
 		}
 	}
-
 	return filteredRoutes
+}
+
+func isInInterfaces(interfaceName string, interfaces []interfaceState) bool {
+	for _, iface := range interfaces {
+		if iface.Name == interfaceName {
+			return true
+		}
+	}
+	return false
 }
 
 func filterOutDynamicAttributes(iface map[string]interface{}) {
@@ -74,10 +113,14 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 	delete(options, "hello-timer")
 }
 
-func filterOutInterfaces(ifacesState []interfaceState, interfacesFilterGlob glob.Glob) []interfaceState {
+func filterOutInterfaces(ifacesState []interfaceState, deviceStates map[string]networkmanager.DeviceState) []interfaceState {
+	if deviceStates == nil {
+		return ifacesState
+	}
+
 	filteredInterfaces := []interfaceState{}
 	for _, iface := range ifacesState {
-		if !interfacesFilterGlob.Match(iface.Name) {
+		if iface.Data["type"] != "veth" || deviceStates[iface.Name] != networkmanager.DeviceStateUnmanaged {
 			filterOutDynamicAttributes(iface.Data)
 			filteredInterfaces = append(filteredInterfaces, iface)
 		}
@@ -85,21 +128,21 @@ func filterOutInterfaces(ifacesState []interfaceState, interfacesFilterGlob glob
 	return filteredInterfaces
 }
 
-func filterOut(currentState shared.State, interfacesFilterGlob glob.Glob) (shared.State, error) {
+func filterOut(currentState shared.State, deviceStates map[string]networkmanager.DeviceState) (shared.State, error) {
 	var state rootState
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
-
 	if err := normalizeInterfacesNames(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
 
-	state.Interfaces = filterOutInterfaces(state.Interfaces, interfacesFilterGlob)
+	state.Interfaces = filterOutInterfaces(state.Interfaces, deviceStates)
 	if state.Routes != nil {
-		state.Routes.Running = filterOutRoutes(state.Routes.Running, interfacesFilterGlob)
-		state.Routes.Config = filterOutRoutes(state.Routes.Config, interfacesFilterGlob)
+		state.Routes.Running = filterOutRoutes(state.Routes.Running, state.Interfaces)
+		state.Routes.Config = filterOutRoutes(state.Routes.Config, state.Interfaces)
 	}
+
 	filteredState, err := yaml.Marshal(state)
 	if err != nil {
 		return currentState, err
@@ -115,8 +158,18 @@ func normalizeInterfacesNames(rawState []byte, state *rootState) error {
 	if err := goyaml.Unmarshal(rawState, &stateForNormalization); err != nil {
 		return err
 	}
+
 	for i, iface := range stateForNormalization.Interfaces {
 		state.Interfaces[i].Name = iface.Name
+	}
+
+	if stateForNormalization.Routes != nil {
+		for i, route := range stateForNormalization.Routes.Config {
+			state.Routes.Config[i].NextHopInterface = route.NextHopInterface
+		}
+		for i, route := range stateForNormalization.Routes.Running {
+			state.Routes.Running[i].NextHopInterface = route.NextHopInterface
+		}
 	}
 	return nil
 }
