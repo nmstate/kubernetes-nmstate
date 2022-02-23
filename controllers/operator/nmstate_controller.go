@@ -50,7 +50,8 @@ type NMStateReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods,verbs="*",namespace="{{ .OperatorNamespace }}"
+// +kubebuilder:rbac:groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods,verbs="*"
+// ,namespace="{{ .OperatorNamespace }}"
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*",namespace="{{ .OperatorNamespace }}"
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs="*",namespace="{{ .OperatorNamespace }}"
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs="*"
@@ -149,7 +150,7 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "rbac", true)
@@ -178,6 +179,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		archAndCRNodeSelector = map[string]string{}
 	}
 	archAndCRNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
+	archAndCRNodeSelector["kubernetes.io/os"] = "linux"
 
 	handlerTolerations := instance.Spec.Tolerations
 	if handlerTolerations == nil {
@@ -201,7 +203,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
@@ -221,7 +223,12 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
-func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
+func (r *NMStateReconciler) renderAndApply(
+	instance *nmstatev1.NMState,
+	data render.RenderData,
+	sourceDirectory string,
+	setControllerReference bool,
+) error {
 	var err error
 
 	sourceFullDirectory := filepath.Join(names.ManifestDir, "kubernetes-nmstate", sourceDirectory)

@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -95,9 +112,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 
 				Byf("Check %s has the default ip address", primaryNic)
 				for _, node := range nodes {
-					Eventually(func() string {
-						return ipv4Address(node, primaryNic)
-					}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
+					Eventually(
+						func() string {
+							return ipv4Address(node, primaryNic)
+						},
+						30*time.Second,
+						1*time.Second,
+					).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 				}
 
 				Byf("Check %s is back as the default route interface", primaryNic)
@@ -165,9 +186,13 @@ func waitForNodesReady() {
 func checkThatBridgeTookOverTheDefaultIP(nodesToCheck []string, bridgeName string, addressByNode map[string]string) {
 	By("Verifying that the bridge obtained node's default IP")
 	for _, node := range nodesToCheck {
-		Eventually(func() string {
-			return ipv4Address(node, bridgeName)
-		}, 15*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s has not take over the %s address", bridgeName, primaryNic))
+		Eventually(
+			func() string {
+				return ipv4Address(node, bridgeName)
+			},
+			15*time.Second,
+			1*time.Second,
+		).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s has not take over the %s address", bridgeName, primaryNic))
 	}
 
 	By("Verify that next-hop-interface for default route is the bridge")

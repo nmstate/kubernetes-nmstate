@@ -17,18 +17,23 @@
 package resolver
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
+	"github.com/nmstate/nmpolicy/nmpolicy/internal/expression"
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/types"
 )
 
 type Resolver struct{}
 
 type resolver struct {
-	currentState   types.NMState
-	capturedStates types.CapturedStates
-	captureASTPool types.CaptureASTPool
+	currentState       types.NMState
+	capturedStates     types.CapturedStates
+	captureExpressions types.CaptureExpressions
+	captureASTPool     types.CaptureASTPool
+	currentNode        *ast.Node
+	currentExpression  *string
 }
 
 func New() Resolver {
@@ -43,23 +48,29 @@ func newResolver() *resolver {
 	}
 }
 
-func (Resolver) Resolve(captureASTPool types.CaptureASTPool,
+func (Resolver) Resolve(captureExpressions types.CaptureExpressions,
+	captureASTPool types.CaptureASTPool,
 	currentState types.NMState,
 	capturedStates types.CapturedStates) (types.CapturedStates, error) {
 	r := newResolver()
 	r.currentState = currentState
 	r.captureASTPool = captureASTPool
+	r.captureExpressions = captureExpressions
 	if capturedStates != nil {
 		r.capturedStates = capturedStates
 	}
-	return r.resolve()
+	capturedStates, err := r.resolve()
+	return capturedStates, r.wrapErrorWithCurrentExpression(err)
 }
 
-func (Resolver) ResolveCaptureEntryPath(captureEntryPathAST ast.Node,
+func (Resolver) ResolveCaptureEntryPath(expr string, captureEntryPathAST ast.Node,
 	capturedStates types.CapturedStates) (interface{}, error) {
 	r := newResolver()
+	r.currentExpression = &expr
 	r.capturedStates = capturedStates
-	return r.resolveCaptureEntryPath(captureEntryPathAST)
+	r.currentNode = &captureEntryPathAST
+	resolvedCaptureEntryPath, err := r.resolveCaptureEntryPath()
+	return resolvedCaptureEntryPath, r.wrapErrorWithCurrentExpression(err)
 }
 
 func (r *resolver) resolve() (types.CapturedStates, error) {
@@ -72,6 +83,10 @@ func (r *resolver) resolve() (types.CapturedStates, error) {
 }
 
 func (r *resolver) resolveCaptureEntryName(captureEntryName string) (types.NMState, error) {
+	expr, ok := r.captureExpressions[captureEntryName]
+	if ok {
+		r.currentExpression = &expr
+	}
 	capturedStateEntry, ok := r.capturedStates[captureEntryName]
 	if ok {
 		return capturedStateEntry.State, nil
@@ -80,9 +95,10 @@ func (r *resolver) resolveCaptureEntryName(captureEntryName string) (types.NMSta
 	if !ok {
 		return nil, fmt.Errorf("capture entry '%s' not found", captureEntryName)
 	}
+	r.currentNode = &captureASTEntry
 	var err error
 	capturedStateEntry = types.CapturedState{}
-	capturedStateEntry.State, err = r.resolveCaptureASTEntry(captureASTEntry)
+	capturedStateEntry.State, err = r.resolveCaptureASTEntry()
 	if err != nil {
 		return nil, err
 	}
@@ -90,16 +106,17 @@ func (r *resolver) resolveCaptureEntryName(captureEntryName string) (types.NMSta
 	return capturedStateEntry.State, nil
 }
 
-func (r resolver) resolveCaptureASTEntry(captureASTEntry ast.Node) (types.NMState, error) {
-	if captureASTEntry.EqFilter != nil {
-		return r.resolveEqFilter(captureASTEntry.EqFilter)
-	} else if captureASTEntry.Replace != nil {
-		return r.resolveReplace(captureASTEntry.Replace)
+func (r *resolver) resolveCaptureASTEntry() (types.NMState, error) {
+	if r.currentNode.EqFilter != nil {
+		return r.resolveEqFilter()
+	} else if r.currentNode.Replace != nil {
+		return r.resolveReplace()
 	}
-	return nil, fmt.Errorf("root node has unsupported operation : %+v", captureASTEntry)
+	return nil, fmt.Errorf("root node has unsupported operation : %s", *r.currentNode)
 }
 
-func (r resolver) resolveEqFilter(operator *ast.TernaryOperator) (types.NMState, error) {
+func (r *resolver) resolveEqFilter() (types.NMState, error) {
+	operator := r.currentNode.EqFilter
 	filteredState, err := r.resolveTernaryOperator(operator, filter)
 	if err != nil {
 		return nil, wrapWithEqFilterError(err)
@@ -107,7 +124,8 @@ func (r resolver) resolveEqFilter(operator *ast.TernaryOperator) (types.NMState,
 	return filteredState, nil
 }
 
-func (r resolver) resolveReplace(operator *ast.TernaryOperator) (types.NMState, error) {
+func (r *resolver) resolveReplace() (types.NMState, error) {
+	operator := r.currentNode.Replace
 	replacedState, err := r.resolveTernaryOperator(operator, replace)
 	if err != nil {
 		return nil, wrapWithResolveError(err)
@@ -115,38 +133,44 @@ func (r resolver) resolveReplace(operator *ast.TernaryOperator) (types.NMState, 
 	return replacedState, nil
 }
 
-func (r resolver) resolveTernaryOperator(operator *ast.TernaryOperator,
-	resolverFunc func(map[string]interface{}, ast.VariadicOperator, ast.Node) (map[string]interface{}, error)) (types.NMState, error) {
-	inputSource, err := r.resolveInputSource((*operator)[0])
+func (r *resolver) resolveTernaryOperator(operator *ast.TernaryOperator,
+	resolverFunc func(map[string]interface{}, ast.VariadicOperator, interface{}) (map[string]interface{}, error)) (types.NMState, error) {
+	operatorNode := r.currentNode
+	r.currentNode = &(*operator)[0]
+	inputSource, err := r.resolveInputSource()
 	if err != nil {
 		return nil, err
 	}
 
-	path, err := r.resolvePath((*operator)[1])
+	r.currentNode = &(*operator)[1]
+	path, err := r.resolvePath()
 	if err != nil {
 		return nil, err
 	}
-	value, err := r.resolveStringOrCaptureEntryPath((*operator)[2])
+	r.currentNode = &(*operator)[2]
+	value, err := r.resolveStringOrCaptureEntryPath()
 	if err != nil {
 		return nil, err
 	}
-	resolvedState, err := resolverFunc(inputSource, path.steps, *value)
+
+	r.currentNode = operatorNode
+	resolvedState, err := resolverFunc(inputSource, path.steps, value)
 	if err != nil {
 		return nil, err
 	}
 	return resolvedState, nil
 }
 
-func (r resolver) resolveInputSource(inputSourceNode ast.Node) (types.NMState, error) {
-	if ast.CurrentStateIdentity().DeepEqual(inputSourceNode.Terminal) {
+func (r *resolver) resolveInputSource() (types.NMState, error) {
+	if ast.CurrentStateIdentity().DeepEqual(r.currentNode.Terminal) {
 		return r.currentState, nil
-	} else if inputSourceNode.Path != nil {
-		resolvedPath, err := r.resolvePath(inputSourceNode)
+	} else if r.currentNode.Path != nil {
+		resolvedPath, err := r.resolvePath()
 		if err != nil {
 			return nil, err
 		}
 		if resolvedPath.captureEntryName == "" {
-			return nil, fmt.Errorf("invalid path input source, only capture reference is supported")
+			return nil, fmt.Errorf("invalid path input source (%s), only capture reference is supported", r.currentNode)
 		}
 		capturedState, err := r.resolveCaptureEntryName(resolvedPath.captureEntryName)
 		if err != nil {
@@ -155,31 +179,21 @@ func (r resolver) resolveInputSource(inputSourceNode ast.Node) (types.NMState, e
 		return capturedState, nil
 	}
 
-	return nil, fmt.Errorf("invalid input source %v, only current state or capture reference is supported", inputSourceNode)
+	return nil, fmt.Errorf("invalid input source (%s), only current state or capture reference is supported", *r.currentNode)
 }
 
-func (r resolver) resolveStringOrCaptureEntryPath(filteredValueNode ast.Node) (*ast.Node, error) {
-	if filteredValueNode.String != nil {
-		return &filteredValueNode, nil
-	} else if filteredValueNode.Path != nil {
-		resolvedCaptureEntryPath, err := r.resolveCaptureEntryPath(filteredValueNode)
-		if err != nil {
-			return nil, err
-		}
-		terminal, err := newTerminalFromInterface(resolvedCaptureEntryPath)
-		if err != nil {
-			return nil, err
-		}
-		return &ast.Node{
-			Terminal: *terminal,
-		}, nil
+func (r *resolver) resolveStringOrCaptureEntryPath() (interface{}, error) {
+	if r.currentNode.Str != nil {
+		return *r.currentNode.Str, nil
+	} else if r.currentNode.Path != nil {
+		return r.resolveCaptureEntryPath()
 	} else {
 		return nil, fmt.Errorf("not supported value. Only string or capture entry path are supported")
 	}
 }
 
-func (r resolver) resolveCaptureEntryPath(pathNode ast.Node) (interface{}, error) {
-	resolvedPath, err := r.resolvePath(pathNode)
+func (r *resolver) resolveCaptureEntryPath() (interface{}, error) {
+	resolvedPath, err := r.resolvePath()
 	if err != nil {
 		return nil, err
 	}
@@ -193,16 +207,16 @@ func (r resolver) resolveCaptureEntryPath(pathNode ast.Node) (interface{}, error
 	return resolvedPath.walkState(capturedStateEntry)
 }
 
-func (r resolver) resolvePath(pathNode ast.Node) (*captureEntryNameAndSteps, error) {
-	if pathNode.Path == nil {
-		return nil, fmt.Errorf("invalid path type %T", pathNode)
-	} else if len(*pathNode.Path) == 0 {
+func (r *resolver) resolvePath() (*captureEntryNameAndSteps, error) {
+	if r.currentNode.Path == nil {
+		return nil, fmt.Errorf("invalid path type %T", *r.currentNode)
+	} else if len(*r.currentNode.Path) == 0 {
 		return nil, fmt.Errorf("empty path length")
-	} else if (*pathNode.Path)[0].Identity == nil {
+	} else if (*r.currentNode.Path)[0].Identity == nil {
 		return nil, fmt.Errorf("path first step has to be an identity")
 	}
 	resolvedPath := captureEntryNameAndSteps{
-		steps: *pathNode.Path,
+		steps: *r.currentNode.Path,
 	}
 	if *resolvedPath.steps[0].Identity == "capture" {
 		const captureRefSize = 2
@@ -215,4 +229,21 @@ func (r resolver) resolvePath(pathNode ast.Node) (*captureEntryNameAndSteps, err
 		}
 	}
 	return &resolvedPath, nil
+}
+
+func (r resolver) wrapErrorWithCurrentExpression(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var pathError PathError
+	errorNode := r.currentNode
+	if errors.As(err, &pathError) {
+		errorNode = pathError.errorNode
+	}
+
+	if errorNode == nil || r.currentExpression == nil {
+		return err
+	}
+	return expression.WrapError(err, *r.currentExpression, errorNode.Meta.Position)
 }

@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package policyconditions
 
 import (
@@ -36,6 +53,12 @@ func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionUnknown,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionTrue,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
 		message,
 	)
 }
@@ -54,6 +77,12 @@ func SetPolicySuccess(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
 		message,
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
 }
 
 func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
@@ -69,6 +98,12 @@ func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 		corev1.ConditionTrue,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
 		message,
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
 	)
 }
 
@@ -86,6 +121,20 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 		nmstate.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		"",
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
+}
+
+func IsProgressing(conditions *nmstate.ConditionList) bool {
+	progressingCondition := conditions.Find(nmstate.NodeNetworkConfigurationPolicyConditionProgressing)
+	if progressingCondition == nil {
+		return false
+	}
+	return progressingCondition.Status == corev1.ConditionTrue
 }
 
 func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
@@ -102,6 +151,7 @@ func Update(cli client.Client, apiReader client.Reader, policyKey types.Namespac
 	return err
 }
 
+//nolint:gocritic
 func update(apiWriter client.Client, apiReader client.Reader, policyReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
@@ -129,27 +179,69 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
 		numberOfNmstateMatchingNodes := len(nmstateMatchingNodes)
+		numberOfReadyNmstateMatchingNodes := len(node.FilterReady(nmstateMatchingNodes))
+		numberOfNotReadyNmstateMatchingNodes := numberOfNmstateMatchingNodes - numberOfReadyNmstateMatchingNodes
 
 		// Let's get conditions with true status count filtered by policy generation
 		enactmentsCountByCondition := enactmentconditions.Count(enactments, policy.Generation)
 
-		numberOfFinishedEnactments := enactmentsCountByCondition.Available() + enactmentsCountByCondition.Failed() + enactmentsCountByCondition.Aborted()
+		numberOfFinishedEnactments := enactmentsCountByCondition.Available() +
+			enactmentsCountByCondition.Failed() +
+			enactmentsCountByCondition.Aborted()
 
-		logger.Info(fmt.Sprintf("numberOfNmstateMatchingNodes: %d, enactments count: %s", numberOfNmstateMatchingNodes, enactmentsCountByCondition))
+		logger.Info(
+			fmt.Sprintf("numberOfNmstateMatchingNodes: %d, enactments count: %s",
+				numberOfNmstateMatchingNodes,
+				enactmentsCountByCondition),
+		)
+
+		var message string
+		informOfNotReadyNodes := func(notReadyNodesCount int) {
+			if notReadyNodesCount > 0 {
+				message += fmt.Sprintf(
+					", %d nodes ignored due to NotReady state",
+					notReadyNodesCount,
+				)
+			}
+		}
+		informOfAbortedEnactments := func(abortedEnactmentsCount int) {
+			if abortedEnactmentsCount > 0 {
+				message += fmt.Sprintf(
+					", %d nodes aborted configuration",
+					abortedEnactmentsCount,
+				)
+			}
+		}
 
 		if numberOfNmstateMatchingNodes == 0 {
-			message := "Policy does not match any node"
+			message = "Policy does not match any node"
 			SetPolicyNotMatching(&policy.Status.Conditions, message)
 		} else if enactmentsCountByCondition.Failed() > 0 || enactmentsCountByCondition.Aborted() > 0 {
-			message := fmt.Sprintf("%d/%d nodes failed to configure", enactmentsCountByCondition.Failed(), numberOfNmstateMatchingNodes)
-			if enactmentsCountByCondition.Aborted() > 0 {
-				message += fmt.Sprintf(", %d nodes aborted configuration", enactmentsCountByCondition.Aborted())
-			}
+			message = fmt.Sprintf(
+				"%d/%d nodes failed to configure",
+				enactmentsCountByCondition.Failed(),
+				numberOfNmstateMatchingNodes,
+			)
+			informOfAbortedEnactments(enactmentsCountByCondition.Aborted())
 			SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
-		} else if numberOfFinishedEnactments < numberOfNmstateMatchingNodes {
-			SetPolicyProgressing(&policy.Status.Conditions, fmt.Sprintf("Policy is progressing %d/%d nodes finished", numberOfFinishedEnactments, numberOfNmstateMatchingNodes))
+		} else if numberOfFinishedEnactments < numberOfReadyNmstateMatchingNodes {
+			message = fmt.Sprintf(
+				"Policy is progressing %d/%d nodes finished",
+				numberOfFinishedEnactments,
+				numberOfReadyNmstateMatchingNodes,
+			)
+			informOfNotReadyNodes(numberOfNotReadyNmstateMatchingNodes)
+			SetPolicyProgressing(
+				&policy.Status.Conditions,
+				message,
+			)
 		} else {
-			message := fmt.Sprintf("%d/%d nodes successfully configured", enactmentsCountByCondition.Available(), enactmentsCountByCondition.Available())
+			message = fmt.Sprintf(
+				"%d/%d nodes successfully configured",
+				enactmentsCountByCondition.Available(),
+				numberOfNmstateMatchingNodes,
+			)
+			informOfNotReadyNodes(numberOfNotReadyNmstateMatchingNodes)
 			SetPolicySuccess(&policy.Status.Conditions, message)
 		}
 

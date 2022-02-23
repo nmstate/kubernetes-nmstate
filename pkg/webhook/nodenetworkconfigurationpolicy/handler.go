@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package nodenetworkconfigurationpolicy
 
 import (
@@ -19,10 +36,10 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-type mutator func(nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy
-type validator func(nmstatev1.NodeNetworkConfigurationPolicy, nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause
+type mutator func(*nmstatev1.NodeNetworkConfigurationPolicy)
+type validator func(*nmstatev1.NodeNetworkConfigurationPolicy, *nmstatev1.NodeNetworkConfigurationPolicy) []metav1.StatusCause
 
-func mutatePolicyHandler(neededMutationFor func(nmstatev1.NodeNetworkConfigurationPolicy) bool, mutate mutator) admission.HandlerFunc {
+func mutatePolicyHandler(neededMutationFor func(*nmstatev1.NodeNetworkConfigurationPolicy) bool, mutate mutator) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/mutator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw
@@ -32,11 +49,11 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1.NodeNetworkConfigurati
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, "failed decoding policy: %s", string(original)))
 		}
 
-		if !neededMutationFor(policy) {
+		if !neededMutationFor(&policy) {
 			return admission.Allowed("mutation not needed")
 		}
 
-		policy = mutate(policy)
+		mutate(&policy)
 		current, err := json.Marshal(policy)
 		if err != nil {
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, "failed encoding policy: %+v", policy))
@@ -48,7 +65,11 @@ func mutatePolicyHandler(neededMutationFor func(nmstatev1.NodeNetworkConfigurati
 	}
 }
 
-func validatePolicyHandler(cli client.Client, neededValidationFor func(admissionv1.Operation, nmstatev1.NodeNetworkConfigurationPolicy, nmstatev1.NodeNetworkConfigurationPolicy) bool, validators ...validator) admission.HandlerFunc {
+func validatePolicyHandler(
+	cli client.Client,
+	neededValidationFor func(admissionv1.Operation, *nmstatev1.NodeNetworkConfigurationPolicy, *nmstatev1.NodeNetworkConfigurationPolicy) bool,
+	validators ...validator,
+) admission.HandlerFunc {
 	log := logf.Log.WithName("webhook/nodenetworkconfigurationpolicy/validator")
 	return func(ctx context.Context, req webhook.AdmissionRequest) webhook.AdmissionResponse {
 		original := req.Object.Raw
@@ -65,13 +86,13 @@ func validatePolicyHandler(cli client.Client, neededValidationFor func(admission
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, errMsg))
 		}
 
-		if !neededValidationFor(req.Operation, policy, currentPolicy) {
+		if !neededValidationFor(req.Operation, &policy, &currentPolicy) {
 			return admission.Allowed("validation not needed")
 		}
 
 		errCauses := []metav1.StatusCause{}
 		for _, validate := range validators {
-			errCauses = append(errCauses, validate(policy, currentPolicy)...)
+			errCauses = append(errCauses, validate(&policy, &currentPolicy)...)
 		}
 		if len(errCauses) > 0 {
 			return admission.Denied(handlePolicyCauses(errCauses, policy.Name))
@@ -88,6 +109,6 @@ func handlePolicyCauses(causes []metav1.StatusCause, name string) string {
 	return errMsg
 }
 
-func always(nmstatev1.NodeNetworkConfigurationPolicy) bool {
+func always(*nmstatev1.NodeNetworkConfigurationPolicy) bool {
 	return true
 }

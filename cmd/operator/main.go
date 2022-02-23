@@ -1,6 +1,7 @@
 /*
 Copyright The Kubernetes NMState Authors.
 
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -20,10 +21,8 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 
-	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -75,7 +74,7 @@ func main() {
 		flag.CommandLine.Set("zap-devel", "true")
 	}
 
-	setupLogger(opt)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opt)))
 
 	ctrlOptions := ctrl.Options{
 		Scheme:             scheme,
@@ -104,15 +103,6 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
-}
-
-func setupLogger(opts zap.Options) {
-	opts.EncoderConfigOptions = append(opts.EncoderConfigOptions, func(ec *zapcore.EncoderConfig) {
-		ec.EncodeTime = zapcore.ISO8601TimeEncoder
-	})
-
-	logger := zap.New(zap.UseFlagOptions(&opts))
-	ctrl.SetLogger(logger)
 }
 
 // Start profiler on given port if ENABLE_PROFILER is True

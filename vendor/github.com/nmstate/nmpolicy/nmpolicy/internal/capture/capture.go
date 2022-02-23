@@ -35,12 +35,13 @@ type Lexer interface {
 }
 
 type Parser interface {
-	Parse([]lexer.Token) (ast.Node, error)
+	Parse(string, []lexer.Token) (ast.Node, error)
 }
 
 type Resolver interface {
-	Resolve(captureASTPool types.CaptureASTPool, state types.NMState, capturedStates types.CapturedStates) (types.CapturedStates, error)
-	ResolveCaptureEntryPath(captureEntryPathAST ast.Node, capturedStates types.CapturedStates) (interface{}, error)
+	Resolve(captureExpressions types.CaptureExpressions, captureASTPool types.CaptureASTPool,
+		state types.NMState, capturedStates types.CapturedStates) (types.CapturedStates, error)
+	ResolveCaptureEntryPath(expression string, captureEntryPathAST ast.Node, capturedStates types.CapturedStates) (interface{}, error)
 }
 
 func New(leXer Lexer, parser Parser, resolver Resolver) Capture {
@@ -69,7 +70,7 @@ func (c Capture) Resolve(
 			return nil, fmt.Errorf("failed to resolve capture expression, err: %v", err)
 		}
 
-		astRoot, err := c.parser.Parse(tokens)
+		astRoot, err := c.parser.Parse(capExpr, tokens)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve capture expression, err: %v", err)
 		}
@@ -77,7 +78,7 @@ func (c Capture) Resolve(
 		astPool[capID] = astRoot
 	}
 
-	resolvedCapturedStates, err := c.resolver.Resolve(astPool, state, capturesState)
+	resolvedCapturedStates, err := c.resolver.Resolve(capturesExpr, astPool, state, capturesState)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve capture expression, err: %v", err)
 	}

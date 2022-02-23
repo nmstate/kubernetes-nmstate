@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -46,17 +63,17 @@ func indexEnactmentStatusByName() map[string]shared.NodeNetworkConfigurationEnac
 	return enactmentStatusByName
 }
 
-func enactmentConditionsStatus(node string, policy string) shared.ConditionList {
+func enactmentConditionsStatus(node, policy string) shared.ConditionList {
 	return nodeNetworkConfigurationEnactment(shared.EnactmentKey(node, policy)).Status.Conditions
 }
 
-func enactmentConditionsStatusForPolicyEventually(node string, policy string) AsyncAssertion {
+func enactmentConditionsStatusForPolicyEventually(node, policy string) AsyncAssertion {
 	return Eventually(func() shared.ConditionList {
 		return enactmentConditionsStatus(node, policy)
 	}, 180*time.Second, 1*time.Second)
 }
 
-func enactmentConditionsStatusForPolicyConsistently(node string, policy string) AsyncAssertion {
+func enactmentConditionsStatusForPolicyConsistently(node, policy string) AsyncAssertion {
 	return Consistently(func() shared.ConditionList {
 		return enactmentConditionsStatus(node, policy)
 	}, 5*time.Second, 1*time.Second)
@@ -148,7 +165,11 @@ func waitForDegradedPolicy(policy string) {
 }
 
 func waitForPolicy(policy string, matcher gomegatypes.GomegaMatcher) {
-	policyConditionsStatusForPolicyEventually(policy).Should(matcher, "should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml())
+	policyConditionsStatusForPolicyEventually(policy).
+		Should(
+			matcher,
+			"should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml(),
+		)
 }
 
 func filterOutMessageAndTimestampFromConditions(conditions shared.ConditionList) shared.ConditionList {

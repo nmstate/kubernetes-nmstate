@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package operator
 
 import (
@@ -33,7 +50,6 @@ type operatorTestData struct {
 	ns                                     string
 	nmstate                                nmstatev1.NMState
 	webhookKey, handlerKey, certManagerKey types.NamespacedName
-	handlerLabels                          map[string]string
 }
 
 func newOperatorTestData(ns string) operatorTestData {
@@ -145,7 +161,11 @@ func eventuallyOperandIsNotFound(testData operatorTestData) {
 	By("Wait for operand pods to terminate")
 	Eventually(func() ([]corev1.Pod, error) {
 		podList := corev1.PodList{}
-		err := testenv.Client.List(context.TODO(), &podList, &client.ListOptions{Namespace: testData.ns, LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector()})
+		err := testenv.Client.List(
+			context.TODO(),
+			&podList,
+			&client.ListOptions{Namespace: testData.ns, LabelSelector: labels.Set{"app": "kubernetes-nmstate"}.AsSelector()},
+		)
 		return podList.Items, err
 	}, 120*time.Second, time.Second).Should(BeEmpty(), "should terminate all the pods")
 }

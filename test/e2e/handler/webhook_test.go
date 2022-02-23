@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -74,7 +91,13 @@ var _ = Describe("Validation Admission Webhook", func() {
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return setDesiredStateWithPolicyAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), map[string]string{})
 			})
-			Expect(err).To(MatchError("admission webhook \"nodenetworkconfigurationpolicies-update-validate.nmstate.io\" denied the request: failed to admit NodeNetworkConfigurationPolicy test-policy: message: policy test-policy is still in progress. "))
+			Expect(err).
+				To(
+					MatchError(
+						"admission webhook \"nodenetworkconfigurationpolicies-update-validate.nmstate.io\" denied the request: " +
+							"failed to admit NodeNetworkConfigurationPolicy test-policy: message: policy test-policy is still in progress. ",
+					),
+				)
 		})
 	})
 	Context("When a policy with too long name is created", func() {
@@ -83,7 +106,15 @@ var _ = Describe("Validation Admission Webhook", func() {
 			policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 			policy.Name = tooLongName
 			err := testenv.Client.Create(context.TODO(), &policy)
-			Expect(err).To(MatchError("admission webhook \"nodenetworkconfigurationpolicies-create-validate.nmstate.io\" denied the request: failed to admit NodeNetworkConfigurationPolicy this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com: message: invalid policy name: \"this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com\": must be no more than 63 characters. "))
+			Expect(err).
+				To(
+					MatchError(
+						"admission webhook \"nodenetworkconfigurationpolicies-create-validate.nmstate.io\" denied the request: " +
+							"failed to admit NodeNetworkConfigurationPolicy this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com:" +
+							" message: invalid policy name: \"this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com\": " +
+							"must be no more than 63 characters. ",
+					),
+				)
 		})
 	})
 	Context("When a policy capture field is updated", func() {
@@ -95,7 +126,14 @@ var _ = Describe("Validation Admission Webhook", func() {
 			By("Add capture field to the NNCP")
 			capture := map[string]string{"default-gw": `routes.running.destination=="0.0.0.0/0"`}
 			err := setDesiredStateWithPolicyAndCaptureAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), capture, map[string]string{})
-			Expect(err).To(MatchError(`admission webhook "nodenetworkconfigurationpolicies-update-validate.nmstate.io" denied the request: failed to admit NodeNetworkConfigurationPolicy test-policy: message: invalid policy operation: capture field cannot be modified. `))
+			Expect(err).
+				To(
+					MatchError(
+						"admission webhook \"nodenetworkconfigurationpolicies-update-validate.nmstate.io\" denied the request: " +
+							"failed to admit NodeNetworkConfigurationPolicy test-policy: message: invalid policy operation: " +
+							"capture field cannot be modified. ",
+					),
+				)
 		})
 		AfterEach(func() {
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))

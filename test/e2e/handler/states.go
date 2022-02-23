@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -150,7 +167,7 @@ func ovsbBrWithInternalInterface(bridgeName string) nmstate.State {
 		bridgeName, firstSecondaryNic))
 }
 
-func ifaceUpWithStaticIP(iface string, ipAddress string, prefixLen string) nmstate.State {
+func ifaceUpWithStaticIP(iface, ipAddress, prefixLen string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
@@ -174,7 +191,7 @@ func ifaceUpWithStaticIPAbsent(firstSecondaryNic string) nmstate.State {
 `, firstSecondaryNic))
 }
 
-func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
+func ifaceUpWithVlanUp(iface, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -185,7 +202,7 @@ func ifaceUpWithVlanUp(iface string, vlanID string) nmstate.State {
 `, iface, vlanID, iface, vlanID))
 }
 
-func vlanAbsent(iface string, vlanID string) nmstate.State {
+func vlanAbsent(iface, vlanID string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s.%s
       type: vlan
@@ -213,7 +230,7 @@ func ifaceDownIPv4Disabled(iface string) nmstate.State {
 `, iface))
 }
 
-func vlanUpWithStaticIP(iface string, ipAddress string) nmstate.State {
+func vlanUpWithStaticIP(iface, ipAddress string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: vlan
@@ -248,6 +265,23 @@ func resetPrimaryAndSecondaryNICs() nmstate.State {
       enabled: false
 
 `, primaryNic, firstSecondaryNic, secondSecondaryNic))
+}
+
+func bridgeOnTheSecondaryInterfaceState() nmstate.State {
+	return nmstate.NewState(`interfaces:
+  - name: brext
+    type: linux-bridge
+    state: up
+    ipv4: "{{ capture.secondary-iface.interfaces.0.ipv4 }}"
+    bridge:
+      options:
+        stp:
+          enabled: false
+      port:
+      - name: "{{ capture.secondary-iface.interfaces.0.name }}"
+routes:
+  config: "{{ capture.bridge-routes.routes.running }}"
+`)
 }
 
 func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {

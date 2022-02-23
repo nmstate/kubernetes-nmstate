@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package node
 
 import (
@@ -39,15 +56,34 @@ func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]c
 	}
 
 	filteredNodes := []corev1.Node{}
-	for _, node := range nodes.Items {
-		for _, pod := range pods.Items {
-			if node.Name == pod.Spec.NodeName {
-				filteredNodes = append(filteredNodes, node)
+	for nodeIndex := range nodes.Items {
+		for podIndex := range pods.Items {
+			if nodes.Items[nodeIndex].Name == pods.Items[podIndex].Spec.NodeName {
+				filteredNodes = append(filteredNodes, nodes.Items[nodeIndex])
 				break
 			}
 		}
 	}
 	return filteredNodes, nil
+}
+
+func FilterReady(nodes []corev1.Node) []corev1.Node {
+	filteredNodes := []corev1.Node{}
+	for i := range nodes {
+		if isReady(&nodes[i]) {
+			filteredNodes = append(filteredNodes, nodes[i])
+		}
+	}
+	return filteredNodes
+}
+
+func isReady(node *corev1.Node) bool {
+	for _, condition := range node.Status.Conditions {
+		if condition.Type == corev1.NodeReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
 }
 
 func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1.NodeNetworkConfigurationPolicy) (int, error) {

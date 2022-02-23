@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package policyconditions
 
 import (
@@ -22,7 +39,11 @@ import (
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
-func e(node string, policy string, conditionsSetters ...func(*nmstate.ConditionList, string)) nmstatev1beta1.NodeNetworkConfigurationEnactment {
+func e(
+	node string,
+	policy string,
+	conditionsSetters ...func(*nmstate.ConditionList, string),
+) nmstatev1beta1.NodeNetworkConfigurationEnactment {
 	conditions := nmstate.ConditionList{}
 	for _, conditionsSetter := range conditionsSetters {
 		conditionsSetter(&conditions, "")
@@ -71,11 +92,40 @@ func newNode(idx int) corev1.Node {
 				"kubernetes.io/hostname": nodeName,
 			},
 		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
+		},
 	}
 	return node
 }
 
-func newPodAtNode(idx int, name string, namespace string, component string) corev1.Pod {
+func newNotReadyNode(idx int) corev1.Node {
+	nodeName := nodeName(idx)
+	node := corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: nodeName,
+			Labels: map[string]string{
+				"kubernetes.io/hostname": nodeName,
+			},
+		},
+		Status: corev1.NodeStatus{
+			Conditions: []corev1.NodeCondition{
+				{
+					Type:   corev1.NodeReady,
+					Status: corev1.ConditionFalse,
+				},
+			},
+		},
+	}
+	return node
+}
+
+func newPodAtNode(idx int, name, namespace, component string) corev1.Pod {
 	pod := corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%d", name, idx),
@@ -286,6 +336,21 @@ var _ = Describe("Policy Conditions", func() {
 				newNonNmstatePodAtNode(4),
 			},
 			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
+		}),
+		Entry("when there is a NotReady node, ignore it for policy conditions calculations", ConditionsCase{
+			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+				e("node1", "policy1", enactmentconditions.SetSuccess),
+				e("node2", "policy1", enactmentconditions.SetSuccess),
+				e("node3", "policy1", enactmentconditions.SetSuccess),
+			},
+			Nodes: []corev1.Node{
+				newNode(1),
+				newNode(2),
+				newNode(3),
+				newNotReadyNode(4),
+			},
+			Pods:   newNmstatePods(4),
+			Policy: p(SetPolicySuccess, "3/4 nodes successfully configured, 1 nodes ignored due to NotReady state"),
 		}),
 	)
 })

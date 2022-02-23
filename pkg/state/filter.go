@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package state
 
 import (
@@ -61,11 +78,11 @@ func FilterOut(currentState shared.State, deviceInfo DeviceInfoer) (shared.State
 	return filterOut(currentState, devStates)
 }
 
-func filterOutRoutes(routes []interface{}, filteredInterfaces []interfaceState) []interface{} {
-	filteredRoutes := []interface{}{}
+func filterOutRoutes(routes []routeState, filteredInterfaces []interfaceState) []routeState {
+	filteredRoutes := []routeState{}
 	for _, route := range routes {
-		name := route.(map[string]interface{})["next-hop-interface"]
-		if isInInterfaces(name.(string), filteredInterfaces) {
+		name := route.NextHopInterface
+		if isInInterfaces(name, filteredInterfaces) {
 			filteredRoutes = append(filteredRoutes, route)
 		}
 	}
@@ -133,7 +150,6 @@ func filterOut(currentState shared.State, deviceStates map[string]networkmanager
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
-
 	if err := normalizeInterfacesNames(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
@@ -159,8 +175,18 @@ func normalizeInterfacesNames(rawState []byte, state *rootState) error {
 	if err := goyaml.Unmarshal(rawState, &stateForNormalization); err != nil {
 		return err
 	}
+
 	for i, iface := range stateForNormalization.Interfaces {
 		state.Interfaces[i].Name = iface.Name
+	}
+
+	if stateForNormalization.Routes != nil {
+		for i, route := range stateForNormalization.Routes.Config {
+			state.Routes.Config[i].NextHopInterface = route.NextHopInterface
+		}
+		for i, route := range stateForNormalization.Routes.Running {
+			state.Routes.Running[i].NextHopInterface = route.NextHopInterface
+		}
 	}
 	return nil
 }

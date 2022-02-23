@@ -135,22 +135,16 @@ generate: gen-k8s gen-crds gen-rbac
 manifests:
 	go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
-handler-manager:
-	hack/build-manager.sh handler $(BIN_DIR)
-
-operator-manager:
-	hack/build-manager.sh operator $(BIN_DIR)
-
 handler: SKIP_PUSH=true
 handler: push-handler
 
-push-handler: handler-manager
+push-handler:
 	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
-push-operator: operator-manager
+push-operator:
 	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh  . -f build/Dockerfile.operator
 
 push: push-handler push-operator
@@ -168,14 +162,6 @@ test-e2e-operator: manifests
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
-
-test-e2e-ocp: test-e2e-handler-ocp # deprecated. Use test-e2e-handler-ocp instead
-
-test-e2e-handler-ocp:
-	./hack/ocp-e2e-tests-handler.sh
-
-test-e2e-operator-ocp:
-	./hack/ocp-e2e-tests-operator.sh
 
 cluster-up:
 	./cluster/up.sh
@@ -259,5 +245,4 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build \
-	manifests
+	bundle-build

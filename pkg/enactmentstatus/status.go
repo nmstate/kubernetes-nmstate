@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package enactmentstatus
 
 import (
@@ -23,11 +40,11 @@ var (
 	log = logf.Log.WithName("enactmentstatus")
 )
 
-func Update(client client.Client, key types.NamespacedName, statusSetter func(*nmstate.NodeNetworkConfigurationEnactmentStatus)) error {
+func Update(cli client.Client, key types.NamespacedName, statusSetter func(*nmstate.NodeNetworkConfigurationEnactmentStatus)) error {
 	logger := log.WithValues("enactment", key.Name)
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-		err := client.Get(context.TODO(), key, instance)
+		err := cli.Get(context.TODO(), key, instance)
 		if err != nil {
 			return errors.Wrap(err, "getting enactment failed")
 		}
@@ -36,15 +53,15 @@ func Update(client client.Client, key types.NamespacedName, statusSetter func(*n
 
 		logger.Info(fmt.Sprintf("status: %+v", instance.Status))
 
-		err = client.Status().Update(context.TODO(), instance)
+		err = cli.Status().Update(context.TODO(), instance)
 		if err != nil {
 			return err
 		}
 
 		// Wait until enactment has being updated at the node
 		expectedStatus := instance.Status
-		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) {
-			err = client.Get(context.TODO(), key, instance)
+		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) { //nolint:gomnd
+			err = cli.Get(context.TODO(), key, instance)
 			if err != nil {
 				return false, err
 			}

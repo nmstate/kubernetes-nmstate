@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -17,7 +34,7 @@ func bondAbsent(bondName string) nmstate.State {
 `, bondName))
 }
 
-func brAndBondAbsent(bridgeName string, bondName string) nmstate.State {
+func brAndBondAbsent(bridgeName, bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
@@ -42,7 +59,7 @@ func bondUp(bondName string) nmstate.State {
 `, bondName, portFieldName, firstSecondaryNic, fmt.Sprintf(miimonFormat, 120)))
 }
 
-func brWithBondUp(bridgeName string, bondName string) nmstate.State {
+func brWithBondUp(bridgeName, bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
@@ -152,7 +169,8 @@ var _ = Describe("NodeNetworkState", func() {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 0"))
 
-					getVLANFlagsEventually(node, firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					getVLANFlagsEventually(node, firstSecondaryNic, 1).
+						Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					vlansCardinality(node, firstSecondaryNic).Should(Equal(0))
 				}
 			})
@@ -178,9 +196,11 @@ var _ = Describe("NodeNetworkState", func() {
 				for _, node := range nodes {
 					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
-					getVLANFlagsEventually(node, firstSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					getVLANFlagsEventually(node, firstSecondaryNic, 1).
+						Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, firstSecondaryNic, 2, 4094).Should(Succeed())
-					getVLANFlagsEventually(node, secondSecondaryNic, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+					getVLANFlagsEventually(node, secondSecondaryNic, 1).
+						Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})

@@ -20,11 +20,9 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"time"
 
-	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -78,6 +76,15 @@ func init() {
 }
 
 func main() {
+	if mainHandler() == 1 {
+		os.Exit(1)
+	}
+}
+
+// The code from main() has to be extracted into another function in order to properly handle defer.
+// Otherwise, defer may never execute because of eventual os.Exit().
+// return 1 indicates that program should exit with status code 1
+func mainHandler() int {
 	opt := zap.Options{}
 	opt.BindFlags(flag.CommandLine)
 	var logType string
@@ -91,7 +98,7 @@ func main() {
 		flag.CommandLine.Set("zap-devel", "true")
 	}
 
-	setupLogger(opt)
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opt)))
 
 	// Lock only for handler, we can run old and new version of
 	// webhook without problems, policy status will be updated
@@ -100,7 +107,7 @@ func main() {
 		handlerLock, err := lockHandler()
 		if err != nil {
 			setupLog.Error(err, "Failed to run lockHandler")
-			os.Exit(1)
+			return 1
 		}
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
@@ -133,7 +140,7 @@ func main() {
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		return 1
 	}
 
 	if environment.IsCertManager() {
@@ -147,43 +154,44 @@ func main() {
 		certManagerOpts.CARotateInterval, err = environment.LookupAsDuration("CA_ROTATE_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving ca rotate interval")
-			os.Exit(1)
+			return 1
 		}
 
 		certManagerOpts.CAOverlapInterval, err = environment.LookupAsDuration("CA_OVERLAP_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving ca overlap interval")
-			os.Exit(1)
+			return 1
 		}
 
 		certManagerOpts.CertRotateInterval, err = environment.LookupAsDuration("CERT_ROTATE_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving cert rotate interval")
-			os.Exit(1)
+			return 1
 		}
 
 		certManagerOpts.CertOverlapInterval, err = environment.LookupAsDuration("CERT_OVERLAP_INTERVAL")
 		if err != nil {
 			setupLog.Error(err, "Failed retrieving cert overlap interval")
-			os.Exit(1)
+			return 1
 		}
 
-		certManager, err := certificate.NewManager(mgr.GetClient(), certManagerOpts)
+		var certManager *certificate.Manager
+		certManager, err = certificate.NewManager(mgr.GetClient(), certManagerOpts)
 		if err != nil {
 			setupLog.Error(err, "unable to create cert-manager", "controller", "cert-manager")
-			os.Exit(1)
+			return 1
 		}
 
 		err = certManager.Add(mgr)
 		if err != nil {
 			setupLog.Error(err, "unable to add cert-manager to controller-runtime manager", "controller", "cert-manager")
-			os.Exit(1)
+			return 1
 		}
 		// Runs only webhook controllers if it's specified
 	} else if environment.IsWebhook() {
-		if err := webhook.AddToManager(mgr); err != nil {
+		if err = webhook.AddToManager(mgr); err != nil {
 			setupLog.Error(err, "Cannot initialize webhook")
-			os.Exit(1)
+			return 1
 		}
 	} else if environment.IsHandler() {
 		if err = (&controllers.NodeReconciler{
@@ -192,13 +200,14 @@ func main() {
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create Node controller", "controller", "NMState")
-			os.Exit(1)
+			return 1
 		}
 
-		apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+		var apiClient client.Client
+		apiClient, err = client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 		if err != nil {
 			setupLog.Error(err, "failed creating non cached client")
-			os.Exit(1)
+			return 1
 		}
 
 		if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
@@ -208,7 +217,7 @@ func main() {
 			Scheme:    mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
-			os.Exit(1)
+			return 1
 		}
 
 		if err = (&controllers.NodeNetworkConfigurationEnactmentReconciler{
@@ -217,14 +226,14 @@ func main() {
 			Scheme: mgr.GetScheme(),
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create NodeNetworkConfigurationEnactment controller", "controller", "NMState")
-			os.Exit(1)
+			return 1
 		}
 
 		// Check that nmstatectl is working
 		_, err = nmstatectl.Show()
 		if err != nil {
 			setupLog.Error(err, "failed checking nmstatectl health")
-			os.Exit(1)
+			return 1
 		}
 
 		// Handler runs with host networking so opening ports is problematic
@@ -236,26 +245,19 @@ func main() {
 		err = file.Touch(healthyFile)
 		if err != nil {
 			setupLog.Error(err, "failed marking handler as healthy")
-			os.Exit(1)
+			return 1
 		}
 	}
 
 	setProfiler()
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
+		return 1
 	}
-}
 
-func setupLogger(opts zap.Options) {
-	opts.EncoderConfigOptions = append(opts.EncoderConfigOptions, func(ec *zapcore.EncoderConfig) {
-		ec.EncodeTime = zapcore.ISO8601TimeEncoder
-	})
-
-	logger := zap.New(zap.UseFlagOptions(&opts))
-	ctrl.SetLogger(logger)
+	return 0
 }
 
 // Start profiler on given port if ENABLE_PROFILER is True
@@ -282,7 +284,7 @@ func lockHandler() (*flock.Flock, error) {
 	}
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
 	handlerLock := flock.New(lockFilePath)
-	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) {
+	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) { //nolint:gomnd
 		locked, err := handlerLock.TryLock()
 		if err != nil {
 			setupLog.Error(err, "retrying to lock handler")

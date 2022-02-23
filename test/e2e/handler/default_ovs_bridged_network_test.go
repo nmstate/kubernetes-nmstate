@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -10,7 +27,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
-func ovsBridgeWithTheDefaultInterface(ovsBridgeName string, defaultInterfaceMac string) nmstate.State {
+func ovsBridgeWithTheDefaultInterface(ovsBridgeName, defaultInterfaceMac string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
 - name: ovs0
   type: ovs-interface
@@ -31,7 +48,7 @@ func ovsBridgeWithTheDefaultInterface(ovsBridgeName string, defaultInterfaceMac 
 `, defaultInterfaceMac, ovsBridgeName, primaryNic))
 }
 
-func ovsBridgeWithTheDefaultInterfaceAbsent(ovsBridgeName string, ovsBridgeInternalPortName string) nmstate.State {
+func ovsBridgeWithTheDefaultInterfaceAbsent(ovsBridgeName, ovsBridgeInternalPortName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
 - name: %s
   type: ethernet
@@ -75,72 +92,80 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 			macAddr = macAddress(node, primaryNic)
 		})
 
-		PContext("and ovs bridge on top of the default interface BZ:[https://bugzilla.redhat.com/show_bug.cgi?id=2011879,https://bugzilla.redhat.com/show_bug.cgi?id=2012420]", func() {
-			BeforeEach(func() {
-				Byf("Creating the %s policy", ovsDefaultNetwork)
-				setDesiredStateWithPolicyAndNodeSelectorEventually(
-					ovsDefaultNetwork, ovsBridgeWithTheDefaultInterface(bridge1, macAddr),
-					map[string]string{"kubernetes.io/hostname": node},
-				)
+		PContext(
+			"and ovs bridge on top of the default interface BZ:[https://bugzilla.redhat.com/show_bug.cgi?id=2011879,"+
+				"https://bugzilla.redhat.com/show_bug.cgi?id=2012420]",
+			func() {
+				BeforeEach(func() {
+					Byf("Creating the %s policy", ovsDefaultNetwork)
+					setDesiredStateWithPolicyAndNodeSelectorEventually(
+						ovsDefaultNetwork, ovsBridgeWithTheDefaultInterface(bridge1, macAddr),
+						map[string]string{"kubernetes.io/hostname": node},
+					)
 
-				By("Waiting until the node becomes ready again")
-				waitForNodesReady()
+					By("Waiting until the node becomes ready again")
+					waitForNodesReady()
 
-				By("Waiting for policy to be ready")
-				waitForAvailablePolicy(ovsDefaultNetwork)
-			})
+					By("Waiting for policy to be ready")
+					waitForAvailablePolicy(ovsDefaultNetwork)
+				})
 
-			AfterEach(func() {
-				Byf("Removing bridge and configuring %s with dhcp", primaryNic)
-				setDesiredStateWithPolicy(ovsDefaultNetwork, ovsBridgeWithTheDefaultInterfaceAbsent(bridge1, ovsBridgeInternalPort))
+				AfterEach(func() {
+					Byf("Removing bridge and configuring %s with dhcp", primaryNic)
+					setDesiredStateWithPolicy(ovsDefaultNetwork, ovsBridgeWithTheDefaultInterfaceAbsent(bridge1, ovsBridgeInternalPort))
 
-				By("Waiting until the node becomes ready again")
-				waitForNodesReady()
+					By("Waiting until the node becomes ready again")
+					waitForNodesReady()
 
-				By("Waiting for policy to be ready")
-				waitForAvailablePolicy(ovsDefaultNetwork)
+					By("Waiting for policy to be ready")
+					waitForAvailablePolicy(ovsDefaultNetwork)
 
-				Byf("Check %s has the default ip address", primaryNic)
-				Eventually(func() string {
-					return ipv4Address(node, primaryNic)
-				}, 30*time.Second, 1*time.Second).Should(Equal(ipv4Addr), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
+					Byf("Check %s has the default ip address", primaryNic)
+					Eventually(func() string {
+						return ipv4Address(node, primaryNic)
+					}, 30*time.Second, 1*time.Second).Should(Equal(ipv4Addr), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 
-				Byf("Check %s is back as the default route interface", primaryNic)
-				defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
+					Byf("Check %s is back as the default route interface", primaryNic)
+					defaultRouteNextHopInterface(node).Should(Equal(primaryNic))
 
-				Byf("Remove the %s policy", ovsDefaultNetwork)
-				deletePolicy(ovsDefaultNetwork)
+					Byf("Remove the %s policy", ovsDefaultNetwork)
+					deletePolicy(ovsDefaultNetwork)
 
-				By("Reset desired state at all nodes")
-				resetDesiredStateForNodes()
-			})
+					By("Reset desired state at all nodes")
+					resetDesiredStateForNodes()
+				})
 
-			checkThatOvsBridgeTookOverTheDefaultIP := func(node string, internalPortName string) {
-				By("Verifying that ovs-interface obtained node's default IP")
-				Eventually(func() string {
-					return ipv4Address(node, internalPortName)
-				}, 15*time.Second, 1*time.Second).Should(Equal(ipv4Addr), fmt.Sprintf("Interface %s has not taken over the %s address", bridge1, primaryNic))
+				checkThatOvsBridgeTookOverTheDefaultIP := func(node string, internalPortName string) {
+					By("Verifying that ovs-interface obtained node's default IP")
+					Eventually(
+						func() string {
+							return ipv4Address(node, internalPortName)
+						},
+						15*time.Second,
+						1*time.Second,
+					).Should(Equal(ipv4Addr), fmt.Sprintf("Interface %s has not taken over the %s address", bridge1, primaryNic))
 
-				By("Verify that next-hop-interface for default route is ovs0")
-				defaultRouteNextHopInterface(node).Should(Equal(ovsBridgeInternalPort))
-			}
+					By("Verify that next-hop-interface for default route is ovs0")
+					defaultRouteNextHopInterface(node).Should(Equal(ovsBridgeInternalPort))
+				}
 
-			It("should successfully move default IP address to the ovs-interface", func() {
-				checkThatOvsBridgeTookOverTheDefaultIP(node, ovsBridgeInternalPort)
-			})
+				It("should successfully move default IP address to the ovs-interface", func() {
+					checkThatOvsBridgeTookOverTheDefaultIP(node, ovsBridgeInternalPort)
+				})
 
-			It("should keep the default IP address after node reboot", func() {
-				err := restartNode(node)
-				Expect(err).ToNot(HaveOccurred())
+				It("should keep the default IP address after node reboot", func() {
+					err := restartNode(node)
+					Expect(err).ToNot(HaveOccurred())
 
-				By("Wait for policy re-reconciled after node reboot")
-				waitForPolicyTransitionUpdate(ovsDefaultNetwork)
-				waitForAvailablePolicy(ovsDefaultNetwork)
+					By("Wait for policy re-reconciled after node reboot")
+					waitForPolicyTransitionUpdate(ovsDefaultNetwork)
+					waitForAvailablePolicy(ovsDefaultNetwork)
 
-				Byf("Node %s was rebooted, verifying that bridge took over the default IP", node)
-				checkThatOvsBridgeTookOverTheDefaultIP(node, ovsBridgeInternalPort)
-			})
-		})
+					Byf("Node %s was rebooted, verifying that bridge took over the default IP", node)
+					checkThatOvsBridgeTookOverTheDefaultIP(node, ovsBridgeInternalPort)
+				})
+			},
+		)
 
 		Context("when desiredState is configured with internal port with wrong IP address", func() {
 			const (

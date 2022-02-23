@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/nmstate/nmpolicy/nmpolicy/internal/expression"
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/lexer/scanner"
 )
 
@@ -27,7 +28,8 @@ import (
 type Lexer struct{}
 
 type lexer struct {
-	scn *scanner.Scanner
+	expression string
+	scn        *scanner.Scanner
 }
 
 // NewLexer construct a Lexer using reader as the input.
@@ -35,14 +37,14 @@ func New() Lexer {
 	return Lexer{}
 }
 
-func newLexer(expression string) *lexer {
-	return &lexer{scn: scanner.New(strings.NewReader(expression))}
+func newLexer(expr string) *lexer {
+	return &lexer{expression: expr, scn: scanner.New(strings.NewReader(expr))}
 }
 
 // Lex scans the input for the next token.
 // It returns a Token struct with position, type, and the literal value.
-func (Lexer) Lex(expression string) ([]Token, error) {
-	return newLexer(expression).Lex()
+func (Lexer) Lex(expr string) ([]Token, error) {
+	return newLexer(expr).Lex()
 }
 
 // Lex scans the input for the next token.
@@ -53,7 +55,7 @@ func (l *lexer) Lex() ([]Token, error) {
 	for {
 		token, err := l.lex()
 		if err != nil {
-			return nil, err
+			return nil, expression.WrapError(err, l.expression, l.scn.Position())
 		}
 		if token == nil {
 			continue

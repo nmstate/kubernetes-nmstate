@@ -14,13 +14,13 @@ function kubevirtci::_get_tag() {
 
 function kubevirtci::install() {
     # Remove cloned kubevirtci repository if it does not match the requested one
-    if [ -d ${KUBEVIRTCI_PATH} ]; then
-        if [ $(kubevirtci::_get_repo) != ${KUBEVIRTCI_REPO} -o $(kubevirtci::_get_tag) != ${KUBEVIRTCI_TAG} ]; then
+    if [[ -d ${KUBEVIRTCI_PATH} ]]; then
+        if [[ $(kubevirtci::_get_repo) != ${KUBEVIRTCI_REPO} || $(kubevirtci::_get_tag) != ${KUBEVIRTCI_TAG} ]]; then
             rm -rf ${KUBEVIRTCI_PATH}
         fi
     fi
 
-    if [ ! -d ${KUBEVIRTCI_PATH} ]; then
+    if [[ ! -d ${KUBEVIRTCI_PATH} ]]; then
         git clone ${KUBEVIRTCI_REPO} ${KUBEVIRTCI_PATH}
         (
             cd ${KUBEVIRTCI_PATH}

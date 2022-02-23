@@ -24,13 +24,20 @@ spec:
         - key: node-role.kubernetes.io/master
           operator: Exists
           effect: NoSchedule
+      priorityClassName: system-cluster-critical
       containers:
         - name: nmstate-operator
+          args:
+          - --zap-time-encoding=iso8601
           # Replace this with the built image name
           image: {{ .OperatorImage }}
           imagePullPolicy: {{ .OperatorPullPolicy }}
           command:
           - manager
+          resources:
+            requests:
+              cpu: 60m
+              memory: 30Mi
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -42,7 +49,7 @@ spec:
               value: "6060"
             - name: RUN_OPERATOR
               value: ""
-            - name: HANDLER_IMAGE
+            - name: RELATED_IMAGE_HANDLER_IMAGE
               value: {{ .HandlerImage }}
             - name: HANDLER_IMAGE_PULL_POLICY
               value: {{ .HandlerPullPolicy }}

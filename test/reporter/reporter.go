@@ -1,9 +1,25 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package reporter
 
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -21,7 +37,7 @@ type KubernetesNMStateReporter struct {
 	nodes                []string
 }
 
-func New(artifactsDir string, namespace string, nodes []string) *KubernetesNMStateReporter {
+func New(artifactsDir, namespace string, nodes []string) *KubernetesNMStateReporter {
 	return &KubernetesNMStateReporter{
 		artifactsDir: artifactsDir,
 		namespace:    namespace,
@@ -29,10 +45,10 @@ func New(artifactsDir string, namespace string, nodes []string) *KubernetesNMSta
 	}
 }
 
-func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
+func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config.GinkgoConfigType, *types.SuiteSummary) {
 }
 
-func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
+func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(*types.SetupSummary) {
 	r.Cleanup()
 }
 
@@ -55,10 +71,10 @@ func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSumma
 	r.dumpStateAfterEach(name, since, passed)
 }
 
-func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
+func (r *KubernetesNMStateReporter) AfterSuiteDidRun(*types.SetupSummary) {
 }
 
-func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
+func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(*types.SuiteSummary) {
 }
 
 func (r *KubernetesNMStateReporter) storeStateBeforeEach() {
@@ -117,12 +133,12 @@ func (r *KubernetesNMStateReporter) Cleanup() {
 				panic(err)
 			}
 		}
-		names, err := ioutil.ReadDir(r.artifactsDir)
+		names, err := os.ReadDir(r.artifactsDir)
 		if err != nil {
 			panic(err)
 		}
-		for _, entery := range names {
-			os.RemoveAll(path.Join([]string{r.artifactsDir, entery.Name()}...))
+		for _, entry := range names {
+			os.RemoveAll(path.Join([]string{r.artifactsDir, entry.Name()}...))
 		}
 	}
 }
@@ -131,15 +147,13 @@ func (r *KubernetesNMStateReporter) logNetworkManager(testName string, sinceTime
 	r.OpenTestLogFile("NetworkManager", testName, networkManagerLogsWriter(r.nodes, sinceTime))
 }
 
-func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time) error {
+func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time) {
 	// Let's print the pods logs to the GinkgoWriter so
 	// we see the failure directly at prow junit output without opening files
 	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime))
-
-	return nil
 }
 
-func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
+func (r *KubernetesNMStateReporter) OpenTestLogFile(logType, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
 	err := os.MkdirAll(r.artifactsDir, 0755)
 	if err != nil {
 		fmt.Println(err)
