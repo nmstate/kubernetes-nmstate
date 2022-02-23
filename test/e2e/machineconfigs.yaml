@@ -13,12 +13,20 @@ spec:
       - contents: |
           [Unit]
           Description=NMState e2e hack
-          Wants=crio.service
-          Before=kubelet.service
-          After=crio.service
+          Wants=NetworkManager-wait-online.service
+          Before=ovs-configuration.service
+          After=NetworkManager-wait-online.service
           [Service]
           Type=oneshot
-          ExecStart=/bin/bash -c "for i in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do nmcli con modify $i match.interface-name '!enp3s0, !enp4s0'; done"
+          ExecStart=/bin/bash -c " \
+                        echo '[main]\nno-auto-default=enp3s0,enp4s0\n' > /etc/NetworkManager/conf.d/90-no-auto-default.conf; \
+                        for i in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do \
+                          nmcli con modify $i match.interface-name '!enp3s0, !enp4s0'; \
+                        done; \
+                        nmcli network off; \
+                        systemctl restart NetworkManager; \
+                        nmcli network on; \
+                        nm-online -s -t 60;"
           [Install]
           WantedBy=multi-user.target
         enabled: true
@@ -40,12 +48,20 @@ spec:
       - contents: |
           [Unit]
           Description=NMState e2e hack
-          Wants=crio.service
-          Before=kubelet.service
-          After=crio.service
+          Wants=NetworkManager-wait-online.service
+          Before=ovs-configuration.service
+          After=NetworkManager-wait-online.service
           [Service]
           Type=oneshot
-          ExecStart=/bin/bash -c "for i in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do nmcli con modify $i match.interface-name '!enp3s0, !enp4s0'; done"
+          ExecStart=/bin/bash -c " \
+                        echo '[main]\nno-auto-default=enp3s0,enp4s0\n' > /etc/NetworkManager/conf.d/90-no-auto-default.conf; \
+                        for i in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do \
+                          nmcli con modify $i match.interface-name '!enp3s0, !enp4s0'; \
+                        done; \
+                        nmcli network off; \
+                        systemctl restart NetworkManager; \
+                        nmcli network on; \
+                        nm-online -s -t 60;"
           [Install]
           WantedBy=multi-user.target
         enabled: true
