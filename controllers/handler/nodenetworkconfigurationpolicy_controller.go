@@ -52,6 +52,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmpolicy"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
@@ -90,6 +91,7 @@ var (
 			return false
 		},
 	}
+	nmstatectlShowFn = nmstatectl.Show
 )
 
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
@@ -165,12 +167,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	enactmentConditions := enactmentconditions.New(r.APIClient, nmstateapi.EnactmentKey(nodeName, instance.Name))
 
-	nns, err := r.readNNS(nodeName)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	err = r.fillInEnactmentStatus(nns, *instance, *enactmentInstance, enactmentConditions)
+	err = r.fillInEnactmentStatus(*instance, *enactmentInstance, enactmentConditions)
 	if err != nil {
 		log.Error(err, "failed filling in the NNCE status")
 		if apierrors.IsNotFound(err) {
@@ -308,11 +305,15 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(policy nm
 	return &enactment, nil
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(nns *nmstatev1beta1.NodeNetworkState,
+func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	policy nmstatev1.NodeNetworkConfigurationPolicy,
 	enactment nmstatev1beta1.NodeNetworkConfigurationEnactment,
 	enactmentConditions enactmentconditions.EnactmentConditions) error {
-	capturedStates, desiredStateMetaInfo, generatedDesiredState, err := nmpolicy.GenerateState(policy.Spec.DesiredState, policy.Spec, nns.Status.CurrentState, enactment.Status.CapturedStates)
+	currentState, err := nmstatectlShowFn()
+	if err != nil {
+		return err
+	}
+	capturedStates, desiredStateMetaInfo, generatedDesiredState, err := nmpolicy.GenerateState(policy.Spec.DesiredState, policy.Spec, nmstateapi.NewState(currentState), enactment.Status.CapturedStates)
 	if err != nil {
 		err2 := enactmentstatus.Update(r.APIClient, nmstateapi.EnactmentKey(nodeName, policy.Name), func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
 			status.PolicyGeneration = policy.Generation
