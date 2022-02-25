@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -44,7 +45,13 @@ import (
 )
 
 // Added for test purposes
-type NmstateUpdater func(client client.Client, node *corev1.Node, observedState shared.State, nns *nmstatev1beta1.NodeNetworkState, versions *nmstate.DependencyVersions) error
+type NmstateUpdater func(
+	client client.Client,
+	node *corev1.Node,
+	observedState shared.State,
+	nns *nmstatev1beta1.NodeNetworkState,
+	versions *nmstate.DependencyVersions,
+) error
 type NmstatectlShow func() (string, error)
 
 // NodeReconciler reconciles a Node object
@@ -117,10 +124,13 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
-	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("NetworkManager", "--version")
+	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("nmcli", "--version")
 	if err != nil {
 		r.Log.Info("error retrieving handler NetworkManager version: %s", err.Error())
 	}
+	// remove leading characters up to last space
+	split := strings.Split(handlerNetworkManagerVersion, " ")
+	handlerNetworkManagerVersion = split[len(split)-1]
 
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
@@ -203,7 +213,11 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	err = ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkState{}).
-		Watches(&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}}, &handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}}, builder.WithPredicates(onDeleteOrForceUpdateForThisNode)).
+		Watches(
+			&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}},
+			&handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}},
+			builder.WithPredicates(onDeleteOrForceUpdateForThisNode),
+		).
 		Complete(r)
 	if err != nil {
 		return errors.Wrap(err, "failed to add controller to Node Reconciler listening Node Network State events")

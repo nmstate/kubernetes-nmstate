@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -37,9 +54,12 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					enactmentConditionsStatusEventually(node).Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
-					enactmentConditionsStatusEventually(node).Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
-					enactmentConditionsStatusConsistently(node).Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
+					enactmentConditionsStatusEventually(node).
+						Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
+					enactmentConditionsStatusEventually(node).
+						Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
+					enactmentConditionsStatusConsistently(node).
+						Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
 				}()
 			}
 			// Run the policy after we set the nnce conditions assert so we
@@ -178,7 +198,9 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			}, 180*time.Second, 1*time.Second).Should(BeNumerically(">=", 1))
 
 			By("Checking the policy is marked as Degraded")
-			Eventually(policyConditionsStatus(TestPolicy)).Should(containPolicyDegraded(), "policy should be marked as Degraded")
+			Eventually(func() nmstate.ConditionList {
+				return policyConditionsStatus(TestPolicy)
+			}, 2*time.Second, 100*time.Millisecond).Should(containPolicyDegraded(), "policy should be marked as Degraded")
 		})
 	})
 })

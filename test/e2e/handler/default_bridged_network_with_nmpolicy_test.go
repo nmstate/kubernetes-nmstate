@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -97,9 +114,13 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 
 				Byf("Check %s has the default ip address", primaryNic)
 				for _, node := range nodes {
-					Eventually(func() string {
-						return ipv4Address(node, primaryNic)
-					}, 30*time.Second, 1*time.Second).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
+					Eventually(
+						func() string {
+							return ipv4Address(node, primaryNic)
+						},
+						30*time.Second,
+						1*time.Second,
+					).Should(Equal(addressByNode[node]), fmt.Sprintf("Interface %s address is not the original one", primaryNic))
 				}
 
 				Byf("Check %s is back as the default route interface", primaryNic)
@@ -121,8 +142,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 			It("should keep the default IP address after node reboot", func() {
 				nodeToReboot := nodes[0]
 
-				err := restartNode(nodeToReboot)
-				Expect(err).ToNot(HaveOccurred())
+				restartNodeWithoutWaiting(nodeToReboot)
 
 				By("Wait for policy re-reconciled after node reboot")
 				waitForPolicyTransitionUpdate(DefaultNetwork)

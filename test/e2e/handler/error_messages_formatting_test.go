@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package handler
 
 import (
@@ -89,13 +106,25 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should discard disarranged parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).NotTo(ContainSubstring(unwantedMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).NotTo(ContainSubstring(unwantedMessage))
 			}
 		})
 
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).To(ContainSubstring(desiredMessage))
 			}
 		})
 	})
@@ -115,13 +144,25 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should discard disarranged parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).NotTo(ContainSubstring(unwantedMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).NotTo(ContainSubstring(unwantedMessage))
 			}
 		})
 
 		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).To(ContainSubstring(desiredMessage))
 			}
 		})
 	})
@@ -143,16 +184,24 @@ var _ = Describe("NodeNetworkState", func() {
 			deletePolicy("test-policy")
 		})
 
-		It("should discard disarranged parts of the message", func() {
-
+		It("should discard disarranged parts of the message and keep desired parts of the message", func() {
 			for _, unwantedMessage := range messagesToRemove {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).NotTo(ContainSubstring(unwantedMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).NotTo(ContainSubstring(unwantedMessage))
 			}
-		})
-
-		It("should keep desired parts of the message", func() {
 			for _, desiredMessage := range messagesToKeep {
-				Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring(desiredMessage))
+				Expect(
+					enactmentConditionsStatus(
+						nodes[0],
+						defaultPolicy,
+					).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).
+						Message,
+				).To(ContainSubstring(desiredMessage))
 			}
 		})
 	})
@@ -168,7 +217,9 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 
 		It("should contain the error message", func() {
-			Expect(enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message).To(ContainSubstring("failure generating desiredState and capturedStates"))
+			Expect(
+				enactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message,
+			).To(ContainSubstring("failure generating desiredState and capturedStates"))
 		})
 	})
 })

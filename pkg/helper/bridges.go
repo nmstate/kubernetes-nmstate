@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package helper
 
 import (
@@ -16,14 +33,16 @@ import (
 )
 
 const nmcliCommand = "nmcli"
+const minVlanID = 2
+const maxVlanID = 4094
 
 var defaultVlanFiltering = map[string]interface{}{
 	"mode": "trunk",
 	"trunk-tags": []map[string]interface{}{
 		{
 			"id-range": map[string]interface{}{
-				"min": 2,
-				"max": 4094,
+				"min": minVlanID,
+				"max": maxVlanID,
 			},
 		},
 	},
@@ -44,7 +63,11 @@ func ApplyDefaultVlanFiltering(desiredState nmstate.State) (nmstate.State, error
 			if hasVlanConfiguration(port) {
 				continue
 			}
-			result, err = sjson.SetBytes(result, fmt.Sprintf("interfaces.%d.bridge.port.%d.vlan", ifaceIndex, portIndex), defaultVlanFiltering)
+			result, err = sjson.SetBytes(
+				result,
+				fmt.Sprintf("interfaces.%d.bridge.port.%d.vlan", ifaceIndex, portIndex),
+				defaultVlanFiltering,
+			)
 			if err != nil {
 				return desiredState, err
 			}
@@ -67,7 +90,10 @@ func EnableVlanFiltering(desiredState nmstate.State) (string, error) {
 	if err != nil {
 		return "failed to list bridges with ports", err
 	}
-	filteredExistingUpBridgesWithPortsAtDesiredState, err := filterExistingLinuxBridgesWithPorts(upBridgesWithPortsAtCurrentState, desiredState)
+	filteredExistingUpBridgesWithPortsAtDesiredState, err := filterExistingLinuxBridgesWithPorts(
+		upBridgesWithPortsAtCurrentState,
+		desiredState,
+	)
 	if err != nil {
 		return "failed to filter existing bridges with ports from desiredState", err
 	}
@@ -103,7 +129,10 @@ func GetUpLinuxBridgesWithPorts(desiredState nmstate.State) (map[string][]string
 	return bridgesWithPorts, nil
 }
 
-func filterExistingLinuxBridgesWithPorts(bridgesAtCurrentState map[string][]string, desiredState nmstate.State) (map[string][]string, error) {
+func filterExistingLinuxBridgesWithPorts(
+	bridgesAtCurrentState map[string][]string,
+	desiredState nmstate.State,
+) (map[string][]string, error) {
 	filteredBridgesWithPorts := map[string][]string{}
 	bridgesAtDesiredState, err := GetUpLinuxBridgesWithPorts(desiredState)
 	if err != nil {
@@ -126,7 +155,7 @@ func enableVlanFiltering(upBridgesWithPorts map[string][]string) (string, error)
 			return out, err
 		}
 		for _, port := range ports {
-			out, err = enableBridgPortVlans(port)
+			out, err = enableBridgePortVlans(port)
 			if err != nil {
 				return out, err
 			}
@@ -140,8 +169,8 @@ func enableBridgeVlanFiltering(bridgeName string) (string, error) {
 	return runCommand(nmcliCommand, args)
 }
 
-func enableBridgPortVlans(port string) (string, error) {
-	args := []string{"con", "mod", port, "bridge-port.vlans", "2-4094"}
+func enableBridgePortVlans(port string) (string, error) {
+	args := []string{"con", "mod", port, "bridge-port.vlans", fmt.Sprintf("%d-%d", minVlanID, maxVlanID)}
 	return runCommand(nmcliCommand, args)
 }
 
@@ -151,7 +180,8 @@ func runCommand(command string, args []string) (string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("failed to execute %s %s: '%v', '%s', '%s'", command, strings.Join(args, " "), err, stdout.String(), stderr.String())
+		return "",
+			fmt.Errorf("failed to execute %s %s: '%v', '%s', '%s'", command, strings.Join(args, " "), err, stdout.String(), stderr.String())
 	}
 	return stdout.String(), nil
 }

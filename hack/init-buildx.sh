@@ -35,5 +35,7 @@ if ! grep -q "^Driver: docker$"  <<<"${current_builder}" && \
   exit 0
 fi
 
-docker buildx rm kubernetes-nmstate-builder || true
-docker buildx create --driver-opt network=host --use --name=kubernetes-nmstate-builder
+
+if ! docker buildx ls | grep -q kubernetes-nmstate-builder; then
+    docker buildx create --driver-opt network=host --use --name=kubernetes-nmstate-builder
+fi

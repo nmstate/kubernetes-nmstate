@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package nodenetworkconfigurationpolicy
 
 import (
@@ -8,12 +25,11 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
-func deleteConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
+func deleteConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 	policy.Status.Conditions = shared.ConditionList{}
-	return policy
 }
 
-func setConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) nmstatev1.NodeNetworkConfigurationPolicy {
+func setConditionsUnknown(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 	unknownConditions := shared.ConditionList{}
 	for _, conditionType := range shared.NodeNetworkConfigurationPolicyConditionTypes {
 		unknownConditions.Set(
@@ -22,10 +38,9 @@ func setConditionsUnknown(policy nmstatev1.NodeNetworkConfigurationPolicy) nmsta
 			"", "")
 	}
 	policy.Status.Conditions = unknownConditions
-	return policy
 }
 
-func atEmptyConditions(policy nmstatev1.NodeNetworkConfigurationPolicy) bool {
+func atEmptyConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) bool {
 	return policy.Status.Conditions == nil || len(policy.Status.Conditions) == 0
 }
 

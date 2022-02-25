@@ -1,9 +1,15 @@
+FROM quay.io/centos/centos:stream9 AS build
+
+RUN dnf install -y golang-1.17.*
+
+COPY . /workdir
+WORKDIR /workdir
+
+RUN --mount=type=cache,target=/root/.cache/go-build go build -o /manager ./cmd/handler
+
 FROM quay.io/centos/centos:stream9
-ARG TARGETARCH
 
-RUN env
-
-COPY build/_output/bin/handler.manager.linux-$TARGETARCH /usr/local/bin/manager
+COPY --from=build /manager /usr/local/bin/manager
 
 RUN dnf install -b -y dnf-plugins-core && \
     dnf install -b -y nmstate && \

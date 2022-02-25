@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package state
 
 import (
@@ -365,6 +382,90 @@ dns-resolver:
 			returnedState, err := filterOut(state, ifaceStates)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(state))
+		})
+	})
+
+	Context("when the interfaces have numeric characters", func() {
+		BeforeEach(func() {
+			ifaceStates = map[string]networkmanager.DeviceState{
+				"0":               networkmanager.DeviceStateUnmanaged,
+				"1101010":         networkmanager.DeviceStateUnmanaged,
+				"0.0":             networkmanager.DeviceStateUnmanaged,
+				"1.0":             networkmanager.DeviceStateUnmanaged,
+				"0xfe":            networkmanager.DeviceStateUnmanaged,
+				"60.e+02":         networkmanager.DeviceStateUnmanaged,
+				"10e+02":          networkmanager.DeviceStateUnmanaged,
+				"70e+02":          networkmanager.DeviceStateUnmanaged,
+				"94475496822e234": networkmanager.DeviceStateUnmanaged,
+			}
+			state = nmstate.NewState(`interfaces:
+  - name: eth0
+    type: ethernet
+  - name: '0'
+    type: veth
+  - name: '1101010'
+    type: veth
+  - name: '0.0'
+    type: veth
+  - name: '1.0'
+    type: veth
+  - name: '0xfe'
+    type: veth
+  - name: '60.e+02'
+    type: veth
+  - name: 10e+02
+    type: veth
+  - name: 70e+02
+    type: veth
+  - name: 94475496822e234
+    type: veth
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: 10.21.21.10
+    next-hop-interface: eth0
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: 10.21.21.10
+    next-hop-interface: 94475496822e234
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: 10.21.21.10
+    next-hop-interface: '94475496822e234'
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: 10.21.21.10
+    next-hop-interface: 70e+02
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: 10.21.21.10
+    next-hop-interface: 60.e+02
+    table-id: 254
+`)
+			filteredState = nmstate.NewState(`interfaces:
+- name: eth0
+  type: ethernet
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: 10.21.21.10
+    next-hop-interface: eth0
+    table-id: 254
+`)
+		})
+
+		It("should filter out interfaces correctly", func() {
+			returnedState, err := filterOut(state, ifaceStates)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
 })

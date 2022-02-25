@@ -1,10 +1,26 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package reporter
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"time"
 
@@ -76,7 +92,8 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 	Expect(err).ToNot(HaveOccurred())
 	podsClientset := testenv.KubeClient.CoreV1().Pods(namespace)
 
-	for _, pod := range podList.Items {
+	for podIndex := range podList.Items {
+		pod := &podList.Items[podIndex]
 		appLabel, hasAppLabel := pod.Labels["app"]
 		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
 			continue
@@ -88,7 +105,7 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 			continue
 		}
 		defer podLogs.Close()
-		rawLogs, err := ioutil.ReadAll(podLogs)
+		rawLogs, err := io.ReadAll(podLogs)
 		if err != nil {
 			io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
 			continue

@@ -22,6 +22,11 @@ linters-settings:
       - octalLiteral
       - whyNoLint
       - wrapperFunc
+    settings:
+      rangeValCopy:
+        sizeThreshold: 128
+      hugeParam:
+        sizeThreshold: 128
   gocyclo:
     min-complexity: 15
   goheader:
@@ -29,10 +34,12 @@ linters-settings:
   goimports:
     local-prefixes: github.com/nmstate/nmpolicy
   gomnd:
-    settings:
-      mnd:
-        # don't include the "operation" and "assign"
-        checks: argument,case,condition,return
+    # don't include the "operation" and "assign"
+    checks:
+      - argument
+      - case
+      - condition
+      - return
   govet:
     check-shadowing: true
   lll:
@@ -49,42 +56,57 @@ linters-settings:
   stylecheck:
     dot-import-whitelist: ["github.com/onsi/gomega", "github.com/onsi/ginkgo", "github.com/onsi/gomega/gstruct"]
 
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: test/
+      linters:
+        - gomnd
+        - dupl
+        - gocritic
+    - path: _test.go
+      linters:
+        - unparam
+        - gomnd
+        - dupl
+        - gocritic
+
 linters:
   disable-all: true
   enable:
     - deadcode
     - depguard
     - dogsled
-      #- dupl
+    - dupl
       #- errcheck
     - exportloopref
     - exhaustive
       #- funlen
       #- gochecknoinits
     - goconst
-      #- gocritic
+    - gocritic
       #- gocyclo
     - gofmt
-      #- goheader
-      #- goimports
-      #- gomnd
+    - goheader
+    - goimports
+    - gomnd
     - goprintffuncname
-      #- gosec
+    - gosec
     - gosimple
-      #- govet
+    - govet
     - ineffassign
-      #- lll
+    - lll
     - misspell
     - nakedret
     - noctx
     - nolintlint
     - rowserrcheck
     - staticcheck
-      #- structcheck
+    - structcheck
     - stylecheck
     - typecheck
     - unconvert
-      #- unparam
-      #- unused
+    - unparam
+    - unused
     - varcheck
     - whitespace

@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package nmpolicy
 
 import (
@@ -10,12 +27,20 @@ import (
 )
 
 type NMPolicyGenerator interface {
-	GenerateState(nmpolicySpec nmpolicytypes.PolicySpec, currentState []byte, cache nmpolicytypes.CachedState) (nmpolicytypes.GeneratedState, error)
+	GenerateState(
+		nmpolicySpec nmpolicytypes.PolicySpec,
+		currentState []byte,
+		cache nmpolicytypes.CachedState,
+	) (nmpolicytypes.GeneratedState, error)
 }
 
 type GenerateStateWithNMPolicy struct{}
 
-func (GenerateStateWithNMPolicy) GenerateState(nmpolicySpec nmpolicytypes.PolicySpec, currentState []byte, cache nmpolicytypes.CachedState) (nmpolicytypes.GeneratedState, error) {
+func (GenerateStateWithNMPolicy) GenerateState(
+	nmpolicySpec nmpolicytypes.PolicySpec,
+	currentState []byte,
+	cache nmpolicytypes.CachedState,
+) (nmpolicytypes.GeneratedState, error) {
 	return nmpolicy.GenerateState(nmpolicySpec, currentState, cache)
 }
 
@@ -44,9 +69,15 @@ func GenerateStateWithStateGenerator(stateGenerator NMPolicyGenerator,
 		Capture:      policySpec.Capture,
 		DesiredState: []byte(desiredState.Raw),
 	}
-	nmpolicyGeneratedState, err := stateGenerator.GenerateState(nmpolicySpec, currentState.Raw, convertCachedStateFromEnactment(cachedState))
+	nmpolicyGeneratedState, err := stateGenerator.GenerateState(
+		nmpolicySpec,
+		currentState.Raw,
+		convertCachedStateFromEnactment(cachedState),
+	)
 	if err != nil {
-		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{}, nmstateapi.NodeNetworkConfigurationEnactmentMetaInfo{}, nmstateapi.State{}, err
+		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+			nmstateapi.NodeNetworkConfigurationEnactmentMetaInfo{},
+			nmstateapi.State{}, err
 	}
 
 	capturedStates, desiredStateMetaInfo, desiredState := convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState)
@@ -62,20 +93,22 @@ func convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState nmpolicytypes
 	for captureKey, capturedState := range nmpolicyGeneratedState.Cache.Capture {
 		capturedState := nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{
 			State: nmstateapi.State{
-				Raw: capturedState.State,
+				Raw: []byte(capturedState.State),
 			},
 			MetaInfo: convertMetaInfoToEnactment(capturedState.MetaInfo),
 		}
 		capturedStates[captureKey] = capturedState
 	}
-	return capturedStates, desireStateMetaInfo, nmstateapi.State{Raw: nmpolicyGeneratedState.DesiredState}
+	return capturedStates, desireStateMetaInfo, nmstateapi.State{Raw: []byte(nmpolicyGeneratedState.DesiredState)}
 }
 
-func convertCachedStateFromEnactment(enactmentCachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState) nmpolicytypes.CachedState {
+func convertCachedStateFromEnactment(
+	enactmentCachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState,
+) nmpolicytypes.CachedState {
 	cachedState := nmpolicytypes.CachedState{Capture: make(map[string]nmpolicytypes.CaptureState)}
 	for captureKey, capturedState := range enactmentCachedState {
 		capturedState := nmpolicytypes.CaptureState{
-			State: capturedState.State.Raw,
+			State: nmpolicytypes.NMState(capturedState.State.Raw),
 			MetaInfo: nmpolicytypes.MetaInfo{
 				Version:   capturedState.MetaInfo.Version,
 				TimeStamp: capturedState.MetaInfo.TimeStamp.Time,

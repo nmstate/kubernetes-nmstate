@@ -21,11 +21,10 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     done
 done
 
-echo 'Installing Open vSwitch on nodes'
+echo 'Installing Open vSwitch and NetworkManager 1.34 on nodes'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
-    ./cluster/cli.sh ssh ${node} -- sudo dnf config-manager --set-enabled powertools
-    ./cluster/cli.sh ssh ${node} -- sudo dnf install -y epel-release centos-release-openstack-wallaby
-    ./cluster/cli.sh ssh ${node} -- sudo dnf install -y openvswitch libibverbs NetworkManager-ovs
+    ./cluster/cli.sh ssh ${node} -- sudo dnf install -y centos-release-nfv-openvswitch
+    ./cluster/cli.sh ssh ${node} -- sudo dnf install -y openvswitch2.16 libibverbs NetworkManager-1.34.0 NetworkManager-ovs-1.34.0
     ./cluster/cli.sh ssh ${node} -- sudo systemctl daemon-reload
     ./cluster/cli.sh ssh ${node} -- sudo systemctl enable openvswitch
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart openvswitch

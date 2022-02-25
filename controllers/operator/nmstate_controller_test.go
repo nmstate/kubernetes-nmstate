@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package controllers
 
 import (
@@ -6,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -29,11 +47,12 @@ import (
 
 var _ = Describe("NMState controller reconcile", func() {
 	var (
-		cl                  client.Client
-		reconciler          NMStateReconciler
-		existingNMStateName = "nmstate"
-		handlerNodeSelector = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
-		handlerTolerations  = []corev1.Toleration{
+		cl                         client.Client
+		reconciler                 NMStateReconciler
+		existingNMStateName        = "nmstate"
+		defaultHandlerNodeSelector = map[string]string{"kubernetes.io/os": "linux", "beta.kubernetes.io/arch": goruntime.GOARCH}
+		customHandlerNodeSelector  = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
+		handlerTolerations         = []corev1.Toleration{
 			{
 				Effect:   "NoSchedule",
 				Key:      "node.kubernetes.io/special-toleration",
@@ -129,8 +148,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		BeforeEach(func() {
 			request.Name = existingNMStateName
-			crdsPath := filepath.Join(manifestsDir, "kubernetes-nmstate/crds/")
-			dir, err := ioutil.ReadDir(crdsPath)
+			crdsPath := filepath.Join(manifestsDir, "kubernetes-nmstate", "crds")
+			dir, err := os.ReadDir(crdsPath)
 			Expect(err).ToNot(HaveOccurred())
 			for _, d := range dir {
 				os.RemoveAll(filepath.Join(crdsPath, d.Name()))
@@ -151,7 +170,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set NodeSelector field in operator Spec
-			nmstate.Spec.NodeSelector = handlerNodeSelector
+			nmstate.Spec.NodeSelector = customHandlerNodeSelector
 			objs := []runtime.Object{&nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
@@ -161,12 +180,21 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
+		It("should add default NodeSelector to handler daemonset", func() {
+			ds := &appsv1.DaemonSet{}
+			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range defaultHandlerNodeSelector {
+				Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+			}
+		})
 		It("should add NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
 			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
-			for k, v := range handlerNodeSelector {
+			for k, v := range customHandlerNodeSelector {
 				Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
 			}
 		})
@@ -175,7 +203,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
-			for k, v := range handlerNodeSelector {
+			for k, v := range customHandlerNodeSelector {
 				Expect(deployment.Spec.Template.Spec.NodeSelector).ToNot(HaveKeyWithValue(k, v))
 			}
 		})
@@ -321,8 +349,8 @@ func copyManifest(src, dst string) error {
 	}
 
 	// create dst directory if needed
-	if _, err := os.Stat(dstDir); os.IsNotExist(err) {
-		if err := os.MkdirAll(dstDir, os.ModePerm); err != nil {
+	if _, err = os.Stat(dstDir); os.IsNotExist(err) {
+		if err = os.MkdirAll(dstDir, os.ModePerm); err != nil {
 			return err
 		}
 	}
@@ -413,8 +441,8 @@ func isSuperset(ss, t corev1.Toleration) bool {
 	}
 }
 
-//allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
-func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
+// allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
+func allTolerationsPresent(toBeCheckedTolerations, actualTolerations []corev1.Toleration) bool {
 	tolerationsFound := true
 	for _, toleration := range toBeCheckedTolerations {
 		tolerationsFound = tolerationsFound && checkTolerationInList(toleration, actualTolerations)
@@ -422,8 +450,8 @@ func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTol
 	return tolerationsFound
 }
 
-//anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
-func anyTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
+// anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
+func anyTolerationsPresent(toBeCheckedTolerations, actualTolerations []corev1.Toleration) bool {
 	tolerationsFound := false
 	for _, toleration := range toBeCheckedTolerations {
 		tolerationsFound = tolerationsFound || checkTolerationInList(toleration, actualTolerations)

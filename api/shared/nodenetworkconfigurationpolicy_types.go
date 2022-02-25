@@ -42,13 +42,15 @@ type NodeNetworkConfigurationPolicyStatus struct {
 }
 
 const (
-	NodeNetworkConfigurationPolicyConditionAvailable ConditionType = "Available"
-	NodeNetworkConfigurationPolicyConditionDegraded  ConditionType = "Degraded"
+	NodeNetworkConfigurationPolicyConditionAvailable  ConditionType = "Available"
+	NodeNetworkConfigurationPolicyConditionDegraded   ConditionType = "Degraded"
+	NodeNetwrkConfigurationPOlicyConditionProgressing ConditionType = "Progressing"
 )
 
 var NodeNetworkConfigurationPolicyConditionTypes = [...]ConditionType{
 	NodeNetworkConfigurationPolicyConditionAvailable,
 	NodeNetworkConfigurationPolicyConditionDegraded,
+	NodeNetwrkConfigurationPOlicyConditionProgressing,
 }
 
 const (

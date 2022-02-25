@@ -8,6 +8,14 @@ tmp_dir=/tmp/knmstate/
 rm -rf $tmp_dir
 mkdir -p $tmp_dir
 
+if gimme --help > /dev/null 2>&1; then
+    export GIMME_GO_VERSION=$(grep '^go' go.mod |sed 's/go //')
+    echo "Installing go $GIMME_GO_VERSION with gimme"
+    eval "$(gimme)"
+else
+    echo "Gimme not installed using existing golang version $(go --version)"
+fi
+
 export ARCHS="amd64 arm64"
 export TMP_PROJECT_PATH=$tmp_dir/kubernetes-nmstate
 export E2E_LOGS=${TMP_PROJECT_PATH}/test_logs/e2e

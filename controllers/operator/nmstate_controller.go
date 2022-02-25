@@ -50,7 +50,8 @@ type NMStateReconciler struct {
 	Scheme *runtime.Scheme
 }
 
-// +kubebuilder:rbac:groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods,verbs="*",namespace="{{ .OperatorNamespace }}"
+// +kubebuilder:rbac:groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods,verbs="*"
+// ,namespace="{{ .OperatorNamespace }}"
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*",namespace="{{ .OperatorNamespace }}"
 // +kubebuilder:rbac:groups=policy,resources=poddisruptionbudgets,verbs="*",namespace="{{ .OperatorNamespace }}"
 // +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=mutatingwebhookconfigurations,verbs="*"
@@ -178,6 +179,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		archAndCRNodeSelector = map[string]string{}
 	}
 	archAndCRNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
+	archAndCRNodeSelector["kubernetes.io/os"] = "linux"
 
 	handlerTolerations := instance.Spec.Tolerations
 	if handlerTolerations == nil {
@@ -221,7 +223,12 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
-func (r *NMStateReconciler) renderAndApply(instance *nmstatev1.NMState, data render.RenderData, sourceDirectory string, setControllerReference bool) error {
+func (r *NMStateReconciler) renderAndApply(
+	instance *nmstatev1.NMState,
+	data render.RenderData,
+	sourceDirectory string,
+	setControllerReference bool,
+) error {
 	var err error
 
 	sourceFullDirectory := filepath.Join(names.ManifestDir, "kubernetes-nmstate", sourceDirectory)
