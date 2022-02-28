@@ -89,7 +89,7 @@ var _ = Describe("NNCP cleanup", func() {
 				verifyEnactmentRemoved(node, 10*time.Second)
 			}
 
-			waitFotNodeToStart(restartedNode)
+			waitForNodeToStart(restartedNode)
 			verifyEnactmentRemoved(restartedNode, 4*time.Minute)
 		})
 	})
