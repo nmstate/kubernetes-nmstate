@@ -96,6 +96,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	}
 	DescribeTable("when claimNodeRunningUpdate is called and",
 		func(c incrementUnavailableNodeCountCase) {
+			nmstatectlShowFn = func() (string, error) { return "", nil }
 			reconciler := NodeNetworkConfigurationPolicyReconciler{}
 			s := scheme.Scheme
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
