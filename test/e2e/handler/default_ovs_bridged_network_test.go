@@ -92,9 +92,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 			macAddr = macAddress(node, primaryNic)
 		})
 
-		PContext(
-			"and ovs bridge on top of the default interface BZ:[https://bugzilla.redhat.com/show_bug.cgi?id=2011879,"+
-				"https://bugzilla.redhat.com/show_bug.cgi?id=2012420]",
+		Context("and ovs bridge on top of the default interface",
 			func() {
 				BeforeEach(func() {
 					Byf("Creating the %s policy", ovsDefaultNetwork)
@@ -154,8 +152,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 				})
 
 				It("should keep the default IP address after node reboot", func() {
-					err := restartNode(node)
-					Expect(err).ToNot(HaveOccurred())
+					restartNodeWithoutWaiting(node)
 
 					By("Wait for policy re-reconciled after node reboot")
 					waitForPolicyTransitionUpdate(ovsDefaultNetwork)
