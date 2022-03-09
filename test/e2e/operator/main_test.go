@@ -24,10 +24,9 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
+	ginkgotypes "github.com/onsi/ginkgo/v2/types"
 	. "github.com/onsi/gomega"
-
-	ginkgoreporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -68,8 +67,9 @@ func newOperatorTestData(ns string) operatorTestData {
 }
 
 var (
-	nodes           []string
-	defaultOperator = newOperatorTestData("nmstate")
+	nodes            []string
+	defaultOperator  = newOperatorTestData("nmstate")
+	knmstateReporter *knmstatereporter.KubernetesNMStateReporter
 )
 
 func TestE2E(t *testing.T) {
@@ -77,16 +77,7 @@ func TestE2E(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 
-	reporters := make([]Reporter, 0)
-	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/operator", testenv.OperatorNamespace, nodes))
-	if ginkgoreporters.Polarion.Run {
-		reporters = append(reporters, &ginkgoreporters.Polarion)
-	}
-	if ginkgoreporters.JunitOutput != "" {
-		reporters = append(reporters, ginkgoreporters.NewJunitReporter())
-	}
-
-	RunSpecsWithDefaultAndCustomReporters(t, "Operator E2E Test Suite", reporters)
+	RunSpecs(t, "Operator E2E Test Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -105,10 +96,21 @@ var _ = BeforeSuite(func() {
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
+
+	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
+	knmstateReporter.Cleanup()
 })
 
 var _ = AfterSuite(func() {
 	uninstallNMStateAndWaitForDeletion(defaultOperator)
+})
+
+var _ = ReportBeforeEach(func(specReport ginkgotypes.SpecReport) {
+	knmstateReporter.ReportBeforeEach(specReport)
+})
+
+var _ = ReportAfterEach(func(specReport ginkgotypes.SpecReport) {
+	knmstateReporter.ReportAfterEach(specReport)
 })
 
 func installNMState(nmstate nmstatev1.NMState) {

@@ -18,7 +18,7 @@ limitations under the License.
 package state
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	networkmanager "github.com/phoracek/networkmanager-go/src"

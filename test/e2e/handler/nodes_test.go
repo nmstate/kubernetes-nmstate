@@ -20,13 +20,13 @@ package handler
 import (
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
-var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component][nns]Nodes", func() {
+var _ = Describe("Nodes", func() {
 	Context("when are up", func() {
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
@@ -52,7 +52,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			AfterEach(func() {
 				deleteConnectionAndWait(nodes, expectedDummyName)
 			})
-			It("[test_id:3794]should update node network state with it", func() {
+			It("should update node network state with it", func() {
 				for _, nodeName := range nodes {
 					Eventually(func() []string {
 						return interfacesNameForNode(nodeName)
