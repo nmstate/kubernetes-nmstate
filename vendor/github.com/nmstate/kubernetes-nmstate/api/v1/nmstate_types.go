@@ -25,6 +25,12 @@ import (
 
 // NMStateSpec defines the desired state of NMState
 type NMStateSpec struct {
+	// Affinity is an optional affinity selector that will be added to handler DaemonSet manifest.
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// Affinity is an optional affinity selector that will be added to webhook & certmanager Deployment manifests.
+	// +optional
+	InfraAffinity *corev1.Affinity `json:"infraAffinity,omitempty"`
 	// NodeSelector is an optional selector that will be added to handler DaemonSet manifest
 	// for both workers and control-plane (https://github.com/nmstate/kubernetes-nmstate/blob/main/deploy/handler/operator.yaml).
 	// If NodeSelector is specified, the handler will run only on nodes that have each of the indicated key-value pairs
