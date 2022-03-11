@@ -3,7 +3,6 @@ module github.com/nmstate/kubernetes-nmstate/api
 go 1.16
 
 require (
-	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.15.0
 	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
@@ -13,5 +12,6 @@ require (
 	k8s.io/api v0.22.3
 	k8s.io/apimachinery v0.22.3
 	sigs.k8s.io/controller-runtime v0.10.3
+	sigs.k8s.io/controller-tools v0.6.0
 	sigs.k8s.io/yaml v1.3.0
 )
