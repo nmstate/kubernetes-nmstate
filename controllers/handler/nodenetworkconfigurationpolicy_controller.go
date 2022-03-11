@@ -247,21 +247,25 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 			return allPoliciesAsRequest
 		})
 
-	// Reconcile NNCP if they are created or updated
-	err := ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1.NodeNetworkConfigurationPolicy{}).
-		WithEventFilter(onCreateOrUpdateWithDifferentGenerationOrDelete).
-		Complete(r)
+	// Reconcile NNCP if they are created/updated/deleted or
+	// Node is updated (for example labels are changed), node creation event
+	// is not needed since all NNCPs are going to be Reconcile at node startup.
+	c, err := controller.New("NodeNetworkConfigurationPolicy", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return errors.Wrap(err, "failed to add controller to NNCP Reconciler listening NNCP events")
+		return errors.Wrap(err, "failed to create NodeNetworkConfigurationPolicy controller")
 	}
 
-	// Reconcile all NNCPs if Node is updated (for example labels are changed), node creation event
-	// is not needed since all NNCPs are going to be Reconcile at node startup.
-	c, err := controller.New("node_labels", mgr, controller.Options{Reconciler: r})
+	// Add watch for NNCP
+	err = c.Watch(
+		&source.Kind{Type: &nmstatev1.NodeNetworkConfigurationPolicy{}},
+		&handler.EnqueueRequestForObject{},
+		onCreateOrUpdateWithDifferentGenerationOrDelete,
+	)
 	if err != nil {
-		return errors.Wrap(err, "failed to create node_labels controller to NNCP Reconciler watching node label changes")
+		return errors.Wrap(err, "failed to add watch for NNCPs")
 	}
+
+	// Add watch to enque all NNCPs on nod label changes
 	err = c.Watch(
 		&source.Kind{Type: &corev1.Node{}},
 		handler.EnqueueRequestsFromMapFunc(allPolicies),
