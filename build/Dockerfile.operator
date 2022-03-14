@@ -2,10 +2,14 @@ FROM --platform=linux/amd64 quay.io/centos/centos:stream8 AS build
 
 ARG TARGETARCH
 
-RUN dnf install -y make golang-1.17.*
+RUN mkdir /workdir
 
-COPY . /workdir
+COPY go.mod /workdir
 WORKDIR /workdir
+
+RUN dnf install -y golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).*
+
+COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/go-build GOOS=linux GOARCH=${TARGETARCH}  go build -o /manager ./cmd/operator
 
