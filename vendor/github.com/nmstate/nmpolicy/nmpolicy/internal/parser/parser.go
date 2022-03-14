@@ -141,7 +141,7 @@ func (p *parser) parseIdentity() error {
 func (p *parser) parseString() error {
 	p.lastNode = &ast.Node{
 		Meta:     ast.Meta{Position: p.currentToken().Position},
-		Terminal: ast.Terminal{String: &p.currentToken().Literal},
+		Terminal: ast.Terminal{Str: &p.currentToken().Literal},
 	}
 	return nil
 }

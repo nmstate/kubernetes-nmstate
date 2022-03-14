@@ -79,20 +79,20 @@ func convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState nmpolicytypes
 	for captureKey, capturedState := range nmpolicyGeneratedState.Cache.Capture {
 		capturedState := nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{
 			State: nmstateapi.State{
-				Raw: capturedState.State,
+				Raw: []byte(capturedState.State),
 			},
 			MetaInfo: convertMetaInfoToEnactment(capturedState.MetaInfo),
 		}
 		capturedStates[captureKey] = capturedState
 	}
-	return capturedStates, desireStateMetaInfo, nmstateapi.State{Raw: nmpolicyGeneratedState.DesiredState}
+	return capturedStates, desireStateMetaInfo, nmstateapi.State{Raw: []byte(nmpolicyGeneratedState.DesiredState)}
 }
 
 func convertCachedStateFromEnactment(enactmentCachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState) nmpolicytypes.CachedState {
 	cachedState := nmpolicytypes.CachedState{Capture: make(map[string]nmpolicytypes.CaptureState)}
 	for captureKey, capturedState := range enactmentCachedState {
 		capturedState := nmpolicytypes.CaptureState{
-			State: capturedState.State.Raw,
+			State: nmpolicytypes.NMState(capturedState.State.Raw),
 			MetaInfo: nmpolicytypes.MetaInfo{
 				Version:   capturedState.MetaInfo.Version,
 				TimeStamp: capturedState.MetaInfo.TimeStamp.Time,
