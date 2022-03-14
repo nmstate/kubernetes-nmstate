@@ -18,9 +18,11 @@ package types
 
 import "time"
 
+type NMState []byte
+
 type PolicySpec struct {
 	Capture      map[string]string
-	DesiredState []byte
+	DesiredState NMState
 }
 
 type CachedState struct {
@@ -29,12 +31,12 @@ type CachedState struct {
 
 type GeneratedState struct {
 	Cache        CachedState
-	DesiredState []byte
+	DesiredState NMState
 	MetaInfo     MetaInfo
 }
 
 type CaptureState struct {
-	State    []byte
+	State    NMState
 	MetaInfo MetaInfo
 }
 

@@ -18,15 +18,23 @@ package resolver
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
 )
 
-func filter(inputState map[string]interface{}, path ast.VariadicOperator, expectedNode ast.Node) (map[string]interface{}, error) {
-	filtered, err := applyFuncOnMap(path, inputState, expectedNode, mapContainsValue, true, true)
+func filter(inputState map[string]interface{}, path ast.VariadicOperator, expectedValue interface{}) (map[string]interface{}, error) {
+	pathVisitorWithEqFilter := pathVisitor{
+		path:              path,
+		lastMapFn:         mapContainsValue(expectedValue),
+		shouldFilterSlice: true,
+		shouldFilterMap:   true,
+	}
+
+	filtered, err := pathVisitorWithEqFilter.visitMap(inputState)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed applying operation on the path: %v", err)
+		return nil, fmt.Errorf("failed applying operation on the path: %w", err)
 	}
 
 	if filtered == nil {
@@ -40,30 +48,19 @@ func filter(inputState map[string]interface{}, path ast.VariadicOperator, expect
 	return filteredMap, nil
 }
 
-func isEqual(obtainedValue interface{}, desiredValue ast.Node) (bool, error) {
-	if desiredValue.String != nil {
-		stringToCompare, ok := obtainedValue.(string)
+func mapContainsValue(expectedValue interface{}) mapEntryVisitFn {
+	return func(mapToFilter map[string]interface{}, filterKey string) (interface{}, error) {
+		obtainedValue, ok := mapToFilter[filterKey]
 		if !ok {
-			return false, fmt.Errorf("the value %v of type %T not supported,"+
-				"curretly only string values are supported", obtainedValue, obtainedValue)
+			return nil, nil
 		}
-		return stringToCompare == *desiredValue.String, nil
-	}
-
-	return false, fmt.Errorf("the desired value %v is not supported. Curretly only string values are supported", desiredValue)
-}
-
-func mapContainsValue(mapToFilter map[string]interface{}, filterKey string, expectedNode ast.Node) (interface{}, error) {
-	obtainedValue, ok := mapToFilter[filterKey]
-	if !ok {
+		if reflect.TypeOf(obtainedValue) != reflect.TypeOf(expectedValue) {
+			return nil, fmt.Errorf(`type missmatch: the value in the path doesn't match the value to filter. `+
+				`"%T" != "%T" -> %+v != %+v`, obtainedValue, expectedValue, obtainedValue, expectedValue)
+		}
+		if obtainedValue == expectedValue {
+			return mapToFilter, nil
+		}
 		return nil, nil
 	}
-	valueIsEqual, err := isEqual(obtainedValue, expectedNode)
-	if err != nil {
-		return nil, fmt.Errorf("error comparing the expected and obtained values : %v", err)
-	}
-	if valueIsEqual {
-		return mapToFilter, nil
-	}
-	return nil, nil
 }
