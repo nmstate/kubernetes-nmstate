@@ -1,11 +1,13 @@
-FROM quay.io/centos/centos:stream8 AS build
+FROM --platform=linux/amd64 quay.io/centos/centos:stream8 AS build
+
+ARG TARGETARCH
 
 RUN dnf install -y make golang-1.17.*
 
 COPY . /workdir
 WORKDIR /workdir
 
-RUN --mount=type=cache,target=/root/.cache/go-build go build -o /manager ./cmd/operator
+RUN --mount=type=cache,target=/root/.cache/go-build GOOS=linux GOARCH=${TARGETARCH}  go build -o /manager ./cmd/operator
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
