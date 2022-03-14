@@ -21,7 +21,7 @@ import (
 	"context"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,7 +33,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
 
-var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]NodeSelector", func() {
+var _ = Describe("NodeSelector", func() {
 	var (
 		testNodeSelector            = map[string]string{"testKey": "testValue"}
 		numberOfEnactmentsForPolicy = func(policyName string) int {
@@ -58,7 +58,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			deletePolicy(bridge1)
 		})
 
-		It("[test_id:3813]should not update any nodes and have not enactments", func() {
+		It("should not update any nodes and have not enactments", func() {
 			for _, node := range allNodes {
 				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
 			}

@@ -23,7 +23,7 @@ import (
 	"os/exec"
 	"strings"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 func Run(command string, quiet bool, arguments ...string) (string, error) {

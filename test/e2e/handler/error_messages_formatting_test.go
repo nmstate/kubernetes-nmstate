@@ -22,7 +22,7 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
