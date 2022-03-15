@@ -7,10 +7,8 @@ export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
-HANDLER_DOCKERFILE=Dockerfile
-
 ifeq ($(NMSTATE_PIN), future)
-	HANDLER_DOCKERFILE=Dockerfile.future
+HANDLER_EXTRA_PARAMS:= "--build-arg FROM=quay.io/centos/centos:stream9"
 endif
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
@@ -140,7 +138,7 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh ${HANDLER_EXTRA_PARAMS} . -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator
