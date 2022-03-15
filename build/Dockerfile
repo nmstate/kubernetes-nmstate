@@ -1,4 +1,5 @@
-FROM --platform=linux/amd64 quay.io/centos/centos:stream8 AS build
+ARG FROM=quay.io/centos/centos:stream8
+FROM --platform=linux/amd64 ${FROM} AS build
 
 ARG TARGETARCH
 
@@ -13,7 +14,8 @@ COPY . .
 
 RUN --mount=type=cache,target=/root/.cache/go-build GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/handler
 
-FROM quay.io/centos/centos:stream8
+ARG FROM=quay.io/centos/centos:stream8
+FROM ${FROM}
 
 COPY --from=build /manager /usr/local/bin/manager
 
