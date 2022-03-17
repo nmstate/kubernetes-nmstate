@@ -29,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
@@ -37,13 +38,36 @@ import (
 )
 
 var _ = Describe("NMState operator", func() {
+	type controlPlaneTest struct {
+		withMultiNode bool
+	}
+	DescribeTable("for control-plane size",
+		func(tc controlPlaneTest) {
+			if isKubevirtciCluster() && tc.withMultiNode {
+				kubevirtciReset := increaseKubevirtciControlPlane()
+				defer kubevirtciReset()
+			}
+			if tc.withMultiNode && len(controlPlaneNodes()) < 2 {
+				Skip("cluster control-plane size should be > 1")
+			}
+			if !tc.withMultiNode && len(controlPlaneNodes()) > 1 {
+				Skip("cluster control-plane size should be < 2")
+			}
+
+			installNMState(defaultOperator.nmstate)
+			defer uninstallNMStateAndWaitForDeletion(defaultOperator)
+			eventuallyOperandIsReady(defaultOperator)
+
+			By("Check webhook is distributed across control-plane nodes")
+			podsShouldBeDistributedAtNodes(controlPlaneNodes(), client.MatchingLabels{"component": "kubernetes-nmstate-webhook"})
+		},
+		Entry("of a single node shoud deploy webhook replicas at the same node", controlPlaneTest{withMultiNode: false}),
+		Entry("of two nodes should deploy webhook replicas at different nodes", controlPlaneTest{withMultiNode: true}),
+	)
 	Context("when installed for the first time", func() {
 		BeforeEach(func() {
 			By("Install NMState for the first time")
 			installNMState(defaultOperator.nmstate)
-		})
-		It("should deploy a ready operand", func() {
-			eventuallyOperandIsReady(defaultOperator)
 		})
 		AfterEach(func() {
 			uninstallNMStateAndWaitForDeletion(defaultOperator)
@@ -137,4 +161,20 @@ func uninstallOperator(operator operatorTestData) {
 	}
 	Expect(testenv.Client.Delete(context.TODO(), &ns)).To(SatisfyAny(Succeed(), WithTransform(apierrors.IsNotFound, BeTrue())))
 	eventuallyIsNotFound(types.NamespacedName{Name: operator.ns}, &ns, "should delete the namespace")
+}
+
+func increaseKubevirtciControlPlane() func() {
+	secondNodeName := "node02"
+	node := &corev1.Node{}
+	Expect(testenv.Client.Get(context.TODO(), client.ObjectKey{Name: secondNodeName}, node)).To(Succeed())
+	By(fmt.Sprintf("Configure kubevirtci cluster node %s as control plane", node.Name))
+	node.Labels["node-role.kubernetes.io/control-plane"] = ""
+	node.Labels["node-role.kubernetes.io/master"] = ""
+	Expect(testenv.Client.Update(context.TODO(), node)).To(Succeed())
+	return func() {
+		By(fmt.Sprintf("Configure kubevirtci cluster node %s as non control plane", node.Name))
+		delete(node.Labels, "node-role.kubernetes.io/control-plane")
+		delete(node.Labels, "node-role.kubernetes.io/master")
+		Expect(testenv.Client.Update(context.TODO(), node)).To(Succeed())
+	}
 }

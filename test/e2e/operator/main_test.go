@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,7 +77,6 @@ func TestE2E(t *testing.T) {
 	testenv.TestMain()
 
 	RegisterFailHandler(Fail)
-
 	RunSpecs(t, "Operator E2E Test Suite")
 }
 
@@ -91,8 +91,7 @@ var _ = BeforeSuite(func() {
 
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
-	err := testenv.Client.List(context.TODO(), &nodeList, &client.ListOptions{})
-	Expect(err).ToNot(HaveOccurred())
+	Expect(testenv.Client.List(context.TODO(), &nodeList, &client.ListOptions{})).To(Succeed())
 	for _, node := range nodeList.Items {
 		nodes = append(nodes, node.Name)
 	}
@@ -156,6 +155,21 @@ func eventuallyOperandIsReady(testData operatorTestData) {
 	deployment.GetEventually(testData.certManagerKey).Should(deployment.BeReady(), "should start cert-manager deployment")
 }
 
+func podsShouldBeDistributedAtNodes(selectedNodes []corev1.Node, listOptions ...client.ListOption) {
+	podList := &corev1.PodList{}
+	Expect(testenv.Client.List(context.TODO(), podList, listOptions...)).To(Succeed())
+	nodesRunningPod := map[string]bool{}
+	for _, pod := range podList.Items {
+		Expect(pod.Spec.NodeName).To(BeElementOf(namesFromNodes(selectedNodes)), "should run on the selected nodes")
+		nodesRunningPod[pod.Spec.NodeName] = true
+	}
+	if len(selectedNodes) > 1 {
+		Expect(nodesRunningPod).To(HaveLen(len(podList.Items)), "should run pods at different nodes")
+	} else {
+		Expect(nodesRunningPod).To(HaveLen(1), "should run pods at the same node")
+	}
+}
+
 func eventuallyOperandIsNotFound(testData operatorTestData) {
 	eventuallyIsNotFound(testData.handlerKey, &appsv1.DaemonSet{}, "should delete handler daemonset")
 	eventuallyIsNotFound(testData.webhookKey, &appsv1.Deployment{}, "should delete webhook deployment")
@@ -176,4 +190,25 @@ func eventuallyOperandIsFound(testData operatorTestData) {
 	eventuallyIsFound(testData.handlerKey, &appsv1.DaemonSet{}, "should create handler daemonset")
 	eventuallyIsFound(testData.webhookKey, &appsv1.Deployment{}, "should create webhook deployment")
 	eventuallyIsFound(testData.certManagerKey, &appsv1.Deployment{}, "should create cert-manager deployment")
+}
+
+func isKubevirtciCluster() bool {
+	return strings.Contains(os.Getenv("KUBECONFIG"), "kubevirtci")
+}
+
+func controlPlaneNodes() []corev1.Node {
+	nodeList := &corev1.NodeList{}
+	Expect(testenv.Client.List(context.TODO(), nodeList, client.HasLabels{"node-role.kubernetes.io/control-plane"})).To(Succeed())
+	if len(nodeList.Items) == 0 {
+		Expect(testenv.Client.List(context.TODO(), nodeList, client.HasLabels{"node-role.kubernetes.io/master"})).To(Succeed())
+	}
+	return nodeList.Items
+}
+
+func namesFromNodes(nodes []corev1.Node) []string {
+	names := []string{}
+	for _, node := range nodes {
+		names = append(names, node.Name)
+	}
+	return names
 }
