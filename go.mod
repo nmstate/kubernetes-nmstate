@@ -56,7 +56,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
 	github.com/cheggaaa/pb/v3 v3.0.8 // indirect
 	github.com/containerd/cgroups v1.0.1 // indirect
-	github.com/containerd/containerd v1.5.9 // indirect
+	github.com/containerd/containerd v1.5.10 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.7.0 // indirect
 	github.com/containerd/ttrpc v1.1.0 // indirect
