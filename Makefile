@@ -1,7 +1,6 @@
 SHELL := /bin/bash
 
 PWD = $(shell pwd)
-GO_VERSION = $(shell hack/go-version.sh)
 
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
@@ -199,10 +198,10 @@ release:
 	hack/release.sh
 
 vendor-api:
-	cd api && go mod tidy -compat=$(GO_VERSION) && go mod vendor
+	cd api && go mod tidy && go mod vendor
 
 vendor: vendor-api
-	go mod tidy -compat=$(GO_VERSION)
+	go mod tidy
 	go mod vendor
 
 # Generate bundle manifests and metadata, then validate generated files.
