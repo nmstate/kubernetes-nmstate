@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -37,7 +37,7 @@ func invalidConfig(bridgeName string) nmstate.State {
 `, bridgeName))
 }
 
-var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]EnactmentCondition", func() {
+var _ = Describe("EnactmentCondition", func() {
 	Context("when applying valid config", func() {
 		AfterEach(func() {
 			By("Remove the bridge")
@@ -46,7 +46,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			By("Reset desired state at all nodes")
 			resetDesiredStateForNodes()
 		})
-		It("[test_id:3796]should go from Progressing to Available", func() {
+		It("should go from Progressing to Available", func() {
 			var wg sync.WaitGroup
 			wg.Add(len(nodes))
 			for i := range nodes {
@@ -82,7 +82,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			resetDesiredStateForNodes()
 		})
 
-		It("[test_id:3795] should have Failing ConditionType set to true", func() {
+		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				Byf("Check %s failing state is reached", node)
 				enactmentConditionsStatusEventually(node).Should(
@@ -115,7 +115,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			wg.Wait()
 		})
 
-		It("[test_id:3795] should have up to maxUnavailable Failing and the rest Aborted ConditionType set to true", func() {
+		It("should have up to maxUnavailable Failing and the rest Aborted ConditionType set to true", func() {
 			checkEnactmentCounts := func(policy string) {
 				failingConditions := 0
 				abortedConditions := 0

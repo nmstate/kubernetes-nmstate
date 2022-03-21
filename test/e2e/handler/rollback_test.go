@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -107,7 +107,7 @@ func discoverNameServers(nic string) nmstate.State {
 `, nic))
 }
 
-var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:component]rollback", func() {
+var _ = Describe("rollback", func() {
 	// This spec is done only at first node since policy has to be different
 	// per node (ip addresses has to be different at cluster).
 	Context("when connectivity to default gw is lost after state configuration", func() {
@@ -124,7 +124,7 @@ var _ = Describe("[rfe_id:3503][crit:medium][vendor:cnv-qe@redhat.com][level:com
 			By("Clean up desired state")
 			resetDesiredStateForNodes()
 		})
-		It("[test_id:3793]should rollback to a good gw configuration", func() {
+		It("should rollback to a good gw configuration", func() {
 			By("Should not be available") // Fail fast
 			policyConditionsStatusConsistently().ShouldNot(containPolicyAvailable())
 

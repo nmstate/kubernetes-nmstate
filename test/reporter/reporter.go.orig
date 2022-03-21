@@ -46,8 +46,20 @@ func New(artifactsDir string, namespace string, nodes []string) *KubernetesNMSta
 	}
 }
 
+<<<<<<< HEAD
+func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
+}
+
+func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
+	r.Cleanup()
+}
+
+func (r *KubernetesNMStateReporter) SpecWillRun(specSummary *types.SpecSummary) {
+	if specSummary.Skipped() || specSummary.Pending() {
+=======
 func (r *KubernetesNMStateReporter) ReportBeforeEach(specReport types.SpecReport) {
 	if specReport.State.Is(types.SpecStateSkipped) || specReport.State.Is(types.SpecStatePending) {
+>>>>>>> af8ec3637 (foo)
 		return
 	}
 
@@ -66,6 +78,15 @@ func (r *KubernetesNMStateReporter) ReportAfterEach(specReport types.SpecReport)
 	r.dumpStateAfterEach(name, since, passed)
 }
 
+<<<<<<< HEAD
+func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
+}
+
+func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
+}
+
+=======
+>>>>>>> af8ec3637 (foo)
 func (r *KubernetesNMStateReporter) storeStateBeforeEach() {
 	r.previousDeviceStatus = r.deviceStatus()
 }
@@ -144,9 +165,14 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 	return nil
 }
 
+<<<<<<< HEAD
+func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
+	err := os.MkdirAll(r.artifactsDir, 0755)
+=======
 func (r *KubernetesNMStateReporter) OpenTestLogFile(logType, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
 	testLogDir := filepath.Join(r.artifactsDir, strings.ReplaceAll(testName, " ", "_"))
 	err := os.MkdirAll(testLogDir, 0755)
+>>>>>>> af8ec3637 (foo)
 	if err != nil {
 		fmt.Println(err)
 		return

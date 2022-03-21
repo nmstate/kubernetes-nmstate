@@ -26,7 +26,7 @@ import (
 
 	nmpolicytypes "github.com/nmstate/nmpolicy/nmpolicy/types"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

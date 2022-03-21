@@ -18,8 +18,7 @@ limitations under the License.
 package helper
 
 import (
-	. "github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -467,67 +466,67 @@ var _ = Describe("testing slice intersection", func() {
 		expectedIntersection []string
 	}
 
-	table.DescribeTable("Slice intersection cases",
+	DescribeTable("Slice intersection cases",
 		func(c intersectionCase) {
 			result := intersectSlices(c.s1, c.s2)
 			Expect(result).To(Equal(c.expectedIntersection))
 		},
-		table.Entry(
+		Entry(
 			"Both slices empty",
 			intersectionCase{
 				s1:                   []string{},
 				s2:                   []string{},
 				expectedIntersection: []string{},
 			}),
-		table.Entry("Empty first slice",
+		Entry("Empty first slice",
 			intersectionCase{
 				s1:                   []string{},
 				s2:                   []string{"foo"},
 				expectedIntersection: []string{},
 			}),
-		table.Entry("Empty second slice",
+		Entry("Empty second slice",
 			intersectionCase{
 				s1:                   []string{"foo"},
 				s2:                   []string{},
 				expectedIntersection: []string{},
 			}),
-		table.Entry("No common elements",
+		Entry("No common elements",
 			intersectionCase{
 				s1:                   []string{"foo"},
 				s2:                   []string{"bar"},
 				expectedIntersection: []string{},
 			}),
-		table.Entry("One common element with extra in first slice",
+		Entry("One common element with extra in first slice",
 			intersectionCase{
 				s1:                   []string{"foo", "bar"},
 				s2:                   []string{"bar"},
 				expectedIntersection: []string{"bar"},
 			}),
-		table.Entry("One common element with extra in first slice",
+		Entry("One common element with extra in first slice",
 			intersectionCase{
 				s1:                   []string{"bar"},
 				s2:                   []string{"bar", "foo"},
 				expectedIntersection: []string{"bar"},
 			}),
-		table.Entry("One common element with extra in first slice",
+		Entry("One common element with extra in first slice",
 			intersectionCase{
 				s1:                   []string{"bar"},
 				s2:                   []string{"bar", "foo"},
 				expectedIntersection: []string{"bar"},
 			}),
-		table.Entry("Both identical with two elements",
+		Entry("Both identical with two elements",
 			intersectionCase{
 				s1:                   []string{"foo", "bar"},
 				s2:                   []string{"bar", "foo"},
 				expectedIntersection: []string{"bar", "foo"},
 			}),
-		table.Entry("Duplicates in first slice",
+		Entry("Duplicates in first slice",
 			intersectionCase{
 				s1:                   []string{"foo", "bar", "one", "two", "three", "one", "two", "three"},
 				s2:                   []string{"bar", "foo", "three", "one"},
 				expectedIntersection: []string{"bar", "foo", "three", "one"},
 			}),
-		table.Entry("Duplicates in second slice",
+		Entry("Duplicates in second slice",
 			intersectionCase{
 				s1:                   []string{"bar", "foo", "three", "one"},
 				s2:                   []string{"foo", "bar", "one", "two", "three", "one", "two", "three"},
