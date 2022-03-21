@@ -20,7 +20,7 @@ limitations under the License.
 package handler
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 )
 
 var _ = Describe("[user-guide] Introduction", func() {

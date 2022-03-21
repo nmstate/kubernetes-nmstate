@@ -23,12 +23,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/onsi/ginkgo/config"
-	"github.com/onsi/ginkgo/types"
+	"github.com/onsi/ginkgo/v2/types"
 )
 
 type KubernetesNMStateReporter struct {
@@ -46,36 +46,24 @@ func New(artifactsDir string, namespace string, nodes []string) *KubernetesNMSta
 	}
 }
 
-func (r *KubernetesNMStateReporter) SpecSuiteWillBegin(config config.GinkgoConfigType, summary *types.SuiteSummary) {
-}
-
-func (r *KubernetesNMStateReporter) BeforeSuiteDidRun(setupSummary *types.SetupSummary) {
-	r.Cleanup()
-}
-
-func (r *KubernetesNMStateReporter) SpecWillRun(specSummary *types.SpecSummary) {
-	if specSummary.Skipped() || specSummary.Pending() {
+func (r *KubernetesNMStateReporter) ReportBeforeEach(specReport types.SpecReport) {
+	if specReport.State.Is(types.SpecStateSkipped) || specReport.State.Is(types.SpecStatePending) {
 		return
 	}
 
 	r.storeStateBeforeEach()
 }
-func (r *KubernetesNMStateReporter) SpecDidComplete(specSummary *types.SpecSummary) {
-	if specSummary.Skipped() || specSummary.Pending() {
+
+func (r *KubernetesNMStateReporter) ReportAfterEach(specReport types.SpecReport) {
+	if specReport.State.Is(types.SpecStateSkipped) || specReport.State.Is(types.SpecStatePending) {
 		return
 	}
 
-	since := time.Now().Add(-specSummary.RunTime).Add(-5 * time.Second)
-	name := strings.Join(specSummary.ComponentTexts[1:], " ")
-	passed := specSummary.Passed()
+	since := time.Now().Add(-specReport.RunTime).Add(-5 * time.Second)
+	name := strings.Join(specReport.ContainerHierarchyTexts, " ")
+	passed := specReport.State.Is(types.SpecStatePassed)
 
 	r.dumpStateAfterEach(name, since, passed)
-}
-
-func (r *KubernetesNMStateReporter) AfterSuiteDidRun(setupSummary *types.SetupSummary) {
-}
-
-func (r *KubernetesNMStateReporter) SpecSuiteDidEnd(summary *types.SuiteSummary) {
 }
 
 func (r *KubernetesNMStateReporter) storeStateBeforeEach() {
@@ -156,14 +144,15 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 	return nil
 }
 
-func (r *KubernetesNMStateReporter) OpenTestLogFile(logType string, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
-	err := os.MkdirAll(r.artifactsDir, 0755)
+func (r *KubernetesNMStateReporter) OpenTestLogFile(logType, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
+	testLogDir := filepath.Join(r.artifactsDir, strings.ReplaceAll(testName, " ", "_"))
+	err := os.MkdirAll(testLogDir, 0755)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	name := fmt.Sprintf("%s/%s_%s.log", r.artifactsDir, testName, logType)
+	name := filepath.Join(testLogDir, fmt.Sprintf("%s.log", logType))
 	fi, err := os.OpenFile(name, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Println(err)

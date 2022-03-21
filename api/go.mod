@@ -3,8 +3,8 @@ module github.com/nmstate/kubernetes-nmstate/api
 go 1.16
 
 require (
-	github.com/onsi/ginkgo v1.16.4
-	github.com/onsi/gomega v1.15.0
+	github.com/onsi/ginkgo/v2 v2.1.3
+	github.com/onsi/gomega v1.17.0
 	golang.org/x/sys v0.0.0-20211013075003-97ac67df715c // indirect
 	golang.org/x/tools v0.1.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

@@ -29,9 +29,9 @@ HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
 export IMAGE_BUILDER ?= docker
 
-WHAT ?= ./pkg ./controllers
+WHAT ?= ./pkg/... ./controllers/...
 
-unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
+unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
 export KUBEVIRT_PROVIDER ?= k8s-1.21
 export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
@@ -39,7 +39,7 @@ export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 80m
 
-e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
+e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) --slow-spec-threshold=60s $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 export PRIMARY_NIC ?= eth0
@@ -61,7 +61,7 @@ export KUBECTL ?= ./cluster/kubectl.sh
 KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
-GINKGO = go run github.com/onsi/ginkgo/ginkgo
+GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
 OPM = go run -tags=json1 github.com/operator-framework/operator-registry/cmd/opm
 
@@ -156,16 +156,16 @@ push-operator: operator-manager
 push: push-handler push-operator
 
 test/unit/api:
-	cd api && $(GINKGO) $(unit_test_args) ./...
+	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
 test/unit: test/unit/api
-	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
+	NODE_NAME=node01 $(GINKGO) --junit-report=junit-pkg-controller-unit-test.xml $(unit_test_args) $(WHAT)
 
 test-e2e-handler:
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
 
 test-e2e-operator: manifests
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
 
 test-e2e: test-e2e-operator test-e2e-handler
 
