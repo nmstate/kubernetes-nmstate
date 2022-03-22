@@ -204,6 +204,29 @@ var _ = Describe("NodeNetworkState", func() {
 					hasVlans(node, secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})
+			Context("and vlan field reset at ports", func() {
+				BeforeEach(func() {
+					updateDesiredStateAndWait(linuxBrUpWithDisabledVlan(bridge1))
+				})
+				AfterEach(func() {
+					updateDesiredStateAndWait(linuxBrAbsent(bridge1))
+					for _, node := range nodes {
+						interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+					}
+					resetDesiredStateForNodes()
+				})
+				It("should have the linux bridge at currentState with vlan_filtering 0 and no default vlan range configured", func() {
+					for _, node := range nodes {
+						interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
+						bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 0"))
+
+						getVLANFlagsEventually(node, firstSecondaryNic, 1).
+							Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
+						vlansCardinality(node, firstSecondaryNic).Should(Equal(0))
+					}
+				})
+			})
+
 		})
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {

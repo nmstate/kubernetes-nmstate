@@ -121,7 +121,9 @@ func linuxBrUpWithDisabledVlan(bridgeName string) nmstate.State {
       port:
         - name: %s
           vlan: {}
-`, bridgeName, firstSecondaryNic))
+        - name: %s
+          vlan: {}
+`, bridgeName, firstSecondaryNic, secondSecondaryNic))
 }
 
 func ovsBrAbsent(bridgeName string) nmstate.State {
