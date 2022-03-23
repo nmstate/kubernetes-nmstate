@@ -29,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
@@ -161,15 +162,24 @@ func uninstallOperator(operator operatorTestData) {
 func increaseKubevirtciControlPlane() func() {
 	secondNodeName := "node02"
 	node := &corev1.Node{}
-	Expect(testenv.Client.Get(context.TODO(), client.ObjectKey{Name: secondNodeName}, node)).To(Succeed())
-	By(fmt.Sprintf("Configure kubevirtci cluster node %s as control plane", node.Name))
-	node.Labels["node-role.kubernetes.io/control-plane"] = ""
-	node.Labels["node-role.kubernetes.io/master"] = ""
-	Expect(testenv.Client.Update(context.TODO(), node)).To(Succeed())
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := testenv.Client.Get(context.TODO(), client.ObjectKey{Name: secondNodeName}, node)
+		if err != nil {
+			return err
+		}
+		By(fmt.Sprintf("Configure kubevirtci cluster node %s as control plane", node.Name))
+		node.Labels["node-role.kubernetes.io/control-plane"] = ""
+		node.Labels["node-role.kubernetes.io/master"] = ""
+		return testenv.Client.Update(context.TODO(), node)
+	})
+	Expect(err).ToNot(HaveOccurred())
 	return func() {
-		By(fmt.Sprintf("Configure kubevirtci cluster node %s as non control plane", node.Name))
-		delete(node.Labels, "node-role.kubernetes.io/control-plane")
-		delete(node.Labels, "node-role.kubernetes.io/master")
-		Expect(testenv.Client.Update(context.TODO(), node)).To(Succeed())
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			By(fmt.Sprintf("Configure kubevirtci cluster node %s as non control plane", node.Name))
+			delete(node.Labels, "node-role.kubernetes.io/control-plane")
+			delete(node.Labels, "node-role.kubernetes.io/master")
+			return testenv.Client.Update(context.TODO(), node)
+		})
+		Expect(err).ToNot(HaveOccurred())
 	}
 }
