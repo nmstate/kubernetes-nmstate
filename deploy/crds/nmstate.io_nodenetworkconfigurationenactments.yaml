@@ -120,6 +120,10 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
     name: v1beta1
     schema:
       openAPIV3Schema:

@@ -23,6 +23,10 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
     name: v1
     schema:
       openAPIV3Schema:
@@ -117,6 +121,10 @@ spec:
     - description: Status
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
       type: string
     deprecated: true
     name: v1alpha1
