@@ -50,6 +50,19 @@ type NMStateSpec struct {
 	// If InfraTolerations is specified, the webhook and certmanager will be able to be scheduled on nodes with corresponding taints
 	// +optional
 	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
+	// SelfSignConfiguration defines self signed certificate configuration
+	SelfSignConfiguration *SelfSignConfiguration `json:"selfSignConfiguration,omitempty"`
+}
+
+type SelfSignConfiguration struct {
+	// CARotateInterval defines duration for CA expiration
+	CARotateInterval string `json:"caRotateInterval,omitempty"`
+	// CAOverlapInterval defines the duration where expired CA certificate can overlap with new one, in order to allow fluent CA rotation transitioning
+	CAOverlapInterval string `json:"caOverlapInterval,omitempty"`
+	// CertRotateInterval defines duration for of service certificate expiration
+	CertRotateInterval string `json:"certRotateInterval,omitempty"`
+	// CertOverlapInterval defines the duration where expired service certificate can overlap with new one, in order to allow fluent service rotation transitioning
+	CertOverlapInterval string `json:"certOverlapInterval,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState
