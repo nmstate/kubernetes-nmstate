@@ -40,6 +40,7 @@ const (
 	defaultDnsProbeTimeout    = 120 * time.Second
 	apiServerProbeTimeout     = 120 * time.Second
 	nodeReadinessProbeTimeout = 120 * time.Second
+	ProbesTotalTimeout        = defaultGwRetrieveTimeout + defaultDnsProbeTimeout + defaultDnsProbeTimeout + apiServerProbeTimeout + nodeReadinessProbeTimeout
 )
 
 func currentStateAsGJson() (gjson.Result, error) {
