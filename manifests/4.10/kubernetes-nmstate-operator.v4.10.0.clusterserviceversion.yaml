@@ -147,6 +147,7 @@ spec:
                     memory: 30Mi
               nodeSelector:
                 node-role.kubernetes.io/master: ""
+              priorityClassName: system-cluster-critical
               serviceAccountName: nmstate-operator
               tolerations:
               - effect: NoSchedule
