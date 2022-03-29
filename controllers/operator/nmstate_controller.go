@@ -212,7 +212,12 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 
 	selfSignConfiguration := instance.Spec.SelfSignConfiguration
 	if selfSignConfiguration == nil {
-		selfSignConfiguration = &nmstatev1.SelfSignConfiguration{}
+		selfSignConfiguration = &nmstatev1.SelfSignConfiguration{
+			CARotateInterval:    "8760h0m0s",
+			CAOverlapInterval:   "24h0m0s",
+			CertRotateInterval:  "4380h0m0s",
+			CertOverlapInterval: "24h0m0s",
+		}
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
@@ -227,10 +232,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = handlerAffinity
-	data.Data["CARotateInterval"] = selfSignConfiguration.CARotateInterval
-	data.Data["CAOverlapInterval"] = selfSignConfiguration.CAOverlapInterval
-	data.Data["CertRotateInterval"] = selfSignConfiguration.CertRotateInterval
-	data.Data["CertOverlapInterval"] = selfSignConfiguration.CertOverlapInterval
+	data.Data["SelfSignConfiguration"] = selfSignConfiguration
+
 	return r.renderAndApply(instance, data, "handler", true)
 }
 

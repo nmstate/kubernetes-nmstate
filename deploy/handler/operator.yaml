@@ -169,13 +169,13 @@ spec:
             - name: PROFILER_PORT
               value: "6060"
             - name: CA_ROTATE_INTERVAL
-              value: {{ .CARotateInterval | default "8760h0m0s" }}
+              value: {{ .SelfSignConfiguration.CARotateInterval }}
             - name: CA_OVERLAP_INTERVAL
-              value: {{ .CAOverlapInterval | default "24h0m0s" }}
+              value: {{ .SelfSignConfiguration.CAOverlapInterval }}
             - name: CERT_ROTATE_INTERVAL
-              value: {{ .CertRotateInterval | default "4380h0m0s" }}
+              value: {{ .SelfSignConfiguration.CertRotateInterval }}
             - name: CERT_OVERLAP_INTERVAL
-              value: {{ .CertOverlapInterval | default "24h0m0s" }}
+              value: {{ .SelfSignConfiguration.CertOverlapInterval }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
