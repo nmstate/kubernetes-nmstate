@@ -1750,6 +1750,28 @@ spec:
                   that have each of the indicated key-value pairs as labels applied
                   to the node.
                 type: object
+              selfSignConfiguration:
+                description: SelfSignConfiguration defines self signed certificate
+                  configuration
+                properties:
+                  caOverlapInterval:
+                    description: CAOverlapInterval defines the duration where expired
+                      CA certificate can overlap with new one, in order to allow fluent
+                      CA rotation transitioning
+                    type: string
+                  caRotateInterval:
+                    description: CARotateInterval defines duration for CA expiration
+                    type: string
+                  certOverlapInterval:
+                    description: CertOverlapInterval defines the duration where expired
+                      service certificate can overlap with new one, in order to allow
+                      fluent service rotation transitioning
+                    type: string
+                  certRotateInterval:
+                    description: CertRotateInterval defines duration for of service
+                      certificate expiration
+                    type: string
+                type: object
               tolerations:
                 description: Tolerations is an optional list of tolerations to be
                   added to handler DaemonSet manifest If Tolerations is specified,

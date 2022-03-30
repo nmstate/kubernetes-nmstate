@@ -209,6 +209,16 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		infraAffinity = &corev1.Affinity{}
 	}
 
+	selfSignConfiguration := instance.Spec.SelfSignConfiguration
+	if selfSignConfiguration == nil {
+		selfSignConfiguration = &nmstatev1.SelfSignConfiguration{
+			CARotateInterval:    "8760h0m0s",
+			CAOverlapInterval:   "24h0m0s",
+			CertRotateInterval:  "4380h0m0s",
+			CertOverlapInterval: "24h0m0s",
+		}
+	}
+
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
@@ -221,12 +231,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = handlerAffinity
-	// TODO: This is just a place holder to make template renderer happy
-	//       proper variable has to be read from env or CR
-	data.Data["CARotateInterval"] = ""
-	data.Data["CAOverlapInterval"] = ""
-	data.Data["CertRotateInterval"] = ""
-	data.Data["CertOverlapInterval"] = ""
+	data.Data["SelfSignConfiguration"] = selfSignConfiguration
+
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
