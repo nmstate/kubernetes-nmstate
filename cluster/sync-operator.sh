@@ -23,14 +23,8 @@ function deploy_operator() {
 
 function wait_ready_operator() {
     # We have to re-check desired number, sometimes takes some time to be filled in
-    if ! eventually isDeploymentOk ${OPERATOR_NAMESPACE} app=kubernetes-nmstate-operator; then
+    if ! $kubectl rollout status -w -n ${OPERATOR_NAMESPACE} deployment nmstate-operator; then
         echo "Operator haven't turned ready within the given timeout"
-        return 1
-    fi
-
-    # Make sure good state is keep for some time
-    if ! consistently isDeploymentOk ${OPERATOR_NAMESPACE} app=kubernetes-nmstate-operator; then
-        echo "Operator is not consistently ready within the given timeout"
         return 1
     fi
 }
