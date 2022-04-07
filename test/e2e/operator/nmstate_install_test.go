@@ -175,6 +175,10 @@ func increaseKubevirtciControlPlane() func() {
 	Expect(err).ToNot(HaveOccurred())
 	return func() {
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := testenv.Client.Get(context.TODO(), client.ObjectKey{Name: secondNodeName}, node)
+			if err != nil {
+				return err
+			}
 			By(fmt.Sprintf("Configure kubevirtci cluster node %s as non control plane", node.Name))
 			delete(node.Labels, "node-role.kubernetes.io/control-plane")
 			delete(node.Labels, "node-role.kubernetes.io/master")
