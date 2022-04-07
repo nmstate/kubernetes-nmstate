@@ -92,7 +92,7 @@ SKIP_IMAGE_BUILD ?= false
 
 all: check handler
 
-check: vet whitespace-check gofmt-check
+check: lint vet whitespace-check gofmt-check
 
 format: whitespace-format gofmt
 
