@@ -117,14 +117,7 @@ func (ec *EnactmentConditions) updateEnactmentConditions(
 }
 
 func SetFailedToConfigure(conditions *nmstate.ConditionList, message string) {
-	strippedMessage := enactmentstatus.FormatErrorString(message)
-	SetFailed(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, strippedMessage)
-	setFailedToConfigureEncodedMessage(conditions, message)
-}
-
-func setFailedToConfigureEncodedMessage(conditions *nmstate.ConditionList, message string) {
-	condition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
-	condition.MessageEncoded = enactmentstatus.CompressAndEncodeMessage(message)
+	SetFailed(conditions, nmstate.NodeNetworkConfigurationEnactmentConditionFailedToConfigure, message)
 }
 
 func SetFailed(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {

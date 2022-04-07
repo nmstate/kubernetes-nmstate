@@ -14,7 +14,6 @@ type Condition struct {
 	Status             corev1.ConditionStatus `json:"status"`
 	Reason             ConditionReason        `json:"reason,omitempty"`
 	Message            string                 `json:"message,omitempty"`
-	MessageEncoded     string                 `json:"messageEncoded,omitempty"`
 	LastHeartbeatTime  metav1.Time            `json:"lastHearbeatTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
