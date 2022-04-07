@@ -31,24 +31,6 @@ function isExternal {
     [[ "${KUBEVIRT_PROVIDER}" == external ]]
 }
 
-function isDeploymentOk {
-    $kubectl wait deployment -n $1 -l $2 --for condition=Available --timeout=15s
-}
-
-function isDaemonSetOk {
-    desiredNumberScheduled=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.desiredNumberScheduled}')
-
-    numberAvailable=$($kubectl get daemonset -n $1 -l $2 -o=jsonpath='{..status.numberAvailable}')
-
-    # There is no numberAvailable yet, return error so we don't end up with
-    # false possitive after 0==0
-    if [ "$numberAvailable" == "" ]; then
-        return 1
-    fi
-
-    [ "$desiredNumberScheduled" == "$numberAvailable" ]
-}
-
 function isOpenshift {
     $kubectl get co openshift-apiserver
 }

@@ -18,27 +18,14 @@ function patch_handler_nodeselector() {
 }
 
 function wait_ready_handler() {
-    # We have to re-check desired number, sometimes takes some time to be filled in
-    if ! eventually isDaemonSetOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate ; then
+    if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds nmstate-handler; then
         echo "Handler haven't turned ready within the given timeout"
         return 1
     fi
 
-    # Make sure good state is keep for some time
-    if ! consistently isDaemonSetOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate ; then
-        echo "Handler is not consistently ready within the given timeout"
-        return 1
-    fi
-
     # We have to re-check desired number, sometimes takes some time to be filled in
-    if ! eventually isDeploymentOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate; then
+    if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} deployment nmstate-webhook; then
         echo "Webhook haven't turned ready within the given timeout"
-        return 1
-    fi
-
-    # Make sure good state is keep for some time
-    if ! consistently isDeploymentOk ${HANDLER_NAMESPACE} app=kubernetes-nmstate; then
-        echo "Webhook is not consistently ready within the given timeout"
         return 1
     fi
 }
