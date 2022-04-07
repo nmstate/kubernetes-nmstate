@@ -208,6 +208,10 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	defer r.decrementUnavailableNodeCount(instance)
 
 	enactmentConditions.NotifyProgressing()
+	if policyconditions.IsUnknown(&instance.Status.Conditions) {
+		policyconditions.Update(r.Client, r.APIClient, request.NamespacedName)
+	}
+
 	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, enactmentInstance.Status.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s,\n %v", nmstateOutput, err)
