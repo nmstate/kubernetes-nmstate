@@ -8,7 +8,7 @@ IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
 ifeq ($(NMSTATE_PIN), future)
-HANDLER_EXTRA_PARAMS:= "--build-arg FROM=quay.io/centos/centos:stream9"
+HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git --build-arg FROM=quay.io/centos/centos:stream9"
 endif
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler

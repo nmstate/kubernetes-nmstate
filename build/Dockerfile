@@ -17,12 +17,14 @@ RUN GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/handler
 ARG FROM=quay.io/centos/centos:stream8
 FROM ${FROM}
 
-COPY --from=build /manager /usr/local/bin/manager
+ARG NMSTATE_SOURCE=distro
 
-RUN dnf install -b -y dnf-plugins-core && \
-    dnf install -b -y -x "*alpha*" -x "*beta*" nmstate && \
+COPY --from=build /manager /usr/local/bin/manager
+COPY --from=build /workdir/build/install-nmstate.${NMSTATE_SOURCE}.sh install-nmstate.sh
+
+RUN ./install-nmstate.sh && \
     dnf install -b -y iproute iputils && \
-    dnf remove -y dnf-plugins-core && \
+    rm ./install-nmstate.sh && \
     dnf clean all
 
 ENTRYPOINT ["manager"]
