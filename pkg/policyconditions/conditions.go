@@ -145,6 +145,14 @@ func IsProgressing(conditions *nmstate.ConditionList) bool {
 	return progressingCondition.Status == corev1.ConditionTrue
 }
 
+func IsUnknown(conditions *nmstate.ConditionList) bool {
+	availableCondition := conditions.Find(nmstate.NodeNetworkConfigurationPolicyConditionAvailable)
+	if availableCondition == nil {
+		return true
+	}
+	return availableCondition.Status == corev1.ConditionUnknown
+}
+
 func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 
