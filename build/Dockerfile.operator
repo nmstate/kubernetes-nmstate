@@ -1,4 +1,4 @@
-FROM --platform=linux/amd64 quay.io/centos/centos:stream8 AS build
+FROM --platform=linux/amd64 quay.io/centos/centos:stream9 AS build
 
 ARG TARGETARCH
 
@@ -13,7 +13,7 @@ COPY . .
 
 RUN GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/operator
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal
+FROM registry.access.redhat.com/ubi9-beta/ubi-minimal
 
 COPY --from=build /manager /usr/local/bin/manager
 
