@@ -18,16 +18,21 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
 	"os"
 
+	rbac "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	// +kubebuilder:scaffold:imports
@@ -98,6 +103,11 @@ func main() {
 
 	setProfiler()
 
+	if err := createClusterRole(mgr.GetClient(), mgr.GetAPIReader()); err != nil {
+		setupLog.Error(err, "unable to create NMState cluster-reader ClusterRole")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
@@ -120,4 +130,51 @@ func setProfiler() {
 			}
 		}()
 	}
+}
+
+func createClusterRole(c client.Client, reader client.Reader) error {
+	var clusterReader rbac.ClusterRole
+	key := types.NamespacedName{Name: "cluster-reader"}
+	err := reader.Get(context.TODO(), key, &clusterReader)
+
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+
+	var clusterRole rbac.ClusterRole
+	const clusterRoleName = "k8s-nmstate-project"
+	err = reader.Get(context.TODO(), types.NamespacedName{Name: clusterRoleName}, &clusterRole)
+
+	clusterRole = getClusterRoleSpec(clusterRoleName)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return c.Create(context.TODO(), &clusterRole)
+		}
+		return err
+	}
+
+	return c.Update(context.TODO(), &clusterRole)
+}
+
+func getClusterRoleSpec(name string) rbac.ClusterRole {
+	clusterRole := rbac.ClusterRole{}
+	clusterRole.APIVersion = "rbac.authorization.k8s.io/v1"
+	clusterRole.Kind = "ClusterRole"
+	clusterRole.Name = name
+	clusterRole.Labels = map[string]string{"rbac.authorization.k8s.io/aggregate-to-cluster-reader": "true"}
+	clusterRole.Rules = make([]rbac.PolicyRule, 1)
+	clusterRole.Rules[0].APIGroups = []string{"nmstate.io"}
+	clusterRole.Rules[0].Resources = []string{
+		"nodenetworkstates",
+		"nodenetworkconfigurationpolicies",
+		"nodenetworkconfigurationenactments"}
+	clusterRole.Rules[0].Verbs = []string{
+		"get",
+		"list",
+		"watch"}
+
+	return clusterRole
 }

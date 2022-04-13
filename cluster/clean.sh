@@ -39,6 +39,7 @@ function clean() {
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/service_account.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role_binding.yaml
+    $kubectl delete --ignore-not-found clusterrole k8s-nmstate-project
 
     if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$ ]]; then
         $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/scc.yaml
