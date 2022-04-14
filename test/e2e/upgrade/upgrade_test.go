@@ -204,8 +204,8 @@ interfaces:
 
 					By("Waiting for all policies to be re-reconciled")
 					allPoliciesReReconciled := func() error {
-						nncps := nmstatev1.NodeNetworkConfigurationPolicyList{}
-						err := testenv.Client.List(context.TODO(), &nncps)
+						nncps = nmstatev1.NodeNetworkConfigurationPolicyList{}
+						err = testenv.Client.List(context.TODO(), &nncps)
 						if err != nil {
 							return err
 						}

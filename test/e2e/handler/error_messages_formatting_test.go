@@ -73,7 +73,9 @@ func createPolicyAndWaitForEnactmentCondition(policy string, desiredState func()
 	waitForNodesReady()
 
 	By("Waiting for enactment to be failing")
-	policyconditions.EnactmentConditionsStatusEventually(nodes[0]).Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure))
+	policyconditions.EnactmentConditionsStatusEventually(
+		nodes[0],
+	).Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure))
 }
 
 var _ = Describe("NodeNetworkState", func() {
@@ -220,7 +222,9 @@ var _ = Describe("NodeNetworkState", func() {
 
 		It("should contain the error message", func() {
 			Expect(
-				policyconditions.EnactmentConditionsStatus(nodes[0], defaultPolicy).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message,
+				policyconditions.EnactmentConditionsStatus(
+					nodes[0], defaultPolicy,
+				).Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing).Message,
 			).To(ContainSubstring("failure generating desiredState and capturedStates"))
 		})
 	})
