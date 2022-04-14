@@ -27,7 +27,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -153,6 +155,11 @@ func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+
+	if err := setClusterReaderExist(r.Client, data); err != nil {
+		return errors.Wrap(err, "failed checking if cluster-reader ClusterRole exists")
+	}
+
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
@@ -276,5 +283,22 @@ func (r *NMStateReconciler) renderAndApply(
 			return errors.Wrapf(err, "failed to apply object %v", obj)
 		}
 	}
+	return nil
+}
+
+func setClusterReaderExist(c client.Client, data render.RenderData) error {
+	var clusterReader rbac.ClusterRole
+	key := types.NamespacedName{Name: "cluster-reader"}
+	err := c.Get(context.TODO(), key, &clusterReader)
+
+	found := true
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		found = false
+	}
+
+	data.Data["ClusterReaderExists"] = found
 	return nil
 }
