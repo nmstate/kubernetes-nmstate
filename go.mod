@@ -43,6 +43,7 @@ replace (
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.10.0
 	github.com/nmstate/kubernetes-nmstate/api => ./api
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1 // Required to fix CVE-2022-21698
 	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
 	k8s.io/client-go => k8s.io/client-go v0.22.3
 )
