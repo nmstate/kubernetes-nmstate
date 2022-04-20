@@ -1,4 +1,4 @@
-ARG FROM=quay.io/centos/centos:stream9
+ARG FROM=quay.io/centos/centos:stream8
 FROM --platform=linux/amd64 ${FROM} AS build
 
 ARG TARGETARCH
@@ -14,7 +14,7 @@ COPY . .
 
 RUN GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/handler
 
-ARG FROM=quay.io/centos/centos:stream9
+ARG FROM=quay.io/centos/centos:stream8
 FROM ${FROM}
 
 ARG NMSTATE_SOURCE=distro
