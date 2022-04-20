@@ -8,6 +8,9 @@ spec:
     - name: eth1.102
       type: vlan
       state: up
+      vlan:
+        id: 102
+        base-iface: eth1
       ipv4:
         dhcp: true
         enabled: true
