@@ -168,7 +168,9 @@ func waitForPolicy(policy string, matcher gomegatypes.GomegaMatcher) {
 	policyConditionsStatusForPolicyEventually(policy).
 		Should(
 			matcher,
-			"should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml(),
+			func() string {
+				return fmt.Sprintf("should reach expected status at NNCP '%s', \n current enactments statuses:\n%s", policy, enactmentsStatusToYaml())
+			},
 		)
 }
 
