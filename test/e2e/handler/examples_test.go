@@ -157,6 +157,12 @@ interfaces:
 			policyName: "worker-selector",
 			ifaceNames: []string{"eth1"},
 		},
+		{
+			name:       "DNS cleanup",
+			fileName:   "dns-cleanup.yaml",
+			policyName: "dns-cleanup",
+			ifaceNames: []string{},
+		},
 	}
 
 	for _, e := range examples {
