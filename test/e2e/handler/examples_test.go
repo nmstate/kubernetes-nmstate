@@ -21,13 +21,16 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
+
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 type exampleSpec struct {
-	name       string
-	fileName   string
-	policyName string
-	ifaceNames []string
+	name         string
+	fileName     string
+	policyName   string
+	ifaceNames   []string
+	cleanupState *nmstate.State
 }
 
 // This suite checks that all examples in our docs can be successfully applied.
@@ -35,6 +38,15 @@ type exampleSpec struct {
 // configuration is indeed applied on nodes. That should be tested by dedicated
 // test suites for each feature.
 var _ = Describe("[user-guide] Examples", func() {
+	cleanDNSDesiredState := nmstate.NewState(`dns-resolver:
+    config:
+      search: []
+      server: []
+interfaces:
+- name: eth1
+  state: absent
+`)
+
 	beforeTestIfaceExample := func(fileName string) {
 		kubectlAndCheck("apply", "-f", fmt.Sprintf("docs/examples/%s", fileName))
 	}
@@ -43,11 +55,17 @@ var _ = Describe("[user-guide] Examples", func() {
 		kubectlAndCheck("wait", "nncp", policyName, "--for", "condition=Available", "--timeout", "2m")
 	}
 
-	afterIfaceExample := func(policyName string, ifaceNames []string) {
+	afterIfaceExample := func(policyName string, ifaceNames []string, cleanupState *nmstate.State) {
 		deletePolicy(policyName)
 
-		for _, ifaceName := range ifaceNames {
-			updateDesiredStateAndWait(interfaceAbsent(ifaceName))
+		if len(ifaceNames) > 0 {
+			for _, ifaceName := range ifaceNames {
+				updateDesiredStateAndWait(interfaceAbsent(ifaceName))
+			}
+		}
+
+		if cleanupState != nil {
+			updateDesiredStateAndWait(*cleanupState)
 		}
 
 		resetDesiredStateForNodes()
@@ -127,10 +145,11 @@ var _ = Describe("[user-guide] Examples", func() {
 			ifaceNames: []string{"eth1"},
 		},
 		{
-			name:       "DNS",
-			fileName:   "dns.yaml",
-			policyName: "dns",
-			ifaceNames: []string{},
+			name:         "DNS",
+			fileName:     "dns.yaml",
+			policyName:   "dns",
+			ifaceNames:   []string{},
+			cleanupState: &cleanDNSDesiredState,
 		},
 		{
 			name:       "Worker selector",
@@ -140,14 +159,15 @@ var _ = Describe("[user-guide] Examples", func() {
 		},
 	}
 
-	for _, example := range examples {
-		Context(example.name, func() {
+	for _, e := range examples {
+		example := e
+		Context(e.name, func() {
 			BeforeEach(func() {
 				beforeTestIfaceExample(example.fileName)
 			})
 
 			AfterEach(func() {
-				afterIfaceExample(example.policyName, example.ifaceNames)
+				afterIfaceExample(example.policyName, example.ifaceNames, example.cleanupState)
 			})
 
 			It("should succeed applying the policy", func() {
