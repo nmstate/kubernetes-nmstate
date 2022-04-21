@@ -456,6 +456,18 @@
         <span class="na">server</span><span class="pi">:</span>
         <span class="pi">-</span> <span class="s">8.8.8.8</span>
         <span class="pi">-</span> <span class="s">2001:4860:4860::8888</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">auto-dns</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">ipv6</span><span class="pi">:</span>
+        <span class="na">auto-dns</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
 
 </code></pre></div></div>
 
@@ -524,15 +536,15 @@
               <span class="na">enabled</span><span class="pi">:</span> <span class="no">false</span>
           <span class="na">port</span><span class="pi">:</span>
             <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
-            <span class="na">vlan</span><span class="pi">:</span>
-              <span class="na">mode</span><span class="pi">:</span> <span class="s">trunk</span>
-              <span class="na">trunk-tags</span><span class="pi">:</span>
-                <span class="pi">-</span> <span class="na">id</span><span class="pi">:</span> <span class="m">101</span>
-                <span class="pi">-</span> <span class="na">id-range</span><span class="pi">:</span>
-                    <span class="na">max</span><span class="pi">:</span> <span class="m">500</span>
-                    <span class="na">min</span><span class="pi">:</span> <span class="m">200</span>
-              <span class="na">tag</span><span class="pi">:</span> <span class="m">100</span>
-              <span class="na">enable-native</span><span class="pi">:</span> <span class="no">true</span>
+              <span class="na">vlan</span><span class="pi">:</span>
+                <span class="na">mode</span><span class="pi">:</span> <span class="s">trunk</span>
+                <span class="na">trunk-tags</span><span class="pi">:</span>
+                  <span class="pi">-</span> <span class="na">id</span><span class="pi">:</span> <span class="m">101</span>
+                  <span class="pi">-</span> <span class="na">id-range</span><span class="pi">:</span>
+                      <span class="na">max</span><span class="pi">:</span> <span class="m">500</span>
+                      <span class="na">min</span><span class="pi">:</span> <span class="m">200</span>
+                <span class="na">tag</span><span class="pi">:</span> <span class="m">100</span>
+                <span class="na">enable-native</span><span class="pi">:</span> <span class="no">true</span>
 
 </code></pre></div></div>
 
