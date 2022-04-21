@@ -12,3 +12,15 @@ spec:
         server:
         - 8.8.8.8
         - 2001:4860:4860::8888
+    interfaces:
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        auto-dns: false
+        dhcp: true
+        enabled: true
+      ipv6:
+        auto-dns: false
+        dhcp: true
+        enabled: true
