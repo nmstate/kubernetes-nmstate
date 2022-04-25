@@ -16,5 +16,12 @@ export DEV_IMAGE_REGISTRY="${DEV_IMAGE_REGISTRY:-quay.io}"
 export KUBEVIRTCI_RUNTIME="${KUBEVIRTCI_RUNTIME:-podman}"
 export FLAKE_ATTEMPTS="${FLAKE_ATTEMPTS:-5}"
 
+if [ "${CI}" == "true" ]; then
+    source ${SHARED_DIR}/fix-uid.sh
+    export SSH=./hack/ssh-ci.sh
+else
+    export SSH=./hack/ssh.sh
+fi
+
 make cluster-sync-operator
 make test-e2e-operator E2E_TEST_ARGS="--flakeAttempts=${FLAKE_ATTEMPTS}"
