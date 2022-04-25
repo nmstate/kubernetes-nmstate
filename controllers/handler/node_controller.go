@@ -27,8 +27,8 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -211,16 +211,30 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return false
 		},
 	}
-	err = ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1beta1.NodeNetworkState{}).
-		Watches(
-			&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}},
-			&handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}},
-			builder.WithPredicates(onDeleteOrForceUpdateForThisNode),
-		).
-		Complete(r)
+
+	c, err := controller.New("NodeNetworkState", mgr, controller.Options{Reconciler: r})
 	if err != nil {
-		return errors.Wrap(err, "failed to add controller to Node Reconciler listening Node Network State events")
+		return errors.Wrap(err, "failed to create NodeNetworkState controller")
+	}
+
+	// Add watch for Node
+	err = c.Watch(
+		&source.Kind{Type: &corev1.Node{}},
+		&handler.EnqueueRequestForObject{},
+		onCreationForThisNode,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to add watch for Nodes")
+	}
+
+	// Add watch for NNS
+	err = c.Watch(
+		&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}},
+		&handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}},
+		onDeleteOrForceUpdateForThisNode,
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to add watch for NNSes")
 	}
 
 	return nil
