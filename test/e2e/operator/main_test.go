@@ -96,7 +96,7 @@ var _ = BeforeSuite(func() {
 		nodes = append(nodes, node.Name)
 	}
 
-	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
+	knmstateReporter = knmstatereporter.New("test_logs/e2e/operator", testenv.OperatorNamespace, nodes)
 	knmstateReporter.Cleanup()
 })
 
