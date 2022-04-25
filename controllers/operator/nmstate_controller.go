@@ -171,14 +171,14 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		Operator: corev1.TolerationOpExists,
 	}
 	archOnMasterNodeSelector := map[string]string{
-		"beta.kubernetes.io/arch":        goruntime.GOARCH,
+		"kubernetes.io/arch":             goruntime.GOARCH,
 		"node-role.kubernetes.io/master": "",
 	}
 	archAndCRNodeSelector := instance.Spec.NodeSelector
 	if archAndCRNodeSelector == nil {
 		archAndCRNodeSelector = map[string]string{}
 	}
-	archAndCRNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
+	archAndCRNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
 	archAndCRNodeSelector["kubernetes.io/os"] = "linux"
 
 	handlerTolerations := instance.Spec.Tolerations
@@ -198,7 +198,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	if archAndCRInfraNodeSelector == nil {
 		archAndCRInfraNodeSelector = archOnMasterNodeSelector
 	} else {
-		archAndCRInfraNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
+		archAndCRInfraNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
 	}
 
 	infraTolerations := instance.Spec.InfraTolerations
