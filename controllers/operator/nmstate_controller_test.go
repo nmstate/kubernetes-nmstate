@@ -43,6 +43,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	policyv1 "k8s.io/api/policy/v1"
 )
 
 var _ = Describe("NMState controller reconcile", func() {
@@ -333,7 +334,125 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(anyTolerationsPresent(infraTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeFalse())
 		})
 	})
+
+	Context("Depending on cluster topology", func() {
+		var (
+			nodeSelector map[string]string
+			objects      []runtime.Object
+		)
+
+		BeforeEach(func() {
+			objects = []runtime.Object{}
+			nodeSelector = defaultHandlerNodeSelector
+		})
+
+		JustBeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
+			)
+			nmstate.Spec.InfraNodeSelector = nodeSelector
+			objects = append(objects, &nmstate)
+
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()
+			reconciler.Client = cl
+
+			var request ctrl.Request
+			request.Name = existingNMStateName
+
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+
+		Context("On single node cluster", func() {
+			BeforeEach(func() {
+				objects = append(objects, dummyNode("node1", nodeSelector))
+			})
+
+			It("should have a minAvailable = 0 in the pod disruption budget", func() {
+				pdb := policyv1.PodDisruptionBudget{}
+				pdbKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+
+				err := cl.Get(context.TODO(), pdbKey, &pdb)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(pdb.Spec.MinAvailable.IntValue()).To(BeEquivalentTo(0))
+			})
+
+			It("should have one replica of the webhook deployment", func() {
+				deployment := &appsv1.Deployment{}
+				webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+				err := cl.Get(context.TODO(), webhookKey, deployment)
+
+				Expect(err).ToNot(HaveOccurred())
+				Expect(*deployment.Spec.Replicas).To(BeEquivalentTo(1))
+			})
+		})
+
+		Context("On multi node cluster", func() {
+			When("When multiple nodes match the node selector", func() {
+				BeforeEach(func() {
+					objects = append(objects, dummyNode("node1", nodeSelector))
+					objects = append(objects, dummyNode("node2", nodeSelector))
+					objects = append(objects, dummyNode("node3", nodeSelector))
+				})
+
+				It("should have a minAvailable = 1 in the pod disruption budget", func() {
+					pdb := policyv1.PodDisruptionBudget{}
+					pdbKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+
+					err := cl.Get(context.TODO(), pdbKey, &pdb)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(pdb.Spec.MinAvailable.IntValue()).To(BeEquivalentTo(1))
+				})
+
+				It("should have two replica of the webhook deployment", func() {
+					deployment := &appsv1.Deployment{}
+					webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+					err := cl.Get(context.TODO(), webhookKey, deployment)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(*deployment.Spec.Replicas).To(BeEquivalentTo(2))
+				})
+			})
+
+			When("When only one node matches the node selector", func() {
+				BeforeEach(func() {
+					objects = append(objects, dummyNode("node1", nodeSelector))
+					objects = append(objects, dummyNode("node2", map[string]string{"foo": "bar"}))
+					objects = append(objects, dummyNode("node3", map[string]string{"foo": "bar"}))
+				})
+
+				It("should have a minAvailable = 0 in the pod disruption budget", func() {
+					pdb := policyv1.PodDisruptionBudget{}
+					pdbKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+
+					err := cl.Get(context.TODO(), pdbKey, &pdb)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(pdb.Spec.MinAvailable.IntValue()).To(BeEquivalentTo(0))
+				})
+
+				It("should have one replica of the webhook deployment", func() {
+					deployment := &appsv1.Deployment{}
+					webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+					err := cl.Get(context.TODO(), webhookKey, deployment)
+
+					Expect(err).ToNot(HaveOccurred())
+					Expect(*deployment.Spec.Replicas).To(BeEquivalentTo(1))
+				})
+			})
+		})
+	})
 })
+
+func dummyNode(name string, labels map[string]string) *corev1.Node {
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   name,
+			Labels: labels,
+		},
+	}
+}
 
 func copyManifest(src, dst string) error {
 	var err error
