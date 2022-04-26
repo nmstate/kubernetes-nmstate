@@ -186,14 +186,6 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
-	err := ctrl.NewControllerManagedBy(mgr).
-		For(&corev1.Node{}).
-		WithEventFilter(onCreationForThisNode).
-		Complete(r)
-	if err != nil {
-		return errors.Wrap(err, "failed to add controller to Node Reconciler listening Node events")
-	}
-
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch delete/update for current node.
 	onDeleteOrForceUpdateForThisNode := predicate.Funcs{
