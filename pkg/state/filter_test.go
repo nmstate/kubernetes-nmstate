@@ -383,4 +383,39 @@ interfaces:
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
+
+	// See https://github.com/yaml/pyyaml/issues/173 for why this scenario is checked.
+	Context("when the route next-hop-interface names have numbers in scientific notation without dot", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    next-hop-interface: eth0
+  - destination: fd10:244::8c40/128
+    next-hop-interface: 60e+02
+  - destination: fd10:244::8c40/128
+    next-hop-interface: 70e+02
+`)
+			filteredState = nmstate.NewState(`
+interfaces: []
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    next-hop-interface: eth0
+  - destination: fd10:244::8c40/128
+    next-hop-interface: "60e+02"
+
+`)
+			interfacesFilterGlob = glob.MustCompile("70e*")
+		})
+
+		It("does not filter out next-hop-interface names correctly and does not represent them correctly", func() {
+			returnedState, err := filterOut(state, interfacesFilterGlob)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
 })
