@@ -51,7 +51,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		cl                         client.Client
 		reconciler                 NMStateReconciler
 		existingNMStateName        = "nmstate"
-		defaultHandlerNodeSelector = map[string]string{"kubernetes.io/os": "linux", "beta.kubernetes.io/arch": goruntime.GOARCH}
+		defaultHandlerNodeSelector = map[string]string{"kubernetes.io/os": "linux", "kubernetes.io/arch": goruntime.GOARCH}
 		customHandlerNodeSelector  = map[string]string{"selector_1": "value_1", "selector_2": "value_2"}
 		handlerTolerations         = []corev1.Toleration{
 			{
