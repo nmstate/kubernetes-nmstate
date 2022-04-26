@@ -30,11 +30,11 @@ func FilterOut(currentState shared.State) (shared.State, error) {
 	return filterOut(currentState, interfacesFilterGlobFromEnv)
 }
 
-func filterOutRoutes(routes []interface{}, interfacesFilterGlob glob.Glob) []interface{} {
-	filteredRoutes := []interface{}{}
+func filterOutRoutes(routes []routeState, interfacesFilterGlob glob.Glob) []routeState {
+	filteredRoutes := []routeState{}
 	for _, route := range routes {
-		name := route.(map[string]interface{})["next-hop-interface"]
-		if !interfacesFilterGlob.Match(name.(string)) {
+		name := route.NextHopInterface
+		if !interfacesFilterGlob.Match(name) {
 			filteredRoutes = append(filteredRoutes, route)
 		}
 	}
@@ -104,7 +104,6 @@ func filterOut(currentState shared.State, interfacesFilterGlob glob.Glob) (share
 	if err != nil {
 		return currentState, err
 	}
-
 	return shared.NewState(string(filteredState)), nil
 }
 
@@ -117,6 +116,15 @@ func normalizeInterfacesNames(rawState []byte, state *rootState) error {
 	}
 	for i, iface := range stateForNormalization.Interfaces {
 		state.Interfaces[i].Name = iface.Name
+	}
+
+	if stateForNormalization.Routes != nil {
+		for i, route := range stateForNormalization.Routes.Config {
+			state.Routes.Config[i].NextHopInterface = route.NextHopInterface
+		}
+		for i, route := range stateForNormalization.Routes.Running {
+			state.Routes.Running[i].NextHopInterface = route.NextHopInterface
+		}
 	}
 	return nil
 }
