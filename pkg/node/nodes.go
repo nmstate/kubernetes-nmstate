@@ -22,6 +22,8 @@ import (
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	corev1 "k8s.io/api/core/v1"
@@ -116,4 +118,13 @@ func ScaledMaxUnavailableNodeCount(matchingNodes int, intOrPercent intstr.IntOrS
 		return correctMaxUnavailable(maxUnavailable), err
 	}
 	return correctMaxUnavailable(maxUnavailable), nil
+}
+
+// Return true if the event name is the name of
+// the pods's node (reading the env var NODE_NAME)
+func EventIsForThisNode(meta v1.Object) bool {
+	createdNodeName := meta.GetName()
+	podNodeName := environment.NodeName()
+	// Only reconcile is it's for this pod
+	return createdNodeName == podNodeName
 }

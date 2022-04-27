@@ -86,7 +86,7 @@ var (
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			labelsChanged := !reflect.DeepEqual(updateEvent.ObjectOld.GetLabels(), updateEvent.ObjectNew.GetLabels())
-			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.ObjectNew)
+			return labelsChanged && node.EventIsForThisNode(updateEvent.ObjectNew)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
