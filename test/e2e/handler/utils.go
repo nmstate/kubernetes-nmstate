@@ -200,8 +200,8 @@ func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstat
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
+	defer deletePolicy(TestPolicy)
 	waitForAvailableTestPolicy()
-	deletePolicy(TestPolicy)
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState {
