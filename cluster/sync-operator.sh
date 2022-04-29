@@ -22,7 +22,10 @@ function deploy_operator() {
 }
 
 function wait_ready_operator() {
-    # We have to re-check desired number, sometimes takes some time to be filled in
+    # Wait a little for resources to be created
+    sleep 5
+
+    # Wait for deployment rollout
     if ! $kubectl rollout status -w -n ${OPERATOR_NAMESPACE} deployment nmstate-operator; then
         echo "Operator haven't turned ready within the given timeout"
         return 1
