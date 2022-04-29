@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/types"
 )
 
@@ -76,6 +77,7 @@ func runAndWait(funcs ...func()) {
 		// You have to pass f to the goroutine, it's going to change
 		// at the next loop iteration.
 		go func(rf func()) {
+			defer ginkgo.GinkgoRecover()
 			rf()
 			wg.Done()
 		}(f)
