@@ -52,7 +52,7 @@ var (
 	portFieldName        string
 	miimonFormat         string
 	nodesInterfacesState = make(map[string][]byte)
-	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
+	interfacesToIgnore   = []string{"flannel.1", "dummy0", "tunl0"}
 	knmstateReporter     *knmstatereporter.KubernetesNMStateReporter
 )
 
