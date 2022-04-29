@@ -18,12 +18,16 @@ function patch_handler_nodeselector() {
 }
 
 function wait_ready_handler() {
+    # Wait a little for resources to be created
+    sleep 5
+
+    # Check daemonset rollout
     if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds nmstate-handler --timeout=2m; then
         echo "Handler haven't turned ready within the given timeout"
         return 1
     fi
 
-    # We have to re-check desired number, sometimes takes some time to be filled in
+    # Check deployment rollout
     if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} deployment nmstate-webhook --timeout=2m; then
         echo "Webhook haven't turned ready within the given timeout"
         return 1
