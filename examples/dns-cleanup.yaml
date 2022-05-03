@@ -8,6 +8,3 @@ spec:
       config:
         search: []
         server: []
-    interfaces:
-    - name: eth1
-      state: absent
