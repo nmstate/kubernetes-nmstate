@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 // We cannot change routes at nmstate if the interface is with dhcp true
@@ -126,10 +127,10 @@ var _ = Describe("rollback", func() {
 		})
 		It("should rollback to a good gw configuration", func() {
 			By("Should not be available") // Fail fast
-			policyConditionsStatusConsistently().ShouldNot(containPolicyAvailable())
+			policy.StatusConsistently().ShouldNot(policy.ContainPolicyAvailable())
 
 			By("Wait for reconcile to fail")
-			waitForDegradedTestPolicy()
+			policy.WaitForDegradedTestPolicy()
 			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return dhcpFlag(nodes[0], primaryNic)
@@ -153,10 +154,10 @@ var _ = Describe("rollback", func() {
 		})
 		It("should rollback to previous name servers", func() {
 			By("Should not be available") // Fail fast
-			policyConditionsStatusConsistently().ShouldNot(containPolicyAvailable())
+			policy.StatusConsistently().ShouldNot(policy.ContainPolicyAvailable())
 
 			By("Wait for reconcile to fail")
-			waitForDegradedTestPolicy()
+			policy.WaitForDegradedTestPolicy()
 			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return autoDNS(nodes[0], primaryNic)
@@ -181,10 +182,10 @@ var _ = Describe("rollback", func() {
 		})
 		It("should rollback to previous name servers", func() {
 			By("Should not be available") // Fail fast
-			policyConditionsStatusConsistently().ShouldNot(containPolicyAvailable())
+			policy.StatusConsistently().ShouldNot(policy.ContainPolicyAvailable())
 
 			By("Wait for reconcile to fail")
-			waitForDegradedTestPolicy()
+			policy.WaitForDegradedTestPolicy()
 			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return autoDNS(nodes[0], primaryNic)

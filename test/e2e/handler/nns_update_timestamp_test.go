@@ -28,6 +28,7 @@ import (
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 const expectedDummyName = "dummy0"
@@ -93,11 +94,11 @@ var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 			// We want to test all the NNS so we apply policies to control-plane and workers
 			// (use linuxBrUpNoPorts to not affect the nodes secondary interfaces state)
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1))
-			waitForAvailableTestPolicy()
+			policy.WaitForAvailableTestPolicy()
 		})
 		AfterEach(func() {
 			setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, linuxBrAbsent(bridge1))
-			waitForAvailableTestPolicy()
+			policy.WaitForAvailableTestPolicy()
 			deletePolicy(TestPolicy)
 		})
 		It("should be immediately updated", func() {

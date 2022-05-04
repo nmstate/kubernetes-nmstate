@@ -27,6 +27,7 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -37,7 +38,7 @@ var _ = Describe("NNCP cleanup", func() {
 		setDesiredStateWithPolicy(bridge1, linuxBrUp(bridge1))
 
 		By("Wait for policy to be ready")
-		waitForAvailablePolicy(bridge1)
+		policy.WaitForAvailablePolicy(bridge1)
 	})
 
 	AfterEach(func() {

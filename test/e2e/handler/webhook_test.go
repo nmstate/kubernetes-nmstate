@@ -28,6 +28,7 @@ import (
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -82,7 +83,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
-			waitForAvailablePolicy(TestPolicy)
+			policy.WaitForAvailablePolicy(TestPolicy)
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			resetDesiredStateForNodes()
 		})

@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 func ovsBridgeWithTheDefaultInterface(ovsBridgeName, defaultInterfaceMac string) nmstate.State {
@@ -105,7 +106,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 					waitForNodesReady()
 
 					By("Waiting for policy to be ready")
-					waitForAvailablePolicy(ovsDefaultNetwork)
+					policy.WaitForAvailablePolicy(ovsDefaultNetwork)
 				})
 
 				AfterEach(func() {
@@ -116,7 +117,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 					waitForNodesReady()
 
 					By("Waiting for policy to be ready")
-					waitForAvailablePolicy(ovsDefaultNetwork)
+					policy.WaitForAvailablePolicy(ovsDefaultNetwork)
 
 					Byf("Check %s has the default ip address", primaryNic)
 					Eventually(func() string {
@@ -155,8 +156,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 					restartNodeWithoutWaiting(node)
 
 					By("Wait for policy re-reconciled after node reboot")
-					waitForPolicyTransitionUpdate(ovsDefaultNetwork)
-					waitForAvailablePolicy(ovsDefaultNetwork)
+					policy.WaitForPolicyTransitionUpdate(ovsDefaultNetwork)
+					policy.WaitForAvailablePolicy(ovsDefaultNetwork)
 
 					Byf("Node %s was rebooted, verifying that bridge took over the default IP", node)
 					checkThatOvsBridgeTookOverTheDefaultIP(node, ovsBridgeInternalPort)
@@ -228,7 +229,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 					map[string]string{"kubernetes.io/hostname": node},
 				)
 				By("Wait for the policy to fail")
-				waitForDegradedPolicy(ovsWrongIPPolicy)
+				policy.WaitForDegradedPolicy(ovsWrongIPPolicy)
 
 				Byf("Check %s still has the default ip address", primaryNic)
 				Eventually(func() string {

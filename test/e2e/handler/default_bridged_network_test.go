@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -97,7 +98,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				waitForNodesReady()
 
 				By("Waiting for policy to be ready")
-				waitForAvailablePolicy(DefaultNetwork)
+				policy.WaitForAvailablePolicy(DefaultNetwork)
 			})
 
 			AfterEach(func() {
@@ -108,7 +109,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				waitForNodesReady()
 
 				By("Wait for policy to be ready")
-				waitForAvailablePolicy(DefaultNetwork)
+				policy.WaitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Check %s has the default ip address", primaryNic)
 				for _, node := range nodes {
@@ -143,8 +144,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				restartNodeWithoutWaiting(nodeToReboot)
 
 				By("Wait for policy re-reconciled after node reboot")
-				waitForPolicyTransitionUpdate(DefaultNetwork)
-				waitForAvailablePolicy(DefaultNetwork)
+				policy.WaitForPolicyTransitionUpdate(DefaultNetwork)
+				policy.WaitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot)
 				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot}, "brext", addressByNode)

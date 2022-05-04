@@ -29,6 +29,7 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
@@ -54,7 +55,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 			resetDesiredStateForNodes()
 		})
 		It("should be stored as v1 and end with available state", func() {
-			waitForAvailableTestPolicy()
+			policy.WaitForAvailableTestPolicy()
 		})
 	})
 
@@ -78,7 +79,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 			resetDesiredStateForNodes()
 		})
 		It("should be stored as v1 and end with available state", func() {
-			waitForAvailableTestPolicy()
+			policy.WaitForAvailableTestPolicy()
 		})
 	})
 })

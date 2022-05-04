@@ -27,6 +27,7 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
+	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 func invalidConfig(bridgeName string) nmstate.State {
@@ -54,12 +55,12 @@ var _ = Describe("EnactmentCondition", func() {
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					enactmentConditionsStatusEventually(node).
-						Should(matchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
-					enactmentConditionsStatusEventually(node).
-						Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
-					enactmentConditionsStatusConsistently(node).
-						Should(matchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
+					policyconditions.EnactmentConditionsStatusEventually(node).
+						Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
+					policyconditions.EnactmentConditionsStatusEventually(node).
+						Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
+					policyconditions.EnactmentConditionsStatusConsistently(node).
+						Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
 				}()
 			}
 			// Run the policy after we set the nnce conditions assert so we
@@ -69,7 +70,7 @@ var _ = Describe("EnactmentCondition", func() {
 			wg.Wait()
 
 			By("Check policy is at available state")
-			waitForAvailableTestPolicy()
+			policyconditions.WaitForAvailableTestPolicy()
 		})
 	})
 
@@ -88,15 +89,15 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should have Failing ConditionType set to true", func() {
 			for _, node := range nodes {
 				Byf("Check %s failing state is reached", node)
-				enactmentConditionsStatusEventually(node).Should(
+				policyconditions.EnactmentConditionsStatusEventually(node).Should(
 					SatisfyAny(
-						matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
-						matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
+						policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+						policyconditions.MatchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 					), "should eventually reach failing or aborted conditions at enactments",
 				)
 			}
 			By("Check policy is at degraded state")
-			waitForDegradedTestPolicy()
+			policyconditions.WaitForDegradedTestPolicy()
 
 			By("Check that the enactment stays in failing state")
 			var wg sync.WaitGroup
@@ -107,10 +108,10 @@ var _ = Describe("EnactmentCondition", func() {
 					defer wg.Done()
 					defer GinkgoRecover()
 					Byf("Check %s failing state is kept", node)
-					enactmentConditionsStatusConsistently(node).Should(
+					policyconditions.EnactmentConditionsStatusConsistently(node).Should(
 						SatisfyAny(
-							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
-							matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
+							policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+							policyconditions.MatchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 						), "should consistently keep failing or aborted conditions at enactments",
 					)
 				}()
@@ -123,12 +124,12 @@ var _ = Describe("EnactmentCondition", func() {
 				failingConditions := 0
 				abortedConditions := 0
 				for _, node := range nodes {
-					conditionList := enactmentConditionsStatus(node, TestPolicy)
-					success, _ := matchConditionsFrom(enactmentconditions.SetFailedToConfigure).Match(conditionList)
+					conditionList := policyconditions.EnactmentConditionsStatus(node, TestPolicy)
+					success, _ := policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure).Match(conditionList)
 					if success {
 						failingConditions++
 					}
-					success, _ = matchConditionsFrom(enactmentconditions.SetConfigurationAborted).Match(conditionList)
+					success, _ = policyconditions.MatchConditionsFrom(enactmentconditions.SetConfigurationAborted).Match(conditionList)
 					if success {
 						abortedConditions++
 					}
@@ -146,17 +147,17 @@ var _ = Describe("EnactmentCondition", func() {
 					defer wg.Done()
 					defer GinkgoRecover()
 					Byf("Check %s failing state is kept", node)
-					enactmentConditionsStatusEventually(node).Should(
+					policyconditions.EnactmentConditionsStatusEventually(node).Should(
 						SatisfyAny(
-							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
-							matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
+							policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+							policyconditions.MatchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 						), "should consistently keep failing or aborted conditions at enactments")
 				}()
 			}
 			wg.Wait()
 
 			By("Check policy is at degraded state")
-			waitForDegradedTestPolicy()
+			policyconditions.WaitForDegradedTestPolicy()
 
 			By("Check that the enactments stay in failing or aborted state")
 			wg.Add(len(nodes))
@@ -166,10 +167,10 @@ var _ = Describe("EnactmentCondition", func() {
 					defer wg.Done()
 					defer GinkgoRecover()
 					Byf("Check %s failing state is kept", node)
-					enactmentConditionsStatusConsistently(node).Should(
+					policyconditions.EnactmentConditionsStatusConsistently(node).Should(
 						SatisfyAny(
-							matchConditionsFrom(enactmentconditions.SetFailedToConfigure),
-							matchConditionsFrom(enactmentconditions.SetConfigurationAborted),
+							policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure),
+							policyconditions.MatchConditionsFrom(enactmentconditions.SetConfigurationAborted),
 						), "should consistently keep failing or aborted conditions at enactments")
 				}()
 			}
@@ -183,8 +184,8 @@ var _ = Describe("EnactmentCondition", func() {
 			failingEnactmentsCount := func(policy string) int {
 				failingConditions := 0
 				for _, node := range nodes {
-					conditionList := enactmentConditionsStatus(node, TestPolicy)
-					found, _ := matchConditionsFrom(enactmentconditions.SetFailedToConfigure).Match(conditionList)
+					conditionList := policyconditions.EnactmentConditionsStatus(node, TestPolicy)
+					found, _ := policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure).Match(conditionList)
 					if found {
 						failingConditions++
 					}
@@ -199,8 +200,8 @@ var _ = Describe("EnactmentCondition", func() {
 
 			By("Checking the policy is marked as Degraded")
 			Eventually(func() nmstate.ConditionList {
-				return policyConditionsStatus(TestPolicy)
-			}, 2*time.Second, 100*time.Millisecond).Should(containPolicyDegraded(), "policy should be marked as Degraded")
+				return policyconditions.Status(TestPolicy)
+			}, 2*time.Second, 100*time.Millisecond).Should(policyconditions.ContainPolicyDegraded(), "policy should be marked as Degraded")
 		})
 	})
 })
