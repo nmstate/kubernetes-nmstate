@@ -216,6 +216,7 @@ var _ = Describe("NodeNetworkState", func() {
 					resetDesiredStateForNodes()
 				})
 				It("should have the linux bridge at currentState with vlan_filtering 0 and no default vlan range configured", func() {
+					Skip("Pending on https://bugzilla.redhat.com/show_bug.cgi?id=2067058 land centos stream 8")
 					for _, node := range nodes {
 						interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
 						bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 0"))
