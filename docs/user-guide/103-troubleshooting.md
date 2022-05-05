@@ -61,7 +61,7 @@ kubectl get nnce node01.eth666 -o yaml
 # output truncated
 status:
   conditions:
-  - lastHearbeatTime: "2020-02-08T20:23:15Z"
+  - lastHeartbeatTime: "2020-02-08T20:23:15Z"
     lastTransitionTime: "2020-02-08T20:23:15Z"
     message: |-
       error reconciling NodeNetworkConfigurationPolicy at desired state apply: , failed to execute nmstatectl set --no-commit --timeout 240: 'exit status 1' '' '2020-02-08 20:23:09,563 root         DEBUG    Checkpoint /org/freedesktop/NetworkManager/Checkpoint/3 created for all devices: 240

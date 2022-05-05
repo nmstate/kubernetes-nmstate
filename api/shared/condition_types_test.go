@@ -100,7 +100,7 @@ var _ = Describe("Conditions list", func() {
 				Expect(newConditions).To(HaveLen(len(originalConditions)))
 			})
 
-			It("should change LastHearbeatTime and keep LastTransitionTime", func() {
+			It("should change LastHeartbeatTime and keep LastTransitionTime", func() {
 				updatedCondition := newConditions.Find(originalConditions[0].Type)
 				Expect(updatedCondition.LastHeartbeatTime.Time).To(BeTemporally(">", originalConditions[0].LastHeartbeatTime.Time))
 				Expect(updatedCondition.LastTransitionTime.Time).To(BeTemporally("==", originalConditions[0].LastTransitionTime.Time))
@@ -120,7 +120,7 @@ var _ = Describe("Conditions list", func() {
 				Expect(newConditions).To(HaveLen(len(originalConditions)))
 			})
 
-			It("should change values and update LastTransitionTime and LastHearbeatTime", func() {
+			It("should change values and update LastTransitionTime and LastHeartbeatTime", func() {
 				updatedCondition := newConditions.Find(originalConditions[0].Type)
 				Expect(updatedCondition.Status).To(Equal(updatedConditionStatus))
 				Expect(updatedCondition.Reason).To(Equal(updatedConditionReason))
