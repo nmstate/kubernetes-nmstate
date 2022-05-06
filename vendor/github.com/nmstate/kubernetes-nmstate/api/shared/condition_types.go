@@ -15,7 +15,7 @@ type Condition struct {
 	Reason             ConditionReason        `json:"reason,omitempty"`
 	Message            string                 `json:"message,omitempty"`
 	MessageEncoded     string                 `json:"messageEncoded,omitempty"`
-	LastHeartbeatTime  metav1.Time            `json:"lastHearbeatTime,omitempty"`
+	LastHeartbeatTime  metav1.Time            `json:"lastHeartbeatTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 

@@ -84,13 +84,13 @@ kubectl get nncp bond0-eth1-eth2 -o yaml
 # output truncated
 status:
   conditions:
-  - lastHearbeatTime: "2020-02-07T10:27:09Z"
+  - lastHeartbeatTime: "2020-02-07T10:27:09Z"
     lastTransitionTime: "2020-02-07T10:27:09Z"
     message: 2/2 nodes successfully configured
     reason: SuccessfullyConfigured
     status: "True"
     type: Available
-  - lastHearbeatTime: "2020-02-07T10:27:09Z"
+  - lastHeartbeatTime: "2020-02-07T10:27:09Z"
     lastTransitionTime: "2020-02-07T10:27:09Z"
     reason: SuccessfullyConfigured
     status: "False"
@@ -137,23 +137,23 @@ kubectl get nnce node01.bond0-eth1-eth2 -o yaml
 # output truncated
 status:
   conditions:
-  - lastHearbeatTime: "2020-02-07T10:27:09Z"
+  - lastHeartbeatTime: "2020-02-07T10:27:09Z"
     lastTransitionTime: "2020-02-07T10:27:09Z"
     reason: SuccessfullyConfigured
     status: "False"
     type: Failing
-  - lastHearbeatTime: "2020-02-07T10:27:09Z"
+  - lastHeartbeatTime: "2020-02-07T10:27:09Z"
     lastTransitionTime: "2020-02-07T10:27:09Z"
     message: successfully reconciled
     reason: SuccessfullyConfigured
     status: "True"
     type: Available
-  - lastHearbeatTime: "2020-02-07T10:27:09Z"
+  - lastHeartbeatTime: "2020-02-07T10:27:09Z"
     lastTransitionTime: "2020-02-07T10:27:09Z"
     reason: SuccessfullyConfigured
     status: "False"
     type: Progressing
-  - lastHearbeatTime: "2020-02-07T10:27:04Z"
+  - lastHeartbeatTime: "2020-02-07T10:27:04Z"
     lastTransitionTime: "2020-02-07T10:27:04Z"
     reason: SuccessfullyConfigured
     status: "False"
