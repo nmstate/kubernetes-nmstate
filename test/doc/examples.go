@@ -73,7 +73,7 @@ interfaces:
 			Name:       "OVS bridge with interface",
 			FileName:   "ovs-bridge-iface.yaml",
 			PolicyName: "ovs-bridge-iface",
-			IfaceNames: []string{"br1"},
+			IfaceNames: []string{"br1", "ovs0"},
 		},
 		{
 			Name:       "Linux bonding",
