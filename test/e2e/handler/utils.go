@@ -173,6 +173,10 @@ func updateDesiredStateAndWait(desiredState nmstate.State) {
 	updateDesiredStateWithCaptureAndWait(desiredState, nil)
 }
 
+func UpdateDesiredStateAndWait(desiredState nmstate.State) {
+	updateDesiredStateAndWait(desiredState, nil)
+}
+
 func updateDesiredStateWithCaptureAndWait(desiredState nmstate.State, capture map[string]string) {
 	updateDesiredStateWithCapture(desiredState, capture)
 	policy.WaitForAvailableTestPolicy()

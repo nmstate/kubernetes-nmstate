@@ -20,12 +20,19 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"net"
+	"os"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
+	whereaboutstypes "github.com/k8snetworkplumbingwg/whereabouts/pkg/types"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,6 +50,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
@@ -58,6 +66,12 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
 )
+
+type IPPool struct {
+	Range      string
+	RangeStart string
+	RangeEnd   string
+}
 
 var (
 	nodeName                                        string
@@ -323,9 +337,41 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	enactmentInstance *nmstatev1beta1.NodeNetworkConfigurationEnactment,
 	enactmentConditions enactmentconditions.EnactmentConditions) error {
+	log := r.Log.WithName("fillInEnactmentStatus")
 	currentState, err := nmstatectlShowFn()
 	if err != nil {
 		return err
+	}
+	// If the ippool is found at a capture use it to allocate an ip and store it at capturedStates
+	for k, v := range policy.Spec.Capture {
+		if strings.Contains(v, "ipPool") {
+			ipPoolExpression := map[string]map[string]string{}
+			err := yaml.Unmarshal([]byte(v), &ipPoolExpression)
+			if err != nil {
+				return err
+			}
+
+			log.Info("Found ippool: %s, %+v", v, ipPoolExpression)
+			ipPool := IPPool{
+				Range:      ipPoolExpression["ipPool"]["range"],
+				RangeStart: ipPoolExpression["ipPool"]["rangeStart"],
+				RangeEnd:   ipPoolExpression["ipPool"]["rangeEnd"],
+			}
+			newip, err := r.allocateIP(ipPool)
+			if err != nil {
+				return err
+			}
+			if enactmentInstance.Status.CapturedStates == nil {
+				enactmentInstance.Status.CapturedStates = map[string]shared.NodeNetworkConfigurationEnactmentCapturedState{}
+			}
+			prefixLength, _ := newip.Mask.Size()
+			enactmentInstance.Status.CapturedStates[k] = shared.NodeNetworkConfigurationEnactmentCapturedState{
+				State: shared.NewState(fmt.Sprintf(`
+ip: %s
+prefix-length: %d`,
+					newip.IP.String(), prefixLength)),
+			}
+		}
 	}
 
 	capturedStates, desiredStateMetaInfo, generatedDesiredState, err := nmpolicy.GenerateState(
@@ -501,4 +547,42 @@ func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(name string) (*nmstat
 		return nil, err
 	}
 	return nns, nil
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) allocateIP(ipPool IPPool) (net.IPNet, error) {
+	var newip net.IPNet
+	ipamConf := whereaboutstypes.IPAMConfig{
+		PodNamespace: os.Getenv("POD_NAMESPACE"),
+		PodName:      os.Getenv("POD_NAME"),
+		Kubernetes: whereaboutstypes.KubernetesConfig{
+			KubeConfigPath: os.Getenv("KUBECONFIG"),
+		},
+		LeaderLeaseDuration: 1500,
+		LeaderRenewDeadline: 1000,
+		LeaderRetryPeriod:   500,
+		Range:               ipPool.Range,
+		RangeStart:          net.ParseIP(ipPool.RangeStart),
+		RangeEnd:            net.ParseIP(ipPool.RangeEnd),
+	}
+	handlerPod := corev1.Pod{}
+	handlerPodKey := client.ObjectKey{
+		Namespace: os.Getenv("POD_NAMESPACE"),
+		Name:      os.Getenv("POD_NAME"),
+	}
+	err := r.APIClient.Get(context.Background(), handlerPodKey, &handlerPod)
+	if err != nil {
+		return newip, err
+	}
+
+	// Use this handler pod as key for the allocation to keep the IP
+	// from being removed by whereabouts garbage collector
+	// since this pod is alive
+	containerID := handlerPod.Status.ContainerStatuses[0].ContainerID
+	podRef := fmt.Sprintf("%s/%s", handlerPodKey.Namespace, handlerPodKey.Name)
+
+	newip, err = kubernetes.IPManagement(context.Background(), whereaboutstypes.Allocate, ipamConf, containerID, podRef)
+	if err != nil {
+		return newip, err
+	}
+	return newip, nil
 }

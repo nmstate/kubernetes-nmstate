@@ -28,3 +28,5 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart openvswitch
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart NetworkManager
 done
+
+./hack/install-whereabouts.sh

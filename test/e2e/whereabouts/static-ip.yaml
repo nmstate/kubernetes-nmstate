@@ -1,0 +1,38 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: static-ip
+spec:
+  nodeSelector:
+    node-role.kubernetes.io/worker: ""
+  capture: 
+    address-for-eth1: |
+      ipPool:
+        range: "10.10.10.0/16"
+        rangeStart: "10.10.10.1"
+        rangeEnd: "10.10.10.10"
+    address-for-eth2: |
+      ipPool:
+        range: "10.10.11.0/16"
+        rangeStart: "10.11.10.1"
+        rangeEnd: "10.10.11.10"
+  desiredState:
+    interfaces:
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        address: 
+        - ip: "{{ capture.address-for-eth1.ip }}"
+          prefix-length: "{{ capture.address-for-eth1.prefix-length }}"
+        dhcp: false
+        enabled: true
+    - name: eth1
+      type: ethernet
+      state: up
+      ipv4:
+        address: 
+        - ip: "{{ capture.address-for-eth1.ip }}"
+          prefix-length: "{{ capture.address-for-eth1.prefix-length }}"
+        dhcp: false
+        enabled: true

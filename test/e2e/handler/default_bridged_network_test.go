@@ -138,7 +138,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				checkThatBridgeTookOverTheDefaultIP(nodes, "brext", addressByNode)
 			})
 
-			It("should keep the default IP address after node reboot", func() {
+			FIt("should keep the default IP address after node reboot", func() {
 				nodeToReboot := nodes[0]
 
 				restartNodeWithoutWaiting(nodeToReboot)

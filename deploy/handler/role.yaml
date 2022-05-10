@@ -64,8 +64,7 @@ rules:
   resources:
   - deployments/finalizers
   verbs:
-  - update
-- apiGroups:
+  - update - apiGroups:
   - coordination.k8s.io
   resources:
   - leases
@@ -118,3 +117,16 @@ rules:
   - configmaps
   verbs:
   - "*"
+- apiGroups:
+  - whereabouts.cni.cncf.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+

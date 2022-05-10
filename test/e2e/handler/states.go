@@ -183,6 +183,10 @@ func ifaceUpWithStaticIP(iface, ipAddress, prefixLen string) nmstate.State {
 `, iface, ipAddress, prefixLen))
 }
 
+func IfaceUpWithStaticIP(iface, ipAddress, prefixLen string) nmstate.State {
+	return ifaceUpWithStaticIP(iface, ipAddress, prefixLen)
+}
+
 func ifaceUpWithStaticIPAbsent(firstSecondaryNic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
