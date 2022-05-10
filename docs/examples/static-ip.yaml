@@ -4,7 +4,7 @@ metadata:
   name: static-ip
 spec:
   nodeSelector:
-    kubernetes.io/hostname: node01
+    kubernetes.io/hostname: node02
   desiredState:
     interfaces:
     - name: eth1
@@ -12,7 +12,7 @@ spec:
       state: up
       ipv4:
         address:
-        - ip: 10.244.0.1
+        - ip: 10.244.0.2
           prefix-length: 24
         dhcp: false
         enabled: true
