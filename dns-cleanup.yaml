@@ -1,0 +1,13 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: ovs-bridge-iface
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server: []
+    interfaces:
+    - name: eth1
+      state: absent
