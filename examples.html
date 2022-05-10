@@ -605,7 +605,7 @@
   <span class="na">name</span><span class="pi">:</span> <span class="s">route</span>
 <span class="na">spec</span><span class="pi">:</span>
   <span class="na">nodeSelector</span><span class="pi">:</span>
-    <span class="na">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node01</span>
+    <span class="na">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node02</span>
   <span class="na">desiredState</span><span class="pi">:</span>
     <span class="na">interfaces</span><span class="pi">:</span>
       <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
@@ -621,7 +621,7 @@
       <span class="na">config</span><span class="pi">:</span>
       <span class="pi">-</span> <span class="na">destination</span><span class="pi">:</span> <span class="s">198.51.100.0/24</span>
         <span class="na">metric</span><span class="pi">:</span> <span class="m">150</span>
-        <span class="na">next-hop-address</span><span class="pi">:</span> <span class="s">192.0.2.1</span>
+        <span class="na">next-hop-address</span><span class="pi">:</span> <span class="s">192.0.2.2</span>
         <span class="na">next-hop-interface</span><span class="pi">:</span> <span class="s">eth1</span>
         <span class="na">table-id</span><span class="pi">:</span> <span class="m">254</span>
 
@@ -635,7 +635,7 @@
   <span class="na">name</span><span class="pi">:</span> <span class="s">static-ip</span>
 <span class="na">spec</span><span class="pi">:</span>
   <span class="na">nodeSelector</span><span class="pi">:</span>
-    <span class="na">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node01</span>
+    <span class="na">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node02</span>
   <span class="na">desiredState</span><span class="pi">:</span>
     <span class="na">interfaces</span><span class="pi">:</span>
     <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
@@ -643,7 +643,7 @@
       <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
       <span class="na">ipv4</span><span class="pi">:</span>
         <span class="na">address</span><span class="pi">:</span>
-        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">10.244.0.1</span>
+        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">10.244.0.2</span>
           <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
         <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
         <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
