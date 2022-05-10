@@ -1,0 +1,27 @@
+apiVersion: nmstate.io/v1beta1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+ name: linux-bridge-vlan-10-20-novlan
+spec:
+ desiredState:
+   interfaces:
+   - name: br01
+     description: Linux bridge with one port
+     type: linux-bridge
+     state: up
+     bridge:
+       options:
+         stp:
+           enabled: false
+       port:
+       - name: bond01
+   - name: bond01
+     type: bond
+     state: up
+     link-aggregation:
+       mode: balance-rr
+       options:
+         miimon: '140'
+       port:
+       - eth1
+       - eth2
