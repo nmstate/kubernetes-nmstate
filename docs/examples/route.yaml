@@ -4,7 +4,7 @@ metadata:
   name: route
 spec:
   nodeSelector:
-    kubernetes.io/hostname: node02
+    kubernetes.io/hostname: node01
   desiredState:
     interfaces:
       - name: eth1
@@ -20,6 +20,6 @@ spec:
       config:
       - destination: 198.51.100.0/24
         metric: 150
-        next-hop-address: 192.0.2.2
+        next-hop-address: 192.0.2.1
         next-hop-interface: eth1
         table-id: 254
