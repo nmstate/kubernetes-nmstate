@@ -20,10 +20,8 @@ package policyconditions
 import (
 	"testing"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/onsi/ginkgo/reporters"
 
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -35,8 +33,5 @@ var _ = BeforeSuite(func() {
 
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	junitReporter := reporters.NewJUnitReporter(
-		"junit.controller-nodenetworkconfigurationpolicy-policyconditions-policyconditions_suite_test.xml",
-	)
-	RunSpecsWithDefaultAndCustomReporters(t, "Conditions Test Suite", []Reporter{junitReporter})
+	RunSpecs(t, "Conditions Test Suite")
 }

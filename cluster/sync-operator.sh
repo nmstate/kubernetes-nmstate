@@ -19,22 +19,15 @@ function deploy_operator() {
     $kubectl apply -f $MANIFESTS_DIR/role_binding.yaml
     $kubectl apply -f deploy/crds/nmstate.io_nmstates.yaml
     $kubectl apply -f $MANIFESTS_DIR/operator.yaml
-
-    if isOpenshift; then
-        $kubectl apply -f $MANIFESTS_DIR/scc.yaml
-    fi
 }
 
 function wait_ready_operator() {
-    # We have to re-check desired number, sometimes takes some time to be filled in
-    if ! eventually isDeploymentOk ${OPERATOR_NAMESPACE} app=kubernetes-nmstate-operator; then
-        echo "Operator haven't turned ready within the given timeout"
-        return 1
-    fi
+    # Wait a little for resources to be created
+    sleep 5
 
-    # Make sure good state is keep for some time
-    if ! consistently isDeploymentOk ${OPERATOR_NAMESPACE} app=kubernetes-nmstate-operator; then
-        echo "Operator is not consistently ready within the given timeout"
+    # Wait for deployment rollout
+    if ! $kubectl rollout status -w -n ${OPERATOR_NAMESPACE} deployment nmstate-operator; then
+        echo "Operator haven't turned ready within the given timeout"
         return 1
     fi
 }

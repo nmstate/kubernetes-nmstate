@@ -22,38 +22,67 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
-	"github.com/nmstate/kubernetes-nmstate/test/e2e/deployment"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
 var _ = Describe("NMState operator", func() {
+	type controlPlaneTest struct {
+		withMultiNode bool
+	}
+	DescribeTable("for control-plane size",
+		func(tc controlPlaneTest) {
+			if isKubevirtciCluster() && tc.withMultiNode {
+				kubevirtciReset := increaseKubevirtciControlPlane()
+				defer kubevirtciReset()
+			}
+			if tc.withMultiNode && len(controlPlaneNodes()) < 2 {
+				Skip("cluster control-plane size should be > 1")
+			}
+			if !tc.withMultiNode && len(controlPlaneNodes()) > 1 {
+				Skip("cluster control-plane size should be < 2")
+			}
+
+			InstallNMState(defaultOperator.Nmstate)
+			defer UninstallNMStateAndWaitForDeletion(defaultOperator)
+			EventuallyOperandIsReady(defaultOperator)
+
+			By("Check webhook is distributed across control-plane nodes")
+			podsShouldBeDistributedAtNodes(controlPlaneNodes(), client.MatchingLabels{"component": "kubernetes-nmstate-webhook"})
+		},
+		Entry("of a single node shoud deploy webhook replicas at the same node", controlPlaneTest{withMultiNode: false}),
+		Entry("of two nodes should deploy webhook replicas at different nodes", controlPlaneTest{withMultiNode: true}),
+	)
 	Context("when installed for the first time", func() {
 		BeforeEach(func() {
 			By("Install NMState for the first time")
-			installNMState(defaultOperator.nmstate)
+			InstallNMState(defaultOperator.Nmstate)
 		})
 		It("should deploy a ready operand", func() {
-			eventuallyOperandIsReady(defaultOperator)
+			EventuallyOperandIsReady(defaultOperator)
 		})
 		AfterEach(func() {
-			uninstallNMStateAndWaitForDeletion(defaultOperator)
+			UninstallNMStateAndWaitForDeletion(defaultOperator)
 		})
 		Context("and another CR is created with different name", func() {
-			var differentNMState = defaultOperator.nmstate
+			var differentNMState = defaultOperator.Nmstate
 			differentNMState.Name = "different-name"
 			BeforeEach(func() {
-				eventuallyOperandIsReady(defaultOperator)
-				installNMState(differentNMState)
+				EventuallyOperandIsReady(defaultOperator)
+				InstallNMState(differentNMState)
 			})
 			It("should remove NMState with different name", func() {
 				Eventually(func() error {
@@ -64,78 +93,209 @@ var _ = Describe("NMState operator", func() {
 		})
 		Context("and uninstalled", func() {
 			BeforeEach(func() {
-				uninstallNMState(defaultOperator.nmstate)
+				UninstallNMState(defaultOperator.Nmstate)
 			})
 			It("should uninstall handler and webhook", func() {
-				eventuallyOperandIsNotFound(defaultOperator)
+				EventuallyOperandIsNotFound(defaultOperator)
 			})
 		})
 		Context("and another handler is installed with different namespace", func() {
 			var (
-				altOperator = newOperatorTestData("nmstate-alt")
+				altOperator = NewOperatorTestData("nmstate-alt", manifestsDir, manifestFiles)
 			)
 			BeforeEach(func() {
 				By("Wait for operand to be ready")
-				eventuallyOperandIsReady(defaultOperator)
+				EventuallyOperandIsReady(defaultOperator)
 
 				By("Install other operator at alternative namespace")
-				installOperator(altOperator)
+				InstallOperator(altOperator)
 			})
 			AfterEach(func() {
-				uninstallOperator(altOperator)
-				eventuallyOperandIsNotFound(altOperator)
-				uninstallNMStateAndWaitForDeletion(defaultOperator)
-				installOperator(defaultOperator)
+				UninstallOperator(altOperator)
+				EventuallyOperandIsNotFound(altOperator)
+				UninstallNMStateAndWaitForDeletion(defaultOperator)
+				InstallOperator(defaultOperator)
 			})
 			It("should wait for defaultOperator handler to be deleted before deploying new altOperator handler", func() {
 				By("Check alt handler has being created")
 				Eventually(func() error {
 					daemonSet := appsv1.DaemonSet{}
-					return testenv.Client.Get(context.TODO(), altOperator.handlerKey, &daemonSet)
+					return testenv.Client.Get(context.TODO(), altOperator.HandlerKey, &daemonSet)
 				}, 180*time.Second, 1*time.Second).Should(Succeed())
 
 				By("Checking alt handler is locked")
-				daemonset.GetConsistently(altOperator.handlerKey).ShouldNot(daemonset.BeReady())
+				daemonset.GetConsistently(altOperator.HandlerKey).ShouldNot(daemonset.BeReady())
 
 				By("Uninstall default operator")
-				uninstallOperator(defaultOperator)
+				UninstallOperator(defaultOperator)
 
 				By("Checking alt handler is unlocked after deleting default one")
-				daemonset.GetEventually(altOperator.handlerKey).Should(daemonset.BeReady())
+				daemonset.GetEventually(altOperator.HandlerKey).Should(daemonset.BeReady())
 			})
+		})
+	})
+	Context("when cluser-reader exists", func() {
+		const (
+			clusterReaderRoleName = "cluster-reader"
+			testUserNamespace     = "default"
+			serviceAccountName    = "test-user"
+			testUserBindingName   = "test-user-binding"
+		)
+
+		var clusterReaderCreated bool
+
+		BeforeEach(func() {
+			err := createClusterReaderCR(clusterReaderRoleName)
+			Expect(err).To(SatisfyAny(Succeed(), WithTransform(apierrors.IsAlreadyExists, BeTrue())))
+			if err == nil {
+				clusterReaderCreated = true
+			}
+
+			Expect(createTestUserSA(testUserNamespace, serviceAccountName)).To(Succeed(),
+				"should success creating a serviceaccount")
+			Expect(createTestUserCRB(testUserBindingName, testUserNamespace, serviceAccountName, clusterReaderRoleName)).To(Succeed(),
+				"should success creating a clusterrolebinding")
+
+			By("Install NMState for the first time")
+			InstallNMState(defaultOperator.Nmstate)
+			EventuallyOperandIsReady(defaultOperator)
+		})
+		AfterEach(func() {
+			UninstallNMStateAndWaitForDeletion(defaultOperator)
+		})
+		AfterEach(func() {
+			Expect(deleteTestUserCRB(testUserBindingName)).To(Succeed())
+		})
+		AfterEach(func() {
+			Expect(deleteTestUserSA(testUserNamespace, serviceAccountName)).To(Succeed())
+		})
+		AfterEach(func() {
+			if clusterReaderCreated {
+				Expect(deleteClusterReaderCR(clusterReaderRoleName)).To(Succeed())
+			}
+		})
+
+		It("should be able to read NMState resources with cluster-reader user", func() {
+			Eventually(func() error {
+				_, err := cmd.Kubectl("get", "nns", fmt.Sprintf("--as=system:serviceaccount:%s:%s", testUserNamespace, serviceAccountName))
+				return err
+			}, 10*time.Second, time.Second).Should(Succeed())
 		})
 	})
 })
 
-func installOperator(operator operatorTestData) {
-	By(fmt.Sprintf("Creating NMState operator with namespace '%s'", operator.ns))
-	_, err := cmd.Run(
-		"make",
-		false,
-		fmt.Sprintf("OPERATOR_NAMESPACE=%s", operator.ns),
-		fmt.Sprintf("HANDLER_NAMESPACE=%s", operator.ns),
-		"manifests",
-	)
+func increaseKubevirtciControlPlane() func() {
+	secondNodeName := "node02"
+	node := &corev1.Node{}
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := testenv.Client.Get(context.TODO(), client.ObjectKey{Name: secondNodeName}, node)
+		if err != nil {
+			return err
+		}
+		By(fmt.Sprintf("Configure kubevirtci cluster node %s as control plane", node.Name))
+		node.Labels["node-role.kubernetes.io/control-plane"] = ""
+		node.Labels["node-role.kubernetes.io/master"] = ""
+		return testenv.Client.Update(context.TODO(), node)
+	})
 	Expect(err).ToNot(HaveOccurred())
-
-	manifestsDir := "build/_output/manifests/"
-	manifests := []string{"namespace.yaml", "service_account.yaml", "operator.yaml", "role.yaml", "role_binding.yaml"}
-	for _, manifest := range manifests {
-		_, err = cmd.Kubectl("apply", "-f", manifestsDir+manifest)
+	return func() {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := testenv.Client.Get(context.TODO(), client.ObjectKey{Name: secondNodeName}, node)
+			if err != nil {
+				return err
+			}
+			By(fmt.Sprintf("Configure kubevirtci cluster node %s as non control plane", node.Name))
+			delete(node.Labels, "node-role.kubernetes.io/control-plane")
+			delete(node.Labels, "node-role.kubernetes.io/master")
+			return testenv.Client.Update(context.TODO(), node)
+		})
 		Expect(err).ToNot(HaveOccurred())
 	}
-	cmd.Kubectl("apply", "-f", fmt.Sprintf("%s/scc.yaml", manifestsDir)) //ignore the error to be able to run the test against none OCP clusters as well
-
-	deployment.GetEventually(types.NamespacedName{Namespace: operator.ns, Name: "nmstate-operator"}).Should(deployment.BeReady())
 }
 
-func uninstallOperator(operator operatorTestData) {
-	By(fmt.Sprintf("Deleting namespace '%s'", operator.ns))
-	ns := corev1.Namespace{
+func createClusterReaderCR(clusterReaderRoleName string) error {
+	clusterReader := rbacv1.ClusterRole{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRole",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name: operator.ns,
+			Name: clusterReaderRoleName,
+		},
+		AggregationRule: &rbacv1.AggregationRule{
+			ClusterRoleSelectors: []metav1.LabelSelector{
+				{
+					MatchLabels: map[string]string{"rbac.authorization.k8s.io/aggregate-to-cluster-reader": "true"},
+				},
+			},
 		},
 	}
-	Expect(testenv.Client.Delete(context.TODO(), &ns)).To(SatisfyAny(Succeed(), WithTransform(apierrors.IsNotFound, BeTrue())))
-	eventuallyIsNotFound(types.NamespacedName{Name: operator.ns}, &ns, "should delete the namespace")
+	return testenv.Client.Create(context.TODO(), &clusterReader)
+}
+
+func createTestUserSA(testUserNamespace, serviceAccountName string) error {
+	testUserSA := corev1.ServiceAccount{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ServiceAccount",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testUserNamespace,
+			Name:      serviceAccountName,
+		},
+	}
+	return testenv.Client.Create(context.TODO(), &testUserSA)
+}
+
+func createTestUserCRB(testUserBindingName, testUserNamespace, serviceAccountName, clusterReaderRoleName string) error {
+	testUserBinding := rbacv1.ClusterRoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ClusterRoleBinding",
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testUserBindingName,
+		},
+		Subjects: []rbacv1.Subject{
+			{
+				Kind:      "ServiceAccount",
+				Namespace: testUserNamespace,
+				Name:      serviceAccountName,
+			},
+		},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			Name:     clusterReaderRoleName,
+			APIGroup: rbacv1.GroupName,
+		},
+	}
+	return testenv.Client.Create(context.TODO(), &testUserBinding)
+}
+
+func deleteClusterReaderCR(clusterReaderRoleName string) error {
+	clusterReader := rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: clusterReaderRoleName,
+		},
+	}
+	return testenv.Client.Delete(context.TODO(), &clusterReader)
+}
+
+func deleteTestUserSA(testUserNamespace, serviceAccountName string) error {
+	testUserSA := corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testUserNamespace,
+			Name:      serviceAccountName,
+		},
+	}
+	return testenv.Client.Delete(context.TODO(), &testUserSA)
+}
+
+func deleteTestUserCRB(testUserBindingName string) error {
+	testUserBinding := rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: testUserBindingName,
+		},
+	}
+	return testenv.Client.Delete(context.TODO(), &testUserBinding)
 }

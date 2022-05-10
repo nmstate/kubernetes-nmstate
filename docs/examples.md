@@ -46,6 +46,11 @@ toc_sticky: true
 
 ```yaml
 {% include_absolute 'examples/linux-bridge.yaml' %}
+
+## Linux bridge with custom VLAN filtering
+
+```yaml
+{% include_absolute 'examples/linux-bridge-vlan.yaml' %}
 ```
 
 ## Open vSwitch bridge interface

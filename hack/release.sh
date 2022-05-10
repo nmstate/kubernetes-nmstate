@@ -9,11 +9,27 @@ gh_organization=nmstate
 gh_repo=kubernetes-nmstate
 github_release_cmd="go run github.com/github-release/github-release"
 
+MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
+
+function eventually() {
+    retries=2
+    interval=2
+    n=0
+    until [ "$n" -ge $retries ]
+    do
+        $@ && break
+        n=$((n+1))
+        sleep $interval
+    done
+    [ "$n" -lt $retries ]
+}
+
 function upload() {
     resource=$1
-    $github_release_cmd upload \
+    eventually $github_release_cmd upload \
         -u $gh_organization \
         -r $gh_repo \
+        -R \
         --name $(basename $resource) \
 	    --tag $new_version \
 		--file $resource
@@ -27,7 +43,10 @@ function create_github_release() {
         --tag $new_version \
         --name $new_version \
         --description "$(hack/render-release-notes.sh $old_version $new_version)"
+}
 
+
+function upload_github_release_artifacts() {
 
     # Upload operator CRDs
     for manifest in $(ls deploy/crds/nmstate.io_*nmstate*); do
@@ -41,6 +60,10 @@ function create_github_release() {
     for manifest in $(find $MANIFESTS_DIR -type f); do
         upload $manifest
     done
+
+    # Upload examples
+    tar -cvzf /tmp/examples.tar.gz  $(find docs/examples -type f)
+    upload /tmp/examples.tar.gz
 }
 
 make OPERATOR_IMAGE_TAG=$new_version HANDLER_IMAGE_TAG=$new_version \
@@ -49,3 +72,4 @@ make OPERATOR_IMAGE_TAG=$new_version HANDLER_IMAGE_TAG=$new_version \
     push-operator
 
 create_github_release
+upload_github_release_artifacts

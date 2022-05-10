@@ -15,7 +15,7 @@ type Condition struct {
 	Reason             ConditionReason        `json:"reason,omitempty"`
 	Message            string                 `json:"message,omitempty"`
 	MessageEncoded     string                 `json:"messageEncoded,omitempty"`
-	LastHeartbeatTime  metav1.Time            `json:"lastHearbeatTime,omitempty"`
+	LastHeartbeatTime  metav1.Time            `json:"lastHeartbeatTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 
@@ -50,10 +50,12 @@ func (conditions *ConditionList) Set(conditionType ConditionType, status corev1.
 
 	// If there is different status, reason or message update it
 	if condition.Status != status || condition.Reason != reason || condition.Message != message {
+		if condition.Status != status {
+			condition.LastTransitionTime = now
+		}
 		condition.Status = status
 		condition.Reason = reason
 		condition.Message = message
-		condition.LastTransitionTime = now
 	}
 	condition.LastHeartbeatTime = now
 }

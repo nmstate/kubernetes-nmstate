@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package names
 
 import (
@@ -11,10 +28,10 @@ var ManifestDir = "./bindata"
 const NMStateResourceName = "nmstate"
 
 // Relationship labels
-const COMPONENT_LABEL_KEY = "app.kubernetes.io/component"
-const PART_OF_LABEL_KEY = "app.kubernetes.io/part-of"
-const VERSION_LABEL_KEY = "app.kubernetes.io/version"
-const MANAGED_BY_LABEL_KEY = "app.kubernetes.io/managed-by"
+const ComponentLabelKey = "app.kubernetes.io/component"
+const PartOfLabelKey = "app.kubernetes.io/part-of"
+const VersionLabelKey = "app.kubernetes.io/version"
+const ManagedByLabelKey = "app.kubernetes.io/managed-by"
 
 func IncludeRelationshipLabels(labels map[string]string) map[string]string {
 	if labels == nil {
@@ -22,10 +39,10 @@ func IncludeRelationshipLabels(labels map[string]string) map[string]string {
 	}
 
 	mapLabelKeys := map[string]string{
-		"COMPONENT":  COMPONENT_LABEL_KEY,
-		"PART_OF":    PART_OF_LABEL_KEY,
-		"VERSION":    VERSION_LABEL_KEY,
-		"MANAGED_BY": MANAGED_BY_LABEL_KEY,
+		"COMPONENT":  ComponentLabelKey,
+		"PART_OF":    PartOfLabelKey,
+		"VERSION":    VersionLabelKey,
+		"MANAGED_BY": ManagedByLabelKey,
 	}
 
 	for key, label := range mapLabelKeys {

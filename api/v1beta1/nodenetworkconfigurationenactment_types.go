@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package v1beta1
 
 import (
@@ -23,6 +40,7 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkconfigurationenactments,shortName=nnce,scope=Cluster
 // +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
 // +kubebuilder:pruning:PreserveUnknownFields
 // +kubebuilder:storageversion
 
@@ -34,7 +52,7 @@ type NodeNetworkConfigurationEnactment struct {
 	Status shared.NodeNetworkConfigurationEnactmentStatus `json:"status,omitempty"`
 }
 
-func NewEnactment(node *corev1.Node, policy nmstatev1.NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+func NewEnactment(node *corev1.Node, policy *nmstatev1.NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: shared.EnactmentKey(node.Name, policy.Name).Name,
@@ -42,7 +60,10 @@ func NewEnactment(node *corev1.Node, policy nmstatev1.NodeNetworkConfigurationPo
 				{Name: node.Name, Kind: "Node", APIVersion: "v1", UID: node.UID},
 			},
 			// Associate policy and node with the enactment using labels
-			Labels: names.IncludeRelationshipLabels(map[string]string{shared.EnactmentPolicyLabel: policy.Name, shared.EnactmentNodeLabel: node.Name}),
+			Labels: names.IncludeRelationshipLabels(map[string]string{
+				shared.EnactmentPolicyLabel: policy.Name,
+				shared.EnactmentNodeLabel:   node.Name,
+			}),
 		},
 		Status: shared.NodeNetworkConfigurationEnactmentStatus{
 			DesiredState: shared.NewState(""),

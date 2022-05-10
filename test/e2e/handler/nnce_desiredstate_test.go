@@ -18,10 +18,11 @@ limitations under the License.
 package handler
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 var _ = Describe("Enactment DesiredState", func() {
@@ -40,7 +41,7 @@ var _ = Describe("Enactment DesiredState", func() {
 			for _, node := range nodes {
 				enactmentKey := nmstate.EnactmentKey(node, TestPolicy)
 				Byf("Check enactment %s has expected desired state", enactmentKey.Name)
-				nnce := nodeNetworkConfigurationEnactment(enactmentKey)
+				nnce := policy.NodeNetworkConfigurationEnactment(enactmentKey)
 				Expect(nnce.Status.DesiredState).To(MatchYAML(linuxBrUpWithDefaults(bridge1)))
 			}
 		})

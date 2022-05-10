@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package shared
 
 import (
@@ -15,7 +32,7 @@ type Condition struct {
 	Reason             ConditionReason        `json:"reason,omitempty"`
 	Message            string                 `json:"message,omitempty"`
 	MessageEncoded     string                 `json:"messageEncoded,omitempty"`
-	LastHeartbeatTime  metav1.Time            `json:"lastHearbeatTime,omitempty"`
+	LastHeartbeatTime  metav1.Time            `json:"lastHeartbeatTime,omitempty"`
 	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 
@@ -50,17 +67,19 @@ func (conditions *ConditionList) Set(conditionType ConditionType, status corev1.
 
 	// If there is different status, reason or message update it
 	if condition.Status != status || condition.Reason != reason || condition.Message != message {
+		if condition.Status != status {
+			condition.LastTransitionTime = now
+		}
 		condition.Status = status
 		condition.Reason = reason
 		condition.Message = message
-		condition.LastTransitionTime = now
 	}
 	condition.LastHeartbeatTime = now
 }
 
 func (conditions ConditionList) Find(conditionType ConditionType) *Condition {
-	for i, condition := range conditions {
-		if condition.Type == conditionType {
+	for i := range conditions {
+		if conditions[i].Type == conditionType {
 			return &conditions[i]
 		}
 	}

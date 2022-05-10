@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nmpolicy", func() {
@@ -80,7 +81,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 				waitForNodesReady()
 
 				By("Waiting for policy to be ready")
-				waitForAvailablePolicy(DefaultNetwork)
+				policy.WaitForAvailablePolicy(DefaultNetwork)
 			})
 
 			AfterEach(func() {
@@ -110,7 +111,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 				waitForNodesReady()
 
 				By("Wait for policy to be ready")
-				waitForAvailablePolicy(DefaultNetwork)
+				policy.WaitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Check %s has the default ip address", primaryNic)
 				for _, node := range nodes {
@@ -145,8 +146,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
 				restartNodeWithoutWaiting(nodeToReboot)
 
 				By("Wait for policy re-reconciled after node reboot")
-				waitForPolicyTransitionUpdate(DefaultNetwork)
-				waitForAvailablePolicy(DefaultNetwork)
+				policy.WaitForPolicyTransitionUpdate(DefaultNetwork)
+				policy.WaitForAvailablePolicy(DefaultNetwork)
 
 				Byf("Node %s was rebooted, verifying that bridge took over the default IP", nodeToReboot)
 				checkThatBridgeTookOverTheDefaultIP([]string{nodeToReboot}, "brext", addressByNode)

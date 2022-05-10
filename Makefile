@@ -1,15 +1,14 @@
 SHELL := /bin/bash
 
 PWD = $(shell pwd)
+GO_VERSION = $(shell hack/go-version.sh)
 
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
-HANDLER_DOCKERFILE=Dockerfile
-
 ifeq ($(NMSTATE_PIN), future)
-	HANDLER_DOCKERFILE=Dockerfile.future
+HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git --build-arg FROM=quay.io/centos/centos:stream9"
 endif
 
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
@@ -29,17 +28,17 @@ HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
 export IMAGE_BUILDER ?= docker
 
-WHAT ?= ./pkg ./controllers
+WHAT ?= ./pkg/... ./controllers/...
 
-unit_test_args ?=  -r -keepGoing --randomizeAllSpecs --randomizeSuites --race --trace $(UNIT_TEST_ARGS)
+unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
-export KUBEVIRT_PROVIDER ?= k8s-1.21
+export KUBEVIRT_PROVIDER ?= k8s-1.23
 export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 80m
 
-e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) -slowSpecThreshold=60 $(E2E_TEST_ARGS)
+e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) --slow-spec-threshold=60s $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 export PRIMARY_NIC ?= eth0
@@ -61,7 +60,7 @@ export KUBECTL ?= ./cluster/kubectl.sh
 KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
-GINKGO = go run github.com/onsi/ginkgo/ginkgo
+GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
 CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
 OPM = go run -tags=json1 github.com/operator-framework/operator-registry/cmd/opm
 
@@ -93,7 +92,7 @@ SKIP_IMAGE_BUILD ?= false
 
 all: check handler
 
-check: vet whitespace-check gofmt-check
+check: lint vet whitespace-check gofmt-check
 
 format: whitespace-format gofmt
 
@@ -119,10 +118,10 @@ $(OPERATOR_SDK):
 	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
 gen-k8s:
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(MAKE) -C api gen-k8s
 
 gen-crds:
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=deploy/crds
+	$(MAKE) -C api gen-crds
 
 gen-rbac:
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
@@ -139,7 +138,7 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh . -f build/$(HANDLER_DOCKERFILE)
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh ${HANDLER_EXTRA_PARAMS} . -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator
@@ -150,26 +149,21 @@ push-operator:
 push: push-handler push-operator
 
 test/unit/api:
-	cd api && $(GINKGO) $(unit_test_args) ./...
+	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
 test/unit: test/unit/api
-	NODE_NAME=node01 $(GINKGO) $(unit_test_args) $(WHAT)
+	NODE_NAME=node01 $(GINKGO) --junit-report=junit-pkg-controller-unit-test.xml $(unit_test_args) $(WHAT)
 
 test-e2e-handler:
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ... -- $(E2E_TEST_SUITE_ARGS)
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
 
 test-e2e-operator: manifests
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ... -- $(E2E_TEST_SUITE_ARGS)
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
+
+test-e2e-upgrade: manifests
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) GINKGO="$(GINKGO)" ./hack/run-e2e-test-upgrade.sh $(e2e_test_args) $(E2E_TEST_SUITE_ARGS)
 
 test-e2e: test-e2e-operator test-e2e-handler
-
-test-e2e-ocp: test-e2e-handler-ocp # deprecated. Use test-e2e-handler-ocp instead
-
-test-e2e-handler-ocp:
-	./hack/ocp-e2e-tests-handler.sh
-
-test-e2e-operator-ocp:
-	./hack/ocp-e2e-tests-operator.sh
 
 cluster-up:
 	./cluster/up.sh
@@ -200,10 +194,10 @@ release:
 	hack/release.sh
 
 vendor-api:
-	cd api && go mod tidy && go mod vendor
+	cd api && go mod tidy -compat=$(GO_VERSION) && go mod vendor
 
 vendor: vendor-api
-	go mod tidy
+	go mod tidy -compat=$(GO_VERSION)
 	go mod vendor
 
 # Generate bundle manifests and metadata, then validate generated files.
@@ -253,5 +247,4 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build \
-	manifests
+	bundle-build

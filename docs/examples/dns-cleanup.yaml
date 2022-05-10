@@ -1,0 +1,10 @@
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: dns-cleanup
+spec:
+  desiredState:
+    dns-resolver:
+      config:
+        search: []
+        server: []

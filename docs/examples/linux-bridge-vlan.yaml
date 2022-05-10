@@ -18,12 +18,12 @@ spec:
               enabled: false
           port:
             - name: eth1
-            vlan:
-              mode: trunk
-              trunk-tags:
-                - id: 101
-                - id-range:
-                    max: 500
-                    min: 200
-              tag: 100
-              enable-native: true
+              vlan:
+                mode: trunk
+                trunk-tags:
+                  - id: 101
+                  - id-range:
+                      max: 500
+                      min: 200
+                tag: 100
+                enable-native: true

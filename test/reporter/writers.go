@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
@@ -71,10 +71,13 @@ func writeNetworkManagerLogs(writer io.Writer, nodes []string, sinceTime time.Ti
 	for _, node := range nodes {
 		output, err := runner.RunQuietAtNode(node, "sudo", "journalctl", "-u", "NetworkManager",
 			"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Since(sinceTime).Seconds())))
-		Expect(err).ToNot(HaveOccurred())
-		writeMessage(writer, banner("Journalctl for NetworkManager on node %s"), node)
-		writeMessage(writer, banner("\n %s"), output)
-		writeMessage(writer, banner("Done NetworkManager logs on node %s"), node)
+		if err != nil {
+			writeMessage(writer, banner("failed reporting NetworkManager logs at %s: %v"), node, err)
+		} else {
+			writeMessage(writer, banner("Journalctl for NetworkManager on node %s"), node)
+			writeMessage(writer, banner("\n %s"), output)
+			writeMessage(writer, banner("Done NetworkManager logs on node %s"), node)
+		}
 	}
 }
 
@@ -130,7 +133,7 @@ func writeString(writer io.Writer, message string) {
 	writer.Write([]byte(message))
 }
 
-func writeMessage(writer io.Writer, message string, args ...string) {
+func writeMessage(writer io.Writer, message string, args ...interface{}) {
 	formattedMessage := message
 	if len(args) > 0 {
 		formattedMessage = fmt.Sprintf(formattedMessage, args)

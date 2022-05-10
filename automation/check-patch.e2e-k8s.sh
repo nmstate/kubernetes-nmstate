@@ -12,7 +12,7 @@ teardown() {
     ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.logs || true
     make cluster-down
     # Don't fail if there is no logs
-    cp ${E2E_LOGS}/handler/*.log ${ARTIFACTS} || true
+    cp -r ${E2E_LOGS}/handler/* ${ARTIFACTS} || true
 }
 
 main() {
@@ -31,9 +31,7 @@ main() {
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
 
-    export E2E_TEST_SUITE_ARGS="--junit-output=$ARTIFACTS/junit.functest.xml"
-
-    make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="-noColor" test-e2e-handler
+    make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="--no-color --output-dir=$ARTIFACTS --junit-report=junit.functest.xml" test-e2e-handler
 }
 
 [[ "${BASH_SOURCE[0]}" == "$0" ]] && main "$@"

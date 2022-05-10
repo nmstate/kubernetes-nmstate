@@ -47,7 +47,7 @@ spec:
               conditions:
                 items:
                   properties:
-                    lastHearbeatTime:
+                    lastHeartbeatTime:
                       format: date-time
                       type: string
                     lastTransitionTime:
@@ -114,7 +114,7 @@ spec:
               conditions:
                 items:
                   properties:
-                    lastHearbeatTime:
+                    lastHeartbeatTime:
                       format: date-time
                       type: string
                     lastTransitionTime:

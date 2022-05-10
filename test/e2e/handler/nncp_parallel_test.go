@@ -20,17 +20,18 @@ package handler
 import (
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	corev1 "k8s.io/api/core/v1"
 )
 
 func enactmentsInProgress(policy string) int {
 	progressingEnactments := 0
 	for _, node := range nodes {
-		enactment := enactmentConditionsStatus(node, policy)
+		enactment := policyconditions.EnactmentConditionsStatus(node, policy)
 		if cond := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing); cond != nil {
 			if cond.Status == corev1.ConditionTrue {
 				progressingEnactments++
@@ -60,13 +61,13 @@ var _ = Describe("NNCP with maxUnavailable", func() {
 			Eventually(func() int {
 				return enactmentsInProgress(TestPolicy)
 			}, duration, interval).Should(BeNumerically("==", maxUnavailableNodes()))
-			waitForAvailablePolicy(TestPolicy)
+			policyconditions.WaitForAvailablePolicy(TestPolicy)
 		})
 		It("should never exceed maxUnavailable nodes", func() {
 			Consistently(func() int {
 				return enactmentsInProgress(TestPolicy)
 			}, duration, interval).Should(BeNumerically("<=", maxUnavailableNodes()))
-			waitForAvailablePolicy(TestPolicy)
+			policyconditions.WaitForAvailablePolicy(TestPolicy)
 		})
 	})
 })
