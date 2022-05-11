@@ -302,7 +302,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed getting node")
 		}
-		enactmentInstance = nmstatev1beta1.NewEnactment(nodeInstance, *policy)
+		enactmentInstance = nmstatev1beta1.NewEnactment(nodeInstance, policy)
 		err = r.APIClient.Create(context.TODO(), &enactmentInstance)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error creating NodeNetworkConfigurationEnactment: %+v", enactmentInstance)

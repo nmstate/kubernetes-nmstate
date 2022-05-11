@@ -149,7 +149,7 @@ push-operator:
 push: push-handler push-operator
 
 test/unit/api:
-	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
+	cd api && GOFLAGS=-mod=mod $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
 test/unit: test/unit/api
 	NODE_NAME=node01 $(GINKGO) --junit-report=junit-pkg-controller-unit-test.xml $(unit_test_args) $(WHAT)
@@ -193,10 +193,8 @@ release-notes:
 release:
 	hack/release.sh
 
-vendor-api:
-	cd api && go mod tidy -compat=$(GO_VERSION) && go mod vendor
-
-vendor: vendor-api
+vendor:
+	cd api && go mod tidy -compat=$(GO_VERSION)
 	go mod tidy -compat=$(GO_VERSION)
 	go mod vendor
 
