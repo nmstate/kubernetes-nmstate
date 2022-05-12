@@ -3,19 +3,20 @@ kind: NodeNetworkConfigurationPolicy
 metadata:
   name: static-ip
 spec:
+  ipPools:
+    foo:
+      range: "10.10.10.0/16"
+      rangeStart: "10.10.10.1"
+      rangeEnd: "10.10.10.10"
+    bar:
+      range: "10.10.11.0/16"
+      rangeStart: "10.11.10.1"
+      rangeEnd: "10.10.11.10"
   nodeSelector:
     node-role.kubernetes.io/worker: ""
   capture: 
-    address-for-eth1: |
-      ipPool:
-        range: "10.10.10.0/16"
-        rangeStart: "10.10.10.1"
-        rangeEnd: "10.10.10.10"
-    address-for-eth2: |
-      ipPool:
-        range: "10.10.11.0/16"
-        rangeStart: "10.11.10.1"
-        rangeEnd: "10.10.11.10"
+    address-from-foo: ipPool.foo
+    address-from-bar: ipPool.bar
   desiredState:
     interfaces:
     - name: eth1
@@ -23,16 +24,16 @@ spec:
       state: up
       ipv4:
         address: 
-        - ip: "{{ capture.address-for-eth1.ip }}"
-          prefix-length: "{{ capture.address-for-eth1.prefix-length }}"
+        - ip: "{{ capture.address-from-foo.ip }}"
+          prefix-length: "{{ capture.address-from-foo.prefix-length }}"
         dhcp: false
         enabled: true
-    - name: eth1
+    - name: eth2
       type: ethernet
       state: up
       ipv4:
         address: 
-        - ip: "{{ capture.address-for-eth1.ip }}"
-          prefix-length: "{{ capture.address-for-eth1.prefix-length }}"
+        - ip: "{{ capture.address-from-bar.ip }}"
+          prefix-length: "{{ capture.address-from-bar.prefix-length }}"
         dhcp: false
         enabled: true

@@ -59,6 +59,17 @@ spec:
                 description: The desired configuration of the policy
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              ipPools:
+                additionalProperties:
+                  properties:
+                    range:
+                      type: string
+                    rangeEnd:
+                      type: string
+                    rangeStart:
+                      type: string
+                  type: object
+                type: object
               maxUnavailable:
                 anyOf:
                 - type: integer
@@ -159,6 +170,17 @@ spec:
                 description: The desired configuration of the policy
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              ipPools:
+                additionalProperties:
+                  properties:
+                    range:
+                      type: string
+                    rangeEnd:
+                      type: string
+                    rangeStart:
+                      type: string
+                  type: object
+                type: object
               maxUnavailable:
                 anyOf:
                 - type: integer
@@ -255,6 +277,17 @@ spec:
                 description: The desired configuration of the policy
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
+              ipPools:
+                additionalProperties:
+                  properties:
+                    range:
+                      type: string
+                    rangeEnd:
+                      type: string
+                    rangeStart:
+                      type: string
+                  type: object
+                type: object
               maxUnavailable:
                 anyOf:
                 - type: integer

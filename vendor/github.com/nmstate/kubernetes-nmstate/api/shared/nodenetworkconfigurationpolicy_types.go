@@ -43,6 +43,9 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// of machines that can be updating at a time. Default is "50%".
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
+
+	// +optional
+	IPPools map[string]IPPool `json:"ipPools,omitempty"`
 }
 
 // NodeNetworkConfigurationPolicyStatus defines the observed state of NodeNetworkConfigurationPolicy

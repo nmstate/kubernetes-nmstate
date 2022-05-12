@@ -28,7 +28,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
-	"gopkg.in/yaml.v2"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/k8snetworkplumbingwg/whereabouts/pkg/storage/kubernetes"
@@ -345,18 +344,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	// If the ippool is found at a capture use it to allocate an ip and store it at capturedStates
 	for k, v := range policy.Spec.Capture {
 		if strings.Contains(v, "ipPool") {
-			ipPoolExpression := map[string]map[string]string{}
-			err := yaml.Unmarshal([]byte(v), &ipPoolExpression)
-			if err != nil {
-				return err
-			}
-
-			log.Info("Found ippool: %s, %+v", v, ipPoolExpression)
-			ipPool := IPPool{
-				Range:      ipPoolExpression["ipPool"]["range"],
-				RangeStart: ipPoolExpression["ipPool"]["rangeStart"],
-				RangeEnd:   ipPoolExpression["ipPool"]["rangeEnd"],
-			}
+			ipPoolName := strings.Split(v, ".")[1]
+			ipPool := policy.Spec.IPPools[ipPoolName]
+			log.Info("Found ippool: %s, %+v", v, ipPool)
 			newip, err := r.allocateIP(ipPool)
 			if err != nil {
 				return err
@@ -549,7 +539,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(name string) (*nmstat
 	return nns, nil
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) allocateIP(ipPool IPPool) (net.IPNet, error) {
+func (r *NodeNetworkConfigurationPolicyReconciler) allocateIP(ipPool shared.IPPool) (net.IPNet, error) {
 	var newip net.IPNet
 	ipamConf := whereaboutstypes.IPAMConfig{
 		PodNamespace: os.Getenv("POD_NAMESPACE"),
