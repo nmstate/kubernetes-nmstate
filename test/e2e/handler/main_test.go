@@ -24,20 +24,19 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
+	"github.com/onsi/ginkgo/v2/types"
 	. "github.com/onsi/gomega"
-
-	ginkgoreporters "kubevirt.io/qe-tools/pkg/ginkgo-reporters"
 
 	corev1 "k8s.io/api/core/v1"
 
-	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
+	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
 var (
@@ -53,7 +52,8 @@ var (
 	portFieldName        string
 	miimonFormat         string
 	nodesInterfacesState = make(map[string][]byte)
-	interfacesToIgnore   = []string{"flannel.1", "dummy0"}
+	interfacesToIgnore   = []string{"flannel.1", "dummy0", "tunl0"}
+	knmstateReporter     *knmstatereporter.KubernetesNMStateReporter
 )
 
 var _ = BeforeSuite(func() {
@@ -94,6 +94,9 @@ var _ = BeforeSuite(func() {
 	}
 
 	resetDesiredStateForNodes()
+
+	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
+	knmstateReporter.Cleanup()
 })
 
 func TestE2E(t *testing.T) {
@@ -101,16 +104,7 @@ func TestE2E(t *testing.T) {
 
 	RegisterFailHandler(Fail)
 
-	reporters := make([]Reporter, 0)
-	reporters = append(reporters, knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes))
-	if ginkgoreporters.Polarion.Run {
-		reporters = append(reporters, &ginkgoreporters.Polarion)
-	}
-	if ginkgoreporters.JunitOutput != "" {
-		reporters = append(reporters, ginkgoreporters.NewJunitReporter())
-	}
-
-	RunSpecsWithDefaultAndCustomReporters(t, "E2E Test Suite", reporters)
+	RunSpecs(t, "Handler E2E Test Suite")
 }
 
 var _ = BeforeEach(func() {
@@ -137,6 +131,14 @@ var _ = AfterEach(func() {
 		}, 120*time.Second, 5*time.Second).Should(MatchJSON(nodesInterfacesState[node]), fmt.Sprintf("Test didn't return "+
 			"to initial state on node %s", node))
 	}
+})
+
+var _ = ReportBeforeEach(func(specReport types.SpecReport) {
+	knmstateReporter.ReportBeforeEach(specReport)
+})
+
+var _ = ReportAfterEach(func(specReport types.SpecReport) {
+	knmstateReporter.ReportAfterEach(specReport)
 })
 
 func containsNode(nodes []string, node string) bool {

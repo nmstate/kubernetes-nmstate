@@ -27,7 +27,9 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	rbac "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,6 +62,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources="*",verbs="*"
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces,verbs="*"
+// +kubebuilder:rbac:groups="",resources=nodes,verbs=list;get
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -153,6 +156,11 @@ func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+
+	if err := setClusterReaderExist(r.Client, data); err != nil {
+		return errors.Wrap(err, "failed checking if cluster-reader ClusterRole exists")
+	}
+
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
@@ -171,35 +179,54 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		Operator: corev1.TolerationOpExists,
 	}
 	archOnMasterNodeSelector := map[string]string{
-		"beta.kubernetes.io/arch":        goruntime.GOARCH,
+		"kubernetes.io/arch":             goruntime.GOARCH,
 		"node-role.kubernetes.io/master": "",
 	}
 	archAndCRNodeSelector := instance.Spec.NodeSelector
 	if archAndCRNodeSelector == nil {
 		archAndCRNodeSelector = map[string]string{}
 	}
-	archAndCRNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
+	archAndCRNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
 	archAndCRNodeSelector["kubernetes.io/os"] = "linux"
 
 	handlerTolerations := instance.Spec.Tolerations
 	if handlerTolerations == nil {
 		handlerTolerations = []corev1.Toleration{operatorExistsToleration}
 	}
+	handlerAffinity := instance.Spec.Affinity
+	if handlerAffinity == nil {
+		handlerAffinity = &corev1.Affinity{}
+	}
 
-	const (
-		webhookMinReplicas int32 = 1
-		webhookReplicas    int32 = 2
-	)
 	archAndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
 	if archAndCRInfraNodeSelector == nil {
 		archAndCRInfraNodeSelector = archOnMasterNodeSelector
 	} else {
-		archAndCRInfraNodeSelector["beta.kubernetes.io/arch"] = goruntime.GOARCH
+		archAndCRInfraNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
+	}
+
+	webhookReplicaCountMin, webhookReplicaCountDesired, err := r.webhookReplicaCount(archAndCRInfraNodeSelector)
+	if err != nil {
+		return fmt.Errorf("could not get min replica count for webhook: %w", err)
 	}
 
 	infraTolerations := instance.Spec.InfraTolerations
 	if infraTolerations == nil {
 		infraTolerations = []corev1.Toleration{masterExistsNoScheduleToleration}
+	}
+	infraAffinity := instance.Spec.InfraAffinity
+	if infraAffinity == nil {
+		infraAffinity = &corev1.Affinity{}
+	}
+
+	selfSignConfiguration := instance.Spec.SelfSignConfiguration
+	if selfSignConfiguration == nil {
+		selfSignConfiguration = &nmstatev1.SelfSignConfiguration{
+			CARotateInterval:    "8760h0m0s",
+			CAOverlapInterval:   "24h0m0s",
+			CertRotateInterval:  "4380h0m0s",
+			CertOverlapInterval: "24h0m0s",
+		}
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
@@ -208,19 +235,43 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
-	data.Data["WebhookAffinity"] = corev1.Affinity{}
-	data.Data["WebhookReplicas"] = webhookReplicas
-	data.Data["WebhookMinReplicas"] = webhookMinReplicas
+	data.Data["WebhookAffinity"] = infraAffinity
+	data.Data["WebhookReplicas"] = webhookReplicaCountDesired
+	data.Data["WebhookMinReplicas"] = webhookReplicaCountMin
 	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
-	data.Data["HandlerAffinity"] = corev1.Affinity{}
-	// TODO: This is just a place holder to make template renderer happy
-	//       proper variable has to be read from env or CR
-	data.Data["CARotateInterval"] = ""
-	data.Data["CAOverlapInterval"] = ""
-	data.Data["CertRotateInterval"] = ""
-	data.Data["CertOverlapInterval"] = ""
+	data.Data["HandlerAffinity"] = handlerAffinity
+	data.Data["SelfSignConfiguration"] = selfSignConfiguration
+
 	return r.renderAndApply(instance, data, "handler", true)
+}
+
+// webhookReplicaCount returns the number of replicas for the nmstate webhook
+// deployment based on the underlying infrastructure toplogy. It returns 2
+// values (and error):
+// 1. min. number of replicas
+// 2. number of desired replicas
+// 3. error
+func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string) (int, int, error) { //nolint:gocritic
+	const (
+		multiNodeClusterReplicaCountDesired = 2
+		multiNodeClusterReplicaMinCount     = 1
+
+		singleNodeClusterReplicaCountDesired = 1
+		singleNodeClusterReplicaMinCount     = 0
+	)
+
+	nodes := corev1.NodeList{}
+	err := r.Client.List(context.TODO(), &nodes, client.MatchingLabels(nodeSelector))
+	if err != nil {
+		return 0, 0, fmt.Errorf("failed to get nodes: %w", err)
+	}
+
+	if len(nodes.Items) > 1 {
+		return multiNodeClusterReplicaMinCount, multiNodeClusterReplicaCountDesired, nil
+	} else {
+		return singleNodeClusterReplicaMinCount, singleNodeClusterReplicaCountDesired, nil
+	}
 }
 
 func (r *NMStateReconciler) renderAndApply(
@@ -262,5 +313,22 @@ func (r *NMStateReconciler) renderAndApply(
 			return errors.Wrapf(err, "failed to apply object %v", obj)
 		}
 	}
+	return nil
+}
+
+func setClusterReaderExist(c client.Client, data render.RenderData) error {
+	var clusterReader rbac.ClusterRole
+	key := types.NamespacedName{Name: "cluster-reader"}
+	err := c.Get(context.TODO(), key, &clusterReader)
+
+	found := true
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		found = false
+	}
+
+	data.Data["ClusterReaderExists"] = found
 	return nil
 }

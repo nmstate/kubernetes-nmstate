@@ -21,12 +21,13 @@ import (
 	"context"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -37,7 +38,7 @@ var _ = Describe("NNCP cleanup", func() {
 		setDesiredStateWithPolicy(bridge1, linuxBrUp(bridge1))
 
 		By("Wait for policy to be ready")
-		waitForAvailablePolicy(bridge1)
+		policy.WaitForAvailablePolicy(bridge1)
 	})
 
 	AfterEach(func() {
@@ -89,7 +90,7 @@ var _ = Describe("NNCP cleanup", func() {
 				verifyEnactmentRemoved(node, 10*time.Second)
 			}
 
-			waitFotNodeToStart(restartedNode)
+			waitForNodeToStart(restartedNode)
 			verifyEnactmentRemoved(restartedNode, 4*time.Minute)
 		})
 	})

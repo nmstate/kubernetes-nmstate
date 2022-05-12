@@ -25,7 +25,7 @@ import (
 	"strings"
 	"time"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/tidwall/gjson"
@@ -43,6 +43,7 @@ import (
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	"github.com/nmstate/kubernetes-nmstate/test/runner"
@@ -174,7 +175,7 @@ func updateDesiredStateAndWait(desiredState nmstate.State) {
 
 func updateDesiredStateWithCaptureAndWait(desiredState nmstate.State, capture map[string]string) {
 	updateDesiredStateWithCapture(desiredState, capture)
-	waitForAvailableTestPolicy()
+	policy.WaitForAvailableTestPolicy()
 }
 
 func updateDesiredStateAtNode(node string, desiredState nmstate.State) {
@@ -192,7 +193,7 @@ func updateDesiredStateAtNodeAndWait(node string, desiredState nmstate.State) {
 
 func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstate.State, capture map[string]string) {
 	updateDesiredStateWithCaptureAtNode(node, desiredState, capture)
-	waitForAvailableTestPolicy()
+	policy.WaitForAvailableTestPolicy()
 }
 
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
@@ -200,8 +201,8 @@ func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstat
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
-	waitForAvailableTestPolicy()
-	deletePolicy(TestPolicy)
+	defer deletePolicy(TestPolicy)
+	policy.WaitForAvailableTestPolicy()
 }
 
 func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState {
@@ -266,11 +267,6 @@ func deletePolicy(name string) {
 	}
 }
 
-func restartNode(node string) error {
-	restartNodeWithoutWaiting(node)
-	return waitFotNodeToStart(node)
-}
-
 func restartNodeWithoutWaiting(node string) {
 	Byf("Restarting node %s", node)
 	// Use halt so reboot command does not get stuck also
@@ -279,7 +275,7 @@ func restartNodeWithoutWaiting(node string) {
 	runner.RunAtNode(node, "sudo", "halt", "--reboot")
 }
 
-func waitFotNodeToStart(node string) error {
+func waitForNodeToStart(node string) {
 	Byf("Waiting till node %s is rebooted", node)
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
 	Eventually(func() string {
@@ -289,7 +285,6 @@ func waitFotNodeToStart(node string) error {
 		}
 		return output
 	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
-	return nil
 }
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {

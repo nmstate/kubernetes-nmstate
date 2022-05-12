@@ -49,24 +49,36 @@ spec:
       clusterPermissions:
       - rules:
         - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - secrets
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
+          - namespaces
+          - serviceaccounts
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - nodes
+          verbs:
+          - get
+          - list
+        - apiGroups:
           - admissionregistration.k8s.io
           resources:
           - mutatingwebhookconfigurations
-          verbs:
-          - '*'
-        - apiGroups:
-          - rbac.authorization.k8s.io
-          resources:
-          - clusterroles
-          - clusterrolebindings
-          - rolebindings
-          - roles
-          verbs:
-          - '*'
-        - apiGroups:
-          - nmstate.io
-          resources:
-          - '*'
           verbs:
           - '*'
         - apiGroups:
@@ -78,33 +90,32 @@ spec:
         - apiGroups:
           - apps
           resources:
-          - deployments
           - daemonsets
+          - deployments
           - replicasets
           - statefulsets
           verbs:
           - '*'
         - apiGroups:
-          - ""
+          - nmstate.io
           resources:
-          - serviceaccounts
-          - configmaps
-          - namespaces
+          - '*'
           verbs:
           - '*'
         - apiGroups:
-          - security.openshift.io
+          - rbac.authorization.k8s.io
           resources:
-          - securitycontextconstraints
+          - clusterrolebindings
+          - clusterroles
+          - rolebindings
+          - roles
           verbs:
-          - use
-          resourceNames:
-          - privileged
+          - '*'
         serviceAccountName: nmstate-operator
       deployments:
-      - name: nmstate-operator
-        label:
+      - label:
           app: kubernetes-nmstate-operator
+        name: nmstate-operator
         spec:
           replicas: 1
           selector:
@@ -118,7 +129,9 @@ spec:
                 name: kubernetes-nmstate-operator
             spec:
               containers:
-              - command:
+              - args:
+                - --zap-time-encoding=iso8601
+                command:
                 - manager
                 env:
                 - name: WATCH_NAMESPACE
@@ -133,15 +146,15 @@ spec:
                   value: "6060"
                 - name: RUN_OPERATOR
                 - name: HANDLER_IMAGE
-                  value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.11
+                  value: quay.io/nmstate/kubernetes-nmstate-handler:latest
                 - name: HANDLER_IMAGE_PULL_POLICY
                   value: Always
                 - name: HANDLER_NAMESPACE
-                  value: openshift-nmstate
-                image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.11
+                  value: nmstate
+                image: quay.io/nmstate/kubernetes-nmstate-operator:latest
                 imagePullPolicy: Always
                 name: nmstate-operator
-                resources: 
+                resources:
                   requests:
                     cpu: 60m
                     memory: 30Mi
@@ -156,22 +169,10 @@ spec:
       permissions:
       - rules:
         - apiGroups:
-          - ""
-          resources:
-          - services
-          - endpoints
-          - persistentvolumeclaims
-          - events
-          - configmaps
-          - secrets
-          - pods
-          verbs:
-          - '*'
-        - apiGroups:
           - apps
           resources:
-          - deployments
           - daemonsets
+          - deployments
           - replicasets
           - statefulsets
           verbs:
@@ -183,16 +184,6 @@ spec:
           verbs:
           - '*'
         serviceAccountName: nmstate-operator
-      - rules:
-        - apiGroups:
-          - security.openshift.io
-          resources:
-          - securitycontextconstraints
-          verbs:
-          - use
-          resourceNames:
-          - privileged
-        serviceAccountName: nmstate-handler
     strategy: deployment
   installModes:
   - supported: true

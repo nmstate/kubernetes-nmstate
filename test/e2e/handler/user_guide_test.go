@@ -20,7 +20,9 @@ limitations under the License.
 package handler
 
 import (
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
+
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 var _ = Describe("[user-guide] Introduction", func() {
@@ -43,9 +45,9 @@ var _ = Describe("[user-guide] Introduction", func() {
 	cleanupConfiguration := func() {
 		deletePolicy("vlan100")
 		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, interfaceAbsent("eth1.100"))
-		waitForAvailableTestPolicy()
+		policy.WaitForAvailableTestPolicy()
 		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
-		waitForAvailableTestPolicy()
+		policy.WaitForAvailableTestPolicy()
 		deletePolicy(TestPolicy)
 	}
 

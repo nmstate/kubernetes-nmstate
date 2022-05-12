@@ -90,7 +90,7 @@ func (ec *EnactmentConditions) NotifySuccess() {
 
 func (ec *EnactmentConditions) NotifyPending() {
 	ec.logger.Info("NotifyPending")
-	err := ec.updateEnactmentConditions(SetPending, "Max unavailable node limit reached")
+	err := ec.updateEnactmentConditions(SetPending, "Waiting for progressing nodes to finish")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Pending")
 	}

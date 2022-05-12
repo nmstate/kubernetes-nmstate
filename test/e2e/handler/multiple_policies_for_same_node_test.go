@@ -20,8 +20,10 @@ package handler
 import (
 	"fmt"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 var _ = Describe("NodeNetworkState", func() {
@@ -36,16 +38,16 @@ var _ = Describe("NodeNetworkState", func() {
 
 		BeforeEach(func() {
 			setDesiredStateWithPolicy(staticIPPolicy, ifaceUpWithStaticIP(firstSecondaryNic, ipAddress, prefixLen))
-			waitForAvailablePolicy(staticIPPolicy)
+			policy.WaitForAvailablePolicy(staticIPPolicy)
 			setDesiredStateWithPolicy(vlanPolicy, ifaceUpWithVlanUp(firstSecondaryNic, vlanID))
-			waitForAvailablePolicy(vlanPolicy)
+			policy.WaitForAvailablePolicy(vlanPolicy)
 		})
 
 		AfterEach(func() {
 			setDesiredStateWithPolicy(staticIPPolicy, ifaceDownIPv4Disabled(firstSecondaryNic))
-			waitForAvailablePolicy(staticIPPolicy)
+			policy.WaitForAvailablePolicy(staticIPPolicy)
 			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanID))
-			waitForAvailablePolicy(vlanPolicy)
+			policy.WaitForAvailablePolicy(vlanPolicy)
 			deletePolicy(staticIPPolicy)
 			deletePolicy(vlanPolicy)
 			resetDesiredStateForNodes()

@@ -21,13 +21,14 @@ import (
 	"context"
 	"strconv"
 
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"k8s.io/client-go/util/retry"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -82,7 +83,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 			updateDesiredState(linuxBrUp(bridge1))
 		})
 		AfterEach(func() {
-			waitForAvailablePolicy(TestPolicy)
+			policy.WaitForAvailablePolicy(TestPolicy)
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			resetDesiredStateForNodes()
 		})
