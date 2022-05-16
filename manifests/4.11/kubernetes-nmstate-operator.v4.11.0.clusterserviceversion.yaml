@@ -146,12 +146,12 @@ spec:
                   value: "6060"
                 - name: RUN_OPERATOR
                 - name: HANDLER_IMAGE
-                  value: quay.io/nmstate/kubernetes-nmstate-handler:latest
+                  value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.11
                 - name: HANDLER_IMAGE_PULL_POLICY
                   value: Always
                 - name: HANDLER_NAMESPACE
-                  value: nmstate
-                image: quay.io/nmstate/kubernetes-nmstate-operator:latest
+                  value: openshift-nmstate
+                image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.11
                 imagePullPolicy: Always
                 name: nmstate-operator
                 resources:
