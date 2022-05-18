@@ -27,7 +27,7 @@ export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
-export IMAGE_BUILDER ?= docker
+export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
 
 WHAT ?= ./pkg/... ./controllers/...
 
