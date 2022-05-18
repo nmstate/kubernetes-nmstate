@@ -14,19 +14,18 @@ fi
 
 ARCHS=${ARCHS:-$(go env GOARCH)}
 
-podman rmi ${IMAGE} || true
-podman manifest rm ${IMAGE} || true
-podman manifest create ${IMAGE}
+buildah rmi ${IMAGE} 2>/dev/null || true
+buildah manifest rm ${IMAGE} 2>/dev/null || true
+buildah manifest create ${IMAGE}
 IMAGES=${IMAGE}
 for arch in $ARCHS; do
-    podman build --arch $arch --build-arg TARGETARCH=$arch -t $IMAGE.$arch $@
-    podman manifest add --tls-verify=$TLS_VERIFY ${IMAGE} docker://${IMAGE}.$arch
-
-    if [ ! "$SKIP_PUSH" == "true" ]; then
-        podman push --tls-verify=$TLS_VERIFY ${IMAGE}.$arch
-    fi
+    buildah bud \
+        --manifest ${IMAGE} \
+        --arch ${arch} --build-arg TARGETARCH=${arch} $@ --tag ${IMAGE}.${arch}
 done
 
 if [ ! "$SKIP_PUSH" == "true" ]; then
-    podman manifest push --tls-verify=$TLS_VERIFY ${IMAGE} docker://${IMAGE}
+    buildah manifest push --all \
+        ${IMAGE} \
+        docker://${IMAGE} --tls-verify=${TLS_VERIFY}
 fi
