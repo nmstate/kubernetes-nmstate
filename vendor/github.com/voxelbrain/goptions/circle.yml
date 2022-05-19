@@ -1,9 +1,0 @@
-version: 2
-jobs:
-  build:
-    docker:
-      - image: circleci/golang
-    steps:
-      - checkout
-      - run: go get -d .
-      - run: go test
