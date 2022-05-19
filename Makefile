@@ -60,9 +60,9 @@ export KUBECTL ?= ./cluster/kubectl.sh
 KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK ?= $(GOBIN)/operator-sdk
 
-GINKGO = go run github.com/onsi/ginkgo/v2/ginkgo
-CONTROLLER_GEN = go run sigs.k8s.io/controller-tools/cmd/controller-gen
-OPM = go run -tags=json1 github.com/operator-framework/operator-registry/cmd/opm
+GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
+CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.0
+OPM = hack/opm.sh
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -97,7 +97,7 @@ check: lint vet whitespace-check gofmt-check
 format: whitespace-format gofmt
 
 vet:
-	go vet ./...
+	GOFLAGS=-mod=mod go vet ./...
 
 whitespace-format:
 	hack/whitespace.sh format
@@ -118,10 +118,10 @@ $(OPERATOR_SDK):
 	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
 
 gen-k8s:
-	$(MAKE) -C api gen-k8s
+	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-crds:
-	$(MAKE) -C api gen-crds
+	cd api && $(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=../deploy/crds
 
 gen-rbac:
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
@@ -132,7 +132,7 @@ check-gen: generate
 generate: gen-k8s gen-crds gen-rbac
 
 manifests:
-	go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 handler: SKIP_PUSH=true
 handler: push-handler
@@ -149,7 +149,7 @@ push-operator:
 push: push-handler push-operator
 
 test/unit/api:
-	cd api && GOFLAGS=-mod=mod $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
+	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
 test/unit: test/unit/api
 	NODE_NAME=node01 $(GINKGO) --junit-report=junit-pkg-controller-unit-test.xml $(unit_test_args) $(WHAT)
@@ -161,7 +161,8 @@ test-e2e-operator: manifests
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
 
 test-e2e-upgrade: manifests
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) GINKGO="$(GINKGO)" ./hack/run-e2e-test-upgrade.sh $(e2e_test_args) $(E2E_TEST_SUITE_ARGS)
+	./hack/prepare-e2e-test-upgrade.sh
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/upgrade ...
 
 test-e2e: test-e2e-operator test-e2e-handler
 
