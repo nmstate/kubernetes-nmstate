@@ -1,0 +1,26 @@
+---
+apiVersion: nmstate.io/v1
+kind: NodeNetworkConfigurationPolicy
+metadata:
+  name: dhcp-to-static
+spec:
+  capture:
+    eth0-iface: interfaces.name == "eth0"
+    eth0-routes: routes.running.next-hop-interface == "eth0"
+    dns: dns-resolver.running
+  desiredState:
+    dns-resolver: 
+      config: "{{ capture.dns.dns-resolver.running }}"
+    interfaces:
+    - name: eth0
+      ipv4:
+        enabled: true
+        dhcp: false
+        address: "{{ capture.eth0-iface.interfaces.0.ipv4.address }}"
+      ipv6:
+        enabled: true
+        dhcp: false
+        autoconf: false
+        address: "{{ capture.eth0-iface.interfaces.0.ipv6.address }}"
+    routes:
+      config: "{{ capture.eth0-routes.routes.running }}"

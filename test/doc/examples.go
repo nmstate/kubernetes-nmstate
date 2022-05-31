@@ -124,5 +124,11 @@ interfaces:
 			PolicyName: "worker-selector",
 			IfaceNames: []string{"eth1"},
 		},
+		{
+			Name:       "Convert interface from DHCP to static",
+			FileName:   "convert-dhcp-to-static.yaml",
+			PolicyName: "convert-dhcp-to-static",
+			IfaceNames: []string{"eth0"},
+		},
 	}
 }
