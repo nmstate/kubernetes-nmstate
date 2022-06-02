@@ -142,8 +142,13 @@ gen-crds:
 gen-rbac:
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
 
-check-gen: generate
-	./hack/check-gen.sh
+check-gen: check-manifests check-bundle
+
+check-manifests: generate
+	./hack/check-gen.sh generate
+
+check-bundle: bundle
+	./hack/check-gen.sh bundle
 
 generate: gen-k8s gen-crds gen-rbac
 
