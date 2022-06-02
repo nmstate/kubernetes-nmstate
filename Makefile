@@ -68,6 +68,9 @@ OPM = hack/opm.sh
 LOCAL_REGISTRY ?= registry:5000
 
 export MANIFESTS_DIR ?= build/_output/manifests
+BUNDLE_DIR ?= ./bundle
+BUNDLE_DOCKERFILE ?= bundle.Dockerfile
+MANIFEST_BASES_DIR ?= deploy/bases
 
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
@@ -214,13 +217,13 @@ vendor:
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
-	cp -r deploy/bases $(MANIFESTS_DIR)/bases
+	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
 	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
-	$(OPERATOR_SDK) bundle validate ./bundle
+	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 
 # Build the bundle image.
 bundle-build:
-	$(IMAGE_BUILDER) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
+	$(IMAGE_BUILDER) build -f $(BUNDLE_DOCKERFILE) -t $(BUNDLE_IMG) .
 
 # Build the index
 index-build: bundle-build
