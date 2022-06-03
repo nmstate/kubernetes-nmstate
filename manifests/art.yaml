@@ -1,5 +1,5 @@
 updates:
-  - file: "{MAJOR}.{MINOR}/kubernetes-nmstate-operator.v{MAJOR}.{MINOR}.0.clusterserviceversion.yaml" # relative to this file
+  - file: "{MAJOR}.{MINOR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml" # relative to this file
     update_list:
     # replace metadata.name value
     - search: "kubernetes-nmstate-operator.v{MAJOR}.{MINOR}.0"
