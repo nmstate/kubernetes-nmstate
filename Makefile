@@ -228,8 +228,20 @@ vendor:
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
 	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds --output-dir $(BUNDLE_DIR)
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
+
+# Update the OCP bundle manifests
+ocp-update-bundle-manifests: generate manifests
+	./hack/ocp-update-bundle-manifests.sh
+
+# Build and deploy the OCP bundle
+ocp-build-and-deploy-bundle: generate manifests
+	./hack/ocp-build-and-deploy-bundle.sh
+
+# Uninstall the bundle from "make ocp-build-and-deploy-bundle"
+ocp-uninstall-bundle:
+	./hack/ocp-uninstall-bundle.sh
 
 # Build the bundle image.
 bundle-build:
