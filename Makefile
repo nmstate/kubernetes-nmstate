@@ -58,7 +58,7 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-OPERATOR_SDK ?= $(GOBIN)/operator-sdk
+OPERATOR_SDK_VERSION ?= 1.21.0
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.0
@@ -114,8 +114,20 @@ gofmt-check:
 lint:
 	hack/lint.sh
 
-$(OPERATOR_SDK):
-	curl https://github.com/operator-framework/operator-sdk/releases/download/v1.15.0/operator-sdk_linux_amd64 -o $(OPERATOR_SDK)
+OPERATOR_SDK = $(CURDIR)/build/_output/bin/operator-sdk_${OPERATOR_SDK_VERSION}
+operator-sdk: ## Download operator-sdk locally.
+ifneq (,$(shell operator-sdk version 2>/dev/null | grep "operator-sdk version: \"v$(OPERATOR_SDK_VERSION)\"" ))
+OPERATOR_SDK = $(shell which operator-sdk)
+else
+ifeq (,$(wildcard $(OPERATOR_SDK)))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(OPERATOR_SDK)) ;\
+	curl -Lo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v$(OPERATOR_SDK_VERSION)/operator-sdk_$$(go env GOOS)_$$(go env GOARCH) ;\
+	chmod +x $(OPERATOR_SDK) ;\
+	}
+endif
+endif
 
 gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -200,7 +212,7 @@ vendor:
 	go mod vendor
 
 # Generate bundle manifests and metadata, then validate generated files.
-bundle: $(OPERATOR_SDK) gen-crds manifests
+bundle: operator-sdk gen-crds manifests
 	cp -r deploy/bases $(MANIFESTS_DIR)/bases
 	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
 	$(OPERATOR_SDK) bundle validate ./bundle
@@ -231,6 +243,7 @@ olm-push: bundle-push index-push
 	test/unit \
 	generate \
 	check-gen \
+	operator-sdk \
 	test-e2e-handler \
 	test-e2e-operator \
 	test-e2e \
