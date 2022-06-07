@@ -26,7 +26,6 @@ import (
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/parser"
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/resolver"
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/types"
-	nmpolicytypes "github.com/nmstate/nmpolicy/nmpolicy/types"
 )
 
 func GenerateState(policySpec types.PolicySpec, currentState types.NMState, cachedState types.CachedState) (types.GeneratedState, error) {
@@ -55,22 +54,19 @@ func GenerateState(policySpec types.PolicySpec, currentState types.NMState, cach
 		}
 	}
 
-	timestamp := time.Now().UTC()
-	timestampCapturesState(capturedStates, timestamp)
+	stampCapturedStates(capturedStates)
 	return types.GeneratedState{
 		Cache:        types.CachedState{CapturedStates: capturedStates},
 		DesiredState: desiredState,
-		MetaInfo: nmpolicytypes.MetaInfo{
-			Version:   "0",
-			TimeStamp: timestamp,
-		},
 	}, nil
 }
 
-func timestampCapturesState(capturedStates types.CapturedStates, timeStamp time.Time) {
+func stampCapturedStates(capturedStates types.CapturedStates) {
+	now := time.Now().UTC()
 	for captureID, capturedState := range capturedStates {
 		if capturedState.MetaInfo.TimeStamp.IsZero() {
-			capturedState.MetaInfo.TimeStamp = timeStamp
+			capturedState.MetaInfo.TimeStamp = now
+			capturedState.MetaInfo.Version = "0"
 			capturedStates[captureID] = capturedState
 		}
 	}

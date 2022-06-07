@@ -42,15 +42,15 @@ func GenerateState(policySpec types.PolicySpec,
 	currentState []byte, cachedState types.CachedState) (generatedState types.GeneratedState, err error) {
 	internalPolicySpec, err := toInternalPolicySpec(policySpec)
 	if err != nil {
-		return generatedState, err
+		return generatedState, fmt.Errorf("failed converting to internal policy spec: %v", err)
 	}
 	internalCurrentState, err := toInternalNMState(currentState)
 	if err != nil {
-		return generatedState, err
+		return generatedState, fmt.Errorf("failed converting to internal current state: %v", err)
 	}
 	internalCachedState, err := toInternalCachedState(cachedState)
 	if err != nil {
-		return generatedState, err
+		return generatedState, fmt.Errorf("failed converting to internal cached state: %v", err)
 	}
 
 	internalGeneratedState, err := internal.GenerateState(internalPolicySpec, internalCurrentState, internalCachedState)
@@ -158,7 +158,6 @@ func toGeneratedState(internalGeneratedState internaltypes.GeneratedState) (type
 		return types.GeneratedState{}, err
 	}
 	return types.GeneratedState{
-		MetaInfo:     internalGeneratedState.MetaInfo,
 		DesiredState: desiredState,
 		Cache:        cachedState,
 	}, nil

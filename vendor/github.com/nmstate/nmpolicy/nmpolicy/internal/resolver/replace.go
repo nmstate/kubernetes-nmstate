@@ -20,15 +20,8 @@ import (
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
 )
 
-func replace(inputState map[string]interface{}, path ast.VariadicOperator, replaceValue interface{}) (map[string]interface{}, error) {
-	pathVisitorWithReplace := pathVisitor{
-		path:              path,
-		lastMapFn:         replaceMapFieldValue(replaceValue),
-		shouldFilterSlice: false,
-		shouldFilterMap:   false,
-	}
-
-	replaced, err := pathVisitorWithReplace.visitMap(inputState)
+func replace(inputState map[string]interface{}, pathSteps ast.VariadicOperator, replaceValue interface{}) (map[string]interface{}, error) {
+	replaced, err := visitState(newPath(pathSteps), inputState, &replaceOpVisitor{replaceValue})
 
 	if err != nil {
 		return nil, replaceError("failed applying operation on the path: %w", err)
@@ -41,14 +34,61 @@ func replace(inputState map[string]interface{}, path ast.VariadicOperator, repla
 	return replacedMap, nil
 }
 
-func replaceMapFieldValue(replaceValue interface{}) mapEntryVisitFn {
-	return func(inputMap map[string]interface{}, mapEntryKeyToReplace string) (interface{}, error) {
-		modifiedMap := map[string]interface{}{}
-		for k, v := range inputMap {
-			modifiedMap[k] = v
-		}
+type replaceOpVisitor struct {
+	replaceValue interface{}
+}
 
-		modifiedMap[mapEntryKeyToReplace] = replaceValue
-		return modifiedMap, nil
+func (r replaceOpVisitor) visitLastMap(p path, inputMap map[string]interface{}) (interface{}, error) {
+	modifiedMap := map[string]interface{}{}
+	for k, v := range inputMap {
+		modifiedMap[k] = v
 	}
+
+	modifiedMap[*p.currentStep.Identity] = r.replaceValue
+	return modifiedMap, nil
+}
+
+func (r replaceOpVisitor) visitLastSlice(p path, sliceToVisit []interface{}) (interface{}, error) {
+	if p.currentStep.Identity != nil {
+		return r.visitSlice(p, sliceToVisit)
+	}
+	return nil, pathError(p.currentStep, "replacing lists value at index not implemented")
+}
+
+func (r replaceOpVisitor) visitMap(p path, mapToVisit map[string]interface{}) (interface{}, error) {
+	if p.currentStep.Number != nil {
+		return nil, pathError(p.currentStep, "failed replacing map: path with index not supported")
+	}
+	interfaceToVisit, ok := mapToVisit[*p.currentStep.Identity]
+	if !ok {
+		return nil, nil
+	}
+
+	visitResult, err := visitState(p.nextStep(), interfaceToVisit, &r)
+	if err != nil {
+		return nil, err
+	}
+
+	replacedMap := map[string]interface{}{}
+	for k, v := range mapToVisit {
+		replacedMap[k] = v
+	}
+	replacedMap[*p.currentStep.Identity] = visitResult
+	return replacedMap, nil
+}
+
+func (r replaceOpVisitor) visitSlice(p path, sliceToVisit []interface{}) (interface{}, error) {
+	if p.currentStep.Number != nil {
+		return nil, pathError(p.currentStep, "failed replacing slice: path with index not supported")
+	}
+
+	replacedSlice := make([]interface{}, len(sliceToVisit))
+	for i, interfaceToVisit := range sliceToVisit {
+		visitResult, err := visitState(p, interfaceToVisit, &r)
+		if err != nil {
+			return nil, err
+		}
+		replacedSlice[i] = visitResult
+	}
+	return replacedSlice, nil
 }
