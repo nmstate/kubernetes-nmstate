@@ -328,7 +328,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		return err
 	}
 
-	capturedStates, desiredStateMetaInfo, generatedDesiredState, err := nmpolicy.GenerateState(
+	capturedStates, generatedDesiredState, err := nmpolicy.GenerateState(
 		policy.Spec.DesiredState,
 		policy.Spec,
 		nmstateapi.NewState(currentState),
@@ -359,7 +359,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		nmstateapi.EnactmentKey(nodeName, policy.Name),
 		func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
 			status.DesiredState = desiredStateWithDefaults
-			status.DesiredStateMetaInfo = desiredStateMetaInfo
 			status.CapturedStates = capturedStates
 			status.PolicyGeneration = policy.Generation
 		},

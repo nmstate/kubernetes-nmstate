@@ -33,7 +33,7 @@ import (
 var _ = Describe("NMPolicy GenerateState", func() {
 	When("fails", func() {
 		It("Should return an error", func() {
-			capturedState, desiredStateMetaInfo, desiredState, err := GenerateStateWithStateGenerator(
+			capturedState, desiredState, err := GenerateStateWithStateGenerator(
 				nmpolicyStub{shouldFail: true},
 				nmstateapi.State{},
 				nmstateapi.NodeNetworkConfigurationPolicySpec{},
@@ -42,7 +42,6 @@ var _ = Describe("NMPolicy GenerateState", func() {
 			)
 			Expect(err).To(HaveOccurred())
 			Expect(capturedState).To(Equal(map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{}))
-			Expect(desiredStateMetaInfo).To(Equal(nmstateapi.NodeNetworkConfigurationEnactmentMetaInfo{}))
 			Expect(desiredState).To(Equal(nmstateapi.State{}))
 		})
 
@@ -61,7 +60,6 @@ var _ = Describe("NMPolicy GenerateState", func() {
 		}
 
 		generatedState := nmpolicytypes.GeneratedState{
-			MetaInfo:     nmpolicyMetaInfo,
 			DesiredState: []byte(desiredStateYaml),
 			Cache: nmpolicytypes.CachedState{
 				Capture: map[string]nmpolicytypes.CaptureState{
@@ -71,7 +69,7 @@ var _ = Describe("NMPolicy GenerateState", func() {
 			},
 		}
 
-		capturedStates, desiredStateMetaInfo, desiredState, err := GenerateStateWithStateGenerator(
+		capturedStates, desiredState, err := GenerateStateWithStateGenerator(
 			nmpolicyStub{output: generatedState},
 			nmstateapi.State{},
 			nmstateapi.NodeNetworkConfigurationPolicySpec{},
@@ -92,7 +90,6 @@ var _ = Describe("NMPolicy GenerateState", func() {
 		}
 
 		Expect(capturedStates).To(Equal(expectedcCaptureCache))
-		Expect(desiredStateMetaInfo).To(Equal(expectedMetaInfo))
 		Expect(desiredState).To(Equal(nmstateapi.State{Raw: []byte(desiredStateYaml)}))
 	})
 })
