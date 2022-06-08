@@ -799,6 +799,8 @@ github.com/ncw/swift v1.0.47/go.mod h1:23YIA4yWVnGwv2dQlN4bB7egfYX6YLn0Yo/S6zZO/
 github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e/go.mod h1:zD1mROLANZcx1PVRCS0qkT7pwLkGfwJo4zjcN/Tysno=
 github.com/nmstate/nmpolicy v0.2.1 h1:DGUKjQV8GI0qeae2Uch9yoY0V87uTALyNnqsBuiOJ9Y=
 github.com/nmstate/nmpolicy v0.2.1/go.mod h1:uItjRVdUUTrtIUmG/772gMujJwMTHgUxPkUPjnpy6Is=
+github.com/nmstate/nmpolicy v0.3.0 h1:mxFDsq6BsWQjPvXa7Yqy2cWyyUgnZpYen6THmiCZ5gE=
+github.com/nmstate/nmpolicy v0.3.0/go.mod h1:jXA9IOzfrcVDqu08Q1e8M4JbhNDuFxU1MvjwOy4JZ80=
 github.com/nxadm/tail v1.4.4/go.mod h1:kenIhsEOeOJmVchQTgglprH7qJGnHDVpk1VPCcaMI8A=
 github.com/nxadm/tail v1.4.8 h1:nPr65rt6Y5JFSKQO7qToXr7pePgD6Gwiw05lkbyAQTE=
 github.com/nxadm/tail v1.4.8/go.mod h1:+ncqLTQzXmGhMZNUePPaPqPvBxHAIsmXswZKocGu+AU=

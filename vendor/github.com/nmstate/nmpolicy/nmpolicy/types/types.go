@@ -16,7 +16,9 @@
 
 package types
 
-import "time"
+import (
+	"time"
+)
 
 type NMState []byte
 
@@ -32,7 +34,6 @@ type CachedState struct {
 type GeneratedState struct {
 	Cache        CachedState
 	DesiredState NMState
-	MetaInfo     MetaInfo
 }
 
 type CaptureState struct {

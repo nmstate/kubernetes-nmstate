@@ -25,6 +25,11 @@ import (
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/types"
 )
 
+type captureEntryNameAndSteps struct {
+	captureEntryName string
+	steps            ast.VariadicOperator
+}
+
 type Resolver struct{}
 
 type resolver struct {
@@ -111,6 +116,8 @@ func (r *resolver) resolveCaptureASTEntry() (types.NMState, error) {
 		return r.resolveEqFilter()
 	} else if r.currentNode.Replace != nil {
 		return r.resolveReplace()
+	} else if r.currentNode.Path != nil {
+		return r.resolvePathFilter()
 	}
 	return nil, fmt.Errorf("root node has unsupported operation : %s", *r.currentNode)
 }
@@ -131,6 +138,10 @@ func (r *resolver) resolveReplace() (types.NMState, error) {
 		return nil, wrapWithResolveError(err)
 	}
 	return replacedState, nil
+}
+
+func (r *resolver) resolvePathFilter() (types.NMState, error) {
+	return filter(r.currentState, *r.currentNode.Path, nil)
 }
 
 func (r *resolver) resolveTernaryOperator(operator *ast.TernaryOperator,
@@ -204,7 +215,7 @@ func (r *resolver) resolveCaptureEntryPath() (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return resolvedPath.walkState(capturedStateEntry)
+	return walk(capturedStateEntry, resolvedPath.steps)
 }
 
 func (r *resolver) resolvePath() (*captureEntryNameAndSteps, error) {

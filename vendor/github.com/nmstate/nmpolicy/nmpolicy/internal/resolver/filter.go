@@ -23,15 +23,8 @@ import (
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
 )
 
-func filter(inputState map[string]interface{}, path ast.VariadicOperator, expectedValue interface{}) (map[string]interface{}, error) {
-	pathVisitorWithEqFilter := pathVisitor{
-		path:              path,
-		lastMapFn:         mapContainsValue(expectedValue),
-		shouldFilterSlice: true,
-		shouldFilterMap:   true,
-	}
-
-	filtered, err := pathVisitorWithEqFilter.visitMap(inputState)
+func filter(inputState map[string]interface{}, pathSteps ast.VariadicOperator, expectedValue interface{}) (map[string]interface{}, error) {
+	filtered, err := visitState(newPath(pathSteps), inputState, &filterVisitor{expectedValue: expectedValue})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed applying operation on the path: %w", err)
@@ -48,19 +41,88 @@ func filter(inputState map[string]interface{}, path ast.VariadicOperator, expect
 	return filteredMap, nil
 }
 
-func mapContainsValue(expectedValue interface{}) mapEntryVisitFn {
-	return func(mapToFilter map[string]interface{}, filterKey string) (interface{}, error) {
-		obtainedValue, ok := mapToFilter[filterKey]
-		if !ok {
-			return nil, nil
-		}
-		if reflect.TypeOf(obtainedValue) != reflect.TypeOf(expectedValue) {
-			return nil, fmt.Errorf(`type missmatch: the value in the path doesn't match the value to filter. `+
-				`"%T" != "%T" -> %+v != %+v`, obtainedValue, expectedValue, obtainedValue, expectedValue)
-		}
-		if obtainedValue == expectedValue {
-			return mapToFilter, nil
-		}
+type filterVisitor struct {
+	mergeVisitResult bool
+	expectedValue    interface{}
+}
+
+func (e filterVisitor) visitLastMap(p path, mapToFilter map[string]interface{}) (interface{}, error) {
+	obtainedValue, ok := mapToFilter[*p.currentStep.Identity]
+	if !ok {
 		return nil, nil
 	}
+
+	// Filter by the path since there is no value to compare
+	if e.expectedValue == nil {
+		return map[string]interface{}{*p.currentStep.Identity: obtainedValue}, nil
+	}
+
+	if reflect.TypeOf(obtainedValue) != reflect.TypeOf(e.expectedValue) {
+		return nil, pathError(p.currentStep, `type missmatch: the value in the path doesn't match the value to filter. `+
+			`"%T" != "%T" -> %+v != %+v`, obtainedValue, e.expectedValue, obtainedValue, e.expectedValue)
+	}
+	if obtainedValue == e.expectedValue {
+		return mapToFilter, nil
+	}
+	return nil, nil
+}
+
+func (e filterVisitor) visitLastSlice(p path, sliceToVisit []interface{}) (interface{}, error) {
+	if p.currentStep.Identity != nil {
+		return e.visitSlice(p, sliceToVisit)
+	}
+	return nil, pathError(p.currentStep, "filtering lists index with equal not implemented")
+}
+
+func (e filterVisitor) visitMap(p path, mapToVisit map[string]interface{}) (interface{}, error) {
+	if p.currentStep.Number != nil {
+		return nil, pathError(p.currentStep, "failed filtering map: path with index not supported")
+	}
+	interfaceToVisit, ok := mapToVisit[*p.currentStep.Identity]
+	if !ok {
+		return nil, nil
+	}
+	visitResult, err := visitState(p.nextStep(), interfaceToVisit, &e)
+	if err != nil {
+		return nil, err
+	}
+	if visitResult == nil {
+		return nil, nil
+	}
+	filteredMap := map[string]interface{}{}
+	if e.mergeVisitResult {
+		for k, v := range mapToVisit {
+			filteredMap[k] = v
+		}
+	}
+	filteredMap[*p.currentStep.Identity] = visitResult
+	return filteredMap, nil
+}
+
+func (e filterVisitor) visitSlice(p path, sliceToVisit []interface{}) (interface{}, error) {
+	if p.currentStep.Number != nil {
+		return nil, pathError(p.currentStep, "failed filtering slice: path with index not supported")
+	}
+
+	filteredSlice := []interface{}{}
+	hasVisitResult := false
+	for _, interfaceToVisit := range sliceToVisit {
+		// Filter only the first slice by forcing "mergeVisitResult" to true
+		// for the the following ones.
+		visitResult, err := visitState(p, interfaceToVisit, &filterVisitor{mergeVisitResult: true, expectedValue: e.expectedValue})
+		if err != nil {
+			return nil, err
+		}
+		if visitResult != nil {
+			hasVisitResult = true
+			filteredSlice = append(filteredSlice, visitResult)
+		} else if e.mergeVisitResult {
+			filteredSlice = append(filteredSlice, interfaceToVisit)
+		}
+	}
+
+	if !hasVisitResult {
+		return nil, nil
+	}
+	return filteredSlice, nil
 }
