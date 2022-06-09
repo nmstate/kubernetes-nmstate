@@ -175,8 +175,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		Effect:   corev1.TaintEffectNoSchedule,
 	}
 	operatorExistsToleration := corev1.Toleration{
-		Key:      "",
 		Operator: corev1.TolerationOpExists,
+		Effect:   corev1.TaintEffectNoSchedule,
 	}
 	archOnMasterNodeSelector := map[string]string{
 		"kubernetes.io/arch":             goruntime.GOARCH,
