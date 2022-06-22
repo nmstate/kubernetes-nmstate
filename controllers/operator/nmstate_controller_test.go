@@ -337,13 +337,28 @@ var _ = Describe("NMState controller reconcile", func() {
 
 	Context("Depending on cluster topology", func() {
 		var (
-			nodeSelector map[string]string
-			objects      []runtime.Object
+			nodeSelector     map[string]string
+			objects          []runtime.Object
+			nodeTaints       []corev1.Taint
+			infraTolerations []corev1.Toleration
 		)
 
 		BeforeEach(func() {
 			objects = []runtime.Object{}
 			nodeSelector = defaultHandlerNodeSelector
+			nodeTaints = []corev1.Taint{
+				{
+					Key:    "node-role.kubernetes.io/control-plane",
+					Effect: corev1.TaintEffectNoSchedule,
+				},
+			}
+			infraTolerations = []corev1.Toleration{
+				{
+					Key:      "node-role.kubernetes.io/control-plane",
+					Operator: corev1.TolerationOpExists,
+					Effect:   corev1.TaintEffectNoSchedule,
+				},
+			}
 		})
 
 		JustBeforeEach(func() {
@@ -352,6 +367,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			nmstate.Spec.InfraNodeSelector = nodeSelector
+			nmstate.Spec.InfraTolerations = infraTolerations
 			objects = append(objects, &nmstate)
 
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()
@@ -367,7 +383,7 @@ var _ = Describe("NMState controller reconcile", func() {
 
 		Context("On single node cluster", func() {
 			BeforeEach(func() {
-				objects = append(objects, dummyNode("node1", nodeSelector))
+				objects = append(objects, dummyNode("node1", nodeSelector, nodeTaints))
 			})
 
 			It("should have a minAvailable = 0 in the pod disruption budget", func() {
@@ -390,11 +406,11 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 
 		Context("On multi node cluster", func() {
-			When("When multiple nodes match the node selector", func() {
+			When("When multiple nodes match the node selector and node taints", func() {
 				BeforeEach(func() {
-					objects = append(objects, dummyNode("node1", nodeSelector))
-					objects = append(objects, dummyNode("node2", nodeSelector))
-					objects = append(objects, dummyNode("node3", nodeSelector))
+					objects = append(objects, dummyNode("node1", nodeSelector, nodeTaints))
+					objects = append(objects, dummyNode("node2", nodeSelector, nodeTaints))
+					objects = append(objects, dummyNode("node3", nodeSelector, nodeTaints))
 				})
 
 				It("should have a minAvailable = 1 in the pod disruption budget", func() {
@@ -416,11 +432,12 @@ var _ = Describe("NMState controller reconcile", func() {
 				})
 			})
 
-			When("When only one node matches the node selector", func() {
+			When("When only one node matches the node selector and taints", func() {
 				BeforeEach(func() {
-					objects = append(objects, dummyNode("node1", nodeSelector))
-					objects = append(objects, dummyNode("node2", map[string]string{"foo": "bar"}))
-					objects = append(objects, dummyNode("node3", map[string]string{"foo": "bar"}))
+					dummyTaints := []corev1.Taint{{Key: "foo", Value: "bar", Effect: corev1.TaintEffectNoSchedule}}
+					objects = append(objects, dummyNode("node1", nodeSelector, nodeTaints))
+					objects = append(objects, dummyNode("node2", map[string]string{"foo": "bar"}, nodeTaints))
+					objects = append(objects, dummyNode("node3", nodeSelector, dummyTaints))
 				})
 
 				It("should have a minAvailable = 0 in the pod disruption budget", func() {
@@ -445,11 +462,14 @@ var _ = Describe("NMState controller reconcile", func() {
 	})
 })
 
-func dummyNode(name string, labels map[string]string) *corev1.Node {
+func dummyNode(name string, labels map[string]string, taints []corev1.Taint) *corev1.Node {
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
 			Labels: labels,
+		},
+		Spec: corev1.NodeSpec{
+			Taints: taints,
 		},
 	}
 }

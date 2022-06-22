@@ -18,12 +18,26 @@ spec:
         name: kubernetes-nmstate-operator
     spec:
       serviceAccountName: nmstate-operator
-      nodeSelector:
-        node-role.kubernetes.io/control-plane: ""
       tolerations:
         - key: node-role.kubernetes.io/control-plane
           operator: Exists
           effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+          - weight: 1
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/master
+                operator: Exists
       priorityClassName: system-cluster-critical
       securityContext:
         runAsNonRoot: true
