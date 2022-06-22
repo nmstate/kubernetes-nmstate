@@ -170,7 +170,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
 	// Prepare defaults
 	masterExistsNoScheduleToleration := corev1.Toleration{
-		Key:      "node-role.kubernetes.io/master",
+		Key:      "node-role.kubernetes.io/control-plane",
 		Operator: corev1.TolerationOpExists,
 		Effect:   corev1.TaintEffectNoSchedule,
 	}
@@ -179,8 +179,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		Operator: corev1.TolerationOpExists,
 	}
 	archOnMasterNodeSelector := map[string]string{
-		"kubernetes.io/arch":             goruntime.GOARCH,
-		"node-role.kubernetes.io/master": "",
+		"kubernetes.io/arch":                    goruntime.GOARCH,
+		"node-role.kubernetes.io/control-plane": "",
 	}
 	archAndCRNodeSelector := instance.Spec.NodeSelector
 	if archAndCRNodeSelector == nil {

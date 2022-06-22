@@ -231,7 +231,7 @@ spec:
                     drop:
                     - ALL
               nodeSelector:
-                node-role.kubernetes.io/master: ""
+                node-role.kubernetes.io/control-plane: ""
               priorityClassName: system-cluster-critical
               securityContext:
                 runAsNonRoot: true
@@ -240,7 +240,7 @@ spec:
               serviceAccountName: nmstate-operator
               tolerations:
               - effect: NoSchedule
-                key: node-role.kubernetes.io/master
+                key: node-role.kubernetes.io/control-plane
                 operator: Exists
       permissions:
       - rules:
