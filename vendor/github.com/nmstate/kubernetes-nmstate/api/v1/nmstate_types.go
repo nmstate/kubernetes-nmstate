@@ -57,11 +57,13 @@ type NMStateSpec struct {
 type SelfSignConfiguration struct {
 	// CARotateInterval defines duration for CA expiration
 	CARotateInterval string `json:"caRotateInterval,omitempty"`
-	// CAOverlapInterval defines the duration where expired CA certificate can overlap with new one, in order to allow fluent CA rotation transitioning
+	// CAOverlapInterval defines the duration where expired CA certificate
+	// can overlap with new one, in order to allow fluent CA rotation transitioning
 	CAOverlapInterval string `json:"caOverlapInterval,omitempty"`
 	// CertRotateInterval defines duration for of service certificate expiration
 	CertRotateInterval string `json:"certRotateInterval,omitempty"`
-	// CertOverlapInterval defines the duration where expired service certificate can overlap with new one, in order to allow fluent service rotation transitioning
+	// CertOverlapInterval defines the duration where expired service certificate
+	// can overlap with new one, in order to allow fluent service rotation transitioning
 	CertOverlapInterval string `json:"certOverlapInterval,omitempty"`
 }
 

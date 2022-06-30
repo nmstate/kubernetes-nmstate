@@ -7,7 +7,7 @@ old_version=$(hack/versions.sh -2)
 new_version=$(hack/versions.sh -1)
 gh_organization=nmstate
 gh_repo=kubernetes-nmstate
-github_release_cmd="go run github.com/github-release/github-release"
+github_release_cmd="GOFLAGS=-mod=mod go run github.com/github-release/github-release@v0.10.0"
 
 MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
 

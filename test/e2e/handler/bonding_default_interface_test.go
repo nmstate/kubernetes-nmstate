@@ -28,12 +28,12 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-// TODO: When https://bugzilla.redhat.com/show_bug.cgi?id=1906307 is resolved, add firstSecondaryNic to the bond again
 func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: bond
     state: up
+    copy-mac-from: %s
     ipv4:
       dhcp: true
       enabled: true
@@ -44,7 +44,8 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
         primary: %s
       %s:
         - %s
-`, bondName, fmt.Sprintf(miimonFormat, 140), primaryNic, portFieldName, primaryNic))
+        - %s
+`, bondName, primaryNic, fmt.Sprintf(miimonFormat, 140), primaryNic, portFieldName, primaryNic, firstSecondaryNic))
 }
 
 func bondAbsentWithPrimaryUp(bondName string) nmstate.State {
