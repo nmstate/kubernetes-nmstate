@@ -297,9 +297,6 @@ spec:
   maturity: alpha
   provider:
     name: NMState
-  relatedImages:
-  - image: quay.io/nmstate/kubernetes-nmstate-handler:latest
-    name: handler-image
   selector:
     matchLabels:
       name: kubernetes-nmstate-operator
