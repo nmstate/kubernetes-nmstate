@@ -8,6 +8,7 @@ spec:
     - name: bond0
       type: bond
       state: up
+      copy-mac-from: eth1
       ipv4:
         dhcp: true
         enabled: true

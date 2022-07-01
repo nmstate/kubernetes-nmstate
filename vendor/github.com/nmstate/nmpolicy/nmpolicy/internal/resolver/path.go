@@ -17,153 +17,31 @@
 package resolver
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
 )
 
-type captureEntryNameAndSteps struct {
-	captureEntryName string
-	steps            ast.VariadicOperator
+type path struct {
+	steps            []ast.Node
+	currentStepIndex int
+	currentStep      *ast.Node
 }
 
-type mapEntryVisitFn func(map[string]interface{}, string) (interface{}, error)
-
-type pathVisitor struct {
-	path              []ast.Node
-	currentStep       *ast.Node
-	lastMapFn         mapEntryVisitFn
-	shouldFilterSlice bool
-	shouldFilterMap   bool
+func newPath(steps []ast.Node) path {
+	return path{
+		steps:            steps,
+		currentStepIndex: 0,
+		currentStep:      &steps[0],
+	}
 }
 
-func (v pathVisitor) visitInterface(inputState interface{}) (interface{}, error) {
-	if len(v.path) == 0 {
-		return inputState, nil
+func (p path) nextStep() path {
+	if p.hasMoreSteps() {
+		p.currentStepIndex++
 	}
-	originalMap, isMap := inputState.(map[string]interface{})
-	if isMap {
-		if len(v.path) == 1 {
-			return v.visitLastMapOnPath(originalMap, inputState)
-		}
-		return v.visitMap(originalMap)
-	}
-
-	originalSlice, isSlice := inputState.([]interface{})
-	if isSlice {
-		return v.visitSlice(originalSlice)
-	}
-
-	return nil, pathError(v.currentStep, "invalid type %T for identity step '%v'", inputState, *v.currentStep)
+	p.currentStep = &p.steps[p.currentStepIndex]
+	return p
 }
 
-func (v pathVisitor) visitSlice(originalSlice []interface{}) (interface{}, error) {
-	adjustedSlice := []interface{}{}
-	sliceEmptyAfterApply := true
-	pathVisitorWithoutFilters := v
-	pathVisitorWithoutFilters.shouldFilterSlice = false
-	pathVisitorWithoutFilters.shouldFilterMap = false
-	for _, valueToCheck := range originalSlice {
-		valueAfterApply, err := pathVisitorWithoutFilters.visitInterface(valueToCheck)
-		if err != nil {
-			return nil, err
-		}
-		if valueAfterApply != nil {
-			sliceEmptyAfterApply = false
-			adjustedSlice = append(adjustedSlice, valueAfterApply)
-		} else if !v.shouldFilterSlice {
-			adjustedSlice = append(adjustedSlice, valueToCheck)
-		}
-	}
-
-	if sliceEmptyAfterApply {
-		return nil, nil
-	}
-
-	return adjustedSlice, nil
-}
-
-func (v pathVisitor) visitMap(originalMap map[string]interface{}) (interface{}, error) {
-	if v.currentStep == nil {
-		v.currentStep = &ast.Node{}
-	}
-	*v.currentStep = v.path[0]
-	if v.currentStep.Identity == nil {
-		return nil, pathError(v.currentStep, "%v has unsupported fromat", *v.currentStep)
-	}
-
-	v.path = v.path[1:]
-	key := *v.currentStep.Identity
-
-	valueToCheck, ok := originalMap[key]
-	if !ok {
-		return nil, nil
-	}
-
-	adjustedValue, err := v.visitInterface(valueToCheck)
-	if err != nil {
-		return nil, err
-	}
-	if adjustedValue == nil {
-		return nil, nil
-	}
-
-	adjustedMap := map[string]interface{}{}
-	if !v.shouldFilterMap {
-		for k, v := range originalMap {
-			adjustedMap[k] = v
-		}
-	}
-	adjustedMap[key] = adjustedValue
-	return adjustedMap, nil
-}
-
-func (v pathVisitor) visitLastMapOnPath(originalMap map[string]interface{}, inputState interface{}) (interface{}, error) {
-	if v.lastMapFn != nil {
-		key := *v.path[0].Identity
-		outputState, err := v.lastMapFn(originalMap, key)
-		if err != nil {
-			return nil, err
-		}
-		return outputState, nil
-	}
-	return inputState, nil
-}
-
-func (p captureEntryNameAndSteps) walkState(stateToWalk map[string]interface{}) (interface{}, error) {
-	var (
-		walkedState interface{}
-		walkedPath  []string
-	)
-	walkedState = stateToWalk
-	for _, step := range p.steps {
-		node := step
-		if step.Identity != nil {
-			identityStep := *step.Identity
-			walkedPath = append(walkedPath, identityStep)
-			walkedStateMap, ok := walkedState.(map[string]interface{})
-			if !ok {
-				return nil, wrapWithPathError(&node, fmt.Errorf("failed walking non map state '%+v' with path '%+v'", walkedState, walkedPath))
-			}
-			walkedState, ok = walkedStateMap[identityStep]
-			if !ok {
-				return nil, wrapWithPathError(&node,
-					fmt.Errorf("step '%s' from path '%s' not found at map state '%+v'", identityStep, walkedPath, walkedStateMap))
-			}
-		} else if step.Number != nil {
-			numberStep := *step.Number
-			walkedPath = append(walkedPath, strconv.Itoa(numberStep))
-			walkedStateSlice, ok := walkedState.([]interface{})
-			if !ok {
-				return nil, wrapWithPathError(&node, fmt.Errorf("failed walking non slice state '%+v' with path '%+v'", walkedState, walkedPath))
-			}
-			if len(walkedStateSlice) == 0 || numberStep >= len(walkedStateSlice) {
-				return nil, wrapWithPathError(&node,
-					fmt.Errorf("step '%d' from path '%s' not found at slice state '%+v'", numberStep, walkedPath, walkedStateSlice))
-			}
-			walkedState = walkedStateSlice[numberStep]
-		}
-	}
-	return walkedState, nil
+func (p path) hasMoreSteps() bool {
+	return p.currentStepIndex+1 < len(p.steps)
 }

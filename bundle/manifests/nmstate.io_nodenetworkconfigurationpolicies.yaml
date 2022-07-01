@@ -21,6 +21,10 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
     name: v1
     schema:
       openAPIV3Schema:
@@ -43,6 +47,12 @@ spec:
             description: NodeNetworkConfigurationPolicySpec defines the desired state
               of NodeNetworkConfigurationPolicy
             properties:
+              capture:
+                additionalProperties:
+                  type: string
+                description: Capture contains expressions with an associated name
+                  than can be referenced at the DesiredState.
+                type: object
               desiredState:
                 description: The desired configuration of the policy
                 type: object
@@ -110,6 +120,10 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
     deprecated: true
     name: v1alpha1
     schema:
@@ -133,6 +147,12 @@ spec:
             description: NodeNetworkConfigurationPolicySpec defines the desired state
               of NodeNetworkConfigurationPolicy
             properties:
+              capture:
+                additionalProperties:
+                  type: string
+                description: Capture contains expressions with an associated name
+                  than can be referenced at the DesiredState.
+                type: object
               desiredState:
                 description: The desired configuration of the policy
                 type: object
@@ -223,6 +243,12 @@ spec:
             description: NodeNetworkConfigurationPolicySpec defines the desired state
               of NodeNetworkConfigurationPolicy
             properties:
+              capture:
+                additionalProperties:
+                  type: string
+                description: Capture contains expressions with an associated name
+                  than can be referenced at the DesiredState.
+                type: object
               desiredState:
                 description: The desired configuration of the policy
                 type: object

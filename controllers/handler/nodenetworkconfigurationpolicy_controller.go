@@ -302,7 +302,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed getting node")
 		}
-		enactmentInstance = nmstatev1beta1.NewEnactment(nodeInstance, *policy)
+		enactmentInstance = nmstatev1beta1.NewEnactment(nodeInstance, policy)
 		err = r.APIClient.Create(context.TODO(), &enactmentInstance)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error creating NodeNetworkConfigurationEnactment: %+v", enactmentInstance)
@@ -328,7 +328,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		return err
 	}
 
-	capturedStates, desiredStateMetaInfo, generatedDesiredState, err := nmpolicy.GenerateState(
+	capturedStates, generatedDesiredState, err := nmpolicy.GenerateState(
 		policy.Spec.DesiredState,
 		policy.Spec,
 		nmstateapi.NewState(currentState),
@@ -359,7 +359,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		nmstateapi.EnactmentKey(nodeName, policy.Name),
 		func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
 			status.DesiredState = desiredStateWithDefaults
-			status.DesiredStateMetaInfo = desiredStateMetaInfo
 			status.CapturedStates = capturedStates
 			status.PolicyGeneration = policy.Generation
 		},

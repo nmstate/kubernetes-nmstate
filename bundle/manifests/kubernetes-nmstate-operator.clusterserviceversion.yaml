@@ -67,7 +67,7 @@ metadata:
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
     operatorframework.io/suggested-namespace: nmstate
-    operators.operatorframework.io/builder: operator-sdk-v1.13.0+git
+    operators.operatorframework.io/builder: operator-sdk-v1.21.0
     operators.operatorframework.io/internal-objects: '["nodenetworkconfigurationenactments.nmstate.io",
       "nodenetworkstates.nmstate.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
@@ -119,10 +119,29 @@ spec:
           - ""
           resources:
           - configmaps
+          - endpoints
+          - events
+          - persistentvolumeclaims
+          - pods
+          - secrets
+          - services
+          verbs:
+          - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - configmaps
           - namespaces
           - serviceaccounts
           verbs:
           - '*'
+        - apiGroups:
+          - ""
+          resources:
+          - nodes
+          verbs:
+          - get
+          - list
         - apiGroups:
           - admissionregistration.k8s.io
           resources:
@@ -161,7 +180,9 @@ spec:
           - '*'
         serviceAccountName: nmstate-operator
       deployments:
-      - name: nmstate-operator
+      - label:
+          app: kubernetes-nmstate-operator
+        name: nmstate-operator
         spec:
           replicas: 1
           selector:
@@ -175,7 +196,9 @@ spec:
                 name: kubernetes-nmstate-operator
             spec:
               containers:
-              - command:
+              - args:
+                - --zap-time-encoding=iso8601
+                command:
                 - manager
                 env:
                 - name: WATCH_NAMESPACE
@@ -198,9 +221,22 @@ spec:
                 image: quay.io/nmstate/kubernetes-nmstate-operator:latest
                 imagePullPolicy: Always
                 name: nmstate-operator
-                resources: {}
+                resources:
+                  requests:
+                    cpu: 60m
+                    memory: 30Mi
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop:
+                    - ALL
               nodeSelector:
                 node-role.kubernetes.io/master: ""
+              priorityClassName: system-cluster-critical
+              securityContext:
+                runAsNonRoot: true
+                seccompProfile:
+                  type: RuntimeDefault
               serviceAccountName: nmstate-operator
               tolerations:
               - effect: NoSchedule
@@ -208,18 +244,6 @@ spec:
                 operator: Exists
       permissions:
       - rules:
-        - apiGroups:
-          - ""
-          resources:
-          - configmaps
-          - endpoints
-          - events
-          - persistentvolumeclaims
-          - pods
-          - secrets
-          - services
-          verbs:
-          - '*'
         - apiGroups:
           - apps
           resources:

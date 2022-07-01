@@ -25,6 +25,10 @@ spec:
           operator: Exists
           effect: NoSchedule
       priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: nmstate-operator
           args:
@@ -34,6 +38,11 @@ spec:
           imagePullPolicy: {{ .OperatorPullPolicy }}
           command:
           - manager
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
           resources:
             requests:
               cpu: 60m
