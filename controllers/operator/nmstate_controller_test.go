@@ -97,6 +97,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 		names.ManifestDir = manifestsDir
 		reconciler.Client = cl
+		reconciler.APIClient = cl
 		reconciler.Scheme = s
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
@@ -176,6 +177,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
+			reconciler.APIClient = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
@@ -224,6 +226,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
+			reconciler.APIClient = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
@@ -259,6 +262,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
+			reconciler.APIClient = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
@@ -307,6 +311,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
+			reconciler.APIClient = cl
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
@@ -356,6 +361,7 @@ var _ = Describe("NMState controller reconcile", func() {
 
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()
 			reconciler.Client = cl
+			reconciler.APIClient = cl
 
 			var request ctrl.Request
 			request.Name = existingNMStateName
