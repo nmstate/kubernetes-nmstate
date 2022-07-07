@@ -165,23 +165,30 @@ func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
+//nolint: funlen, gomnd
 func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	// Register ToYaml template method
 	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
 	// Prepare defaults
-	masterExistsNoScheduleToleration := corev1.Toleration{
-		Key:      "node-role.kubernetes.io/master",
-		Operator: corev1.TolerationOpExists,
-		Effect:   corev1.TaintEffectNoSchedule,
+	masterExistsNoScheduleTolerations := []corev1.Toleration{
+		{
+			Key:      "node-role.kubernetes.io/master",
+			Operator: corev1.TolerationOpExists,
+			Effect:   corev1.TaintEffectNoSchedule,
+		},
+		{
+			Key:      "node-role.kubernetes.io/control-plane",
+			Operator: corev1.TolerationOpExists,
+			Effect:   corev1.TaintEffectNoSchedule,
+		},
 	}
 	operatorExistsToleration := corev1.Toleration{
 		Key:      "",
 		Operator: corev1.TolerationOpExists,
 	}
-	archOnMasterNodeSelector := map[string]string{
-		"kubernetes.io/arch":             goruntime.GOARCH,
-		"node-role.kubernetes.io/master": "",
+	archNodeSelector := map[string]string{
+		"kubernetes.io/arch": goruntime.GOARCH,
 	}
 	archAndCRNodeSelector := instance.Spec.NodeSelector
 	if archAndCRNodeSelector == nil {
@@ -201,23 +208,51 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 
 	archAndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
 	if archAndCRInfraNodeSelector == nil {
-		archAndCRInfraNodeSelector = archOnMasterNodeSelector
+		archAndCRInfraNodeSelector = archNodeSelector
 	} else {
 		archAndCRInfraNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
 	}
 
-	webhookReplicaCountMin, webhookReplicaCountDesired, err := r.webhookReplicaCount(archAndCRInfraNodeSelector)
-	if err != nil {
-		return fmt.Errorf("could not get min replica count for webhook: %w", err)
-	}
-
 	infraTolerations := instance.Spec.InfraTolerations
 	if infraTolerations == nil {
-		infraTolerations = []corev1.Toleration{masterExistsNoScheduleToleration}
+		infraTolerations = masterExistsNoScheduleTolerations
 	}
+
 	infraAffinity := instance.Spec.InfraAffinity
 	if infraAffinity == nil {
-		infraAffinity = &corev1.Affinity{}
+		infraAffinity = &corev1.Affinity{
+			NodeAffinity: &corev1.NodeAffinity{
+				PreferredDuringSchedulingIgnoredDuringExecution: []corev1.PreferredSchedulingTerm{
+					{
+						Weight: 10,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      "node-role.kubernetes.io/control-plane",
+									Operator: corev1.NodeSelectorOpExists,
+								},
+							},
+						},
+					},
+					{
+						Weight: 1,
+						Preference: corev1.NodeSelectorTerm{
+							MatchExpressions: []corev1.NodeSelectorRequirement{
+								{
+									Key:      "node-role.kubernetes.io/master",
+									Operator: corev1.NodeSelectorOpExists,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	webhookReplicaCountMin, webhookReplicaCountDesired, err := r.webhookReplicaCount(archAndCRInfraNodeSelector, infraTolerations)
+	if err != nil {
+		return fmt.Errorf("could not get min replica count for webhook: %w", err)
 	}
 
 	selfSignConfiguration := instance.Spec.SelfSignConfiguration
@@ -253,7 +288,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 // 1. min. number of replicas
 // 2. number of desired replicas
 // 3. error
-func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string) (int, int, error) { //nolint:gocritic
+//nolint:gocritic
+func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string, tolerations []corev1.Toleration) (int, int, error) {
 	const (
 		multiNodeClusterReplicaCountDesired = 2
 		multiNodeClusterReplicaMinCount     = 1
@@ -268,7 +304,20 @@ func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string) 
 		return 0, 0, fmt.Errorf("failed to get nodes: %w", err)
 	}
 
-	if len(nodes.Items) > 1 {
+	infraNodes := 0
+	for _, node := range nodes.Items {
+		for _, toleration := range tolerations {
+			for _, nodeTaint := range node.Spec.Taints {
+				if nodeTaint.Key == toleration.Key &&
+					nodeTaint.Value == toleration.Value &&
+					nodeTaint.Effect == toleration.Effect {
+					infraNodes++
+				}
+			}
+		}
+	}
+
+	if infraNodes > 1 {
 		return multiNodeClusterReplicaMinCount, multiNodeClusterReplicaCountDesired, nil
 	} else {
 		return singleNodeClusterReplicaMinCount, singleNodeClusterReplicaCountDesired, nil
