@@ -7,12 +7,9 @@ old_version=$(hack/versions.sh -2)
 new_version=$(hack/versions.sh -1)
 gh_organization=nmstate
 gh_repo=kubernetes-nmstate
+github_release_cmd="go run github.com/github-release/github-release@v0.10.0"
 
 MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
-
-function github_release_cmd() {
-    GOFLAGS=-mod=mod go run github.com/github-release/github-release@v0.10.0 $@
-}
 
 function eventually() {
     retries=2
@@ -29,7 +26,7 @@ function eventually() {
 
 function upload() {
     resource=$1
-    eventually github_release_cmd upload \
+    eventually $github_release_cmd upload \
         -u $gh_organization \
         -r $gh_repo \
         -R \
@@ -40,7 +37,7 @@ function upload() {
 
 function create_github_release() {
     # Create the release
-    github_release_cmd release \
+    $github_release_cmd release \
         -u $gh_organization \
         -r $gh_repo \
         --tag $new_version \
@@ -74,5 +71,6 @@ make OPERATOR_IMAGE_TAG=$new_version HANDLER_IMAGE_TAG=$new_version \
     push-handler \
     push-operator
 
+export GOFLAGS=-mod=mod
 create_github_release
 upload_github_release_artifacts
