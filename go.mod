@@ -127,7 +127,7 @@ replace (
 	github.com/nmstate/kubernetes-nmstate/api => ./api
 	go.opentelemetry.io/otel => go.opentelemetry.io/otel v0.20.0
 	go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v0.20.0
-	golang.org/x/text => golang.org/x/text v0.3.3 // Required to fix CVE-2020-14040
+	golang.org/x/text => golang.org/x/text v0.3.7 // Required to fix CVE-2021-38561
 	k8s.io/client-go => k8s.io/client-go v0.24.1
 )
 
