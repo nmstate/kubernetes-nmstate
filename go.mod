@@ -11,6 +11,7 @@ require (
 	github.com/nmstate/nmpolicy v0.3.0
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.1
+	github.com/openshift/api v0.0.0-20220722144142-ac5cee47c2a0
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/phoracek/networkmanager-go v0.3.0
 	github.com/pkg/errors v0.9.1

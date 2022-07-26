@@ -42,6 +42,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
 
@@ -161,6 +162,12 @@ func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	if err := setClusterReaderExist(r.Client, data); err != nil {
 		return errors.Wrap(err, "failed checking if cluster-reader ClusterRole exists")
 	}
+
+	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
+	if err != nil {
+		return err
+	}
+	data.Data["IsOpenShift"] = isOpenShift
 
 	return r.renderAndApply(instance, data, "rbac", true)
 }

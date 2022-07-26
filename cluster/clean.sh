@@ -39,10 +39,6 @@ function clean() {
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/service_account.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role.yaml
     $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role_binding.yaml
-
-    if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$ ]]; then
-        $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/scc.yaml
-    fi
 }
 
 # Use labels so we don't care about prefixes
