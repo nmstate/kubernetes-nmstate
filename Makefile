@@ -160,6 +160,9 @@ check-manifests: generate
 check-bundle: bundle
 	./hack/check-gen.sh bundle
 
+check-ocp-bundle: ocp-update-bundle-manifests
+	./hack/check-gen.sh ocp-update-bundle-manifests
+
 generate: gen-k8s gen-crds gen-rbac
 
 manifests:
