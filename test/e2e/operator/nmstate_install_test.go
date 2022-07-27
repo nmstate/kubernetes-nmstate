@@ -69,7 +69,7 @@ var _ = Describe("NMState operator", func() {
 			By("Check webhook is distributed across control-plane nodes")
 			podsShouldBeDistributedAtNodes(controlPlaneNodes(), client.MatchingLabels{"component": "kubernetes-nmstate-webhook"})
 		},
-		Entry("of a single node shoud deploy webhook replicas at the same node", controlPlaneTest{withMultiNode: false}),
+		Entry("of a single node should deploy webhook replicas at the same node", controlPlaneTest{withMultiNode: false}),
 		Entry("of two nodes should deploy webhook replicas at different nodes", controlPlaneTest{withMultiNode: true}),
 	)
 	Context("when installed for the first time", func() {
