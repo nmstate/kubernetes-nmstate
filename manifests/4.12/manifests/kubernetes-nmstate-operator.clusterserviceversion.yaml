@@ -62,11 +62,11 @@ metadata:
     capabilities: Basic Install
     categories: OpenShift Optional
     certified: "false"
-    containerImage: quay.io/openshift/origin-kubernetes-nmstate-operator:4.11
+    containerImage: quay.io/openshift/origin-kubernetes-nmstate-operator:4.12
     createdAt: "2022-02-21 08:46:16"
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
-    olm.skipRange: '>=4.3.0 <4.11.0'
+    olm.skipRange: '>=4.3.0 <4.12.0'
     operatorframework.io/suggested-namespace: openshift-nmstate
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/builder: operator-sdk-v1.21.0
@@ -78,7 +78,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: kubernetes-nmstate-operator.v4.11.0
+  name: kubernetes-nmstate-operator.v4.12.0
   namespace: openshift-nmstate
 spec:
   apiservicedefinitions: {}
@@ -204,12 +204,12 @@ spec:
                         value: "6060"
                       - name: RUN_OPERATOR
                       - name: HANDLER_IMAGE
-                        value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.11
+                        value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.12
                       - name: HANDLER_IMAGE_PULL_POLICY
                         value: Always
                       - name: HANDLER_NAMESPACE
                         value: openshift-nmstate
-                    image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.11
+                    image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.12
                     imagePullPolicy: Always
                     name: nmstate-operator
                     resources:
@@ -277,7 +277,7 @@ spec:
     - NetworkManager
   labels:
     olm-owner-enterprise-app: kubernetes-nmstate-operator
-    olm-status-descriptors: kubernetes-nmstate-operator.v4.11.0
+    olm-status-descriptors: kubernetes-nmstate-operator.v4.12.0
   links:
     - name: Kubernetes Nmstate Operator
       url: https://github.com/nmstate/kubernetes-nmstate
@@ -290,4 +290,4 @@ spec:
   selector:
     matchLabels:
       name: kubernetes-nmstate-operator
-  version: 4.11.0
+  version: 4.12.0
