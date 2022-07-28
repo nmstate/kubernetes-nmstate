@@ -5,8 +5,8 @@ spec:
   - name: kubernetes-nmstate-operator
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-kubernetes-nmstate-operator:4.11
+      name: quay.io/openshift/origin-kubernetes-nmstate-operator:4.12
   - name: kubernetes-nmstate-handler
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-kubernetes-nmstate-handler:4.11
+      name: quay.io/openshift/origin-kubernetes-nmstate-handler:4.12
