@@ -24,4 +24,4 @@ else
 fi
 
 make cluster-sync-operator
-make test-e2e-operator E2E_TEST_ARGS="--flakeAttempts=${FLAKE_ATTEMPTS}"
+make test-e2e-operator E2E_TEST_ARGS="--flake-attempts=${FLAKE_ATTEMPTS}"
