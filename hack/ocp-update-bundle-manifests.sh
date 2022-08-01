@@ -5,6 +5,25 @@
 
 set -ex
 
+function yq4 {
+  VERSION_REGEX=" version 4\.[0-9]+\.[0-9]$"
+  if [[ "`yq --version`" =~ $VERSION_REGEX ]]; then
+    # installed yq version is v4 -> we are OK
+    echo yq
+  else
+    # version from yq in path is != 4 --> check for alternatives
+    INSTALL_DIR=$(pwd)/build/_output/bin
+    if [[ -f ${INSTALL_DIR}/yq ]] && [[ "`${INSTALL_DIR}/yq --version`" =~ $VERSION_REGEX ]]; then
+      # yq is installed at a 2nd location already and in the correct version --> nothing to do
+      echo ${INSTALL_DIR}/yq
+    else
+      # yq is not installed/in wrong version --> install v4
+      GOBIN=$INSTALL_DIR GOFLAGS= go install github.com/mikefarah/yq/v4@latest
+      echo ${INSTALL_DIR}/yq
+    fi
+  fi
+}
+
 if [ -z "${CHANNEL}" ]; then
     export CHANNEL=$(find manifests/ -name "4.*" -printf "%f\n" | sort -Vr | head -n 1)
 fi
@@ -36,13 +55,13 @@ VERSION=${VERSION} CHANNELS=${CHANNEL},alpha DEFAULT_CHANNEL=${CHANNEL} \
 BUNDLE_DIR=${BUNDLE_DIR} MANIFEST_BASES_DIR=${MANIFEST_BASES_DIR} make bundle
 
 # add the cluster permissions to use the privileged security context constraint to the nmstate-operator SA in the CSV
-yq --inplace eval '.spec.install.spec.clusterPermissions[] |= select(.rules[]) |= select(.serviceAccountName == "nmstate-operator").rules += {"apiGroups":["security.openshift.io"],"resources":["securitycontextconstraints"],"verbs":["use"],"resourceNames":["privileged"]}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+$(yq4) --inplace eval '.spec.install.spec.clusterPermissions[] |= select(.rules[]) |= select(.serviceAccountName == "nmstate-operator").rules += {"apiGroups":["security.openshift.io"],"resources":["securitycontextconstraints"],"verbs":["use"],"resourceNames":["privileged"]}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 
 # add the permissions to use the privileged security context constraint to the nmstate-handler SA in the CSV
-yq --inplace eval '.spec.install.spec.permissions += {"rules":[{"apiGroups":["security.openshift.io"],"resources":["securitycontextconstraints"],"verbs":["use"],"resourceNames":["privileged"]}],"serviceAccountName":"nmstate-handler"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+$(yq4) --inplace eval '.spec.install.spec.permissions += {"rules":[{"apiGroups":["security.openshift.io"],"resources":["securitycontextconstraints"],"verbs":["use"],"resourceNames":["privileged"]}],"serviceAccountName":"nmstate-handler"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 
 # remove unneeded owned CRDs in CSV / use only NMState v1 CRD
-yq --inplace eval '.spec.customresourcedefinitions.owned |= [{"kind":"NMState","name":"nmstates.nmstate.io","version":"v1","description":"Represents an NMState deployment.","displayName":"NMState"}]' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+$(yq4) --inplace eval '.spec.customresourcedefinitions.owned |= [{"kind":"NMState","name":"nmstates.nmstate.io","version":"v1","description":"Represents an NMState deployment.","displayName":"NMState"}]' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 
 # delete unneeded files
 rm -f ${BUNDLE_DIR}/manifests/nmstate.io_nodenetwork*.yaml
