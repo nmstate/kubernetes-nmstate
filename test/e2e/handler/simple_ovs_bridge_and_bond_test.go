@@ -167,37 +167,35 @@ var _ = Describe("OVS Bridge", func() {
 			})
 		})
 	})
-	PContext(
-		"when desiredState is updated with ovs-bridge with linux bond as port [BZ: https://bugzilla.redhat.com/show_bug.cgi?id=2005240]",
-		func() {
-			BeforeEach(func() {
-				updateDesiredStateAndWait(ovsBrUpLinuxBondEth1AndEth2(bridge1, bond1))
-			})
-			AfterEach(func() {
-				updateDesiredStateAndWait(ovsBrAndBondAbsent(bridge1, bond1))
-				for _, node := range nodes {
-					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
-				}
-				resetDesiredStateForNodes()
-			})
-			It("should have the ovs-bridge and bond at currentState", func() {
-				By("Verify all required interfaces are present at currentState")
-				for _, node := range nodes {
-					interfacesForNode(node).Should(SatisfyAll(
-						ContainElement(SatisfyAll(
-							HaveKeyWithValue("name", bridge1),
-							HaveKeyWithValue("type", "ovs-bridge"),
-							HaveKeyWithValue("state", "up"),
-						)),
-						ContainElement(SatisfyAll(
-							HaveKeyWithValue("name", bond1),
-							HaveKeyWithValue("type", "bond"),
-							HaveKeyWithValue("state", "up"),
-						))))
-				}
-			})
-		},
+	Context("when desiredState is updated with ovs-bridge with linux bond as port", func() {
+		BeforeEach(func() {
+			updateDesiredStateAndWait(ovsBrUpLinuxBondEth1AndEth2(bridge1, bond1))
+		})
+		AfterEach(func() {
+			updateDesiredStateAndWait(ovsBrAndBondAbsent(bridge1, bond1))
+			for _, node := range nodes {
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+				interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bond1))
+			}
+			resetDesiredStateForNodes()
+		})
+		It("should have the ovs-bridge and bond at currentState", func() {
+			By("Verify all required interfaces are present at currentState")
+			for _, node := range nodes {
+				interfacesForNode(node).Should(SatisfyAll(
+					ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", bridge1),
+						HaveKeyWithValue("type", "ovs-bridge"),
+						HaveKeyWithValue("state", "up"),
+					)),
+					ContainElement(SatisfyAll(
+						HaveKeyWithValue("name", bond1),
+						HaveKeyWithValue("type", "bond"),
+						HaveKeyWithValue("state", "up"),
+					))))
+			}
+		})
+	},
 	)
 	Context("when desiredState is updated with ovs-bridge with link aggregation port and ovs-interface port", func() {
 		const ovsPortName = "ovs1"
