@@ -36,6 +36,8 @@ with ping fail|\
 when connectivity to default gw is lost after state configuration|\
 when name servers are lost after state configuration|\
 when name servers are wrong after state configuration"
+elif oc get ns openshift-sdn &> /dev/null; then
+    SKIPPED_TESTS+="|should discard disarranged parts of the message and keep desired parts of the message"
 fi
 
 # Apply machine configs and wait until machine config pools got updated
