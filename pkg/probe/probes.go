@@ -172,50 +172,41 @@ func runPing(client client.Client, timeout time.Duration) error {
 	}
 	return nil
 }
-func lookupRootNS(nameServer string, timeout time.Duration) error {
-	rootNS := "root-server.net"
-	r := &net.Resolver{
-		PreferGo: true,
-		Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-			d := net.Dialer{
-				Timeout: timeout,
-			}
-			return d.DialContext(ctx, network, net.JoinHostPort(nameServer, "53"))
-		},
-	}
-	// We use a closure to create a scope for defer here
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	_, err := r.LookupNS(ctx, rootNS)
-	if err != nil {
-		return errors.Wrapf(err, "failed looking up NS %s using name sever %s", rootNS, nameServer)
-	}
-	return nil
-}
 
-func runDNS(client client.Client, timeout time.Duration) error {
-	currentStateAsGJson, err := currentStateAsGJson()
-	if err != nil {
-		return errors.Wrap(err, "failed retrieving current state to get name resolving config")
-	}
-
-	// Get the name servers at node since the ones at container are not accurate
+func runDNS(_ client.Client, timeout time.Duration) error {
 	runningServersGJsonPath := "dns-resolver.running.server"
-	runningNameServers := currentStateAsGJson.Get(runningServersGJsonPath).Array()
-	if len(runningNameServers) == 0 {
-		return fmt.Errorf("missing name servers at '%s' on %s", runningServersGJsonPath, currentStateAsGJson.String())
-	}
-
 	errs := []error{}
-	for _, runningNameServer := range runningNameServers {
-		err = lookupRootNS(runningNameServer.String(), defaultDNSProbeTimeout)
+	runningNameServers := []gjson.Result{}
+
+	return wait.PollImmediate(time.Second, timeout, func() (bool, error) {
+		// Get the name servers at node since the ones at container are not accurate
+		currentStateAsGJson, err := currentStateAsGJson()
 		if err != nil {
-			errs = append(errs, err)
-		} else {
-			return nil
+			return false, errors.Wrap(err, "failed retrieving current state to get name resolving config")
 		}
-	}
-	return fmt.Errorf("failed checking DNS connectivity: %v", errs)
+		runningNameServers = currentStateAsGJson.Get(runningServersGJsonPath).Array()
+		if len(runningNameServers) == 0 {
+			return false, fmt.Errorf("missing name servers at '%s' on %s", runningServersGJsonPath, currentStateAsGJson.String())
+		}
+		for _, runningNameServer := range runningNameServers {
+			r := &net.Resolver{
+				PreferGo: true,
+				Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+					d := net.Dialer{
+						Timeout: timeout,
+					}
+					return d.DialContext(ctx, network, net.JoinHostPort(runningNameServer.String(), "53"))
+				},
+			}
+			_, err := r.LookupNS(context.TODO(), "root-server.net")
+			if err != nil {
+				errs = append(errs, err)
+			} else {
+				return true, nil
+			}
+		}
+		return false, fmt.Errorf("failed checking DNS connectivity: %v", errs)
+	})
 }
 
 // Select will return the external connectivity probes that are working (ping and dns) and
