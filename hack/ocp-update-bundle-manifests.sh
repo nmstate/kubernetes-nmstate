@@ -67,7 +67,7 @@ $(yq4) --inplace eval '.spec.customresourcedefinitions.owned |= [{"kind":"NMStat
 rm -f ${BUNDLE_DIR}/manifests/nmstate.io_nodenetwork*.yaml
 
 # save new bundle.Dockerfile with new paths
-sed 's#manifests\/$(CHANNEL)/##g' bundle.Dockerfile | head -n -1 > ${BUNDLE_DIR}/bundle.Dockerfile
+sed 's#manifests\/$(CHANNEL)/##g' bundle.Dockerfile > ${BUNDLE_DIR}/bundle.Dockerfile
 
 # save image-refences file
 cat > ${BUNDLE_DIR}/manifests/image-references <<EOF

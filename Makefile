@@ -59,7 +59,7 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-OPERATOR_SDK_VERSION ?= 1.21.0
+OPERATOR_SDK_VERSION ?= 1.22.2
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
@@ -252,7 +252,7 @@ bundle-build:
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:v1.24.0
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
