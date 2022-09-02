@@ -199,11 +199,11 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 	archAndCRNodeSelector := instance.Spec.NodeSelector
 	if archAndCRNodeSelector == nil {
-		archAndCRNodeSelector = map[string]string{}
+		archAndCRNodeSelector = map[string]string{
+			"kubernetes.io/arch": goruntime.GOARCH,
+			"kubernetes.io/os":   "linux",
+		}
 	}
-	archAndCRNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
-	archAndCRNodeSelector["kubernetes.io/os"] = "linux"
-
 	handlerTolerations := instance.Spec.Tolerations
 	if handlerTolerations == nil {
 		handlerTolerations = []corev1.Toleration{operatorExistsToleration}

@@ -183,13 +183,13 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(ctrl.Result{}))
 		})
-		It("should add default NodeSelector to handler daemonset", func() {
+		It("should not add default NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
 			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			for k, v := range defaultHandlerNodeSelector {
-				Expect(ds.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+				Expect(ds.Spec.Template.Spec.NodeSelector).ToNot(HaveKeyWithValue(k, v))
 			}
 		})
 		It("should add NodeSelector to handler daemonset", func() {
