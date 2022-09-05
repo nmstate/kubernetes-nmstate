@@ -59,7 +59,7 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-OPERATOR_SDK_VERSION ?= 1.21.0
+OPERATOR_SDK_VERSION ?= 1.22.2
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.0
@@ -150,6 +150,9 @@ check-manifests: generate
 check-bundle: bundle
 	./hack/check-gen.sh bundle
 
+check-ocp-bundle: ocp-update-bundle-manifests
+	./hack/check-gen.sh ocp-update-bundle-manifests
+
 generate: gen-k8s gen-crds gen-rbac
 
 manifests:
@@ -231,8 +234,20 @@ vendor:
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
 	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds --output-dir $(BUNDLE_DIR)
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
+
+# Update the OCP bundle manifests
+ocp-update-bundle-manifests: generate manifests
+	./hack/ocp-update-bundle-manifests.sh
+
+# Build and deploy the OCP bundle
+ocp-build-and-deploy-bundle: generate manifests
+	./hack/ocp-build-and-deploy-bundle.sh
+
+# Uninstall the bundle from "make ocp-build-and-deploy-bundle"
+ocp-uninstall-bundle:
+	./hack/ocp-uninstall-bundle.sh
 
 # Build the bundle image.
 bundle-build:
@@ -240,7 +255,7 @@ bundle-build:
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:v1.24.0
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
