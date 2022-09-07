@@ -28,7 +28,9 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	// +kubebuilder:scaffold:imports
 
@@ -87,12 +89,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.NMStateReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("NMState"),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create NMState controller", "controller", "NMState")
+	err = setupOperatorController(mgr)
+	if err != nil {
+		setupLog.Error(err, "unable to setup controller", "controller", "NMState")
 		os.Exit(1)
 	}
 
@@ -103,6 +102,24 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func setupOperatorController(mgr manager.Manager) error {
+	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
+	if err != nil {
+		return fmt.Errorf("failed creating non cached client: %w", err)
+	}
+
+	if err = (&controllers.NMStateReconciler{
+		Client:    mgr.GetClient(),
+		APIClient: apiClient,
+		Log:       ctrl.Log.WithName("controllers").WithName("NMState"),
+		Scheme:    mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("failed creating NMState CR controller: %w", err)
+	}
+
+	return nil
 }
 
 // Start profiler on given port if ENABLE_PROFILER is True

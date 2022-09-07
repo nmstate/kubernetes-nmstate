@@ -118,3 +118,13 @@ rules:
   - configmaps
   verbs:
   - "*"
+{{- if .IsOpenShift }}
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - privileged
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+{{- end }}

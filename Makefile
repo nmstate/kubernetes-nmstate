@@ -32,7 +32,7 @@ WHAT ?= ./pkg/... ./controllers/...
 
 unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
-export KUBEVIRT_PROVIDER ?= k8s-1.23
+export KUBEVIRT_PROVIDER ?= k8s-1.24
 export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
@@ -59,10 +59,10 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-OPERATOR_SDK_VERSION ?= 1.22.2
+OPERATOR_SDK_VERSION ?= 1.21.0
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.4
-CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.6.0
+CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
 OPM = hack/opm.sh
 
 LOCAL_REGISTRY ?= registry:5000
@@ -71,9 +71,6 @@ export MANIFESTS_DIR ?= build/_output/manifests
 BUNDLE_DIR ?= ./bundle
 BUNDLE_DOCKERFILE ?= bundle.Dockerfile
 MANIFEST_BASES_DIR ?= deploy/bases
-
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-CRD_OPTIONS ?= "crd:trivialVersions=true"
 
 # Current Operator version
 VERSION ?= 0.0.1
@@ -137,10 +134,10 @@ gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-crds:
-	cd api && $(CONTROLLER_GEN) $(CRD_OPTIONS) paths="./..." output:crd:artifacts:config=../deploy/crds
+	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
 
 gen-rbac:
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
+	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
 
 check-gen: check-manifests check-bundle
 
@@ -149,9 +146,6 @@ check-manifests: generate
 
 check-bundle: bundle
 	./hack/check-gen.sh bundle
-
-check-ocp-bundle: ocp-update-bundle-manifests
-	./hack/check-gen.sh ocp-update-bundle-manifests
 
 generate: gen-k8s gen-crds gen-rbac
 
@@ -190,14 +184,6 @@ test-e2e-upgrade: manifests
 
 test-e2e: test-e2e-operator test-e2e-handler
 
-test-e2e-ocp: test-e2e-handler-ocp # deprecated. Use test-e2e-handler-ocp instead
-
-test-e2e-handler-ocp:
-	./hack/ocp-e2e-tests-handler.sh
-
-test-e2e-operator-ocp:
-	./hack/ocp-e2e-tests-operator.sh
-
 cluster-up:
 	./cluster/up.sh
 
@@ -234,20 +220,8 @@ vendor:
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
 	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds --output-dir $(BUNDLE_DIR)
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
-
-# Update the OCP bundle manifests
-ocp-update-bundle-manifests: generate manifests
-	./hack/ocp-update-bundle-manifests.sh
-
-# Build and deploy the OCP bundle
-ocp-build-and-deploy-bundle: generate manifests
-	./hack/ocp-build-and-deploy-bundle.sh
-
-# Uninstall the bundle from "make ocp-build-and-deploy-bundle"
-ocp-uninstall-bundle:
-	./hack/ocp-uninstall-bundle.sh
 
 # Build the bundle image.
 bundle-build:
@@ -255,7 +229,7 @@ bundle-build:
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:v1.24.0
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
@@ -291,5 +265,4 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build \
-	manifests
+	bundle-build
