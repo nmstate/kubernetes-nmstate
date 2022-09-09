@@ -37,6 +37,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
+	"k8s.io/kubectl/pkg/drain"
 )
 
 var _ = Describe("NMState operator", func() {
@@ -49,6 +50,11 @@ var _ = Describe("NMState operator", func() {
 				kubevirtciReset := increaseKubevirtciControlPlane()
 				defer kubevirtciReset()
 			}
+			if isKubevirtciCluster() && !tc.withMultiNode {
+				uncordonNodeFunc := drainNode("node02")
+				defer uncordonNodeFunc()
+			}
+
 			if tc.withMultiNode && len(controlPlaneNodes()) < 2 {
 				Skip("cluster control-plane size should be > 1")
 			}
@@ -63,7 +69,7 @@ var _ = Describe("NMState operator", func() {
 			By("Check webhook is distributed across control-plane nodes")
 			podsShouldBeDistributedAtNodes(controlPlaneNodes(), client.MatchingLabels{"component": "kubernetes-nmstate-webhook"})
 		},
-		Entry("of a single node shoud deploy webhook replicas at the same node", controlPlaneTest{withMultiNode: false}),
+		Entry("of a single node should deploy webhook replicas at the same node", controlPlaneTest{withMultiNode: false}),
 		Entry("of two nodes should deploy webhook replicas at different nodes", controlPlaneTest{withMultiNode: true}),
 	)
 	Context("when installed for the first time", func() {
@@ -183,6 +189,47 @@ var _ = Describe("NMState operator", func() {
 		})
 	})
 })
+
+func drainNode(nodeName string) func() {
+	node := &corev1.Node{}
+	drainer := drain.Helper{
+		Ctx:                 context.TODO(),
+		Client:              testenv.KubeClient,
+		IgnoreAllDaemonSets: true,
+		Out:                 GinkgoWriter,
+		ErrOut:              GinkgoWriter,
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		err := testenv.Client.Get(context.TODO(), client.ObjectKey{Name: nodeName}, node)
+		if err != nil {
+			return err
+		}
+
+		By(fmt.Sprintf("Cordon kubevirtci cluster node %s", node.Name))
+		err = drain.RunCordonOrUncordon(&drainer, node, true)
+		if err != nil {
+			return err
+		}
+
+		By(fmt.Sprintf("Drain kubevirtci cluster node %s", node.Name)) //not really needed but to be sure to remove running pods from node...
+		return drain.RunNodeDrain(&drainer, node.Name)
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	return func() {
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := testenv.Client.Get(context.TODO(), client.ObjectKey{Name: nodeName}, node)
+			if err != nil {
+				return err
+			}
+
+			By(fmt.Sprintf("Uncordon kubevirtci cluster node %s", node.Name))
+			return drain.RunCordonOrUncordon(&drainer, node, false)
+		})
+		Expect(err).ToNot(HaveOccurred())
+	}
+}
 
 func increaseKubevirtciControlPlane() func() {
 	secondNodeName := "node02"

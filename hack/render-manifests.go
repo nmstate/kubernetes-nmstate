@@ -88,11 +88,6 @@ func main() {
 		exitWithError(err, "failed parsing sub dir example manifests at %s", *inputDir)
 	}
 
-	tmpl, err = tmpl.ParseGlob(path.Join(*inputDir, "openshift/*.yaml"))
-	if err != nil {
-		exitWithError(err, "failed parsing sub dir openshift manifests at %s", *inputDir)
-	}
-
 	for _, t := range tmpl.Templates() {
 		outputFile := path.Join(*outputDir, t.Name())
 		f, err := os.Create(outputFile)

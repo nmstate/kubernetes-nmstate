@@ -186,6 +186,19 @@ spec:
                   app: kubernetes-nmstate-operator
                   name: kubernetes-nmstate-operator
               spec:
+                affinity:
+                  nodeAffinity:
+                    preferredDuringSchedulingIgnoredDuringExecution:
+                      - preference:
+                          matchExpressions:
+                            - key: node-role.kubernetes.io/control-plane
+                              operator: Exists
+                        weight: 10
+                      - preference:
+                          matchExpressions:
+                            - key: node-role.kubernetes.io/master
+                              operator: Exists
+                        weight: 1
                 containers:
                   - args:
                       - --zap-time-encoding=iso8601
@@ -221,8 +234,6 @@ spec:
                       capabilities:
                         drop:
                           - ALL
-                nodeSelector:
-                  node-role.kubernetes.io/master: ""
                 priorityClassName: system-cluster-critical
                 securityContext:
                   runAsNonRoot: true
@@ -230,6 +241,9 @@ spec:
                     type: RuntimeDefault
                 serviceAccountName: nmstate-operator
                 tolerations:
+                  - effect: NoSchedule
+                    key: node-role.kubernetes.io/control-plane
+                    operator: Exists
                   - effect: NoSchedule
                     key: node-role.kubernetes.io/master
                     operator: Exists
@@ -251,16 +265,6 @@ spec:
               verbs:
                 - '*'
           serviceAccountName: nmstate-operator
-        - rules:
-            - apiGroups:
-                - security.openshift.io
-              resources:
-                - securitycontextconstraints
-              verbs:
-                - use
-              resourceNames:
-                - privileged
-          serviceAccountName: nmstate-handler
     strategy: deployment
   installModes:
     - supported: true

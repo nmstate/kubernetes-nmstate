@@ -195,6 +195,19 @@ spec:
                 app: kubernetes-nmstate-operator
                 name: kubernetes-nmstate-operator
             spec:
+              affinity:
+                nodeAffinity:
+                  preferredDuringSchedulingIgnoredDuringExecution:
+                  - preference:
+                      matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: Exists
+                    weight: 10
+                  - preference:
+                      matchExpressions:
+                      - key: node-role.kubernetes.io/master
+                        operator: Exists
+                    weight: 1
               containers:
               - args:
                 - --zap-time-encoding=iso8601
@@ -230,8 +243,6 @@ spec:
                   capabilities:
                     drop:
                     - ALL
-              nodeSelector:
-                node-role.kubernetes.io/master: ""
               priorityClassName: system-cluster-critical
               securityContext:
                 runAsNonRoot: true
@@ -239,6 +250,9 @@ spec:
                   type: RuntimeDefault
               serviceAccountName: nmstate-operator
               tolerations:
+              - effect: NoSchedule
+                key: node-role.kubernetes.io/control-plane
+                operator: Exists
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists
@@ -262,13 +276,13 @@ spec:
         serviceAccountName: nmstate-operator
     strategy: deployment
   installModes:
-  - supported: true
+  - supported: false
     type: OwnNamespace
-  - supported: true
+  - supported: false
     type: SingleNamespace
   - supported: false
     type: MultiNamespace
-  - supported: false
+  - supported: true
     type: AllNamespaces
   keywords:
   - nmstate
