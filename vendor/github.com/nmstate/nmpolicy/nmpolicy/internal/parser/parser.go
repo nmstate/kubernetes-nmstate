@@ -66,6 +66,10 @@ func (p *parser) parse() (ast.Node, error) {
 			if err := p.parseString(); err != nil {
 				return ast.Node{}, err
 			}
+		} else if p.currentToken().Type == lexer.BOOLEAN {
+			if err := p.parseBoolean(); err != nil {
+				return ast.Node{}, err
+			}
 		} else if p.currentToken().Type == lexer.IDENTITY {
 			if err := p.parsePath(); err != nil {
 				return ast.Node{}, err
@@ -158,6 +162,22 @@ func (p *parser) parseNumber() error {
 	return nil
 }
 
+func (p *parser) parseBoolean() error {
+	if p.currentToken().IsTrue() || p.currentToken().IsFalse() {
+		boolean, err := strconv.ParseBool(p.currentToken().Literal)
+		if err != nil {
+			return err
+		}
+		p.lastNode = &ast.Node{
+			Meta:     ast.Meta{Position: p.currentToken().Position},
+			Terminal: ast.Terminal{Boolean: &boolean},
+		}
+		return nil
+	} else {
+		return fmt.Errorf("only true/false is accepted as boolean literal")
+	}
+}
+
 func (p *parser) parsePath() error {
 	if err := p.parseIdentity(); err != nil {
 		return err
@@ -234,6 +254,11 @@ func (p *parser) fillInTernaryOperator(operator *ast.TernaryOperator) error {
 	p.nextToken()
 	if p.currentToken().Type == lexer.STRING {
 		if err := p.parseString(); err != nil {
+			return err
+		}
+		operator[2] = *p.lastNode
+	} else if p.currentToken().Type == lexer.BOOLEAN {
+		if err := p.parseBoolean(); err != nil {
 			return err
 		}
 		operator[2] = *p.lastNode
