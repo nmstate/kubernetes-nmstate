@@ -580,6 +580,11 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	return ret
 }
 
+func lldpEnabled(node, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").lldp.enabled", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
+
 func ipv4Address(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
