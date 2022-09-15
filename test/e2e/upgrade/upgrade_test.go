@@ -20,6 +20,8 @@ package upgrade
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -43,14 +45,36 @@ var _ = Describe("Upgrade", func() {
 `, iface))
 	}
 
+	previousTagExamplesPath := "test/e2e/upgrade/examples"
+	currentExamplesPath := "docs/examples"
+
+	fileExists := func(path string) (bool, error) {
+		_, err := os.Stat(path)
+		exists := false
+
+		if err == nil {
+			exists = true
+		} else if os.IsNotExist(err) {
+			err = nil
+		}
+		return exists, err
+	}
+
 	kubectlAndCheck := func(command ...string) {
 		out, err := cmd.Kubectl(command...)
 		Expect(err).ShouldNot(HaveOccurred(), out)
 	}
 
 	createUpgradeCasePolicy := func(example doc.ExampleSpec) {
+		examplePath := path.Join(previousTagExamplesPath, example.FileName)
+		exists, err := fileExists(examplePath)
+		Expect(err).NotTo(HaveOccurred())
+		if !exists {
+			examplePath = path.Join(currentExamplesPath, example.FileName)
+		}
+
 		By(fmt.Sprintf("Creating policy %s", example.PolicyName))
-		kubectlAndCheck("apply", "-f", fmt.Sprintf("test/e2e/upgrade/examples/%s", example.FileName))
+		kubectlAndCheck("apply", "-f", examplePath)
 		By("Waiting for policy to be available")
 		kubectlAndCheck("wait", "nncp", example.PolicyName, "--for", "condition=Available", "--timeout", "3m")
 	}
