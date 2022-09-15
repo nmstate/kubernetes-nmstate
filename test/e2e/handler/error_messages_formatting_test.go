@@ -73,14 +73,15 @@ func createPolicyAndWaitForEnactmentCondition(policy string, desiredState func()
 	waitForNodesReady()
 
 	By("Waiting for enactment to be failing")
-	policyconditions.EnactmentConditionsStatusEventually(
+	policyconditions.EnactmentConditionsStatusForPolicyEventually(
 		nodes[0],
+		policy,
 	).Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetFailedToConfigure))
 }
 
 var _ = Describe("NodeNetworkState", func() {
 	var (
-		defaultPolicy = "test-policy"
+		defaultPolicy = "errors-policy"
 
 		messagesToRemove = []string{
 			"DEBUG    Async action: Create checkpoint started",
@@ -174,7 +175,7 @@ var _ = Describe("NodeNetworkState", func() {
 	Context("with ping fail", func() {
 		var (
 			messagesToKeep = []string{
-				"failed to retrieve default gw at runProbes",
+				"timed out waiting for the condition",
 			}
 		)
 
@@ -185,7 +186,7 @@ var _ = Describe("NodeNetworkState", func() {
 		AfterEach(func() {
 			resetDesiredStateForNodes()
 			By("Remove the policy")
-			deletePolicy("test-policy")
+			deletePolicy(defaultPolicy)
 		})
 
 		It("should discard disarranged parts of the message and keep desired parts of the message", func() {
