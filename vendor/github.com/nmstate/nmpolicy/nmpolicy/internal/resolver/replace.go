@@ -61,7 +61,7 @@ func (r replaceOpVisitor) visitMap(p path, mapToVisit map[string]interface{}) (i
 	}
 	interfaceToVisit, ok := mapToVisit[*p.currentStep.Identity]
 	if !ok {
-		return nil, nil
+		interfaceToVisit = map[string]interface{}{}
 	}
 
 	visitResult, err := visitState(p.nextStep(), interfaceToVisit, &r)
