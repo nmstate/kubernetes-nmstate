@@ -171,7 +171,6 @@ func runPing(_ client.Client) (bool, error) {
 
 func ping(target string) (string, error) {
 	cmd := exec.Command("ping", "-c", "1", target)
-	fmt.Println("\nPinging: " + target + "\n")
 	var outputBuffer bytes.Buffer
 	cmd.Stdout = &outputBuffer
 	cmd.Stderr = &outputBuffer
