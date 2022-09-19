@@ -29,14 +29,22 @@ type ExampleSpec struct {
 	CleanupState *nmstate.State
 }
 
+//nolint: funlen
 func ExampleSpecs() []ExampleSpec {
 	cleanDNSDesiredState := nmstate.NewState(`dns-resolver:
-    config:
-      search: []
-      server: []
+  config:
+    search: []
+    server: []
 interfaces:
 - name: eth1
   state: absent
+`)
+
+	cleanLLDPDesiredState := nmstate.NewState(`interfaces:
+- name: eth0
+  type: ethernet
+  lldp:
+    enabled: false
 `)
 	return []ExampleSpec{
 		{
@@ -117,6 +125,13 @@ interfaces:
 			PolicyName:   "dns",
 			IfaceNames:   []string{},
 			CleanupState: &cleanDNSDesiredState,
+		},
+		{
+			Name:         "LLDP",
+			FileName:     "lldp.yaml",
+			PolicyName:   "enable-lldp-ethernets-up",
+			IfaceNames:   []string{},
+			CleanupState: &cleanLLDPDesiredState,
 		},
 		{
 			Name:       "Worker selector",
