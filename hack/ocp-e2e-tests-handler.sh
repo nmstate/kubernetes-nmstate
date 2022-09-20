@@ -36,7 +36,8 @@ if oc get ns openshift-ovn-kubernetes &> /dev/null; then
 with ping fail|\
 when connectivity to default gw is lost after state configuration|\
 when name servers are lost after state configuration|\
-when name servers are wrong after state configuration"
+when name servers are wrong after state configuration|\
+LLDP configuration with nmpolicy"
 elif oc get ns openshift-sdn &> /dev/null; then
     SKIPPED_TESTS+="|should discard disarranged parts of the message and keep desired parts of the message"
 fi
