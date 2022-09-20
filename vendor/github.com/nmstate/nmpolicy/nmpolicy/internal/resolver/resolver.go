@@ -159,7 +159,7 @@ func (r *resolver) resolveTernaryOperator(operator *ast.TernaryOperator,
 		return nil, err
 	}
 	r.currentNode = &(*operator)[2]
-	value, err := r.resolveStringOrCaptureEntryPath()
+	value, err := r.resolveTerminalOrCapturePath()
 	if err != nil {
 		return nil, err
 	}
@@ -193,11 +193,13 @@ func (r *resolver) resolveInputSource() (types.NMState, error) {
 	return nil, fmt.Errorf("invalid input source (%s), only current state or capture reference is supported", *r.currentNode)
 }
 
-func (r *resolver) resolveStringOrCaptureEntryPath() (interface{}, error) {
+func (r *resolver) resolveTerminalOrCapturePath() (interface{}, error) {
 	if r.currentNode.Str != nil {
 		return *r.currentNode.Str, nil
 	} else if r.currentNode.Path != nil {
 		return r.resolveCaptureEntryPath()
+	} else if r.currentNode.Boolean != nil {
+		return *r.currentNode.Boolean, nil
 	} else {
 		return nil, fmt.Errorf("not supported value. Only string or capture entry path are supported")
 	}

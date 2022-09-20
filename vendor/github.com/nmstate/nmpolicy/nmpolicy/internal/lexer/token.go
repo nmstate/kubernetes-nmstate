@@ -23,6 +23,7 @@ const (
 	IDENTITY
 	NUMBER
 	STRING
+	BOOLEAN
 
 	DOT // .
 
@@ -32,9 +33,6 @@ const (
 	EQFILTER // ==
 	MERGE    // +
 	operatorsEnd
-
-	TRUE  // true
-	FALSE // false
 )
 
 var tokens = []string{
@@ -42,6 +40,7 @@ var tokens = []string{
 	IDENTITY: "IDENTITY",
 	NUMBER:   "NUMBER",
 	STRING:   "STRING",
+	BOOLEAN:  "BOOLEAN",
 
 	DOT:  "DOT",
 	PIPE: "PIPE",
@@ -49,9 +48,6 @@ var tokens = []string{
 	REPLACE:  "REPLACE",
 	EQFILTER: "EQFILTER",
 	MERGE:    "MERGE",
-
-	TRUE:  "TRUE",
-	FALSE: "FALSE",
 }
 
 func (t TokenType) String() string {
@@ -66,4 +62,12 @@ type Token struct {
 	Position int
 	Type     TokenType
 	Literal  string
+}
+
+func (t *Token) IsTrue() bool {
+	return t.Literal == "true"
+}
+
+func (t *Token) IsFalse() bool {
+	return t.Literal == "false"
 }

@@ -137,6 +137,7 @@ func InstallOperator(operator TestData) {
 		false,
 		fmt.Sprintf("OPERATOR_NAMESPACE=%s", operator.Ns),
 		fmt.Sprintf("HANDLER_NAMESPACE=%s", operator.Ns),
+		"IMAGE_REGISTRY=registry:5000",
 		"manifests",
 	)
 	Expect(err).ToNot(HaveOccurred())
@@ -145,7 +146,6 @@ func InstallOperator(operator TestData) {
 		_, err = cmd.Kubectl("apply", "-f", operator.ManifestsDir+manifest)
 		Expect(err).ToNot(HaveOccurred())
 	}
-
 	deployment.GetEventually(types.NamespacedName{Namespace: operator.Ns, Name: "nmstate-operator"}).Should(deployment.BeReady())
 }
 

@@ -95,7 +95,7 @@ func (l *lexer) lexCurrentRune() (*Token, error) {
 	} else if l.isString() {
 		return l.lexString()
 	} else if l.isLetter() {
-		return l.lexIdentity()
+		return l.lexIdentityOrBoolean()
 	} else if l.isDot() {
 		return &Token{l.scn.Position(), DOT, string(l.scn.Rune())}, nil
 	} else if l.isColon() {
@@ -153,16 +153,22 @@ func (l *lexer) lexString() (*Token, error) {
 	}
 }
 
-func (l *lexer) lexIdentity() (*Token, error) {
+func (l *lexer) lexIdentityOrBoolean() (*Token, error) {
 	token := &Token{l.scn.Position(), IDENTITY, string(l.scn.Rune())}
-	for {
+
+	for i := 1; ; i++ {
 		if err := l.scn.Next(); err != nil {
 			return nil, err
 		}
 
-		if l.isEOF() || l.isSpace() {
-			return token, nil
-		} else if l.isDot() || l.isEqual() || l.isColon() || l.isPlus() || l.isPipe() {
+		if l.isDelimiter() {
+			if token.IsTrue() || token.IsFalse() {
+				token.Type = BOOLEAN
+			}
+			if l.isEOF() || l.isSpace() {
+				return token, nil
+			}
+
 			if err := l.scn.Prev(); err != nil {
 				return nil, fmt.Errorf("failed lexing identity: %w", err)
 			}
