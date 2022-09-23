@@ -1,11 +1,11 @@
 apiVersion: nmstate.io/v1
 kind: NodeNetworkConfigurationPolicy
 metadata:
-  name: lldp-enabled-on-eths
+  name: enable-lldp-ethernets-up
 spec:
   capture:
     ethernets: interfaces.type=="ethernet"
     ethernets-up: capture.ethernets | interfaces.state=="up"
-    ethernets-lldp: capture.ethernets-up | interfaces.lldp.enabled:=false
+    ethernets-lldp: capture.ethernets-up | interfaces.lldp.enabled:=true
   desiredState:
     interfaces: "{{ capture.ethernets-lldp.interfaces }}"
