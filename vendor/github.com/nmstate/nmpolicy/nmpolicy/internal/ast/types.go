@@ -28,6 +28,7 @@ type Terminal struct {
 	Str      *string `json:"string,omitempty"`
 	Identity *string `json:"identity,omitempty"`
 	Number   *int    `json:"number,omitempty"`
+	Boolean  *bool   `json:"boolean,omitempty"`
 }
 
 type Node struct {
@@ -60,6 +61,9 @@ func (t Terminal) String() string {
 	}
 	if t.Number != nil {
 		return fmt.Sprintf("Number=%d", *t.Number)
+	}
+	if t.Boolean != nil {
+		return fmt.Sprintf("Boolean=%t", *t.Boolean)
 	}
 	return ""
 }
