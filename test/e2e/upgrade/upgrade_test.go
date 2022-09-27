@@ -108,7 +108,7 @@ var _ = Describe("Upgrade", func() {
 			Context(example.Name, func() {
 				It("should succeed applying the policy", func() {
 					//TODO: remove when no longer required
-					for _, policyToSkip := range []string{"vlan", "linux-bridge-vlan", "dns"} {
+					for _, policyToSkip := range []string{"vlan", "linux-bridge-vlan", "dns", "enable-lldp-ethernets-up"} {
 						if policyToSkip == example.PolicyName {
 							Skip("Skipping due to malformed example manifest")
 						}
