@@ -11,7 +11,7 @@ RUN dnf install -y golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).*
 
 COPY . .
 
-RUN GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/operator
+RUN --mount=type=cache,target=/root/.cache/go-build GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/operator
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
