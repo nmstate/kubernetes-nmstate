@@ -10,6 +10,7 @@ RUN \
     dnf -y install \
         nmstate \
         nmstate-plugin-ovsdb \
+        ovs-python3 \
         iputils \
         iproute && \
     dnf clean all
