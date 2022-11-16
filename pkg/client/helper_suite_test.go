@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package helper
+package client
 
 import (
 	"testing"
@@ -26,5 +26,5 @@ import (
 
 func TestUnit(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Helpers Test Suite")
+	RunSpecs(t, "Client Test Suite")
 }

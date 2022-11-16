@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package helper
+package client
 
 import (
 	"bytes"
@@ -34,6 +34,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/bridge"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -156,7 +157,7 @@ func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, er
 		return "Ignoring empty desired state", nil
 	}
 
-	out, err := EnableVlanFiltering(desiredState)
+	out, err := bridge.EnableVlanFiltering(desiredState)
 	if err != nil {
 		return out, fmt.Errorf("failed to enable vlan filtering via nmcli: %s", err.Error())
 	}
