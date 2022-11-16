@@ -39,7 +39,7 @@ func Run(command string, quiet bool, arguments ...string) (string, error) {
 		fmt.Fprintf(GinkgoWriter, "stdout: %.500s...,\nstderr: %s\n", stdout.String(), stderr.String())
 	}
 	if err != nil {
-		return "", fmt.Errorf("%s: %s: %v", stdout.String(), stderr.String(), err)
+		return "", fmt.Errorf("%s %s: %s %v", command+strings.Join(arguments, " "), stdout.String(), stderr.String(), err)
 	}
-	return stdout.String(), err
+	return stdout.String(), nil
 }
