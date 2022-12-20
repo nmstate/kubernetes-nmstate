@@ -53,6 +53,28 @@ metadata:
                   "name": "br1",
                   "state": "up",
                   "type": "linux-bridge"
+                },
+                {
+                  "bridge": {
+                    "options": {
+                      "stp": {
+                        "enabled": false
+                      }
+                    },
+                    "port": [
+                      {
+                        "name": "eth3"
+                      }
+                    ]
+                  },
+                  "ipv4": {
+                    "auto-dns": false,
+                    "dhcp": true,
+                    "enabled": true
+                  },
+                  "name": "br3",
+                  "state": "up",
+                  "type": "linux-bridge"
                 }
               ]
             }
@@ -67,7 +89,7 @@ metadata:
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
     operatorframework.io/suggested-namespace: nmstate
-    operators.operatorframework.io/builder: operator-sdk-v1.21.0
+    operators.operatorframework.io/builder: operator-sdk-v1.22.2
     operators.operatorframework.io/internal-objects: '["nodenetworkconfigurationenactments.nmstate.io",
       "nodenetworkstates.nmstate.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
