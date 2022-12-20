@@ -23,3 +23,16 @@ spec:
             enabled: false
         port:
           - name: eth2
+    - name: br3
+      type: linux-bridge
+      state: up
+      ipv4:
+        dhcp: true
+        enabled: true
+        auto-dns: false
+      bridge:
+        options:
+          stp:
+            enabled: false
+        port:
+          - name: eth3
