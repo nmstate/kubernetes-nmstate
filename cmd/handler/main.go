@@ -307,7 +307,8 @@ func setProfiler() {
 		go func() {
 			profilerAddress := fmt.Sprintf("0.0.0.0:%s", cfg.ProfilerPort)
 			setupLog.Info(fmt.Sprintf("Starting Profiler Server! \t Go to http://%s/debug/pprof/\n", profilerAddress))
-			err := http.ListenAndServe(profilerAddress, nil)
+			server := &http.Server{ReadHeaderTimeout: 10 * time.Second, Addr: profilerAddress}
+			err := server.ListenAndServe()
 			if err != nil {
 				setupLog.Info("Failed to start the server! Error: %v", err)
 			}
