@@ -9,7 +9,8 @@ metadata:
           "kind": "NMState",
           "metadata": {
             "name": "nmstate"
-          }
+          },
+          "spec": {}
         }
       ]
     capabilities: Basic Install
