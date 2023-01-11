@@ -166,6 +166,10 @@ func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, er
 	// working fine after apply
 	probes := probe.Select(cli)
 
+	// Rollback before Apply to remove pending checkpoints (for example handler pod restarted
+	// before Commit)
+	nmstatectl.Rollback()
+
 	setOutput, err := nmstatectl.Set(desiredState, DesiredStateConfigurationTimeout)
 	if err != nil {
 		return setOutput, err
