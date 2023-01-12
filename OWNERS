@@ -4,6 +4,7 @@ approvers:
   - rhrazdil
   - cybertron
   - dougsland
+  - mkowalski
 reviewers:
   - phoracek
   - qinqon
@@ -11,6 +12,7 @@ reviewers:
   - rhrazdil
   - cybertron
   - dougsland
+  - mkowalski
 
 # Bugzilla info;
 component: Networking
