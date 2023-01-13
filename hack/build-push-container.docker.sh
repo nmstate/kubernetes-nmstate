@@ -7,8 +7,6 @@ if [ "$SKIP_IMAGE_BUILD" == "true" ]; then
     exit 0
 fi
 
-hack/init-buildx.sh
-
 ARCHS=${ARCHS:-$(go env GOARCH)}
 PLATFORM=""
 
