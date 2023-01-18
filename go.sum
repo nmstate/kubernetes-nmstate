@@ -87,8 +87,8 @@ github.com/DATA-DOG/go-sqlmock v1.4.1/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd h1:sjQovDkwrZp8u+gxLtPgKGjk5hCxuy2hrRejBTA9xFU=
 github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd/go.mod h1:64YHyfSL2R96J44Nlwm39UHepQbyR5q10x7iYa1ks2E=
-github.com/Masterminds/goutils v1.1.0 h1:zukEsf/1JZwCMgHiK3GZftabmxiCw4apj3a28RPBiVg=
-github.com/Masterminds/goutils v1.1.0/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
+github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
+github.com/Masterminds/goutils v1.1.1/go.mod h1:8cTjp+g8YejhMuvIA5y2vz3BpJxksy863GQaJW2MFNU=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Masterminds/semver/v3 v3.0.3/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
@@ -1887,7 +1887,6 @@ k8s.io/component-base v0.17.4/go.mod h1:5BRqHMbbQPm2kKu35v3G+CpVq4K0RJKC7TRioF0I
 k8s.io/component-base v0.18.3/go.mod h1:bp5GzGR0aGkYEfTj+eTY0AN/vXTgkJdQXjNTTVUaa3k=
 k8s.io/component-base v0.20.1/go.mod h1:guxkoJnNoh8LNrbtiQOlyp2Y2XFCZQmrcg2n/DeYNLk=
 k8s.io/component-base v0.20.2/go.mod h1:pzFtCiwe/ASD0iV7ySMu8SYVJjCapNM9bjvk7ptpKh0=
-k8s.io/component-base v0.24.0/go.mod h1:Dgazgon0i7KYUsS8krG8muGiMVtUZxG037l1MKyXgrA=
 k8s.io/component-base v0.24.0/go.mod h1:Dgazgon0i7KYUsS8krG8muGiMVtUZxG037l1MKyXgrA=
 k8s.io/component-base v0.24.1 h1:APv6W/YmfOWZfo+XJ1mZwep/f7g7Tpwvdbo9CQLDuts=
 k8s.io/component-base v0.24.1/go.mod h1:DW5vQGYVCog8WYpNob3PMmmsY8A3L9QZNg4j/dV3s38=

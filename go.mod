@@ -32,7 +32,7 @@ require (
 	cloud.google.com/go v0.99.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd // indirect
-	github.com/Masterminds/goutils v1.1.0 // indirect
+	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.22.0+incompatible // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
@@ -131,5 +131,7 @@ replace (
 	golang.org/x/text => golang.org/x/text v0.3.7 // Required to fix CVE-2021-38561
 	k8s.io/client-go => k8s.io/client-go v0.24.1
 )
+
+replace github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1
 
 exclude github.com/spf13/viper v1.3.2 // Required to fix CVE-2018-1098
