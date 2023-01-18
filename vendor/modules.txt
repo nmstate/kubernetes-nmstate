@@ -8,7 +8,7 @@ github.com/Azure/go-ansiterm/winterm
 # github.com/MakeNowJust/heredoc v0.0.0-20170808103936-bb23615498cd
 ## explicit
 github.com/MakeNowJust/heredoc
-# github.com/Masterminds/goutils v1.1.0
+# github.com/Masterminds/goutils v1.1.1 => github.com/Masterminds/goutils v1.1.1
 ## explicit
 github.com/Masterminds/goutils
 # github.com/Masterminds/semver v1.5.0
@@ -901,3 +901,4 @@ sigs.k8s.io/yaml
 # go.opentelemetry.io/otel/sdk => go.opentelemetry.io/otel/sdk v0.20.0
 # golang.org/x/text => golang.org/x/text v0.3.7
 # k8s.io/client-go => k8s.io/client-go v0.24.1
+# github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1
