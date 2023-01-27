@@ -48,7 +48,7 @@ echo "Cherry-picking commits since ${last_merge_commit}..."
 for commit in $(git --no-pager log --oneline --reverse --no-merges ${last_merge_commit}..${downstream_remote}/${downstream_target_branch} | awk '{print $1}'); do
     echo "cherry-picking "$(git --no-pager log --format=%s -n 1 ${commit} ${downstream_remote}/${downstream_target_branch})
 
-    if ! git cherry-pick -x $commit; then
+    if ! git cherry-pick -s -x $commit; then
         echo "Error on cherry-picking happened. Maybe a merge commit you have to resolve and fix."
         read -p "Press any key to continue when issue is fixed..."
     fi
