@@ -8,24 +8,54 @@
 
 set -e
 
+upstream_tree="https://github.com/nmstate/kubernetes-nmstate"
+downstream_tree="https://github.com/openshift/kubernetes-nmstate"
+
+# make sure we have downstream and upstream trees before the script starts
+if ! git remote -v | grep -q "${upstream_tree}"; then
+    git remote add upstream "${upstream_tree}"
+fi
+
+if ! git remote -v | grep -q "${downstream_tree}"; then
+    git remote add downstream "${downstream_tree}"
+fi
+
+upstream_remote=$(git remote -v | grep "${upstream_tree} (fetch)" | awk '{print $1}')
+downstream_remote=$(git remote -v | grep "${downstream_tree} (fetch)" | awk '{print $1}')
 git remote update
 
-upstream_remote=$(git remote -v | grep "https://github.com/nmstate/kubernetes-nmstate (fetch)" | awk '{print $1}')
-downstream_remote=$(git remote -v | grep "https://github.com/openshift/kubernetes-nmstate (fetch)" | awk '{print $1}')
+read -p "Source branch from upstream [default: main]: " upstream_source_branch
+if [ -z "${upstream_source_branch}" ]
+then
+    upstream_source_branch="main"
+fi
+echo "Selected branch from upstream: ${upstream_source_branch}"
 
-read -p "Source branch from upstream (usually main): " upstream_source_branch
 if ! git show-ref --quiet ${upstream_remote}/${upstream_source_branch}; then
     echo "Branch ${upstream_source_branch} does not exist in ${upstream_remote}"
     exit 1
 fi
 
-read -p "Target branch in downstream (usually master): " downstream_target_branch
+read -p "Target branch in downstream [default: master]: " downstream_target_branch
+if [ -z "${downstream_target_branch}" ]
+then
+    downstream_target_branch="master"
+fi
+echo "Selected branch from downstream: ${downstream_target_branch}"
+
 if ! git show-ref --quiet ${downstream_remote}/${downstream_target_branch}; then
     echo "Branch ${downstream_target_branch} does not exist in ${downstream_remote}"
     exit 1
 fi
 
-read -p "CommitId of latest merge commit in ${downstream_remote}/${downstream_target_branch}: " last_merge_commit
+commitID=$(git log --oneline downstream/master | grep "merge nmstate/${upstream_source_branch}" | cut -d ' ' -f 1 | head -n 1)
+read -p "CommitId of latest merge commit in ${downstream_remote}/${downstream_target_branch} [suggested: ${commitID}]: " last_merge_commit
+if [ -z "${last_merge_commit}" ]
+then
+    last_merge_commit="${commitID}"
+fi
+echo "Commit ID selected: ${commitID}"
+
 if ! git log ${downstream_remote}/${downstream_target_branch} | grep -q ${last_merge_commit}; then
     echo "commit ${last_merge_commit} not found in ${downstream_remote}/${downstream_target_branch}. Aborting..."
     exit 1   
