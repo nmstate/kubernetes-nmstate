@@ -40,9 +40,12 @@ import (
 	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 
+	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
+
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
 
@@ -65,6 +68,8 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments;daemonsets;replicasets;statefulsets,verbs="*"
 // +kubebuilder:rbac:groups="",resources=serviceaccounts;configmaps;namespaces,verbs="*"
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;get
+// +kubebuilder:rbac:groups="console.openshift.io",resources=consoleplugins,verbs="*"
+// +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -106,27 +111,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	err = r.applyCRDs(instance)
-	if err != nil {
-		errors.Wrap(err, "failed applying CRDs")
-		return ctrl.Result{}, err
-	}
-
-	err = r.applyNamespace(instance)
-	if err != nil {
-		errors.Wrap(err, "failed applying Namespace")
-		return ctrl.Result{}, err
-	}
-
-	err = r.applyRBAC(instance)
-	if err != nil {
-		errors.Wrap(err, "failed applying RBAC")
-		return ctrl.Result{}, err
-	}
-
-	err = r.applyHandler(instance)
-	if err != nil {
-		errors.Wrap(err, "failed applying Handler")
+	if _, err = r.applyManifests(instance, ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -138,6 +123,41 @@ func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1.NMState{}).
 		Complete(r)
+}
+
+func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx context.Context) (ctrl.Result, error) {
+	if err := r.applyCRDs(instance); err != nil {
+		errors.Wrap(err, "failed applying CRDs")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.applyNamespace(instance); err != nil {
+		errors.Wrap(err, "failed applying Namespace")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.applyRBAC(instance); err != nil {
+		errors.Wrap(err, "failed applying RBAC")
+		return ctrl.Result{}, err
+	}
+
+	if err := r.applyHandler(instance); err != nil {
+		errors.Wrap(err, "failed applying Handler")
+		return ctrl.Result{}, err
+	}
+
+	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
+	if err == nil && isOpenShift {
+		if err = r.applyOpenshiftUIPlugin(instance); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed applying UI Plugin")
+		}
+		if err = r.patchOpenshiftConsolePlugin(ctx); err != nil {
+			return ctrl.Result{}, errors.Wrap(err, "failed enabling the plugin in cluster's console")
+		}
+	} else if err != nil {
+		r.Log.Info("Warning: could not determine if running on OpenShift")
+	}
+	return ctrl.Result{}, nil
 }
 
 func (r *NMStateReconciler) applyCRDs(instance *nmstatev1.NMState) error {
@@ -289,12 +309,44 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	return r.renderAndApply(instance, data, "handler", true)
 }
 
+func (r *NMStateReconciler) applyOpenshiftUIPlugin(instance *nmstatev1.NMState) error {
+	data := render.MakeRenderData()
+	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "openshift-nmstate")
+	data.Data["PluginName"] = environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
+	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")
+	return r.renderAndApply(instance, data, filepath.Join("openshift", "ui-plugin"), true)
+}
+
+func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) error {
+	// Enable console plugin for nmstate-console if not already enabled
+	pluginName := environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
+	consoleKey := client.ObjectKey{Name: "cluster"}
+	consoleObj := &openshiftoperatorv1.Console{}
+	if err := r.Client.Get(ctx, consoleKey, consoleObj); err != nil {
+		r.Log.Error(err, "Could not get consoles.operator.openshift.io resource")
+		return err
+	}
+
+	if !stringInSlice(pluginName, consoleObj.Spec.Plugins) {
+		r.Log.Info("Enabling kubevirt plugin in Console")
+		consoleObj.Spec.Plugins = append(consoleObj.Spec.Plugins, pluginName)
+		err := r.Client.Update(ctx, consoleObj)
+		if err != nil {
+			r.Log.Error(err, fmt.Sprintf("Could not update resource - APIVersion: %s, Kind: %s, Name: %s",
+				consoleObj.APIVersion, consoleObj.Kind, consoleObj.Name))
+			return err
+		}
+	}
+	return nil
+}
+
 // webhookReplicaCount returns the number of replicas for the nmstate webhook
-// deployment based on the underlying infrastructure toplogy. It returns 2
+// deployment based on the underlying infrastructure topology. It returns 2
 // values (and error):
 // 1. min. number of replicas
 // 2. number of desired replicas
 // 3. error
+//
 //nolint:gocritic
 func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string, tolerations []corev1.Toleration) (int, int, error) {
 	const (
@@ -388,4 +440,13 @@ func setClusterReaderExist(c client.Client, data render.RenderData) error {
 
 	data.Data["ClusterReaderExists"] = found
 	return nil
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
 }

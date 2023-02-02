@@ -65,3 +65,10 @@ func LookupAsDuration(varName string) (time.Duration, error) {
 	}
 	return duration, nil
 }
+
+func GetEnvVar(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+	return fallback
+}

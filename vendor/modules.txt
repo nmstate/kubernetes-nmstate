@@ -227,6 +227,9 @@ github.com/onsi/gomega/matchers/support/goraph/util
 github.com/onsi/gomega/types
 # github.com/openshift/api v0.0.0-20220722144142-ac5cee47c2a0
 ## explicit; go 1.16
+github.com/openshift/api/config/v1
+github.com/openshift/api/console/v1
+github.com/openshift/api/operator/v1
 github.com/openshift/api/security/v1
 # github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 ## explicit; go 1.14
