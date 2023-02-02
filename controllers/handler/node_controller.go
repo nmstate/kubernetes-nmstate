@@ -125,7 +125,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("nmcli", "--version")
 	if err != nil {
-		r.Log.Info("error retrieving handler NetworkManager version: %s", err.Error())
+		r.Log.Error(err, "failed retrieving handler NetworkManager version")
 	}
 	// remove leading characters up to last space
 	split := strings.Split(handlerNetworkManagerVersion, " ")
@@ -133,14 +133,14 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
-		r.Log.Info("error retrieving handler nmstate version: %s", err.Error())
+		r.Log.Error(err, "failed retrieving handler nmstate version")
 	}
 
 	hostNmstateVersion := ""
 	nmClient, err := networkmanager.NewClientPrivate()
 
 	if err != nil {
-		r.Log.Info("error retrieving new client: %s", err.Error())
+		r.Log.Error(err, "failed retrieving new client")
 
 		return &nmstate.DependencyVersions{
 			HandlerNetworkManagerVersion: handlerNetworkManagerVersion,
