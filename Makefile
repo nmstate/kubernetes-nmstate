@@ -32,7 +32,7 @@ WHAT ?= ./pkg/... ./controllers/...
 
 unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
-export KUBEVIRT_PROVIDER ?= k8s-1.24
+export KUBEVIRT_PROVIDER ?= k8s-1.26-centos9
 export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
