@@ -23,7 +23,7 @@ COPY --from=build /manager /usr/local/bin/manager
 COPY --from=build /workdir/build/install-nmstate.${NMSTATE_SOURCE}.sh install-nmstate.sh
 
 RUN ./install-nmstate.sh && \
-    dnf install -b -y iproute iputils && \
+    dnf install -b -y NetworkManager iproute iputils && \
     rm ./install-nmstate.sh && \
     dnf clean all
 
