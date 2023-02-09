@@ -9,7 +9,7 @@ sed -i "s#^url:.*#url: \"$url\"#" docs/_config.yaml
 sed -i "s#^baseurl:.*#baseurl: \"$baseurl\"#" docs/_config.yaml
 
 
-${IMAGE_BUILDER} run -v $(pwd)/docs:/docs/ docker.io/library/ruby make -C docs install check
+${IMAGE_BUILDER} run -v $(pwd)/docs:/docs/ docker.io/library/ruby:3.1 make -C docs install check
 
 # Copy the docs to the artifacts
 mkdir -p $ARTIFACTS/gh-pages

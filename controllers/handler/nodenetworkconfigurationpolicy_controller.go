@@ -46,11 +46,12 @@ import (
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/bridge"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmpolicy"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -85,7 +86,7 @@ var (
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
 			labelsChanged := !reflect.DeepEqual(updateEvent.ObjectOld.GetLabels(), updateEvent.ObjectNew.GetLabels())
-			return labelsChanged && nmstate.EventIsForThisNode(updateEvent.ObjectNew)
+			return labelsChanged && node.EventIsForThisNode(updateEvent.ObjectNew)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -349,7 +350,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		return err
 	}
 
-	desiredStateWithDefaults, err := nmstate.ApplyDefaultVlanFiltering(generatedDesiredState)
+	desiredStateWithDefaults, err := bridge.ApplyDefaultVlanFiltering(generatedDesiredState)
 	if err != nil {
 		return err
 	}

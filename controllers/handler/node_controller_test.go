@@ -21,7 +21,7 @@ import (
 	"context"
 	"fmt"
 
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

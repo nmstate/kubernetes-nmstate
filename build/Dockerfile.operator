@@ -11,7 +11,7 @@ RUN dnf install -y golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).*
 
 COPY . .
 
-RUN GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/operator
+RUN --mount=type=cache,target=/root/.cache/go-build GOOS=linux GOARCH=${TARGETARCH} go build -o /manager ./cmd/operator
 
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 
@@ -24,6 +24,7 @@ COPY deploy/handler/service_account.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/cluster_role.yaml /bindata/kubernetes-nmstate/rbac/
+COPY deploy/openshift/ui-plugin/ /bindata/kubernetes-nmstate/openshift/ui-plugin/
 
 USER 1000
 
