@@ -186,11 +186,26 @@ spec:
           verbs:
           - '*'
         - apiGroups:
+          - console.openshift.io
+          resources:
+          - consoleplugins
+          verbs:
+          - '*'
+        - apiGroups:
           - nmstate.io
           resources:
           - '*'
           verbs:
           - '*'
+        - apiGroups:
+          - operator.openshift.io
+          resources:
+          - consoles
+          verbs:
+          - get
+          - list
+          - update
+          - watch
         - apiGroups:
           - rbac.authorization.k8s.io
           resources:

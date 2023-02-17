@@ -15,18 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package helper
+package bridge
 
 import (
-	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// Return true if the event name is the name of
-// the pods's node (reading the env var NODE_NAME)
-func EventIsForThisNode(meta v1.Object) bool {
-	createdNodeName := meta.GetName()
-	podNodeName := environment.NodeName()
-	// Only reconcile is it's for this pod
-	return createdNodeName == podNodeName
+func TestUnit(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Bridge Test Suite")
 }

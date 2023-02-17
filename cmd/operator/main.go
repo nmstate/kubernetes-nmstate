@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -36,6 +37,9 @@ import (
 
 	"github.com/kelseyhightower/envconfig"
 	"github.com/spf13/pflag"
+
+	openshiftconsolev1 "github.com/openshift/api/console/v1"
+	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
@@ -59,6 +63,8 @@ func init() {
 	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(openshiftoperatorv1.Install(scheme))
+	utilruntime.Must(openshiftconsolev1.Install(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -131,7 +137,8 @@ func setProfiler() {
 		go func() {
 			profilerAddress := fmt.Sprintf("0.0.0.0:%s", cfg.ProfilerPort)
 			setupLog.Info(fmt.Sprintf("Starting Profiler Server! \t Go to http://%s/debug/pprof/\n", profilerAddress))
-			err := http.ListenAndServe(profilerAddress, nil)
+			server := &http.Server{ReadHeaderTimeout: 10 * time.Second, Addr: profilerAddress}
+			err := server.ListenAndServe()
 			if err != nil {
 				setupLog.Info("Failed to start the server! Error: %v", err)
 			}

@@ -143,7 +143,7 @@ func defaultGw() (string, error) {
 		} else {
 			defaultGwLog.Info(msg)
 		}
-		return "", fmt.Errorf(msg)
+		return "", errors.New(msg)
 	}
 	return defaultGw, nil
 }

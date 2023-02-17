@@ -36,7 +36,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/helper"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
@@ -173,7 +173,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// but we only want to watch create/delete for current node.
 	onCreationForThisNode := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return nmstate.EventIsForThisNode(createEvent.Object)
+			return node.EventIsForThisNode(createEvent.Object)
 		},
 		DeleteFunc: func(event.DeleteEvent) bool {
 			return false
@@ -193,10 +193,10 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return false
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return nmstate.EventIsForThisNode(deleteEvent.Object)
+			return node.EventIsForThisNode(deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return nmstate.EventIsForThisNode(updateEvent.ObjectNew) &&
+			return node.EventIsForThisNode(updateEvent.ObjectNew) &&
 				shouldForceRefresh(updateEvent)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
