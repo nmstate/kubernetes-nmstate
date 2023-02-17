@@ -48,7 +48,7 @@ export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 80m
 
-e2e_test_args = -vv --show-node-events -timeout=$(E2E_TEST_TIMEOUT) $(E2E_TEST_ARGS)
+e2e_test_args = --vv -timeout=$(E2E_TEST_TIMEOUT) --slow-spec-threshold=60s $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 export PRIMARY_NIC ?= eth0
