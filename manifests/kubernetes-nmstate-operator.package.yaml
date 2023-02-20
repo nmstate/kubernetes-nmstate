@@ -1,4 +1,4 @@
 packageName: kubernetes-nmstate-operator
 channels:
-  - name: "4.12"
-    currentCSV: kubernetes-nmstate-operator.v4.12.0
+  - name: "4.13"
+    currentCSV: kubernetes-nmstate-operator.v4.13.0
