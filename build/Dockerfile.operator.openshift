@@ -13,6 +13,7 @@ COPY deploy/handler/service_account.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/cluster_role.yaml /bindata/kubernetes-nmstate/rbac/
+COPY deploy/openshift/ui-plugin/ /bindata/kubernetes-nmstate/openshift/ui-plugin/
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/manifests /manifests
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/metadata /metadata
 
