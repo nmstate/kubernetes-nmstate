@@ -30,7 +30,7 @@ import (
 
 // We cannot change routes at nmstate if the interface is with dhcp true
 // that's why we need to set it static with the same ip it has previously.
-func badDefaultGw(address, nic string) nmstate.State {
+func badDefaultGw(address, nic string, routingTable int) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
@@ -47,7 +47,8 @@ routes:
       metric: 150
       next-hop-address: 192.0.2.1
       next-hop-interface: %s
-`, nic, address, nic))
+      table-id: %d
+`, nic, address, nic, routingTable))
 }
 
 func removeNameServers(nic string) nmstate.State {
@@ -119,7 +120,7 @@ var _ = Describe("rollback", func() {
 				address = ipv4Address(nodes[0], primaryNic)
 				return address
 			}, ReadTimeout, ReadInterval).ShouldNot(BeEmpty())
-			updateDesiredStateAtNode(nodes[0], badDefaultGw(address, primaryNic))
+			updateDesiredStateAtNode(nodes[0], badDefaultGw(address, primaryNic, 254))
 		})
 		AfterEach(func() {
 			By("Clean up desired state")
@@ -140,6 +141,32 @@ var _ = Describe("rollback", func() {
 			Consistently(func() bool {
 				return dhcpFlag(nodes[0], primaryNic)
 			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "DHCP flag has change to false")
+		})
+	})
+
+	Context("when changing the default gw to a routing table different from main", func() {
+		secondaryNicCustomAddress := "192.168.100.1"
+		BeforeEach(func() {
+			By("Configure a invalid default gw")
+			updateDesiredStateAtNode(nodes[0], badDefaultGw(secondaryNicCustomAddress, firstSecondaryNic, 200))
+		})
+		AfterEach(func() {
+			By("Clean up desired state")
+			resetDesiredStateForNodes()
+		})
+		It("should not rollback to the previous configuration", func() {
+			By("Should be available")
+			policy.WaitForPolicyTransitionUpdate(TestPolicy)
+			policy.WaitForAvailablePolicy(TestPolicy)
+
+			Eventually(func() string {
+				return ipv4Address(nodes[0], firstSecondaryNic)
+			}, 3*time.Minute, ReadInterval).Should(Equal(secondaryNicCustomAddress), "IP has not being set")
+
+			Byf("Check that %s is not rolled back", firstSecondaryNic)
+			Consistently(func() string {
+				return ipv4Address(nodes[0], firstSecondaryNic)
+			}, 20*time.Second, ReadInterval).Should(Equal(secondaryNicCustomAddress), "IP has rolled back to empty")
 		})
 	})
 
@@ -198,5 +225,4 @@ var _ = Describe("rollback", func() {
 
 		})
 	})
-
 })
