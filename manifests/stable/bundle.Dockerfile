@@ -12,5 +12,5 @@ LABEL operators.operatorframework.io.metrics.mediatype.v1=metrics+v1
 LABEL operators.operatorframework.io.metrics.project_layout=go.kubebuilder.io/v3
 
 # Copy files to locations specified by labels.
-COPY manifests/4.13/manifests /manifests/
-COPY manifests/4.13/metadata /metadata/
+COPY manifests/stable/manifests /manifests/
+COPY manifests/stable/metadata /metadata/
