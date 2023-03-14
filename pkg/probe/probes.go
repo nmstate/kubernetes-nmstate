@@ -57,6 +57,7 @@ const (
 	defaultDNSProbeTimeout    = 120 * time.Second
 	apiServerProbeTimeout     = 120 * time.Second
 	nodeReadinessProbeTimeout = 120 * time.Second
+	mainRoutingTableID        = 254
 	ProbesTotalTimeout        = defaultGwRetrieveTimeout +
 		defaultDNSProbeTimeout +
 		defaultDNSProbeTimeout +
@@ -64,8 +65,12 @@ const (
 		nodeReadinessProbeTimeout
 )
 
+var nmstatectlShow = func() (string, error) {
+	return nmstatectl.Show()
+}
+
 func currentStateAsGJson() (gjson.Result, error) {
-	observedStateRaw, err := nmstatectl.Show()
+	observedStateRaw, err := nmstatectlShow()
 	if err != nil {
 		return gjson.Result{}, errors.Wrap(err, "failed retrieving current state")
 	}
@@ -127,12 +132,20 @@ func checkNodeReadiness(cli client.Client) (bool, error) {
 	return false, nil
 }
 
+// defaultGw gets the current nmstate in JSON format with library tidwall/gjson. It then filters the JSON according to
+// the following criteria:
+// * Get all routes with table-id==254, table-id==0 or table-id not set (the best way to find unset fields with gjson
+// is to convert the field to boolean. Boolean false will match table-id==0 or an empty table-id field).
+// * Then get the first route for all matching table-ids with destination==0.0.0.0/0.
+// See here for more details https://github.com/tidwall/gjson/issues/212 and
+// https://github.com/tidwall/gjson/blob/master/SYNTAX.md#queries for more details.
 func defaultGw() (string, error) {
 	gjsonCurrentState, err := currentStateAsGJson()
 	if err != nil {
 		return "", errors.Wrap(err, "failed retrieving current state to retrieve default gw")
 	}
-	defaultGwGjsonPath := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-address"
+	defaultGwGjsonPath := fmt.Sprintf("[routes.running.#(table-id==~false)#,routes.running.#(table-id==%d)#].@flatten"+
+		"|#(destination==\"0.0.0.0/0\").next-hop-address", mainRoutingTableID)
 	defaultGw := gjsonCurrentState.Get(defaultGwGjsonPath).String()
 	if defaultGw == "" {
 		msg := "default gw missing"
@@ -265,7 +278,7 @@ func Select(cli client.Client) []Probe {
 // Run will run the externalConnectivityProbes and also some internal
 // kubernetes cluster connectivity and node readiness probes
 func Run(cli client.Client, probes []Probe) error {
-	currentState, err := nmstatectl.Show()
+	currentState, err := nmstatectlShow()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve currentState at runProbes")
 	}
