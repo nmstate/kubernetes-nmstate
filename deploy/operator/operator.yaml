@@ -74,6 +74,8 @@ spec:
               value: ""
             - name: HANDLER_IMAGE
               value: {{ .HandlerImage }}
+            - name: PLUGIN_IMAGE
+              value: {{ .PluginImage }}
             - name: HANDLER_IMAGE_PULL_POLICY
               value: {{ .HandlerPullPolicy }}
             - name: HANDLER_NAMESPACE
