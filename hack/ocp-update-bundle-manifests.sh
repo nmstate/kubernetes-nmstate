@@ -5,44 +5,7 @@
 
 set -ex
 
-function yq4 {
-  VERSION_REGEX=" version 4\.[0-9]+\.[0-9]$"
-  if [[ "`yq --version`" =~ $VERSION_REGEX ]]; then
-    # installed yq version is v4 -> we are OK
-    echo yq
-  else
-    # version from yq in path is != 4 --> check for alternatives
-    INSTALL_DIR=$(pwd)/build/_output/bin
-    if [[ -f ${INSTALL_DIR}/yq ]] && [[ "`${INSTALL_DIR}/yq --version`" =~ $VERSION_REGEX ]]; then
-      # yq is installed at a 2nd location already and in the correct version --> nothing to do
-      echo ${INSTALL_DIR}/yq
-    else
-      # yq is not installed/in wrong version --> install v4
-      GOBIN=$INSTALL_DIR GOFLAGS= go install github.com/mikefarah/yq/v4@latest
-      echo ${INSTALL_DIR}/yq
-    fi
-  fi
-}
-
-if [ -z "${CHANNEL}" ]; then
-    export CHANNEL=$(find manifests/ -name "4.*" -printf "%f\n" | sort -Vr | head -n 1)
-fi
-
-export IMAGE_REPO="${IMAGE_REPO:-openshift}"
-export NAMESPACE="openshift-nmstate"
-
-export HANDLER_IMAGE_NAME="${HANDLER_IMAGE_NAME:-origin-kubernetes-nmstate-handler}"
-export HANDLER_IMAGE_TAG="${HANDLER_IMAGE_TAG:-${CHANNEL}}"
-export HANDLER_NAMESPACE="${NAMESPACE}"
-
-export OPERATOR_IMAGE_NAME="${OPERATOR_IMAGE_NAME:-origin-kubernetes-nmstate-operator}"
-export OPERATOR_IMAGE_TAG="${OPERATOR_IMAGE_TAG:-${CHANNEL}}"
-export OPERATOR_NAMESPACE="${NAMESPACE}"
-
-export VERSION="${VERSION:-${CHANNEL}.0}"
-
-export BUNDLE_DIR="${BUNDLE_DIR:-manifests/${CHANNEL}}"
-MANIFEST_BASES_DIR=manifests/bases
+source ./hack/ocp-bundle-common.sh
 
 # remove old manifests & bundle metadata files
 rm -rf ${BUNDLE_DIR}/manifests ${BUNDLE_DIR}/metadata
@@ -75,11 +38,11 @@ spec:
   - name: kubernetes-nmstate-operator
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-kubernetes-nmstate-operator:${CHANNEL}
+      name: quay.io/openshift/origin-kubernetes-nmstate-operator:${VERSION_MAJOR_MINOR}
   - name: kubernetes-nmstate-handler
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-kubernetes-nmstate-handler:${CHANNEL}
+      name: quay.io/openshift/origin-kubernetes-nmstate-handler:${VERSION_MAJOR_MINOR}
 EOF
 
 # undo changes on "root" bundle.Dockerfile (gets updated by `make bundle`)

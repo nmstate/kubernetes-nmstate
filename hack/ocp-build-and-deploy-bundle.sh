@@ -1,10 +1,9 @@
-
 #!/bin/bash
 
 # This is a helper to deploy a bundle to a running cluster (e.g. to validate the
 # bundle manifests / csv). This should be called via its make target (`make ocp-build-and-deploy-bundle`)
 
-# Available "parameters": 
+# Available "parameters":
 #   - IMAGE_REGISTRY (defaults to quay.io)
 #   - IMAGE_REPO (defaults to openshift)
 #   - HANDLER_IMAGE_NAME (defaults to origin-kubernetes-nmstate-handler)
@@ -18,35 +17,12 @@
 
 set -ex
 
-if [ -z "${CHANNEL}" ]; then
-    # get latest 4.* version from manifests folder
-    export CHANNEL=$(find manifests/ -name "4.*" -printf "%f\n" | sort -Vr | head -n 1)
-fi
-
-export IMAGE_REGISTRY="${IMAGE_REGISTRY:-quay.io}"
-export IMAGE_REPO="${IMAGE_REPO:-openshift}"
-export VERSION="${VERSION:-${CHANNEL}.0}"
-export NAMESPACE="openshift-nmstate"
-
-export HANDLER_IMAGE_NAME="${HANDLER_IMAGE_NAME:-origin-kubernetes-nmstate-handler}"
-export HANDLER_IMAGE_TAG="${HANDLER_IMAGE_TAG:-${VERSION}}"
-export HANDLER_NAMESPACE="${NAMESPACE}"
-
-export OPERATOR_IMAGE_NAME="${OPERATOR_IMAGE_NAME:-origin-kubernetes-nmstate-operator}"
-export OPERATOR_IMAGE_TAG="${OPERATOR_IMAGE_TAG:-${VERSION}}"
-export OPERATOR_NAMESPACE="${NAMESPACE}"
-
-export BUNDLE_VERSION="${BUNDLE_VERSION:-${VERSION}}"
-export BUNDLE_IMG="${BUNDLE_IMG:-${IMAGE_REGISTRY}/${IMAGE_REPO}/kubernetes-nmstate-operator-bundle:${BUNDLE_VERSION}}"
-
-export INDEX_VERSION="${INDEX_VERSION:-${VERSION}}"
-export INDEX_IMG="${INDEX_IMG:-${IMAGE_REGISTRY}/${IMAGE_REPO}/kubernetes-nmstate-operator-index:${INDEX_VERSION}}"
-
+source ./hack/ocp-bundle-common.sh
 
 if [ ! "$SKIP_IMAGE_BUILD" == "true" ]; then
   # create or cleanup tmp dir for bundle manifests to not override manifests in manifests/4.x
   TMP_BUNDLE_DIR=./build/_output/bundle-tmp
-  
+
   if [ -d "${TMP_BUNDLE_DIR}" ]; then
     echo "*** Cleaning up old bundle files from disk... ***"
     rm -rf ${TMP_BUNDLE_DIR}
@@ -70,7 +46,7 @@ if [ ! "$SKIP_IMAGE_BUILD" == "true" ]; then
 fi
 
 echo "**** Create catalog source ****"
-cat <<EOF | oc create -f - 
+cat <<EOF | oc create -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
@@ -92,7 +68,7 @@ echo "**** Create namespace if it does not exist ****"
 oc create namespace "${OPERATOR_NAMESPACE}" --dry-run=client -o yaml | oc apply -f -
 
 echo "**** Create operator group ****"
-cat <<EOF | oc create -f - 
+cat <<EOF | oc create -f -
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
@@ -104,7 +80,7 @@ spec:
 EOF
 
 echo "**** Create subscription ****"
-cat <<EOF | oc create -f - 
+cat <<EOF | oc create -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
