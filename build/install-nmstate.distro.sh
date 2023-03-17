@@ -1,3 +1,3 @@
 #!/bin/bash -xe
 
-dnf install -b -y -x "*alpha*" -x "*beta*" nmstate
+dnf install -b -y -x "*alpha*" -x "*beta*" nmstate-2.2.6
