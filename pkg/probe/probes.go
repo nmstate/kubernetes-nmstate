@@ -57,6 +57,7 @@ const (
 	defaultDNSProbeTimeout    = 120 * time.Second
 	apiServerProbeTimeout     = 120 * time.Second
 	nodeReadinessProbeTimeout = 120 * time.Second
+	mainRoutingTableID        = 254
 	ProbesTotalTimeout        = defaultGwRetrieveTimeout +
 		defaultDNSProbeTimeout +
 		defaultDNSProbeTimeout +
@@ -69,12 +70,19 @@ func currentStateAsGJson() (gjson.Result, error) {
 	if err != nil {
 		return gjson.Result{}, errors.Wrap(err, "failed retrieving current state")
 	}
-
-	currentState, err := yaml.YAMLToJSON([]byte(observedStateRaw))
+	res, err := yamlToGJson(observedStateRaw)
 	if err != nil {
-		return gjson.Result{}, errors.Wrap(err, "failed to convert current state to JSON")
+		return gjson.Result{}, errors.Wrap(err, "failed to convert the current state to GJson")
 	}
-	return gjson.ParseBytes(currentState), nil
+	return res, nil
+}
+
+func yamlToGJson(rawYaml string) (gjson.Result, error) {
+	json, err := yaml.YAMLToJSON([]byte(rawYaml))
+	if err != nil {
+		return gjson.Result{}, err
+	}
+	return gjson.ParseBytes(json), nil
 }
 
 func apiServerCondition(_ client.Client) wait.ConditionFunc {
@@ -127,25 +135,31 @@ func checkNodeReadiness(cli client.Client) (bool, error) {
 	return false, nil
 }
 
-func defaultGw() (string, error) {
-	gjsonCurrentState, err := currentStateAsGJson()
-	if err != nil {
-		return "", errors.Wrap(err, "failed retrieving current state to retrieve default gw")
-	}
-	defaultGwGjsonPath := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-address"
-	defaultGw := gjsonCurrentState.Get(defaultGwGjsonPath).String()
-	if defaultGw == "" {
+func defaultGw(currentState gjson.Result) (string, error) {
+	var found gjson.Result
+	currentState.Get("routes.running").ForEach(
+		func(_, v gjson.Result) bool {
+			// we want to pick the next hop related to the "main" table because we may have multiple tables
+			if v.Get("destination").String() == "0.0.0.0/0" && v.Get("table-id").Int() == mainRoutingTableID {
+				found = v.Get("next-hop-address")
+				return false
+			}
+			return true
+		},
+	)
+
+	if !found.Exists() {
 		msg := "default gw missing"
-		defaultGwLog := log.WithValues("path", defaultGwGjsonPath)
+		defaultGwLog := log.WithValues("path", "routes.running.next-hop-address", "table-id", mainRoutingTableID)
 		defaultGwLogDebug := defaultGwLog.V(1)
 		if defaultGwLogDebug.Enabled() {
-			defaultGwLogDebug.Info(msg, "state", gjsonCurrentState.String())
+			defaultGwLogDebug.Info(msg, "state", currentState.String())
 		} else {
 			defaultGwLog.Info(msg)
 		}
 		return "", errors.New(msg)
 	}
-	return defaultGw, nil
+	return found.String(), nil
 }
 
 func pingCondition(cli client.Client) wait.ConditionFunc {
@@ -155,7 +169,12 @@ func pingCondition(cli client.Client) wait.ConditionFunc {
 }
 
 func runPing(_ client.Client) (bool, error) {
-	defaultGw, err := defaultGw()
+	gjsonCurrentState, err := currentStateAsGJson()
+	if err != nil {
+		return false, errors.Wrap(err, "failed retrieving current state to retrieve default gw")
+	}
+
+	defaultGw, err := defaultGw(gjsonCurrentState)
 	if err != nil {
 		log.Error(err, "failed to retrieve default gw")
 		return false, nil
