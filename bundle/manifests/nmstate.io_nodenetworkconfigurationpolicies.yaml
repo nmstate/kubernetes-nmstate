@@ -87,8 +87,6 @@ spec:
                       type: string
                     message:
                       type: string
-                    messageEncoded:
-                      type: string
                     reason:
                       type: string
                     status:
@@ -187,8 +185,6 @@ spec:
                       type: string
                     message:
                       type: string
-                    messageEncoded:
-                      type: string
                     reason:
                       type: string
                     status:
@@ -282,8 +278,6 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      type: string
-                    messageEncoded:
                       type: string
                     reason:
                       type: string

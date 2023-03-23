@@ -62,7 +62,6 @@ type NodeReconciler struct {
 	lastState      shared.State
 	nmstateUpdater NmstateUpdater
 	nmstatectlShow NmstatectlShow
-	deviceInfo     state.DeviceInfoer
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -77,7 +76,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := state.FilterOut(shared.NewState(currentStateRaw), r.deviceInfo)
+	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -126,7 +125,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("nmcli", "--version")
 	if err != nil {
-		r.Log.Info("error retrieving handler NetworkManager version: %s", err.Error())
+		r.Log.Error(err, "failed retrieving handler NetworkManager version")
 	}
 	// remove leading characters up to last space
 	split := strings.Split(handlerNetworkManagerVersion, " ")
@@ -134,14 +133,14 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
-		r.Log.Info("error retrieving handler nmstate version: %s", err.Error())
+		r.Log.Error(err, "failed retrieving handler nmstate version")
 	}
 
 	hostNmstateVersion := ""
 	nmClient, err := networkmanager.NewClientPrivate()
 
 	if err != nil {
-		r.Log.Info("error retrieving new client: %s", err.Error())
+		r.Log.Error(err, "failed retrieving new client")
 
 		return &nmstate.DependencyVersions{
 			HandlerNetworkManagerVersion: handlerNetworkManagerVersion,
@@ -167,7 +166,6 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 	r.nmstatectlShow = nmstatectl.Show
-	r.deviceInfo = state.DeviceInfo{}
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
