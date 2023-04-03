@@ -210,7 +210,7 @@ func runDNS(_ client.Client) (bool, error) {
 				return d.DialContext(ctx, network, net.JoinHostPort(runningNameServer.String(), "53"))
 			},
 		}
-		_, err := r.LookupNS(context.TODO(), "root-server.net")
+		_, err := r.LookupNS(context.TODO(), "root-servers.net")
 		if err != nil {
 			errs = append(errs, err)
 		} else {
