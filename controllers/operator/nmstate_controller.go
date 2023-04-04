@@ -147,7 +147,8 @@ func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx cont
 	}
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
-	if err == nil && isOpenShift {
+	_, errUIPluginPathExists := os.Stat(filepath.Join("openshift", "ui-plugin"))
+	if err == nil && isOpenShift && errUIPluginPathExists == nil {
 		if err = r.applyOpenshiftUIPlugin(instance); err != nil {
 			return ctrl.Result{}, errors.Wrap(err, "failed applying UI Plugin")
 		}
