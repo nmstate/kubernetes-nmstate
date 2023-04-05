@@ -8,7 +8,8 @@ RUN mkdir /workdir
 COPY go.mod /workdir
 WORKDIR /workdir
 
-RUN dnf install -y golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).*
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial && \
+    dnf install -y golang-$(sed -En 's/^go +(.*+)$/\1/p' go.mod).*
 
 COPY . .
 
@@ -22,7 +23,8 @@ ARG NMSTATE_SOURCE=distro
 COPY --from=build /manager /usr/local/bin/manager
 COPY --from=build /workdir/build/install-nmstate.${NMSTATE_SOURCE}.sh install-nmstate.sh
 
-RUN ./install-nmstate.sh && \
+RUN rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-centosofficial && \
+    ./install-nmstate.sh && \
     dnf install -b -y NetworkManager iproute iputils && \
     rm ./install-nmstate.sh && \
     dnf clean all
