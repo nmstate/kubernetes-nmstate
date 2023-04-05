@@ -24,12 +24,16 @@ function wait_ready_handler() {
     # Check daemonset rollout
     if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds nmstate-handler --timeout=2m; then
         echo "Handler haven't turned ready within the given timeout"
+        $kubectl describe ds -n ${OPERATOR_NAMESPACE} nmstate-handler
+        $kubectl describe pod -n ${OPERATOR_NAMESPACE}
         return 1
     fi
 
     # Check deployment rollout
     if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} deployment nmstate-webhook --timeout=2m; then
         echo "Webhook haven't turned ready within the given timeout"
+        $kubectl describe deployment -n ${OPERATOR_NAMESPACE} nmstate-webhook
+        $kubectl describe pod -n ${OPERATOR_NAMESPACE}
         return 1
     fi
 }

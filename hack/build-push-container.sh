@@ -7,7 +7,7 @@ if [ "$SKIP_IMAGE_BUILD" == "true" ]; then
     exit 0
 fi
 
-hack/init-buildx.sh
+podman version
 
 ARCHS=${ARCHS:-$(go env GOARCH)}
 PLATFORM=""
@@ -20,9 +20,8 @@ done
 PLATFORM=${PLATFORM::-1}
 
 
-PUSH=--push
-if [ "$SKIP_PUSH" == "true" ]; then
-    PUSH=""
+podman build --manifest ${IMAGE} --build-arg GO_VERSION=${GO_VERSION} --progress plain --platform ${PLATFORM} . $@
+if [ "$SKIP_PUSH" != "true" ]; then
+    podman manifest push --tls-verify=false ${IMAGE} docker://${IMAGE}
 fi
-docker buildx build --progress plain --platform ${PLATFORM} . $@ -t ${IMAGE} $PUSH
 

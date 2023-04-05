@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 PWD = $(shell pwd)
-GO_VERSION = $(shell hack/go-version.sh)
+export GO_VERSION = $(shell hack/go-version.sh)
 
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
@@ -26,7 +26,6 @@ export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
-export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
 
 WHAT ?= ./pkg/... ./controllers/...
 
@@ -156,13 +155,13 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh ${HANDLER_EXTRA_PARAMS} -f build/Dockerfile
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.sh ${HANDLER_EXTRA_PARAMS} -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
 push-operator:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh -f build/Dockerfile.operator
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.sh -f build/Dockerfile.operator
 
 push: push-handler push-operator
 
@@ -225,17 +224,17 @@ bundle: operator-sdk gen-crds manifests
 
 # Build the bundle image.
 bundle-build:
-	$(IMAGE_BUILDER) build -f $(BUNDLE_DOCKERFILE) -t $(BUNDLE_IMG) .
+	podman build -f $(BUNDLE_DOCKERFILE) -t $(BUNDLE_IMG) .
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool podman
 
 bundle-push: bundle-build
-	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
+	podman push $(BUNDLE_IMG)
 
 index-push: index-build
-	$(IMAGE_BUILDER) push $(INDEX_IMG)
+	podman push $(INDEX_IMG)
 
 olm-push: bundle-push index-push
 
