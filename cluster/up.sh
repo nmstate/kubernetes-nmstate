@@ -24,8 +24,10 @@ done
 echo 'Upgrading NetworkManager and enabling and starting up openvswitch'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
     ./cluster/cli.sh ssh ${node} -- sudo dnf upgrade -y NetworkManager
+    ./cluster/cli.sh ssh ${node} -- sudo dnf install -y NetworkManager-config-server
     ./cluster/cli.sh ssh ${node} -- sudo systemctl daemon-reload
     ./cluster/cli.sh ssh ${node} -- sudo systemctl enable openvswitch
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart openvswitch
+    ./cluster/cli.sh ssh ${node} -- sudo nmcli general logging level TRACE domains ALL
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart NetworkManager
 done
