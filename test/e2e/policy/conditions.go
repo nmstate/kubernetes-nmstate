@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
@@ -156,12 +157,18 @@ func ContainPolicyDegraded() gomegatypes.GomegaMatcher {
 	}))
 }
 
-func WaitForPolicyTransitionUpdate(policy string) {
-	now := time.Now()
+func WaitForPolicyTransitionUpdateWithTime(policy string, applyTime time.Time) {
+	// the k8s times at status are rounded to seconds
+	roundedApplyTime := metav1.NewTime(applyTime).Rfc3339Copy().Time
 	EventuallyWithOffset(1, func() time.Time {
 		availableCondition := Status(policy).Find(shared.NodeNetworkConfigurationPolicyConditionAvailable)
 		return availableCondition.LastTransitionTime.Time
-	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", now), fmt.Sprintf("Policy %s should have updated transition time", policy))
+	}, 4*time.Minute, 5*time.Second).Should(BeTemporally(">=", roundedApplyTime),
+		fmt.Sprintf("Policy %s should have updated transition time", policy))
+}
+
+func WaitForPolicyTransitionUpdate(policy string) {
+	WaitForPolicyTransitionUpdateWithTime(policy, time.Now())
 }
 
 func WaitForAvailableTestPolicy() {

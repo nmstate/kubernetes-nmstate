@@ -21,8 +21,9 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     done
 done
 
-echo 'Enabling and starting up openvswitch'
+echo 'Upgrading NetworkManager and enabling and starting up openvswitch'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
+    ./cluster/cli.sh ssh ${node} -- sudo dnf upgrade -y NetworkManager
     ./cluster/cli.sh ssh ${node} -- sudo systemctl daemon-reload
     ./cluster/cli.sh ssh ${node} -- sudo systemctl enable openvswitch
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart openvswitch

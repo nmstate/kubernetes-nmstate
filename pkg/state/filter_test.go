@@ -21,15 +21,12 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	networkmanager "github.com/phoracek/networkmanager-go/src"
-
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
 var _ = Describe("FilterOut", func() {
 	var (
 		state, filteredState nmstate.State
-		ifaceStates          map[string]networkmanager.DeviceState
 	)
 
 	Context("when there is a linux bridge with gc-timer and hello-timer", func() {
@@ -81,10 +78,6 @@ routes:
     next-hop-interface: eth1
     table-id: 254
 `)
-			ifaceStates = map[string]networkmanager.DeviceState{
-				"eth1": networkmanager.DeviceStateActivated,
-				"br1":  networkmanager.DeviceStateActivated,
-			}
 			filteredState = nmstate.NewState(`
 interfaces:
 - name: eth1
@@ -132,7 +125,7 @@ routes:
 `)
 		})
 		It("should remove dynamic attributes from linux-bridge interface", func() {
-			returnedState, err := filterOut(state, ifaceStates)
+			returnedState, err := filterOut(state)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -143,7 +136,9 @@ routes:
 			state = nmstate.NewState(`interfaces:
 - name: vethab6030bd
   state: down
-  type: veth
+  type: ethernet
+  veth:
+    peer: eth2
 routes:
   config: []
   running:
@@ -153,13 +148,12 @@ routes:
     next-hop-interface: vethab6030bd
     table-id: 254
 `)
-			ifaceStates = map[string]networkmanager.DeviceState{
-				"vethab6030bd": networkmanager.DeviceStateActivated,
-			}
 			filteredState = nmstate.NewState(`interfaces:
 - name: vethab6030bd
   state: down
-  type: veth
+  type: ethernet
+  veth:
+    peer: eth2
 routes:
   config: []
   running:
@@ -172,7 +166,7 @@ routes:
 		})
 
 		It("should keep managed veth interface", func() {
-			returnedState, err := filterOut(state, ifaceStates)
+			returnedState, err := filterOut(state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -182,8 +176,10 @@ routes:
 		BeforeEach(func() {
 			state = nmstate.NewState(`interfaces:
 - name: vethab6030bd
-  state: down
-  type: veth
+  state: ignore
+  type: ethernet
+  veth:
+    peer: eth2
 routes:
   config: []
   running:
@@ -193,9 +189,6 @@ routes:
     next-hop-interface: vethab6030bd
     table-id: 254
 `)
-			ifaceStates = map[string]networkmanager.DeviceState{
-				"vethab6030bd": networkmanager.DeviceStateUnmanaged,
-			}
 			filteredState = nmstate.NewState(`interfaces: []
 routes:
   config: []
@@ -204,13 +197,13 @@ routes:
 		})
 
 		It("should filter unmanaged veth interface", func() {
-			returnedState, err := filterOut(state, ifaceStates)
+			returnedState, err := filterOut(state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
 
-	Context("when there are multiple managed and unmanaged veth interfaces", func() {
+	Context("when there are multiple managed and unmanaged interfaces", func() {
 		BeforeEach(func() {
 			state = nmstate.NewState(`interfaces:
 - name: eth1
@@ -218,16 +211,24 @@ routes:
   type: ethernet
 - name: veth101
   state: down
-  type: veth
+  type: ethernet
+  veth:
+    peer: eth2
 - name: veth102
-  state: down
-  type: veth
+  state: ignore
+  type: ethernet
+  veth:
+    peer: eth2
 - name: vethjyuftrgv
   state: down
-  type: veth
+  type: ethernet
+  veth:
+    peer: eth2
 - name: vethvasziovs
-  state: down
-  type: veth
+  state: ignore
+  type: ethernet
+  veth:
+    peer: eth2
 routes:
   config: []
   running:
@@ -257,22 +258,20 @@ routes:
     next-hop-interface: eth1
     table-id: 254
 `)
-			ifaceStates = map[string]networkmanager.DeviceState{
-				"veth101":      networkmanager.DeviceStateActivated,
-				"veth102":      networkmanager.DeviceStateUnmanaged,
-				"vethjyuftrgv": networkmanager.DeviceStateActivated,
-				"vethvasziovs": networkmanager.DeviceStateUnmanaged,
-			}
 			filteredState = nmstate.NewState(`interfaces:
 - name: eth1
   state: up
   type: ethernet
 - name: veth101
   state: down
-  type: veth
+  type: ethernet
+  veth:
+    peer: eth2
 - name: vethjyuftrgv
   state: down
-  type: veth
+  type: ethernet
+  veth:
+    peer: eth2
 routes:
   config: []
   running:
@@ -294,65 +293,9 @@ routes:
 `)
 		})
 		It("should filter out all unmanaged veth interfaces", func() {
-			returnedState, err := filterOut(state, ifaceStates)
+			returnedState, err := filterOut(state)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
-		})
-
-		Context("when we fail to get deviceStates", func() {
-			BeforeEach(func() {
-				ifaceStates = nil
-				filteredState = nmstate.NewState(`interfaces:
-- name: eth1
-  state: up
-  type: ethernet
-- name: veth101
-  state: down
-  type: veth
-- name: veth102
-  state: down
-  type: veth
-- name: vethjyuftrgv
-  state: down
-  type: veth
-- name: vethvasziovs
-  state: down
-  type: veth
-routes:
-  config: []
-  running:
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: veth101
-    table-id: 254
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: veth102
-    table-id: 254
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: vethjyuftrgv
-    table-id: 254
-  - destination: fd10:244::8c40/128
-    metric: 1024
-    next-hop-address: ""
-    next-hop-interface: vethvasziovs
-    table-id: 254
-  - destination: 0.0.0.0/0
-    metric: 102
-    next-hop-address: 192.168.66.2
-    next-hop-interface: eth1
-    table-id: 254
-`)
-			})
-			It("should keep the state intact", func() {
-				returnedState, err := filterOut(state, ifaceStates)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(returnedState).To(MatchYAML(filteredState))
-			})
 		})
 	})
 
@@ -379,7 +322,7 @@ dns-resolver:
 		})
 
 		It("Should keep the DNS Resolver intact", func() {
-			returnedState, err := filterOut(state, ifaceStates)
+			returnedState, err := filterOut(state)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(state))
 		})
@@ -387,38 +330,54 @@ dns-resolver:
 
 	Context("when the interfaces have numeric characters", func() {
 		BeforeEach(func() {
-			ifaceStates = map[string]networkmanager.DeviceState{
-				"0":               networkmanager.DeviceStateUnmanaged,
-				"1101010":         networkmanager.DeviceStateUnmanaged,
-				"0.0":             networkmanager.DeviceStateUnmanaged,
-				"1.0":             networkmanager.DeviceStateUnmanaged,
-				"0xfe":            networkmanager.DeviceStateUnmanaged,
-				"60.e+02":         networkmanager.DeviceStateUnmanaged,
-				"10e+02":          networkmanager.DeviceStateUnmanaged,
-				"70e+02":          networkmanager.DeviceStateUnmanaged,
-				"94475496822e234": networkmanager.DeviceStateUnmanaged,
-			}
 			state = nmstate.NewState(`interfaces:
   - name: eth0
     type: ethernet
   - name: '0'
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: '1101010'
-    type: veth
+    type: ethernet
+    state: ignore
+    veth:
+      peer: eth2
   - name: '0.0'
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: '1.0'
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: '0xfe'
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: '60.e+02'
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: 10e+02
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: 70e+02
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
   - name: 94475496822e234
-    type: veth
+    type: ethernet
+    veth:
+      peer: eth2
+    state: ignore
 routes:
   config: []
   running:
@@ -463,7 +422,7 @@ routes:
 		})
 
 		It("should filter out interfaces correctly", func() {
-			returnedState, err := filterOut(state, ifaceStates)
+			returnedState, err := filterOut(state)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})

@@ -38,7 +38,6 @@ var _ = Describe("[nns] NNS Dependencies", func() {
 			key := types.NamespacedName{Name: node}
 			status := nodeNetworkState(key).Status
 			Expect(status.HostNetworkManagerVersion).ToNot(BeEmpty())
-			Expect(status.HandlerNetworkManagerVersion).ToNot(BeEmpty())
 			Expect(status.HandlerNmstateVersion).ToNot(BeEmpty())
 		}
 	})
