@@ -67,6 +67,7 @@ interfaces:
   ipv6:
     auto-dns: false
     dhcp: true
+    autoconf: true
     enabled: true
 `, nic))
 }
@@ -89,12 +90,18 @@ interfaces:
   ipv6:
     auto-dns: false
     dhcp: true
+    autoconf: true
     enabled: true
 `, nic))
 }
 
 func discoverNameServers(nic string) nmstate.State {
-	return nmstate.NewState(fmt.Sprintf(`interfaces:
+	return nmstate.NewState(fmt.Sprintf(`
+dns-resolver:
+  config:
+    search: []
+    server: []
+interfaces:
 - name: %s
   type: ethernet
   state: up
@@ -105,6 +112,7 @@ func discoverNameServers(nic string) nmstate.State {
   ipv6:
     auto-dns: true
     dhcp: true
+    autoconf: true
     enabled: true
 `, nic))
 }

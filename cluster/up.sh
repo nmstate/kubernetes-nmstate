@@ -19,6 +19,9 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
         	  ./cluster/cli.sh ssh $node -- sudo nmcli con del $uuid
 	      fi
     done
+    for nic in $(nmcli --fields NAME,UUID -t con show | grep 'Wired Connection' | awk -F : '{print $2}'); do
+        nmcli con modify $nic match.interface-name "!$FIRST_SECONDARY_NIC, !$SECOND_SECONDARY_NIC";
+    done
 done
 
 echo 'Upgrading NetworkManager and enabling and starting up openvswitch'

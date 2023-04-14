@@ -135,6 +135,10 @@ func StatusForPolicyConsistently(policy string) AsyncAssertion {
 	}, 5*time.Second, 1*time.Second)
 }
 
+func StatusEventually() AsyncAssertion {
+	return StatusForPolicyEventually(TestPolicy)
+}
+
 func StatusConsistently() AsyncAssertion {
 	return StatusForPolicyConsistently(TestPolicy)
 }
