@@ -48,7 +48,7 @@ if ! git show-ref --quiet ${downstream_remote}/${downstream_target_branch}; then
     exit 1
 fi
 
-commitID=$(git log --oneline downstream/master | grep "merge nmstate/${upstream_source_branch}" | cut -d ' ' -f 1 | head -n 1)
+commitID=$(git log --oneline ${downstream_remote}/${downstream_target_branch} | grep "merge nmstate/${upstream_source_branch}" | cut -d ' ' -f 1 | head -n 1)
 read -p "CommitId of latest merge commit in ${downstream_remote}/${downstream_target_branch} [suggested: ${commitID}]: " last_merge_commit
 if [ -z "${last_merge_commit}" ]
 then
