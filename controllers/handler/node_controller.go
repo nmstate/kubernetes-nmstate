@@ -19,7 +19,6 @@ package controllers
 
 import (
 	"context"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -123,14 +122,6 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
-	handlerNetworkManagerVersion, err := nmstate.ExecuteCommand("nmcli", "--version")
-	if err != nil {
-		r.Log.Error(err, "failed retrieving handler NetworkManager version")
-	}
-	// remove leading characters up to last space
-	split := strings.Split(handlerNetworkManagerVersion, " ")
-	handlerNetworkManagerVersion = split[len(split)-1]
-
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
 		r.Log.Error(err, "failed retrieving handler nmstate version")
@@ -143,9 +134,8 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 		r.Log.Error(err, "failed retrieving new client")
 
 		return &nmstate.DependencyVersions{
-			HandlerNetworkManagerVersion: handlerNetworkManagerVersion,
-			HandlerNmstateVersion:        handlerNmstateVersion,
-			HostNmstateVersion:           hostNmstateVersion,
+			HandlerNmstateVersion: handlerNmstateVersion,
+			HostNmstateVersion:    hostNmstateVersion,
 		}
 	}
 
@@ -157,9 +147,8 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 	}
 
 	return &nmstate.DependencyVersions{
-		HandlerNetworkManagerVersion: handlerNetworkManagerVersion,
-		HandlerNmstateVersion:        handlerNmstateVersion,
-		HostNmstateVersion:           hostNmstateVersion,
+		HandlerNmstateVersion: handlerNmstateVersion,
+		HostNmstateVersion:    hostNmstateVersion,
 	}
 }
 
