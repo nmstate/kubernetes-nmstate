@@ -199,7 +199,7 @@ func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstat
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
 //       to remove this
 func resetDesiredStateForNodes() {
-	By("Resetting nics state primary up and secondaries down")
+	By("Resetting nics state primary up and secondaries disable ipv4 and ipv6")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
 	defer deletePolicy(TestPolicy)
 	policy.WaitForAvailableTestPolicy()

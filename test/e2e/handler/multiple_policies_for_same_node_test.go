@@ -44,7 +44,7 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 
 		AfterEach(func() {
-			setDesiredStateWithPolicy(staticIPPolicy, ifaceDownIPv4Disabled(firstSecondaryNic))
+			setDesiredStateWithPolicy(staticIPPolicy, ifaceIPDisabled(firstSecondaryNic))
 			policy.WaitForAvailablePolicy(staticIPPolicy)
 			setDesiredStateWithPolicy(vlanPolicy, vlanAbsent(firstSecondaryNic, vlanID))
 			policy.WaitForAvailablePolicy(vlanPolicy)

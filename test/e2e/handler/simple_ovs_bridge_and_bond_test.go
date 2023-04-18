@@ -147,7 +147,7 @@ var _ = Describe("OVS Bridge", func() {
 			BeforeEach(func() {
 				capture := map[string]string{
 					"ethernet-ifaces":  `interfaces.type=="ethernet"`,
-					"secondary-ifaces": `capture.ethernet-ifaces | interfaces.state=="down"`,
+					"secondary-ifaces": `capture.ethernet-ifaces | interfaces.ipv4.enabled==false`,
 				}
 				updateDesiredStateWithCaptureAndWait(
 					ovsBrUpLAGEth1AndEth2(
@@ -256,7 +256,7 @@ var _ = Describe("OVS Bridge", func() {
 				capture := map[string]string{
 					"first-secondary-iface": fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
 					"ethernet-ifaces":       `interfaces.type=="ethernet"`,
-					"secondary-ifaces":      `capture.ethernet-ifaces | interfaces.state=="down"`,
+					"secondary-ifaces":      `capture.ethernet-ifaces | interfaces.ipv4.enabled==false`,
 				}
 
 				macAddr = `"{{ capture.first-secondary-iface.interfaces.0.mac-address }}"`
