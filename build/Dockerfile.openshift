@@ -9,7 +9,6 @@ RUN \
     microdnf -y update && \
     microdnf -y install \
         nmstate \
-        nmstate-plugin-ovsdb \
         iputils \
         iproute && \
     microdnf clean all
