@@ -138,13 +138,7 @@ $ make ocp-update-bundle-manifests
 
 ## Add manifests for a new release
 
-With each new planned release (e.g. 4.12, 4.13), the manifest files must be adjusted. To do so, rename the current release folder in `manifests/` to the new release, e.g:
-
-```bash
-$ git mv manifests/4.12 manifests/4.13
-```
-
-Afterwards replace every occurrence of the old release in the `manifests` folder with the new release. E.g.:
+With each new planned release (e.g. 4.12, 4.13), replace every occurrence of the old release in the `manifests` folder with the new release. E.g.:
 
 ```bash
 $ find manifests -type f -exec sed -i 's/4.12/4.13/g' {} +
