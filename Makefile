@@ -22,12 +22,10 @@ OPERATOR_IMAGE_TAG ?= latest
 OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME):$(OPERATOR_IMAGE_TAG)
 OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_FULL_NAME)
 
-KUBE_RBAC_PROXY_NAME ?= origin-kube-rbac-proxy
-KUBE_RBAC_PROXY_TAG ?= 4.10.0
-KUBE_RBAC_PROXY_IMAGE_REGISTRY ?= quay.io
-KUBE_RBAC_PROXY_IMAGE_REPO ?= openshift
-KUBE_RBAC_PROXY_FULL_NAME ?= $(KUBE_RBAC_PROXY_IMAGE_REPO)/$(KUBE_RBAC_PROXY_NAME):$(KUBE_RBAC_PROXY_TAG)
-KUBE_RBAC_PROXY_IMAGE ?= $(KUBE_RBAC_PROXY_IMAGE_REGISTRY)/$(KUBE_RBAC_PROXY_FULL_NAME)
+PLUGIN_IMAGE_NAME ?= nmstate-console-plugin
+PLUGIN_IMAGE_TAG ?= latest
+PLUGIN_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(PLUGIN_IMAGE_NAME):$(PLUGIN_IMAGE_TAG)
+PLUGIN_IMAGE ?= $(IMAGE_REGISTRY)/$(PLUGIN_IMAGE_FULL_NAME)
 
 export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
@@ -69,7 +67,7 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-OPERATOR_SDK_VERSION ?= 1.21.0
+OPERATOR_SDK_VERSION ?= 1.22.2
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.1
@@ -166,7 +164,7 @@ check-ocp-bundle: ocp-update-bundle-manifests
 generate: gen-k8s gen-crds gen-rbac
 
 manifests:
-	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -kube-rbac-proxy-image=$(KUBE_RBAC_PROXY_IMAGE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -plugin-image=$(PLUGIN_IMAGE) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 handler: SKIP_PUSH=true
 handler: push-handler
@@ -244,8 +242,20 @@ vendor:
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
 	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds --output-dir $(BUNDLE_DIR)
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
+
+# Update the OCP bundle manifests
+ocp-update-bundle-manifests: generate manifests
+	./hack/ocp-update-bundle-manifests.sh
+
+# Build and deploy the OCP bundle
+ocp-build-and-deploy-bundle: generate manifests
+	./hack/ocp-build-and-deploy-bundle.sh
+
+# Uninstall the bundle from "make ocp-build-and-deploy-bundle"
+ocp-uninstall-bundle:
+	./hack/ocp-uninstall-bundle.sh
 
 # Build the bundle image.
 bundle-build:
@@ -253,7 +263,7 @@ bundle-build:
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:v1.24.0
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
@@ -289,4 +299,5 @@ olm-push: bundle-push index-push
 	generate-manifests \
 	tools \
 	bundle \
-	bundle-build
+	bundle-build \
+	manifests

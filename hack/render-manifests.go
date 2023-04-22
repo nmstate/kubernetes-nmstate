@@ -34,15 +34,14 @@ func exitWithError(err error, cause string, args ...interface{}) {
 
 func main() {
 	type Inventory struct {
-		HandlerNamespace    string
-		HandlerImage        string
-		HandlerPullPolicy   string
-		HandlerPrefix       string
-		OperatorNamespace   string
-		OperatorImage       string
-		OperatorPullPolicy  string
-		MonitoringNamespace string
-		KubeRBACProxyImage  string
+		HandlerNamespace   string
+		HandlerImage       string
+		HandlerPullPolicy  string
+		HandlerPrefix      string
+		OperatorNamespace  string
+		OperatorImage      string
+		OperatorPullPolicy string
+		PluginImage        string
 	}
 
 	handlerNamespace := flag.String("handler-namespace", "nmstate", "Namespace for the NMState handler")
@@ -51,23 +50,21 @@ func main() {
 	handlerPrefix := flag.String("handler-prefix", "", "Name prefix for the NMState handler's resources")
 	operatorNamespace := flag.String("operator-namespace", "nmstate-operator", "Namespace for the NMState operator")
 	operatorImage := flag.String("operator-image", "", "Image for the NMState operator")
-	operatorPullPolicy := flag.String("operator-pull-policy", "IfNotPresent", "Pull policy for the NMState operator image")
-	monitoringNamespace := flag.String("monitoring-namespace", "monitoring", "Namespace for the cluster monitoring")
-	kubeRBACProxyImage := flag.String("kube-rbac-proxy-image", "", "Image for the kube RBAC proxy needed for metrics")
+	operatorPullPolicy := flag.String("operator-pull-policy", "Always", "Pull policy for the NMState operator image")
+	pluginImage := flag.String("plugin-image", "", "Image for the NMState console plugin")
 	inputDir := flag.String("input-dir", "", "Input directory")
 	outputDir := flag.String("output-dir", "", "Output directory")
 	flag.Parse()
 
 	inventory := Inventory{
-		HandlerNamespace:    *handlerNamespace,
-		HandlerImage:        *handlerImage,
-		HandlerPullPolicy:   *handlerPullPolicy,
-		HandlerPrefix:       *handlerPrefix,
-		OperatorNamespace:   *operatorNamespace,
-		OperatorImage:       *operatorImage,
-		OperatorPullPolicy:  *operatorPullPolicy,
-		MonitoringNamespace: *monitoringNamespace,
-		KubeRBACProxyImage:  *kubeRBACProxyImage,
+		HandlerNamespace:   *handlerNamespace,
+		HandlerImage:       *handlerImage,
+		HandlerPullPolicy:  *handlerPullPolicy,
+		HandlerPrefix:      *handlerPrefix,
+		OperatorNamespace:  *operatorNamespace,
+		OperatorImage:      *operatorImage,
+		OperatorPullPolicy: *operatorPullPolicy,
+		PluginImage:        *pluginImage,
 	}
 
 	// Clean up output dir so we don't have old files.

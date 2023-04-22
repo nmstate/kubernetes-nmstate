@@ -1,9 +1,9 @@
-FROM registry.svc.ci.openshift.org/openshift/release:golang-1.15 AS builder
+FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.22-openshift-4.18 AS builder
 WORKDIR /go/src/github.com/openshift/kubernetes-nmstate
 COPY . .
 RUN GO111MODULE=on go build --mod=vendor -o build/_output/bin/manager ./cmd/operator
 
-FROM registry.access.redhat.com/ubi8/ubi-minimal
+FROM registry.ci.openshift.org/ocp/4.18:base-rhel9
 
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/build/_output/bin/manager /usr/bin/
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
@@ -14,9 +14,13 @@ COPY deploy/handler/role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/role_binding.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/handler/cluster_role.yaml /bindata/kubernetes-nmstate/rbac/
 COPY deploy/openshift/ui-plugin/ /bindata/kubernetes-nmstate/openshift/ui-plugin/
+COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/manifests /manifests
+COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/metadata /metadata
 
 ENTRYPOINT ["manager"]
 
 LABEL io.k8s.display-name="kubernetes-nmstate-operator" \
       io.k8s.description="Operator for Node network configuration through Kubernetes API" \
+      io.openshift.tags="openshift,kubernetes-nmstate-operator" \
+      com.redhat.delivery.appregistry=true \
       maintainer="Yossi Boaron <yboaron@redhat.com>"
