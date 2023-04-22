@@ -1,0 +1,15 @@
+updates:
+  - file: "stable/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml" # relative to this file
+    update_list:
+    # replace metadata.name value
+    - search: "kubernetes-nmstate-operator.v{MAJOR}.{MINOR}.0"
+      replace: "kubernetes-nmstate-operator.{FULL_VER}"
+    # replace entire version line, otherwise would replace {MAJOR}.{MINOR}.0 anywhere
+    - search: "version: {MAJOR}.{MINOR}.0"
+      replace: "version: {FULL_VER}"
+    - search: 'olm.skipRange: ">=4.3.0 <{MAJOR}.{MINOR}.0"'
+      replace: 'olm.skipRange: ">=4.3.0 <{FULL_VER}"'
+  - file: "kubernetes-nmstate-operator.package.yaml"
+    update_list:
+    - search: "currentCSV: kubernetes-nmstate-operator.v{MAJOR}.{MINOR}.0"
+      replace: "currentCSV: kubernetes-nmstate-operator.{FULL_VER}"
