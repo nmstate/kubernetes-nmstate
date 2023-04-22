@@ -145,7 +145,7 @@ func InstallOperator(operator TestData) {
 		_, err = cmd.Kubectl("apply", "-f", operator.ManifestsDir+manifest)
 		Expect(err).ToNot(HaveOccurred())
 	}
-	cmd.Kubectl("apply", "-f", fmt.Sprintf("%s/scc.yaml", operator.ManifestsDir)) //ignore the error to be able to run the test against none OCP clusters as well
+
 	deployment.GetEventually(types.NamespacedName{Namespace: operator.Ns, Name: "nmstate-operator"}).Should(deployment.BeReady())
 }
 
