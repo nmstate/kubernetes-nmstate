@@ -1,0 +1,20 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+spec:
+  tags:
+  - name: kubernetes-nmstate-operator
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-kubernetes-nmstate-operator:4.17
+  - name: kubernetes-nmstate-handler
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-kubernetes-nmstate-handler:4.17
+  - name: nmstate-console-plugin-rhel8
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-nmstate-console-plugin:4.17
+  - name: kube-rbac-proxy
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-kube-rbac-proxy:4.17
