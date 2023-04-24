@@ -104,8 +104,7 @@ func filterOutInterfaces(ifacesState []interfaceState) []interfaceState {
 }
 
 func isVeth(ifaceData map[string]interface{}) bool {
-	_, ok := ifaceData["veth"]
-	return ok
+	return ifaceData["type"] == "veth"
 }
 
 func isUnmanaged(ifaceData map[string]interface{}) bool {
