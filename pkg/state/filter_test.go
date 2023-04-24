@@ -136,7 +136,7 @@ routes:
 			state = nmstate.NewState(`interfaces:
 - name: vethab6030bd
   state: down
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 routes:
@@ -151,7 +151,7 @@ routes:
 			filteredState = nmstate.NewState(`interfaces:
 - name: vethab6030bd
   state: down
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 routes:
@@ -177,7 +177,7 @@ routes:
 			state = nmstate.NewState(`interfaces:
 - name: vethab6030bd
   state: ignore
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 routes:
@@ -211,22 +211,22 @@ routes:
   type: ethernet
 - name: veth101
   state: down
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 - name: veth102
   state: ignore
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 - name: vethjyuftrgv
   state: down
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 - name: vethvasziovs
   state: ignore
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 routes:
@@ -264,12 +264,12 @@ routes:
   type: ethernet
 - name: veth101
   state: down
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 - name: vethjyuftrgv
   state: down
-  type: ethernet
+  type: veth
   veth:
     peer: eth2
 routes:
@@ -334,47 +334,47 @@ dns-resolver:
   - name: eth0
     type: ethernet
   - name: '0'
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: '1101010'
-    type: ethernet
+    type: veth
     state: ignore
     veth:
       peer: eth2
   - name: '0.0'
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: '1.0'
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: '0xfe'
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: '60.e+02'
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: 10e+02
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: 70e+02
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
   - name: 94475496822e234
-    type: ethernet
+    type: veth
     veth:
       peer: eth2
     state: ignore
