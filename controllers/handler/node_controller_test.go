@@ -36,23 +36,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	networkmanager "github.com/phoracek/networkmanager-go/src"
-
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 )
-
-type fakeDeviceInfo struct{}
-
-func (fakeDeviceInfo) DeviceStates() (map[string]networkmanager.DeviceState, error) {
-	return map[string]networkmanager.DeviceState{
-		"eth1": networkmanager.DeviceStateActivated,
-		"eth2": networkmanager.DeviceStateActivated,
-	}, nil
-}
 
 var _ = Describe("Node controller reconcile", func() {
 	var (
@@ -100,7 +89,6 @@ var _ = Describe("Node controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 		reconciler.nmstatectlShow = nmstatectl.Show
-		reconciler.deviceInfo = fakeDeviceInfo{}
 		reconciler.lastState = shared.NewState("lastState")
 		observedState = `
 ---
@@ -114,7 +102,7 @@ routes:
 `
 
 		var err error
-		filteredOutObservedState, err = state.FilterOut(shared.NewState(observedState), reconciler.deviceInfo)
+		filteredOutObservedState, err = state.FilterOut(shared.NewState(observedState))
 		Expect(err).ToNot(HaveOccurred())
 
 		reconciler.nmstatectlShow = func() (string, error) {
@@ -209,7 +197,7 @@ routes:
 				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
 				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 				Expect(err).ToNot(HaveOccurred())
-				filteredOutExpectedState, err := state.FilterOut(shared.NewState(expectedStateRaw), reconciler.deviceInfo)
+				filteredOutExpectedState, err := state.FilterOut(shared.NewState(expectedStateRaw))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(obtainedNNS.Status.CurrentState.String()).To(Equal(filteredOutExpectedState.String()))
 			})

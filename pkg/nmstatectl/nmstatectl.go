@@ -74,7 +74,6 @@ func Show() (string, error) {
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	var setDoneCh = make(chan struct{})
-	go setUnavailableUp(setDoneCh)
 	defer close(setDoneCh)
 
 	setOutput, err := nmstatectlWithInput(

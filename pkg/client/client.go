@@ -34,7 +34,6 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/bridge"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -53,9 +52,8 @@ const (
 )
 
 type DependencyVersions struct {
-	HandlerNetworkManagerVersion string
-	HandlerNmstateVersion        string
-	HostNmstateVersion           string
+	HandlerNmstateVersion string
+	HostNmstateVersion    string
 }
 
 func InitializeNodeNetworkState(cli client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
@@ -106,7 +104,6 @@ func UpdateCurrentState(
 		return nil
 	}
 
-	nodeNetworkState.Status.HandlerNetworkManagerVersion = versions.HandlerNetworkManagerVersion
 	nodeNetworkState.Status.HandlerNmstateVersion = versions.HandlerNmstateVersion
 	nodeNetworkState.Status.HostNetworkManagerVersion = versions.HostNmstateVersion
 
@@ -155,11 +152,6 @@ func rollback(cli client.Client, probes []probe.Probe, cause error) error {
 func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, error) {
 	if string(desiredState.Raw) == "" {
 		return "Ignoring empty desired state", nil
-	}
-
-	out, err := bridge.EnableVlanFiltering(desiredState)
-	if err != nil {
-		return out, fmt.Errorf("failed to enable vlan filtering via nmcli: %s", err.Error())
 	}
 
 	// Before apply we get the probes that are working fine, they should be

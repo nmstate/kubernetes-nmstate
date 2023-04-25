@@ -48,7 +48,7 @@ var (
 type Probe struct {
 	name      string
 	timeout   time.Duration
-	condition func(client.Client) wait.ConditionFunc
+	condition func(client.Client, time.Duration) wait.ConditionFunc
 }
 
 const (
@@ -85,7 +85,7 @@ func yamlToGJson(rawYaml string) (gjson.Result, error) {
 	return gjson.ParseBytes(json), nil
 }
 
-func apiServerCondition(_ client.Client) wait.ConditionFunc {
+func apiServerCondition(_ client.Client, _ time.Duration) wait.ConditionFunc {
 	return checkAPIServerConnectivity
 }
 
@@ -113,7 +113,7 @@ func checkAPIServerConnectivity() (bool, error) {
 	return true, nil
 }
 
-func nodeReadinessCondition(cli client.Client) wait.ConditionFunc {
+func nodeReadinessCondition(cli client.Client, _ time.Duration) wait.ConditionFunc {
 	return func() (bool, error) {
 		return checkNodeReadiness(cli)
 	}
@@ -162,7 +162,7 @@ func defaultGw(currentState gjson.Result) (string, error) {
 	return found.String(), nil
 }
 
-func pingCondition(cli client.Client) wait.ConditionFunc {
+func pingCondition(cli client.Client, timeout time.Duration) wait.ConditionFunc {
 	return func() (bool, error) {
 		return runPing(cli)
 	}
@@ -201,13 +201,13 @@ func ping(target string) (string, error) {
 	return output, nil
 }
 
-func dnsCondition(cli client.Client) wait.ConditionFunc {
+func dnsCondition(cli client.Client, timeout time.Duration) wait.ConditionFunc {
 	return func() (bool, error) {
-		return runDNS(cli)
+		return runDNS(cli, timeout)
 	}
 }
 
-func runDNS(_ client.Client) (bool, error) {
+func runDNS(_ client.Client, timeout time.Duration) (bool, error) {
 	runningServersGJsonPath := "dns-resolver.running.server"
 	errs := []error{}
 
@@ -229,10 +229,13 @@ func runDNS(_ client.Client) (bool, error) {
 				return d.DialContext(ctx, network, net.JoinHostPort(runningNameServer.String(), "53"))
 			},
 		}
-		_, err := r.LookupNS(context.TODO(), "root-server.net")
+		ctx, cancel := context.WithTimeout(context.TODO(), timeout)
+		_, err := r.LookupNS(ctx, "root-servers.net")
 		if err != nil {
+			cancel()
 			errs = append(errs, err)
 		} else {
+			cancel()
 			return true, nil
 		}
 	}
@@ -258,7 +261,7 @@ func Select(cli client.Client) []Probe {
 	}
 
 	for _, p := range externalConnectivityProbes {
-		err := wait.PollImmediate(time.Second, p.timeout, p.condition(cli))
+		err := wait.PollImmediate(time.Second, p.timeout, p.condition(cli, p.timeout))
 		if err == nil {
 			probes = append(probes, p)
 		} else {
@@ -291,7 +294,7 @@ func Run(cli client.Client, probes []Probe) error {
 
 	for _, p := range probes {
 		log.Info(fmt.Sprintf("Running '%s' probe", p.name))
-		err = wait.PollImmediate(time.Second, p.timeout, p.condition(cli))
+		err = wait.PollImmediate(time.Second, p.timeout, p.condition(cli, p.timeout))
 		if err != nil {
 			return errors.Wrapf(
 				err,

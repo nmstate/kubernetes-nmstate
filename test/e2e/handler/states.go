@@ -222,12 +222,14 @@ func interfaceAbsent(iface string) nmstate.State {
 `, iface))
 }
 
-func ifaceDownIPv4Disabled(iface string) nmstate.State {
+func ifaceIPDisabled(iface string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
       type: ethernet
-      state: down
+      state: up
       ipv4:
+        enabled: false
+      ipv6:
         enabled: false
 `, iface))
 }
@@ -251,16 +253,23 @@ func resetPrimaryAndSecondaryNICs() nmstate.State {
   - name: %s
     type: ethernet
     state: up
+    ipv4:
+      enabled: true
+      dhcp: true
+    ipv6:
+      enabled: true
+      dhcp: true
+      autoconf: true
   - name: %s
     type: ethernet
-    state: down
+    state: up
     ipv4:
       enabled: false
     ipv6:
       enabled: false
   - name: %s
+    state: up
     type: ethernet
-    state: down
     ipv4:
       enabled: false
     ipv6:
