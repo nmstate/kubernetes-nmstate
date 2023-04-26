@@ -130,7 +130,11 @@ interfaces:
     dhcp: true
 - name: eth1
   type: ethernet
-  state: down
+  state: up
+  ipv4:
+    enabled: false
+  ipv6:
+    enabled: false
 `, dnsTestNicIP, dnsTestNic, dnsTestNic))
 }
 

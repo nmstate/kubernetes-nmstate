@@ -7,11 +7,10 @@ import (
 // NodeNetworkStateStatus is the status of the NodeNetworkState of a specific node
 type NodeNetworkStateStatus struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
-	CurrentState                 State       `json:"currentState,omitempty"`
-	LastSuccessfulUpdateTime     metav1.Time `json:"lastSuccessfulUpdateTime,omitempty"`
-	HostNetworkManagerVersion    string      `json:"hostNetworkManagerVersion,omitempty"`
-	HandlerNetworkManagerVersion string      `json:"handlerNetworkManagerVersion,omitempty"`
-	HandlerNmstateVersion        string      `json:"handlerNmstateVersion,omitempty"`
+	CurrentState              State       `json:"currentState,omitempty"`
+	LastSuccessfulUpdateTime  metav1.Time `json:"lastSuccessfulUpdateTime,omitempty"`
+	HostNetworkManagerVersion string      `json:"hostNetworkManagerVersion,omitempty"`
+	HandlerNmstateVersion     string      `json:"handlerNmstateVersion,omitempty"`
 
 	Conditions ConditionList `json:"conditions,omitempty" optional:"true"`
 }

@@ -67,6 +67,7 @@ interfaces:
   ipv6:
     auto-dns: false
     dhcp: true
+    autoconf: true
     enabled: true
 `, nic))
 }
@@ -89,12 +90,18 @@ interfaces:
   ipv6:
     auto-dns: false
     dhcp: true
+    autoconf: true
     enabled: true
 `, nic))
 }
 
 func discoverNameServers(nic string) nmstate.State {
-	return nmstate.NewState(fmt.Sprintf(`interfaces:
+	return nmstate.NewState(fmt.Sprintf(`
+dns-resolver:
+  config:
+    search: []
+    server: []
+interfaces:
 - name: %s
   type: ethernet
   state: up
@@ -105,6 +112,7 @@ func discoverNameServers(nic string) nmstate.State {
   ipv6:
     auto-dns: true
     dhcp: true
+    autoconf: true
     enabled: true
 `, nic))
 }
@@ -148,17 +156,16 @@ var _ = Describe("rollback", func() {
 		secondaryNicCustomAddress := "192.168.100.1"
 		BeforeEach(func() {
 			By("Configure a invalid default gw")
+			applyTime := time.Now()
 			updateDesiredStateAtNode(nodes[0], badDefaultGw(secondaryNicCustomAddress, firstSecondaryNic, 200))
+			policy.WaitForPolicyTransitionUpdateWithTime(TestPolicy, applyTime)
+			policy.WaitForAvailablePolicy(TestPolicy)
 		})
 		AfterEach(func() {
 			By("Clean up desired state")
 			resetDesiredStateForNodes()
 		})
 		It("should not rollback to the previous configuration", func() {
-			By("Should be available")
-			policy.WaitForPolicyTransitionUpdate(TestPolicy)
-			policy.WaitForAvailablePolicy(TestPolicy)
-
 			Eventually(func() string {
 				return ipv4Address(nodes[0], firstSecondaryNic)
 			}, 3*time.Minute, ReadInterval).Should(Equal(secondaryNicCustomAddress), "IP has not being set")

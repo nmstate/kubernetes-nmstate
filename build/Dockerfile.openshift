@@ -9,7 +9,6 @@ RUN \
     dnf -y update && \
     dnf -y install \
         nmstate \
-        nmstate-plugin-ovsdb \
         iputils \
         iproute && \
     dnf clean all

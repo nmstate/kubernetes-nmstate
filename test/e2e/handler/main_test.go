@@ -97,6 +97,11 @@ var _ = BeforeSuite(func() {
 
 	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
 	knmstateReporter.Cleanup()
+	By("Getting nodes initial state")
+	for _, node := range allNodes {
+		nodeState := nodeInterfacesState(node, interfacesToIgnore)
+		nodesInterfacesState[node] = nodeState
+	}
 })
 
 func TestE2E(t *testing.T) {
@@ -113,12 +118,6 @@ var _ = BeforeEach(func() {
 	bridge1 = nextBridge()
 	Byf("Setting bridge1=%s", bridge1)
 	startTime = time.Now()
-
-	By("Getting nodes initial state")
-	for _, node := range allNodes {
-		nodeState := nodeInterfacesState(node, interfacesToIgnore)
-		nodesInterfacesState[node] = nodeState
-	}
 })
 
 var _ = AfterEach(func() {

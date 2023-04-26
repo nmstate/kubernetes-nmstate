@@ -18,22 +18,15 @@ limitations under the License.
 package state
 
 import (
-	networkmanager "github.com/phoracek/networkmanager-go/src"
-
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
 	goyaml "gopkg.in/yaml.v2"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	yaml "sigs.k8s.io/yaml"
 )
 
 const (
 	InterfaceFilter = "interface_filter"
-)
-
-var (
-	filterLog = logf.Log.WithName(InterfaceFilter)
 )
 
 func init() {
@@ -42,40 +35,8 @@ func init() {
 	}
 }
 
-type DeviceInfoer interface {
-	DeviceStates() (map[string]networkmanager.DeviceState, error)
-}
-
-type DeviceInfo struct{}
-
-func (d DeviceInfo) DeviceStates() (map[string]networkmanager.DeviceState, error) {
-	nmClient, err := networkmanager.NewClientPrivate()
-	if err != nil {
-		filterLog.Error(err, "failed to initialize NetworkManager client")
-		return nil, err
-	}
-	defer nmClient.Close()
-
-	devices, err := nmClient.GetDevices()
-	if err != nil {
-		filterLog.Error(err, "failed to list NetworkManager devices")
-		return nil, err
-	}
-
-	ifaceStates := map[string]networkmanager.DeviceState{}
-	for _, device := range devices {
-		ifaceStates[device.Interface] = device.State
-	}
-	return ifaceStates, nil
-}
-
-func FilterOut(currentState shared.State, deviceInfo DeviceInfoer) (shared.State, error) {
-	devStates, err := deviceInfo.DeviceStates()
-	if err != nil {
-		filterLog.Error(err, "failed getting interface states, cannot filter managed interfaces")
-		return currentState, nil
-	}
-	return filterOut(currentState, devStates)
+func FilterOut(currentState shared.State) (shared.State, error) {
+	return filterOut(currentState)
 }
 
 func filterOutRoutes(routes []routeState, filteredInterfaces []interfaceState) []routeState {
@@ -130,22 +91,27 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 	delete(options, "hello-timer")
 }
 
-func filterOutInterfaces(ifacesState []interfaceState, deviceStates map[string]networkmanager.DeviceState) []interfaceState {
-	if deviceStates == nil {
-		return ifacesState
-	}
-
+func filterOutInterfaces(ifacesState []interfaceState) []interfaceState {
 	filteredInterfaces := []interfaceState{}
 	for _, iface := range ifacesState {
-		if iface.Data["type"] != "veth" || deviceStates[iface.Name] != networkmanager.DeviceStateUnmanaged {
-			filterOutDynamicAttributes(iface.Data)
-			filteredInterfaces = append(filteredInterfaces, iface)
+		if isVeth(iface.Data) && isUnmanaged(iface.Data) {
+			continue
 		}
+		filterOutDynamicAttributes(iface.Data)
+		filteredInterfaces = append(filteredInterfaces, iface)
 	}
 	return filteredInterfaces
 }
 
-func filterOut(currentState shared.State, deviceStates map[string]networkmanager.DeviceState) (shared.State, error) {
+func isVeth(ifaceData map[string]interface{}) bool {
+	return ifaceData["type"] == "veth"
+}
+
+func isUnmanaged(ifaceData map[string]interface{}) bool {
+	return ifaceData["state"] == "ignore"
+}
+
+func filterOut(currentState shared.State) (shared.State, error) {
 	var state rootState
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
@@ -154,7 +120,7 @@ func filterOut(currentState shared.State, deviceStates map[string]networkmanager
 		return currentState, err
 	}
 
-	state.Interfaces = filterOutInterfaces(state.Interfaces, deviceStates)
+	state.Interfaces = filterOutInterfaces(state.Interfaces)
 	if state.Routes != nil {
 		state.Routes.Running = filterOutRoutes(state.Routes.Running, state.Interfaces)
 		state.Routes.Config = filterOutRoutes(state.Routes.Config, state.Interfaces)
