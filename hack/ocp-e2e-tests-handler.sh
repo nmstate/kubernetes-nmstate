@@ -40,17 +40,6 @@ when name servers are wrong after state configuration|\
 LLDP configuration with nmpolicy"
 fi
 
-# Apply machine configs and wait until machine config pools got updated
-old_mcp_generation=$(oc get mcp master -o jsonpath={.metadata.generation})
-if oc create -f test/e2e/machineconfigs.yaml; then
-    # If MCs could be created, wait until the MCP are aware of new machine configs
-    while [ "$old_mcp_generation" -eq "$(oc get mcp master -o jsonpath={.metadata.generation})" ]; do 
-        echo "waiting for MCP update to start..."; 
-        sleep 1; 
-    done
-fi
-while ! oc wait mcp --all --for=condition=Updated --timeout -1s; do sleep 1; done
-
 make cluster-sync-operator
 oc create -f test/e2e/nmstate.yaml
 # On first deployment, it can take a while for all of the pods to come up
