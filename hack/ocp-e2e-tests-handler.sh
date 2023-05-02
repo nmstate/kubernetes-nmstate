@@ -32,12 +32,14 @@ fi
 if oc get ns openshift-ovn-kubernetes &> /dev/null; then
     # We are using OVNKubernetes -> use enp1s0 as primary nic
     export PRIMARY_NIC=enp1s0
+    # Some tests don't work correctly in OVNK due to our inability to modify the br-ex interface
     SKIPPED_TESTS+="|NodeNetworkConfigurationPolicy bonding default interface|\
 with ping fail|\
 when connectivity to default gw is lost after state configuration|\
 when name servers are lost after state configuration|\
 when name servers are wrong after state configuration|\
-LLDP configuration with nmpolicy"
+LLDP configuration with nmpolicy|\
+with capture"
 fi
 
 make cluster-sync-operator
