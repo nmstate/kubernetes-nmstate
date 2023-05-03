@@ -187,6 +187,8 @@ spec:
                       - name: RUN_OPERATOR
                       - name: HANDLER_IMAGE
                         value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.13
+                      - name: PLUGIN_IMAGE
+                        value: quay.io/openshift/origin-nmstate-console-plugin:4.13
                       - name: HANDLER_IMAGE_PULL_POLICY
                         value: Always
                       - name: HANDLER_NAMESPACE

@@ -14,6 +14,7 @@ rm -rf ${BUNDLE_DIR}/manifests ${BUNDLE_DIR}/metadata
 IMAGE_REPO=${IMAGE_REPO} \
 HANDLER_IMAGE_NAME=${HANDLER_IMAGE_NAME} HANDLER_IMAGE_TAG=${HANDLER_IMAGE_TAG} HANDLER_NAMESPACE=${HANDLER_NAMESPACE} \
 OPERATOR_IMAGE_NAME=${OPERATOR_IMAGE_NAME} OPERATOR_IMAGE_TAG=${OPERATOR_IMAGE_TAG} OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} \
+PLUGIN_IMAGE_NAME=${PLUGIN_IMAGE_NAME} PLUGIN_IMAGE_TAG=${PLUGIN_IMAGE_TAG} PLUGIN_NAMESPACE=${PLUGIN_NAMESPACE} \
 VERSION=${VERSION} CHANNELS=${CHANNEL},alpha DEFAULT_CHANNEL=${CHANNEL} \
 BUNDLE_DIR=${BUNDLE_DIR} MANIFEST_BASES_DIR=${MANIFEST_BASES_DIR} make bundle
 
@@ -43,6 +44,10 @@ spec:
     from:
       kind: DockerImage
       name: quay.io/openshift/origin-kubernetes-nmstate-handler:${VERSION_MAJOR_MINOR}
+  - name: nmstate-console-plugin-rhel8
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-nmstate-console-plugin:${VERSION_MAJOR_MINOR}
 EOF
 
 # undo changes on "root" bundle.Dockerfile (gets updated by `make bundle`)

@@ -10,6 +10,8 @@
 #   - HANDLER_IMAGE_TAG (defaults to ${CHANNEL})
 #   - OPERATOR_IMAGE_NAME (defaults to origin-kubernetes-nmstate-operator)
 #   - OPERATOR_IMAGE_TAG (defaults to ${CHANNEL})
+#   - PLUGIN_IMAGE_NAME (defaults to origin-nmstate-console-plugin)
+#   - PLUGIN_IMAGE_TAG (defaults to ${CHANNEL})
 #   - CHANNEL (defaults to the latest 4.x version in manifests/)
 #   - VERSION (defaults to ${CHANNEL}.0)
 #   - BUNDLE_VERSION (defaults to ${VERSION})
