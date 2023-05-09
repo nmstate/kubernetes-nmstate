@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
@@ -43,6 +44,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
@@ -139,6 +141,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
+	log.Info("Reconcile nncp", "desiredState", instance.Spec.DesiredState)
 
 	if !policyconditions.IsProgressing(&instance.Status.Conditions) {
 		policyconditions.Reset(r.Client, request.NamespacedName)
@@ -329,12 +332,23 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		return err
 	}
 
-	capturedStates, generatedDesiredState, err := nmpolicy.GenerateState(
-		policy.Spec.DesiredState,
-		policy.Spec,
-		nmstateapi.NewState(currentState),
-		enactmentInstance.Status.CapturedStates,
-	)
+	generatedDesiredState := shared.State{}
+	capturedStates := map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{}
+
+	if policy.Spec.DesiredStateTemplate != nil {
+		capturedStates, generatedDesiredState, err = nmpolicy.GenerateState(
+			*policy.Spec.DesiredStateTemplate,
+			policy.Spec,
+			nmstateapi.NewState(currentState),
+			enactmentInstance.Status.CapturedStates,
+		)
+	} else {
+		generatedDesiredState.Raw, err = json.Marshal(&policy.Spec.DesiredState)
+		if err != nil {
+			return err
+		}
+	}
+
 	if err != nil {
 		err2 := enactmentstatus.Update(
 			r.APIClient,

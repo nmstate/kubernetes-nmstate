@@ -20,6 +20,8 @@ package shared
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	nmstateapi "github.com/qinqon/nmstate/rust/src/go/api/v2"
 )
 
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
@@ -35,9 +37,11 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// +optional
 	Capture map[string]string `json:"capture,omitempty"`
 
-	// +kubebuilder:validation:XPreserveUnknownFields
 	// The desired configuration of the policy
-	DesiredState State `json:"desiredState,omitempty"`
+	DesiredState nmstateapi.NetworkState `json:"desiredState,omitempty"`
+
+	// The desired configuration of the policy
+	DesiredStateTemplate *State `json:"desiredStateTemplate,omitempty"`
 
 	// MaxUnavailable specifies percentage or number
 	// of machines that can be updating at a time. Default is "50%".

@@ -985,6 +985,8 @@ github.com/prometheus/prometheus v2.3.2+incompatible/go.mod h1:oAIUtOny2rjMX0OWN
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/qinqon/kube-admission-webhook v0.18.0 h1:gv2OGWN8OPYjBAFOH0FGzUnhIgXG5+p4chBI/yDKOAw=
 github.com/qinqon/kube-admission-webhook v0.18.0/go.mod h1:eYJw+S+JSprEMLzGNmE0GFIlSrBQw0lAVES/ZjgM2FI=
+github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20230511111801-47c365e7c53f h1:+ZYgIEnaF2Et2lWKA6YhFfFFF7CyN0P8i54mmjUv01Q=
+github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20230511111801-47c365e7c53f/go.mod h1:SABxeDWEHI2upT5ex4YWYls4/62BtfVn28Sby09DeVM=
 github.com/rcrowley/go-metrics v0.0.0-20181016184325-3113b8401b8a/go.mod h1:bCqnVzQkZxMG4s8nGwiZ5l3QUCyqpo9Y+/ZMZ9VjZe4=
 github.com/remyoudompheng/bigfft v0.0.0-20170806203942-52369c62f446/go.mod h1:uYEyJGbgTkfkS4+E/PavXkNJcbFIpEtjt2B0KDQ5+9M=
 github.com/robfig/cron v0.0.0-20170526150127-736158dc09e1/go.mod h1:JGuDeoQd7Z6yL4zQhZ3OPEVHB7fL6Ka6skscFHfmt2k=

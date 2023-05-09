@@ -55,8 +55,861 @@ spec:
                 type: object
               desiredState:
                 description: The desired configuration of the policy
+                properties:
+                  dns-resolver:
+                    properties:
+                      config:
+                        properties:
+                          search:
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      running:
+                        properties:
+                          search:
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  hostname:
+                    properties:
+                      config:
+                        type: string
+                      running:
+                        type: string
+                    type: object
+                  interfaces:
+                    items:
+                      properties:
+                        802.1x:
+                          properties:
+                            ca-cert:
+                              type: string
+                            client-cert:
+                              type: string
+                            eap-methods:
+                              items:
+                                type: string
+                              type: array
+                            identity:
+                              type: string
+                            private-key:
+                              type: string
+                            private-key-password:
+                              type: string
+                          type: object
+                        accept-all-mac-addresses:
+                          type: boolean
+                        bridge:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        controller:
+                          type: string
+                        copy-mac-from:
+                          type: string
+                        description:
+                          type: string
+                        dpdk:
+                          properties:
+                            devargs:
+                              type: string
+                            n_rxq_desc:
+                              format: int32
+                              type: integer
+                            n_txq_desc:
+                              format: int32
+                              type: integer
+                            rx-queue:
+                              format: int32
+                              type: integer
+                          required:
+                          - devargs
+                          type: object
+                        ethernet:
+                          properties:
+                            auto-negotiation:
+                              type: boolean
+                            duplex:
+                              type: string
+                            speed:
+                              format: int32
+                              type: integer
+                            sr-iov:
+                              properties:
+                                total-vfs:
+                                  format: int32
+                                  type: integer
+                                vfs:
+                                  items:
+                                    properties:
+                                      id:
+                                        format: int32
+                                        type: integer
+                                      mac-address:
+                                        type: string
+                                      max-tx-rate:
+                                        format: int32
+                                        type: integer
+                                      min-tx-rate:
+                                        format: int32
+                                        type: integer
+                                      qos:
+                                        format: int32
+                                        type: integer
+                                      spoof-check:
+                                        type: boolean
+                                      trust:
+                                        type: boolean
+                                      vlan-id:
+                                        format: int32
+                                        type: integer
+                                    required:
+                                    - id
+                                    type: object
+                                  type: array
+                              type: object
+                          type: object
+                        ethtool:
+                          properties:
+                            coalesce:
+                              properties:
+                                adaptive-rx:
+                                  type: boolean
+                                adaptive-tx:
+                                  type: boolean
+                                pkt-rate-high:
+                                  format: int32
+                                  type: integer
+                                pkt-rate-low:
+                                  format: int32
+                                  type: integer
+                                rx-frames:
+                                  format: int32
+                                  type: integer
+                                rx-frames-high:
+                                  format: int32
+                                  type: integer
+                                rx-frames-irq:
+                                  format: int32
+                                  type: integer
+                                rx-frames-low:
+                                  format: int32
+                                  type: integer
+                                rx-usecs:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-high:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-irq:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-low:
+                                  format: int32
+                                  type: integer
+                                sample-interval:
+                                  format: int32
+                                  type: integer
+                                stats-block-usecs:
+                                  format: int32
+                                  type: integer
+                                tx-frames:
+                                  format: int32
+                                  type: integer
+                                tx-frames-high:
+                                  format: int32
+                                  type: integer
+                                tx-frames-irq:
+                                  format: int32
+                                  type: integer
+                                tx-frames-low:
+                                  format: int32
+                                  type: integer
+                                tx-usecs:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-high:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-irq:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-low:
+                                  format: int32
+                                  type: integer
+                              type: object
+                            feature:
+                              additionalProperties:
+                                type: boolean
+                              type: object
+                            pause:
+                              properties:
+                                autoneg:
+                                  type: boolean
+                                rx:
+                                  type: boolean
+                                tx:
+                                  type: boolean
+                              type: object
+                            ring:
+                              properties:
+                                rx:
+                                  format: int32
+                                  type: integer
+                                rx-jumbo:
+                                  format: int32
+                                  type: integer
+                                rx-jumbo-max:
+                                  format: int32
+                                  type: integer
+                                rx-max:
+                                  format: int32
+                                  type: integer
+                                rx-mini:
+                                  format: int32
+                                  type: integer
+                                rx-mini-max:
+                                  format: int32
+                                  type: integer
+                                tx:
+                                  format: int32
+                                  type: integer
+                                tx-max:
+                                  format: int32
+                                  type: integer
+                              type: object
+                          type: object
+                        identifier:
+                          type: string
+                        infiniband:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            pkey:
+                              type: string
+                          required:
+                          - mode
+                          type: object
+                        ipv4:
+                          properties:
+                            addr-gen-mode:
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    type: string
+                                  mptcp-flags:
+                                    items:
+                                      type: string
+                                    type: array
+                                  preferred-left:
+                                    type: string
+                                  prefix-length:
+                                    type: integer
+                                  valid-left:
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              format: int32
+                              type: integer
+                            auto-route-table-id:
+                              format: int32
+                              type: integer
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        ipv6:
+                          properties:
+                            addr-gen-mode:
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    type: string
+                                  mptcp-flags:
+                                    items:
+                                      type: string
+                                    type: array
+                                  preferred-left:
+                                    type: string
+                                  prefix-length:
+                                    type: integer
+                                  valid-left:
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              format: int32
+                              type: integer
+                            auto-route-table-id:
+                              format: int32
+                              type: integer
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        link-aggregation:
+                          properties:
+                            mode:
+                              type: string
+                            options:
+                              properties:
+                                ad_actor_sys_prio:
+                                  type: integer
+                                ad_actor_system:
+                                  type: string
+                                ad_select:
+                                  type: string
+                                ad_user_port_key:
+                                  type: integer
+                                all_slaves_active:
+                                  type: string
+                                arp_all_targets:
+                                  type: string
+                                arp_interval:
+                                  format: int32
+                                  type: integer
+                                arp_ip_target:
+                                  type: string
+                                arp_validate:
+                                  type: string
+                                balance_slb:
+                                  type: boolean
+                                downdelay:
+                                  format: int32
+                                  type: integer
+                                fail_over_mac:
+                                  type: string
+                                lacp_rate:
+                                  type: string
+                                lp_interval:
+                                  format: int32
+                                  type: integer
+                                miimon:
+                                  format: int32
+                                  type: integer
+                                min_links:
+                                  format: int32
+                                  type: integer
+                                num_grat_arp:
+                                  type: integer
+                                num_unsol_na:
+                                  type: integer
+                                packets_per_slave:
+                                  format: int32
+                                  type: integer
+                                primary:
+                                  type: string
+                                primary_reselect:
+                                  type: string
+                                resend_igmp:
+                                  format: int32
+                                  type: integer
+                                tlb_dynamic_lb:
+                                  type: boolean
+                                updelay:
+                                  format: int32
+                                  type: integer
+                                use_carrier:
+                                  type: boolean
+                                xmit_hash_policy:
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        linux-bridge:
+                          properties:
+                            options:
+                              properties:
+                                gc-timer:
+                                  format: int64
+                                  type: integer
+                                group-addr:
+                                  type: string
+                                group-forward-mask:
+                                  type: integer
+                                group-fwd-mask:
+                                  type: integer
+                                hash-max:
+                                  format: int32
+                                  type: integer
+                                hello-timer:
+                                  format: int64
+                                  type: integer
+                                mac-ageing-time:
+                                  format: int32
+                                  type: integer
+                                multicast-last-member-count:
+                                  format: int32
+                                  type: integer
+                                multicast-last-member-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-membership-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-querier:
+                                  type: boolean
+                                multicast-querier-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-response-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-use-ifaddr:
+                                  type: boolean
+                                multicast-router:
+                                  type: string
+                                multicast-snooping:
+                                  type: boolean
+                                multicast-startup-query-count:
+                                  format: int32
+                                  type: integer
+                                multicast-startup-query-interval:
+                                  format: int64
+                                  type: integer
+                                stp:
+                                  properties:
+                                    enabled:
+                                      type: boolean
+                                    forward-delay:
+                                      type: integer
+                                    hello-time:
+                                      type: integer
+                                    max-age:
+                                      type: integer
+                                    priority:
+                                      type: integer
+                                  type: object
+                                vlan-protocol:
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                  stp-hairpin-mode:
+                                    type: boolean
+                                  stp-path-cost:
+                                    format: int32
+                                    type: integer
+                                  stp-priority:
+                                    type: integer
+                                  vlan:
+                                    properties:
+                                      enable-native:
+                                        type: boolean
+                                      mode:
+                                        type: string
+                                      tag:
+                                        type: integer
+                                      trunk-tags:
+                                        items:
+                                          properties:
+                                            id:
+                                              type: integer
+                                            id-range:
+                                              properties:
+                                                max:
+                                                  type: integer
+                                                min:
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        lldp:
+                          properties:
+                            enabled:
+                              type: boolean
+                            neighbors:
+                              items:
+                                items:
+                                  type: string
+                                type: array
+                              type: array
+                          required:
+                          - enabled
+                          type: object
+                        mac-address:
+                          type: string
+                        mac-vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            promiscuous:
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        mac-vtap:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            promiscuous:
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        max-mtu:
+                          format: int64
+                          type: integer
+                        min-mtu:
+                          format: int64
+                          type: integer
+                        mptcp:
+                          properties:
+                            address-flags:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        mtu:
+                          format: int64
+                          type: integer
+                        name:
+                          type: string
+                        other:
+                          type: string
+                        ovs-bridge:
+                          properties:
+                            options:
+                              properties:
+                                datapath:
+                                  type: string
+                                fail-mode:
+                                  type: string
+                                mcast-snooping-enable:
+                                  type: boolean
+                                rstp:
+                                  type: boolean
+                                stp:
+                                  type: boolean
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  link-aggregation:
+                                    properties:
+                                      bond-downdelay:
+                                        format: int32
+                                        type: integer
+                                      bond-updelay:
+                                        format: int32
+                                        type: integer
+                                      mode:
+                                        type: string
+                                      ovs-db:
+                                        properties:
+                                          external_ids:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          other_config:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                      port:
+                                        items:
+                                          properties:
+                                            name:
+                                              type: string
+                                          required:
+                                          - name
+                                          type: object
+                                        type: array
+                                    type: object
+                                  name:
+                                    type: string
+                                  vlan:
+                                    properties:
+                                      enable-native:
+                                        type: boolean
+                                      mode:
+                                        type: string
+                                      tag:
+                                        type: integer
+                                      trunk-tags:
+                                        items:
+                                          properties:
+                                            id:
+                                              type: integer
+                                            id-range:
+                                              properties:
+                                                max:
+                                                  type: integer
+                                                min:
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        ovs-db:
+                          properties:
+                            external_ids:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            other_config:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        patch:
+                          properties:
+                            peer:
+                              type: string
+                          required:
+                          - peer
+                          type: object
+                        profile-name:
+                          type: string
+                        state:
+                          type: string
+                        type:
+                          type: string
+                        veth:
+                          properties:
+                            peer:
+                              type: string
+                          required:
+                          - peer
+                          type: object
+                        vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            id:
+                              type: integer
+                            protocol:
+                              type: string
+                          required:
+                          - base-iface
+                          - id
+                          type: object
+                        vrf:
+                          properties:
+                            port:
+                              items:
+                                type: string
+                              type: array
+                            route-table-id:
+                              format: int32
+                              type: integer
+                          required:
+                          - port
+                          - route-table-id
+                          type: object
+                        vxlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            destination-port:
+                              type: integer
+                            id:
+                              format: int32
+                              type: integer
+                            learning:
+                              type: boolean
+                            local:
+                              type: string
+                            remote:
+                              type: string
+                          required:
+                          - id
+                          type: object
+                        wait-ip:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  ovs-db:
+                    properties:
+                      external_ids:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      other_config:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  route-rules:
+                    properties:
+                      config:
+                        items:
+                          properties:
+                            action:
+                              type: string
+                            family:
+                              type: string
+                            fwmark:
+                              format: int32
+                              type: integer
+                            fwmask:
+                              format: int32
+                              type: integer
+                            iif:
+                              type: string
+                            ip-from:
+                              type: string
+                            ip-to:
+                              type: string
+                            priority:
+                              format: int64
+                              type: integer
+                            route-table:
+                              format: int32
+                              type: integer
+                            state:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  routes:
+                    properties:
+                      config:
+                        items:
+                          properties:
+                            destination:
+                              type: string
+                            metric:
+                              format: int64
+                              type: integer
+                            next-hop-address:
+                              type: string
+                            next-hop-interface:
+                              type: string
+                            state:
+                              type: string
+                            table-id:
+                              format: int32
+                              type: integer
+                            weight:
+                              type: integer
+                          type: object
+                        type: array
+                      running:
+                        items:
+                          properties:
+                            destination:
+                              type: string
+                            metric:
+                              format: int64
+                              type: integer
+                            next-hop-address:
+                              type: string
+                            next-hop-interface:
+                              type: string
+                            state:
+                              type: string
+                            table-id:
+                              format: int32
+                              type: integer
+                            weight:
+                              type: integer
+                          type: object
+                        type: array
+                    type: object
                 type: object
-                x-kubernetes-preserve-unknown-fields: true
+              desiredStateTemplate:
+                description: The desired configuration of the policy
+                type: object
               maxUnavailable:
                 anyOf:
                 - type: integer
@@ -153,8 +1006,861 @@ spec:
                 type: object
               desiredState:
                 description: The desired configuration of the policy
+                properties:
+                  dns-resolver:
+                    properties:
+                      config:
+                        properties:
+                          search:
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      running:
+                        properties:
+                          search:
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  hostname:
+                    properties:
+                      config:
+                        type: string
+                      running:
+                        type: string
+                    type: object
+                  interfaces:
+                    items:
+                      properties:
+                        802.1x:
+                          properties:
+                            ca-cert:
+                              type: string
+                            client-cert:
+                              type: string
+                            eap-methods:
+                              items:
+                                type: string
+                              type: array
+                            identity:
+                              type: string
+                            private-key:
+                              type: string
+                            private-key-password:
+                              type: string
+                          type: object
+                        accept-all-mac-addresses:
+                          type: boolean
+                        bridge:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        controller:
+                          type: string
+                        copy-mac-from:
+                          type: string
+                        description:
+                          type: string
+                        dpdk:
+                          properties:
+                            devargs:
+                              type: string
+                            n_rxq_desc:
+                              format: int32
+                              type: integer
+                            n_txq_desc:
+                              format: int32
+                              type: integer
+                            rx-queue:
+                              format: int32
+                              type: integer
+                          required:
+                          - devargs
+                          type: object
+                        ethernet:
+                          properties:
+                            auto-negotiation:
+                              type: boolean
+                            duplex:
+                              type: string
+                            speed:
+                              format: int32
+                              type: integer
+                            sr-iov:
+                              properties:
+                                total-vfs:
+                                  format: int32
+                                  type: integer
+                                vfs:
+                                  items:
+                                    properties:
+                                      id:
+                                        format: int32
+                                        type: integer
+                                      mac-address:
+                                        type: string
+                                      max-tx-rate:
+                                        format: int32
+                                        type: integer
+                                      min-tx-rate:
+                                        format: int32
+                                        type: integer
+                                      qos:
+                                        format: int32
+                                        type: integer
+                                      spoof-check:
+                                        type: boolean
+                                      trust:
+                                        type: boolean
+                                      vlan-id:
+                                        format: int32
+                                        type: integer
+                                    required:
+                                    - id
+                                    type: object
+                                  type: array
+                              type: object
+                          type: object
+                        ethtool:
+                          properties:
+                            coalesce:
+                              properties:
+                                adaptive-rx:
+                                  type: boolean
+                                adaptive-tx:
+                                  type: boolean
+                                pkt-rate-high:
+                                  format: int32
+                                  type: integer
+                                pkt-rate-low:
+                                  format: int32
+                                  type: integer
+                                rx-frames:
+                                  format: int32
+                                  type: integer
+                                rx-frames-high:
+                                  format: int32
+                                  type: integer
+                                rx-frames-irq:
+                                  format: int32
+                                  type: integer
+                                rx-frames-low:
+                                  format: int32
+                                  type: integer
+                                rx-usecs:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-high:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-irq:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-low:
+                                  format: int32
+                                  type: integer
+                                sample-interval:
+                                  format: int32
+                                  type: integer
+                                stats-block-usecs:
+                                  format: int32
+                                  type: integer
+                                tx-frames:
+                                  format: int32
+                                  type: integer
+                                tx-frames-high:
+                                  format: int32
+                                  type: integer
+                                tx-frames-irq:
+                                  format: int32
+                                  type: integer
+                                tx-frames-low:
+                                  format: int32
+                                  type: integer
+                                tx-usecs:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-high:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-irq:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-low:
+                                  format: int32
+                                  type: integer
+                              type: object
+                            feature:
+                              additionalProperties:
+                                type: boolean
+                              type: object
+                            pause:
+                              properties:
+                                autoneg:
+                                  type: boolean
+                                rx:
+                                  type: boolean
+                                tx:
+                                  type: boolean
+                              type: object
+                            ring:
+                              properties:
+                                rx:
+                                  format: int32
+                                  type: integer
+                                rx-jumbo:
+                                  format: int32
+                                  type: integer
+                                rx-jumbo-max:
+                                  format: int32
+                                  type: integer
+                                rx-max:
+                                  format: int32
+                                  type: integer
+                                rx-mini:
+                                  format: int32
+                                  type: integer
+                                rx-mini-max:
+                                  format: int32
+                                  type: integer
+                                tx:
+                                  format: int32
+                                  type: integer
+                                tx-max:
+                                  format: int32
+                                  type: integer
+                              type: object
+                          type: object
+                        identifier:
+                          type: string
+                        infiniband:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            pkey:
+                              type: string
+                          required:
+                          - mode
+                          type: object
+                        ipv4:
+                          properties:
+                            addr-gen-mode:
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    type: string
+                                  mptcp-flags:
+                                    items:
+                                      type: string
+                                    type: array
+                                  preferred-left:
+                                    type: string
+                                  prefix-length:
+                                    type: integer
+                                  valid-left:
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              format: int32
+                              type: integer
+                            auto-route-table-id:
+                              format: int32
+                              type: integer
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        ipv6:
+                          properties:
+                            addr-gen-mode:
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    type: string
+                                  mptcp-flags:
+                                    items:
+                                      type: string
+                                    type: array
+                                  preferred-left:
+                                    type: string
+                                  prefix-length:
+                                    type: integer
+                                  valid-left:
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              format: int32
+                              type: integer
+                            auto-route-table-id:
+                              format: int32
+                              type: integer
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        link-aggregation:
+                          properties:
+                            mode:
+                              type: string
+                            options:
+                              properties:
+                                ad_actor_sys_prio:
+                                  type: integer
+                                ad_actor_system:
+                                  type: string
+                                ad_select:
+                                  type: string
+                                ad_user_port_key:
+                                  type: integer
+                                all_slaves_active:
+                                  type: string
+                                arp_all_targets:
+                                  type: string
+                                arp_interval:
+                                  format: int32
+                                  type: integer
+                                arp_ip_target:
+                                  type: string
+                                arp_validate:
+                                  type: string
+                                balance_slb:
+                                  type: boolean
+                                downdelay:
+                                  format: int32
+                                  type: integer
+                                fail_over_mac:
+                                  type: string
+                                lacp_rate:
+                                  type: string
+                                lp_interval:
+                                  format: int32
+                                  type: integer
+                                miimon:
+                                  format: int32
+                                  type: integer
+                                min_links:
+                                  format: int32
+                                  type: integer
+                                num_grat_arp:
+                                  type: integer
+                                num_unsol_na:
+                                  type: integer
+                                packets_per_slave:
+                                  format: int32
+                                  type: integer
+                                primary:
+                                  type: string
+                                primary_reselect:
+                                  type: string
+                                resend_igmp:
+                                  format: int32
+                                  type: integer
+                                tlb_dynamic_lb:
+                                  type: boolean
+                                updelay:
+                                  format: int32
+                                  type: integer
+                                use_carrier:
+                                  type: boolean
+                                xmit_hash_policy:
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        linux-bridge:
+                          properties:
+                            options:
+                              properties:
+                                gc-timer:
+                                  format: int64
+                                  type: integer
+                                group-addr:
+                                  type: string
+                                group-forward-mask:
+                                  type: integer
+                                group-fwd-mask:
+                                  type: integer
+                                hash-max:
+                                  format: int32
+                                  type: integer
+                                hello-timer:
+                                  format: int64
+                                  type: integer
+                                mac-ageing-time:
+                                  format: int32
+                                  type: integer
+                                multicast-last-member-count:
+                                  format: int32
+                                  type: integer
+                                multicast-last-member-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-membership-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-querier:
+                                  type: boolean
+                                multicast-querier-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-response-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-use-ifaddr:
+                                  type: boolean
+                                multicast-router:
+                                  type: string
+                                multicast-snooping:
+                                  type: boolean
+                                multicast-startup-query-count:
+                                  format: int32
+                                  type: integer
+                                multicast-startup-query-interval:
+                                  format: int64
+                                  type: integer
+                                stp:
+                                  properties:
+                                    enabled:
+                                      type: boolean
+                                    forward-delay:
+                                      type: integer
+                                    hello-time:
+                                      type: integer
+                                    max-age:
+                                      type: integer
+                                    priority:
+                                      type: integer
+                                  type: object
+                                vlan-protocol:
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                  stp-hairpin-mode:
+                                    type: boolean
+                                  stp-path-cost:
+                                    format: int32
+                                    type: integer
+                                  stp-priority:
+                                    type: integer
+                                  vlan:
+                                    properties:
+                                      enable-native:
+                                        type: boolean
+                                      mode:
+                                        type: string
+                                      tag:
+                                        type: integer
+                                      trunk-tags:
+                                        items:
+                                          properties:
+                                            id:
+                                              type: integer
+                                            id-range:
+                                              properties:
+                                                max:
+                                                  type: integer
+                                                min:
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        lldp:
+                          properties:
+                            enabled:
+                              type: boolean
+                            neighbors:
+                              items:
+                                items:
+                                  type: string
+                                type: array
+                              type: array
+                          required:
+                          - enabled
+                          type: object
+                        mac-address:
+                          type: string
+                        mac-vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            promiscuous:
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        mac-vtap:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            promiscuous:
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        max-mtu:
+                          format: int64
+                          type: integer
+                        min-mtu:
+                          format: int64
+                          type: integer
+                        mptcp:
+                          properties:
+                            address-flags:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        mtu:
+                          format: int64
+                          type: integer
+                        name:
+                          type: string
+                        other:
+                          type: string
+                        ovs-bridge:
+                          properties:
+                            options:
+                              properties:
+                                datapath:
+                                  type: string
+                                fail-mode:
+                                  type: string
+                                mcast-snooping-enable:
+                                  type: boolean
+                                rstp:
+                                  type: boolean
+                                stp:
+                                  type: boolean
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  link-aggregation:
+                                    properties:
+                                      bond-downdelay:
+                                        format: int32
+                                        type: integer
+                                      bond-updelay:
+                                        format: int32
+                                        type: integer
+                                      mode:
+                                        type: string
+                                      ovs-db:
+                                        properties:
+                                          external_ids:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          other_config:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                      port:
+                                        items:
+                                          properties:
+                                            name:
+                                              type: string
+                                          required:
+                                          - name
+                                          type: object
+                                        type: array
+                                    type: object
+                                  name:
+                                    type: string
+                                  vlan:
+                                    properties:
+                                      enable-native:
+                                        type: boolean
+                                      mode:
+                                        type: string
+                                      tag:
+                                        type: integer
+                                      trunk-tags:
+                                        items:
+                                          properties:
+                                            id:
+                                              type: integer
+                                            id-range:
+                                              properties:
+                                                max:
+                                                  type: integer
+                                                min:
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        ovs-db:
+                          properties:
+                            external_ids:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            other_config:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        patch:
+                          properties:
+                            peer:
+                              type: string
+                          required:
+                          - peer
+                          type: object
+                        profile-name:
+                          type: string
+                        state:
+                          type: string
+                        type:
+                          type: string
+                        veth:
+                          properties:
+                            peer:
+                              type: string
+                          required:
+                          - peer
+                          type: object
+                        vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            id:
+                              type: integer
+                            protocol:
+                              type: string
+                          required:
+                          - base-iface
+                          - id
+                          type: object
+                        vrf:
+                          properties:
+                            port:
+                              items:
+                                type: string
+                              type: array
+                            route-table-id:
+                              format: int32
+                              type: integer
+                          required:
+                          - port
+                          - route-table-id
+                          type: object
+                        vxlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            destination-port:
+                              type: integer
+                            id:
+                              format: int32
+                              type: integer
+                            learning:
+                              type: boolean
+                            local:
+                              type: string
+                            remote:
+                              type: string
+                          required:
+                          - id
+                          type: object
+                        wait-ip:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  ovs-db:
+                    properties:
+                      external_ids:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      other_config:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  route-rules:
+                    properties:
+                      config:
+                        items:
+                          properties:
+                            action:
+                              type: string
+                            family:
+                              type: string
+                            fwmark:
+                              format: int32
+                              type: integer
+                            fwmask:
+                              format: int32
+                              type: integer
+                            iif:
+                              type: string
+                            ip-from:
+                              type: string
+                            ip-to:
+                              type: string
+                            priority:
+                              format: int64
+                              type: integer
+                            route-table:
+                              format: int32
+                              type: integer
+                            state:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  routes:
+                    properties:
+                      config:
+                        items:
+                          properties:
+                            destination:
+                              type: string
+                            metric:
+                              format: int64
+                              type: integer
+                            next-hop-address:
+                              type: string
+                            next-hop-interface:
+                              type: string
+                            state:
+                              type: string
+                            table-id:
+                              format: int32
+                              type: integer
+                            weight:
+                              type: integer
+                          type: object
+                        type: array
+                      running:
+                        items:
+                          properties:
+                            destination:
+                              type: string
+                            metric:
+                              format: int64
+                              type: integer
+                            next-hop-address:
+                              type: string
+                            next-hop-interface:
+                              type: string
+                            state:
+                              type: string
+                            table-id:
+                              format: int32
+                              type: integer
+                            weight:
+                              type: integer
+                          type: object
+                        type: array
+                    type: object
                 type: object
-                x-kubernetes-preserve-unknown-fields: true
+              desiredStateTemplate:
+                description: The desired configuration of the policy
+                type: object
               maxUnavailable:
                 anyOf:
                 - type: integer
@@ -247,8 +1953,861 @@ spec:
                 type: object
               desiredState:
                 description: The desired configuration of the policy
+                properties:
+                  dns-resolver:
+                    properties:
+                      config:
+                        properties:
+                          search:
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                      running:
+                        properties:
+                          search:
+                            items:
+                              type: string
+                            type: array
+                          server:
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  hostname:
+                    properties:
+                      config:
+                        type: string
+                      running:
+                        type: string
+                    type: object
+                  interfaces:
+                    items:
+                      properties:
+                        802.1x:
+                          properties:
+                            ca-cert:
+                              type: string
+                            client-cert:
+                              type: string
+                            eap-methods:
+                              items:
+                                type: string
+                              type: array
+                            identity:
+                              type: string
+                            private-key:
+                              type: string
+                            private-key-password:
+                              type: string
+                          type: object
+                        accept-all-mac-addresses:
+                          type: boolean
+                        bridge:
+                          type: object
+                          x-kubernetes-preserve-unknown-fields: true
+                        controller:
+                          type: string
+                        copy-mac-from:
+                          type: string
+                        description:
+                          type: string
+                        dpdk:
+                          properties:
+                            devargs:
+                              type: string
+                            n_rxq_desc:
+                              format: int32
+                              type: integer
+                            n_txq_desc:
+                              format: int32
+                              type: integer
+                            rx-queue:
+                              format: int32
+                              type: integer
+                          required:
+                          - devargs
+                          type: object
+                        ethernet:
+                          properties:
+                            auto-negotiation:
+                              type: boolean
+                            duplex:
+                              type: string
+                            speed:
+                              format: int32
+                              type: integer
+                            sr-iov:
+                              properties:
+                                total-vfs:
+                                  format: int32
+                                  type: integer
+                                vfs:
+                                  items:
+                                    properties:
+                                      id:
+                                        format: int32
+                                        type: integer
+                                      mac-address:
+                                        type: string
+                                      max-tx-rate:
+                                        format: int32
+                                        type: integer
+                                      min-tx-rate:
+                                        format: int32
+                                        type: integer
+                                      qos:
+                                        format: int32
+                                        type: integer
+                                      spoof-check:
+                                        type: boolean
+                                      trust:
+                                        type: boolean
+                                      vlan-id:
+                                        format: int32
+                                        type: integer
+                                    required:
+                                    - id
+                                    type: object
+                                  type: array
+                              type: object
+                          type: object
+                        ethtool:
+                          properties:
+                            coalesce:
+                              properties:
+                                adaptive-rx:
+                                  type: boolean
+                                adaptive-tx:
+                                  type: boolean
+                                pkt-rate-high:
+                                  format: int32
+                                  type: integer
+                                pkt-rate-low:
+                                  format: int32
+                                  type: integer
+                                rx-frames:
+                                  format: int32
+                                  type: integer
+                                rx-frames-high:
+                                  format: int32
+                                  type: integer
+                                rx-frames-irq:
+                                  format: int32
+                                  type: integer
+                                rx-frames-low:
+                                  format: int32
+                                  type: integer
+                                rx-usecs:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-high:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-irq:
+                                  format: int32
+                                  type: integer
+                                rx-usecs-low:
+                                  format: int32
+                                  type: integer
+                                sample-interval:
+                                  format: int32
+                                  type: integer
+                                stats-block-usecs:
+                                  format: int32
+                                  type: integer
+                                tx-frames:
+                                  format: int32
+                                  type: integer
+                                tx-frames-high:
+                                  format: int32
+                                  type: integer
+                                tx-frames-irq:
+                                  format: int32
+                                  type: integer
+                                tx-frames-low:
+                                  format: int32
+                                  type: integer
+                                tx-usecs:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-high:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-irq:
+                                  format: int32
+                                  type: integer
+                                tx-usecs-low:
+                                  format: int32
+                                  type: integer
+                              type: object
+                            feature:
+                              additionalProperties:
+                                type: boolean
+                              type: object
+                            pause:
+                              properties:
+                                autoneg:
+                                  type: boolean
+                                rx:
+                                  type: boolean
+                                tx:
+                                  type: boolean
+                              type: object
+                            ring:
+                              properties:
+                                rx:
+                                  format: int32
+                                  type: integer
+                                rx-jumbo:
+                                  format: int32
+                                  type: integer
+                                rx-jumbo-max:
+                                  format: int32
+                                  type: integer
+                                rx-max:
+                                  format: int32
+                                  type: integer
+                                rx-mini:
+                                  format: int32
+                                  type: integer
+                                rx-mini-max:
+                                  format: int32
+                                  type: integer
+                                tx:
+                                  format: int32
+                                  type: integer
+                                tx-max:
+                                  format: int32
+                                  type: integer
+                              type: object
+                          type: object
+                        identifier:
+                          type: string
+                        infiniband:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            pkey:
+                              type: string
+                          required:
+                          - mode
+                          type: object
+                        ipv4:
+                          properties:
+                            addr-gen-mode:
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    type: string
+                                  mptcp-flags:
+                                    items:
+                                      type: string
+                                    type: array
+                                  preferred-left:
+                                    type: string
+                                  prefix-length:
+                                    type: integer
+                                  valid-left:
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              format: int32
+                              type: integer
+                            auto-route-table-id:
+                              format: int32
+                              type: integer
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        ipv6:
+                          properties:
+                            addr-gen-mode:
+                              type: string
+                            address:
+                              items:
+                                properties:
+                                  ip:
+                                    type: string
+                                  mptcp-flags:
+                                    items:
+                                      type: string
+                                    type: array
+                                  preferred-left:
+                                    type: string
+                                  prefix-length:
+                                    type: integer
+                                  valid-left:
+                                    type: string
+                                required:
+                                - ip
+                                - prefix-length
+                                type: object
+                              type: array
+                            allow-extra-address:
+                              type: boolean
+                            auto-dns:
+                              type: boolean
+                            auto-gateway:
+                              type: boolean
+                            auto-route-metric:
+                              format: int32
+                              type: integer
+                            auto-route-table-id:
+                              format: int32
+                              type: integer
+                            auto-routes:
+                              type: boolean
+                            autoconf:
+                              type: boolean
+                            dhcp:
+                              type: boolean
+                            dhcp-client-id:
+                              type: string
+                            dhcp-custom-hostname:
+                              type: string
+                            dhcp-duid:
+                              type: string
+                            dhcp-send-hostname:
+                              type: boolean
+                            enabled:
+                              type: boolean
+                            token:
+                              type: string
+                          type: object
+                        link-aggregation:
+                          properties:
+                            mode:
+                              type: string
+                            options:
+                              properties:
+                                ad_actor_sys_prio:
+                                  type: integer
+                                ad_actor_system:
+                                  type: string
+                                ad_select:
+                                  type: string
+                                ad_user_port_key:
+                                  type: integer
+                                all_slaves_active:
+                                  type: string
+                                arp_all_targets:
+                                  type: string
+                                arp_interval:
+                                  format: int32
+                                  type: integer
+                                arp_ip_target:
+                                  type: string
+                                arp_validate:
+                                  type: string
+                                balance_slb:
+                                  type: boolean
+                                downdelay:
+                                  format: int32
+                                  type: integer
+                                fail_over_mac:
+                                  type: string
+                                lacp_rate:
+                                  type: string
+                                lp_interval:
+                                  format: int32
+                                  type: integer
+                                miimon:
+                                  format: int32
+                                  type: integer
+                                min_links:
+                                  format: int32
+                                  type: integer
+                                num_grat_arp:
+                                  type: integer
+                                num_unsol_na:
+                                  type: integer
+                                packets_per_slave:
+                                  format: int32
+                                  type: integer
+                                primary:
+                                  type: string
+                                primary_reselect:
+                                  type: string
+                                resend_igmp:
+                                  format: int32
+                                  type: integer
+                                tlb_dynamic_lb:
+                                  type: boolean
+                                updelay:
+                                  format: int32
+                                  type: integer
+                                use_carrier:
+                                  type: boolean
+                                xmit_hash_policy:
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        linux-bridge:
+                          properties:
+                            options:
+                              properties:
+                                gc-timer:
+                                  format: int64
+                                  type: integer
+                                group-addr:
+                                  type: string
+                                group-forward-mask:
+                                  type: integer
+                                group-fwd-mask:
+                                  type: integer
+                                hash-max:
+                                  format: int32
+                                  type: integer
+                                hello-timer:
+                                  format: int64
+                                  type: integer
+                                mac-ageing-time:
+                                  format: int32
+                                  type: integer
+                                multicast-last-member-count:
+                                  format: int32
+                                  type: integer
+                                multicast-last-member-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-membership-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-querier:
+                                  type: boolean
+                                multicast-querier-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-response-interval:
+                                  format: int64
+                                  type: integer
+                                multicast-query-use-ifaddr:
+                                  type: boolean
+                                multicast-router:
+                                  type: string
+                                multicast-snooping:
+                                  type: boolean
+                                multicast-startup-query-count:
+                                  format: int32
+                                  type: integer
+                                multicast-startup-query-interval:
+                                  format: int64
+                                  type: integer
+                                stp:
+                                  properties:
+                                    enabled:
+                                      type: boolean
+                                    forward-delay:
+                                      type: integer
+                                    hello-time:
+                                      type: integer
+                                    max-age:
+                                      type: integer
+                                    priority:
+                                      type: integer
+                                  type: object
+                                vlan-protocol:
+                                  type: string
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  name:
+                                    type: string
+                                  stp-hairpin-mode:
+                                    type: boolean
+                                  stp-path-cost:
+                                    format: int32
+                                    type: integer
+                                  stp-priority:
+                                    type: integer
+                                  vlan:
+                                    properties:
+                                      enable-native:
+                                        type: boolean
+                                      mode:
+                                        type: string
+                                      tag:
+                                        type: integer
+                                      trunk-tags:
+                                        items:
+                                          properties:
+                                            id:
+                                              type: integer
+                                            id-range:
+                                              properties:
+                                                max:
+                                                  type: integer
+                                                min:
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        lldp:
+                          properties:
+                            enabled:
+                              type: boolean
+                            neighbors:
+                              items:
+                                items:
+                                  type: string
+                                type: array
+                              type: array
+                          required:
+                          - enabled
+                          type: object
+                        mac-address:
+                          type: string
+                        mac-vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            promiscuous:
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        mac-vtap:
+                          properties:
+                            base-iface:
+                              type: string
+                            mode:
+                              type: string
+                            promiscuous:
+                              type: boolean
+                          required:
+                          - base-iface
+                          - mode
+                          type: object
+                        max-mtu:
+                          format: int64
+                          type: integer
+                        min-mtu:
+                          format: int64
+                          type: integer
+                        mptcp:
+                          properties:
+                            address-flags:
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        mtu:
+                          format: int64
+                          type: integer
+                        name:
+                          type: string
+                        other:
+                          type: string
+                        ovs-bridge:
+                          properties:
+                            options:
+                              properties:
+                                datapath:
+                                  type: string
+                                fail-mode:
+                                  type: string
+                                mcast-snooping-enable:
+                                  type: boolean
+                                rstp:
+                                  type: boolean
+                                stp:
+                                  type: boolean
+                              type: object
+                            port:
+                              items:
+                                properties:
+                                  link-aggregation:
+                                    properties:
+                                      bond-downdelay:
+                                        format: int32
+                                        type: integer
+                                      bond-updelay:
+                                        format: int32
+                                        type: integer
+                                      mode:
+                                        type: string
+                                      ovs-db:
+                                        properties:
+                                          external_ids:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                          other_config:
+                                            additionalProperties:
+                                              type: string
+                                            type: object
+                                        type: object
+                                      port:
+                                        items:
+                                          properties:
+                                            name:
+                                              type: string
+                                          required:
+                                          - name
+                                          type: object
+                                        type: array
+                                    type: object
+                                  name:
+                                    type: string
+                                  vlan:
+                                    properties:
+                                      enable-native:
+                                        type: boolean
+                                      mode:
+                                        type: string
+                                      tag:
+                                        type: integer
+                                      trunk-tags:
+                                        items:
+                                          properties:
+                                            id:
+                                              type: integer
+                                            id-range:
+                                              properties:
+                                                max:
+                                                  type: integer
+                                                min:
+                                                  type: integer
+                                              required:
+                                              - max
+                                              - min
+                                              type: object
+                                          type: object
+                                        type: array
+                                    type: object
+                                required:
+                                - name
+                                type: object
+                              type: array
+                          type: object
+                        ovs-db:
+                          properties:
+                            external_ids:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            other_config:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          type: object
+                        patch:
+                          properties:
+                            peer:
+                              type: string
+                          required:
+                          - peer
+                          type: object
+                        profile-name:
+                          type: string
+                        state:
+                          type: string
+                        type:
+                          type: string
+                        veth:
+                          properties:
+                            peer:
+                              type: string
+                          required:
+                          - peer
+                          type: object
+                        vlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            id:
+                              type: integer
+                            protocol:
+                              type: string
+                          required:
+                          - base-iface
+                          - id
+                          type: object
+                        vrf:
+                          properties:
+                            port:
+                              items:
+                                type: string
+                              type: array
+                            route-table-id:
+                              format: int32
+                              type: integer
+                          required:
+                          - port
+                          - route-table-id
+                          type: object
+                        vxlan:
+                          properties:
+                            base-iface:
+                              type: string
+                            destination-port:
+                              type: integer
+                            id:
+                              format: int32
+                              type: integer
+                            learning:
+                              type: boolean
+                            local:
+                              type: string
+                            remote:
+                              type: string
+                          required:
+                          - id
+                          type: object
+                        wait-ip:
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  ovs-db:
+                    properties:
+                      external_ids:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      other_config:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                  route-rules:
+                    properties:
+                      config:
+                        items:
+                          properties:
+                            action:
+                              type: string
+                            family:
+                              type: string
+                            fwmark:
+                              format: int32
+                              type: integer
+                            fwmask:
+                              format: int32
+                              type: integer
+                            iif:
+                              type: string
+                            ip-from:
+                              type: string
+                            ip-to:
+                              type: string
+                            priority:
+                              format: int64
+                              type: integer
+                            route-table:
+                              format: int32
+                              type: integer
+                            state:
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  routes:
+                    properties:
+                      config:
+                        items:
+                          properties:
+                            destination:
+                              type: string
+                            metric:
+                              format: int64
+                              type: integer
+                            next-hop-address:
+                              type: string
+                            next-hop-interface:
+                              type: string
+                            state:
+                              type: string
+                            table-id:
+                              format: int32
+                              type: integer
+                            weight:
+                              type: integer
+                          type: object
+                        type: array
+                      running:
+                        items:
+                          properties:
+                            destination:
+                              type: string
+                            metric:
+                              format: int64
+                              type: integer
+                            next-hop-address:
+                              type: string
+                            next-hop-interface:
+                              type: string
+                            state:
+                              type: string
+                            table-id:
+                              format: int32
+                              type: integer
+                            weight:
+                              type: integer
+                          type: object
+                        type: array
+                    type: object
                 type: object
-                x-kubernetes-preserve-unknown-fields: true
+              desiredStateTemplate:
+                description: The desired configuration of the policy
+                type: object
               maxUnavailable:
                 anyOf:
                 - type: integer

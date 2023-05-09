@@ -5,6 +5,7 @@ go 1.17
 require (
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.1
+	github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20230511111801-47c365e7c53f
 	k8s.io/api v0.24.1
 	k8s.io/apimachinery v0.24.1
 	sigs.k8s.io/controller-runtime v0.12.1
@@ -30,3 +31,5 @@ require (
 	sigs.k8s.io/json v0.0.0-20211208200746-9f7c6b3444d2 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 )
+
+//replace github.com/qinqon/nmstate/rust/src/go/api/v2 => ../../nmstate/rust/src/go/api/

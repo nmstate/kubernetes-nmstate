@@ -83,6 +83,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20230511111801-47c365e7c53f // indirect
 	github.com/russross/blackfriday v1.5.2 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/spf13/cobra v1.4.0 // indirect
@@ -133,5 +134,7 @@ replace (
 )
 
 replace github.com/Masterminds/goutils => github.com/Masterminds/goutils v1.1.1
+
+//replace github.com/qinqon/nmstate/rust/src/go/api/v2 => ../nmstate/rust/src/go/api/
 
 exclude github.com/spf13/viper v1.3.2 // Required to fix CVE-2018-1098

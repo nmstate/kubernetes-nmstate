@@ -270,6 +270,9 @@ github.com/prometheus/procfs/internal/util
 ## explicit; go 1.15
 github.com/qinqon/kube-admission-webhook/pkg/certificate
 github.com/qinqon/kube-admission-webhook/pkg/certificate/triple
+# github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20230511111801-47c365e7c53f
+## explicit; go 1.16
+github.com/qinqon/nmstate/rust/src/go/api/v2
 # github.com/russross/blackfriday v1.5.2
 ## explicit
 github.com/russross/blackfriday
