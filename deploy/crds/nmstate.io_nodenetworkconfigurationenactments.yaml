@@ -22,6 +22,10 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    - description: Status Age
+      jsonPath: .status.conditions[?(@.status=="True")].lastTransitionTime
+      name: Status Age
+      type: date
     deprecated: true
     name: v1alpha1
     schema:
