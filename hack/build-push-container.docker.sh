@@ -10,6 +10,11 @@ fi
 hack/init-buildx.sh
 
 ARCHS=${ARCHS:-$(go env GOARCH)}
+
+if [ "${ARCHS}" != "$(go env GOARCH)" ]; then
+    hack/qemu-user-static.sh
+fi
+
 PLATFORM=""
 
 for arch in $ARCHS; do

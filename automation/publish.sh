@@ -12,6 +12,7 @@ image_registry=${IMAGE_REGISTRY:-quay.io}
 image_repo=${IMAGE_REPO:-nmstate}
 
 source automation/check-patch.setup.sh
+export ARCHS="amd64 arm64"
 cd ${TMP_PROJECT_PATH}
 
 push_knmstate_containers() {
