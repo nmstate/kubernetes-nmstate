@@ -14,6 +14,10 @@ fi
 
 ARCHS=${ARCHS:-$(go env GOARCH)}
 
+if [ "${ARCHS}" != "$(go env GOARCH)" ]; then
+    hack/qemu-user-static.sh
+fi
+
 buildah rmi ${IMAGE} 2>/dev/null || true
 buildah manifest rm ${IMAGE} 2>/dev/null || true
 buildah manifest create ${IMAGE}

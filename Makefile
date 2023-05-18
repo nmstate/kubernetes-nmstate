@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 PWD = $(shell pwd)
-GO_VERSION = $(shell hack/go-version.sh)
+export GO_VERSION = $(shell hack/go-version.sh)
 
 export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
@@ -98,7 +98,7 @@ INDEX_IMG ?= $(IMAGE_REGISTRY)/$(IMAGE_REPO)/kubernetes-nmstate-operator-index:$
 
 SKIP_IMAGE_BUILD ?= false
 
-all: check handler
+all: check handler operator
 
 check: lint vet whitespace-check gofmt-check
 

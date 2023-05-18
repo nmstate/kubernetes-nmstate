@@ -10,6 +10,7 @@
 main() {
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
+    export ARCHS="amd64 arm64"
     make all
     make UNIT_TEST_ARGS="--output-dir=$ARTIFACTS --no-color --compilers=2" test/unit
 }
