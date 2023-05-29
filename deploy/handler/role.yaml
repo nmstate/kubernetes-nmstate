@@ -128,3 +128,16 @@ rules:
   verbs:
   - use
 {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-handler-events
+  namespace: default
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - 'create'

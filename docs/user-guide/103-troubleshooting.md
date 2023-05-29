@@ -11,7 +11,8 @@ the operator protect the user from breaking the cluster networking.
 ## Invalid configuration
 
 If any of the following cases render the configuration faulty, the setup will be
-automatically rolled back and Enactment will report the failure.
+automatically rolled back and Enactment will report the failure. In addition,
+an event for the NodeNetworkConfigurationPolicy will be created.
 
 * Configuration fails to be applied on the host (due to missing interfaces, inability to obtain IP, invalid attributes, ...)
 * Connectivity to the default gateway is broken
@@ -108,6 +109,28 @@ the `ERROR` log line:
 
 ```
 Connection activation failed on connection_id eth666: error=nm-manager-error-quark: No suitable device found for this connection
+```
+
+In addition, events are generated in the default namespace:
+```shell
+$ kubectl get events | grep Warning
+6m55s       Warning   ReconcileFailed           nodenetworkconfigurationpolicy/eth666   error reconciling NodeNetworkConfigurationPolicy on node node02 at desired state apply: "",...
+```
+
+And these events are also linked to the NodeNetworkConfigurationPolicy when using `kubectl describe`:
+```shell
+kubectl describe nodenetworkconfigurationpolicies.nmstate.io eth666
+```
+
+```
+# output truncated
+Events:
+  Type     Reason           Age    From                    Message
+  ----     ------           ----   ----                    -------
+  Warning  ReconcileFailed  8m25s  node02.nmstate-handler  error reconciling NodeNetworkConfigurationPolicy on node node02 at desired state apply: "",
+(...)
+NmstateError: InvalidArgument: Ethernet interface eth666 does not exists
+'
 ```
 
 The configuration therefore failed due to absence of NIC `eth666` on the node.
