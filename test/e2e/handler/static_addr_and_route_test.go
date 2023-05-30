@@ -26,7 +26,17 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
+// ipV4AddrAndRoute creates an IP address and routes for the default routing table.
 func ipV4AddrAndRoute(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress string) nmstate.State {
+	return ipV4AddrAndRouteWithTableID(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress, "")
+}
+
+// ipV4AddrAndRouteWithTableID creates an IP address and routes for a given routing table ID.
+func ipV4AddrAndRouteWithTableID(firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress,
+	tableID string) nmstate.State {
+	if tableID == "" {
+		tableID = "254"
+	}
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: ethernet
@@ -43,8 +53,8 @@ routes:
       metric: 150
       next-hop-address: %s
       next-hop-interface: %s
-      table-id: 254
-`, firstSecondaryNic, ipAddress, prefixLen, destIPAddress, nextHopIPAddress, firstSecondaryNic))
+      table-id: %s
+`, firstSecondaryNic, ipAddress, prefixLen, destIPAddress, nextHopIPAddress, firstSecondaryNic, tableID))
 }
 
 func ipV4AddrAndRouteAbsent(firstSecondaryNic string) nmstate.State {

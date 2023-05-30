@@ -215,6 +215,28 @@ func vlanAbsent(iface, vlanID string) nmstate.State {
 `, iface, vlanID, iface, vlanID))
 }
 
+// vrfUp creates VRF vrfID and adds the interfaces from ifaceList to that VRF.
+func vrfUp(vrfID string, ifaceList ...string) nmstate.State {
+	ifaces := strings.Join(ifaceList, ",")
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+    - name: vrf%s
+      type: vrf
+      state: up
+      vrf:
+        port: [%s]
+        route-table-id: %[1]s
+`, vrfID, ifaces))
+}
+
+// vrfAbsent removes VRF vrfID.
+func vrfAbsent(vrfID string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+    - name: vrf%s
+      type: vrf
+      state: absent
+`, vrfID))
+}
+
 func interfaceAbsent(iface string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s

@@ -196,8 +196,7 @@ func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstat
 	policy.WaitForAvailableTestPolicy()
 }
 
-// TODO: After we implement policy delete (it will cleanUp desiredState) we have
-//       to remove this
+// TODO: After we implement policy delete (it will cleanUp desiredState) we have to remove this.
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries disable ipv4 and ipv6")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
@@ -396,6 +395,13 @@ func routeDestForNodeInterfaceEventually(node, destIP string) AsyncAssertion {
 func vlanForNodeInterfaceEventually(node, iface string) AsyncAssertion {
 	return Eventually(func() string {
 		return vlan(node, iface)
+	}, ReadTimeout, ReadInterval)
+}
+
+// vrfForNodeInterfaceEventually asserts that VRF with vrfID is eventually created.
+func vrfForNodeInterfaceEventually(node, vrfID string) AsyncAssertion {
+	return Eventually(func() string {
+		return vrf(node, vrfID)
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -612,9 +618,19 @@ func routeDest(node, destIP string) string {
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 }
 
+// routeNextHopInterfaceWithTableID checks if a route with destIP exists in the default routing table.
 func routeNextHopInterface(node, destIP string) AsyncAssertion {
+	return routeNextHopInterfaceWithTableID(node, destIP, "")
+}
+
+// routeNextHopInterfaceWithTableID checks if a route with destIP exists in table tableID. If tableID is the empty
+// string, use the default table-id (254).
+func routeNextHopInterfaceWithTableID(node, destIP, tableID string) AsyncAssertion {
+	if tableID == "" {
+		tableID = "254"
+	}
 	return Eventually(func() string {
-		path := fmt.Sprintf("routes.running.#(destination==%q).next-hop-interface", destIP)
+		path := fmt.Sprintf("routes.running.#(table-id==%s)#|#(destination==%q).next-hop-interface", tableID, destIP)
 		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
 	}, 15*time.Second, 1*time.Second)
 }
@@ -622,6 +638,12 @@ func routeNextHopInterface(node, destIP string) AsyncAssertion {
 func vlan(node, iface string) string {
 	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
+}
+
+// vrf verifies if the VRF with vrfID was created on node.
+func vrf(node, vrfID string) string {
+	vrfFilter := fmt.Sprintf("interfaces.#(name==vrf%s).vrf.route-table-id", vrfID)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(vrfFilter).String()
 }
 
 func kubectlAndCheck(command ...string) {
