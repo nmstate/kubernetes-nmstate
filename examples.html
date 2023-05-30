@@ -336,6 +336,7 @@
 <li><a href="#routes">Routes</a></li>
 <li><a href="#static-ip">Static IP</a></li>
 <li><a href="#vlan">VLAN</a></li>
+<li><a href="#vrf">VRF</a></li>
 <li><a href="#worker-selector">Worker selector</a></li>
 </ul>
 
@@ -669,6 +670,43 @@
       <span class="na">ipv4</span><span class="pi">:</span>
         <span class="na">dhcp</span><span class="pi">:</span> <span class="no">true</span>
         <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+
+</code></pre></div></div>
+
+<h2 id="vrf">VRF</h2>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NodeNetworkConfigurationPolicy</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">vrf</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">desiredState</span><span class="pi">:</span>
+    <span class="na">interfaces</span><span class="pi">:</span>
+    <span class="pi">-</span> <span class="na">name</span><span class="pi">:</span> <span class="s">vrf102</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">vrf</span>
+      <span class="na">vrf</span><span class="pi">:</span>
+        <span class="na">port</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="s">eth1</span>
+        <span class="na">route-table-id</span><span class="pi">:</span> <span class="m">102</span>
+    <span class="pi">-</span> <span class="na">ipv4</span><span class="pi">:</span>
+        <span class="na">address</span><span class="pi">:</span>
+        <span class="pi">-</span> <span class="na">ip</span><span class="pi">:</span> <span class="s">192.0.2.251</span>
+          <span class="na">prefix-length</span><span class="pi">:</span> <span class="m">24</span>
+        <span class="na">dhcp</span><span class="pi">:</span> <span class="no">false</span>
+        <span class="na">enabled</span><span class="pi">:</span> <span class="no">true</span>
+      <span class="na">name</span><span class="pi">:</span> <span class="s">eth1</span>
+      <span class="na">state</span><span class="pi">:</span> <span class="s">up</span>
+      <span class="na">type</span><span class="pi">:</span> <span class="s">ethernet</span>
+    <span class="na">routes</span><span class="pi">:</span>
+      <span class="na">config</span><span class="pi">:</span>
+      <span class="pi">-</span> <span class="na">destination</span><span class="pi">:</span> <span class="s">198.51.100.0/24</span>
+        <span class="na">metric</span><span class="pi">:</span> <span class="m">150</span>
+        <span class="na">next-hop-address</span><span class="pi">:</span> <span class="s">192.0.2.1</span>
+        <span class="na">next-hop-interface</span><span class="pi">:</span> <span class="s">eth1</span>
+        <span class="na">table-id</span><span class="pi">:</span> <span class="m">102</span>
+  <span class="na">nodeSelector</span><span class="pi">:</span>
+    <span class="na">kubernetes.io/hostname</span><span class="pi">:</span> <span class="s">node01</span>
 
 </code></pre></div></div>
 
