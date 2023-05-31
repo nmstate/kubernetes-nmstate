@@ -25,6 +25,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,6 +59,10 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
+)
+
+const (
+	ReconcileFailed = "ReconcileFailed"
 )
 
 var (
@@ -103,6 +108,7 @@ type NodeNetworkConfigurationPolicyReconciler struct {
 	APIClient client.Client
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
+	Recorder  record.EventRecorder
 }
 
 func init() {
@@ -121,7 +127,8 @@ func init() {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-//nolint: funlen, gocyclo
+//
+//nolint:funlen,gocyclo
 func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	log := r.Log.WithValues("nodenetworkconfigurationpolicy", request.NamespacedName)
@@ -218,9 +225,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, enactmentInstance.Status.DesiredState)
 	if err != nil {
-		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy at desired state apply: %s,\n %v", nmstateOutput, err)
+		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy on node %s at desired state apply: %q,\n %v",
+			nodeName, nmstateOutput, err)
 		enactmentConditions.NotifyFailedToConfigure(errmsg)
 		log.Error(errmsg, fmt.Sprintf("Rolling back network configuration, manual intervention needed: %s", nmstateOutput))
+		if r.Recorder != nil {
+			r.Recorder.Event(instance, corev1.EventTypeWarning, ReconcileFailed, errmsg.Error())
+		}
 		return ctrl.Result{}, nil
 	}
 	log.Info("nmstate", "output", nmstateOutput)
