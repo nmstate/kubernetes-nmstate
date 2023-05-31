@@ -327,7 +327,8 @@ the operator protect the user from breaking the cluster networking.</p>
 <h2 id="invalid-configuration">Invalid configuration</h2>
 
 <p>If any of the following cases render the configuration faulty, the setup will be
-automatically rolled back and Enactment will report the failure.</p>
+automatically rolled back and Enactment will report the failure. In addition,
+an event for the NodeNetworkConfigurationPolicy will be created.</p>
 
 <ul>
   <li>Configuration fails to be applied on the host (due to missing interfaces, inability to obtain IP, invalid attributes, …)</li>
@@ -429,6 +430,25 @@ contains the whole error output of a failed call. The interesting message is in
 the <code class="language-plaintext highlighter-rouge">ERROR</code> log line:</p>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Connection activation failed on connection_id eth666: error=nm-manager-error-quark: No suitable device found for this connection
+</code></pre></div></div>
+
+<p>In addition, events are generated in the default namespace:</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>kubectl get events | <span class="nb">grep </span>Warning
+6m55s       Warning   ReconcileFailed           nodenetworkconfigurationpolicy/eth666   error reconciling NodeNetworkConfigurationPolicy on node node02 at desired state apply: <span class="s2">""</span>,...
+</code></pre></div></div>
+
+<p>And these events are also linked to the NodeNetworkConfigurationPolicy when using <code class="language-plaintext highlighter-rouge">kubectl describe</code>:</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl describe nodenetworkconfigurationpolicies.nmstate.io eth666
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># output truncated
+Events:
+  Type     Reason           Age    From                    Message
+  ----     ------           ----   ----                    -------
+  Warning  ReconcileFailed  8m25s  node02.nmstate-handler  error reconciling NodeNetworkConfigurationPolicy on node node02 at desired state apply: "",
+(...)
+NmstateError: InvalidArgument: Ethernet interface eth666 does not exists
+'
 </code></pre></div></div>
 
 <p>The configuration therefore failed due to absence of NIC <code class="language-plaintext highlighter-rouge">eth666</code> on the node.
