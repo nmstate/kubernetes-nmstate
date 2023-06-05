@@ -6,6 +6,8 @@ This document gives some hints for developing and testing kubernetes-nmstate on 
 
 To test your changes you can either deploy a cluster via cluster-bot or use the [dev-scripts](https://github.com/openshift-metal3/dev-scripts) to spin up a cluster on your hardware. In the following we are focusing on the dev-scripts approach.
 
+Please note: The MIRROR_IMAGES option in dev-scripts may cause issues pulling the operator images from some sources. When in doubt, do not use image mirroring for clusters where you intend to install kubernetes-nmstate.
+
 ### General cluster config
 
 To specify your CNI plugin, you have set the `NETWORK_TYPE` env var in your dev-scripts `config_$USER.sh` file. Valid values are `OVNKubernetes` and `OpenShiftSDN`. E.g.:
@@ -74,6 +76,18 @@ To uninstall the operator again, run the following command:
 ```bash
 $ KUBECONFIG=<path to your kubeconfig> make ocp-uninstall-bundle
 ```
+
+Just in case, the official documentation for the deploy is [located here](https://docs.openshift.com/container-platform/4.13/networking/k8s_nmstate/k8s-nmstate-about-the-k8s-nmstate-operator.html) but do not mix the deploy methods.
+
+Finally, there [is a script](https://github.com/openshift/kubernetes-nmstate/blob/07faf0dbb8ebcb76174e12efba1515c816c36d20/hack/ocp-install-nightly-art-operators.sh) that install the latest operator but requires VPN.
+
+For debugging there are commands like:
+```
+oc get sub -n openshift-nmstate
+oc get csv -n openshift-nmstate
+```
+
+Official doc for troubleshooting [is here](https://docs.openshift.com/container-platform/4.13/support/troubleshooting/troubleshooting-operator-issues.html)
 
 ## Running the E2E Tests locally
 
