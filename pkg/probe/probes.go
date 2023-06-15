@@ -51,6 +51,11 @@ type Probe struct {
 	condition func(client.Client, time.Duration) wait.ConditionFunc
 }
 
+type Route struct {
+	nextHop net.IP
+	iface   string
+}
+
 const (
 	defaultGwRetrieveTimeout  = 120 * time.Second
 	defaultGwProbeTimeout     = 120 * time.Second
@@ -135,20 +140,22 @@ func checkNodeReadiness(cli client.Client) (bool, error) {
 	return false, nil
 }
 
-func defaultGw(currentState gjson.Result) (string, error) {
-	var found gjson.Result
+func defaultGw(currentState gjson.Result) (Route, error) {
+	var found Route
 	currentState.Get("routes.running").ForEach(
 		func(_, v gjson.Result) bool {
 			// we want to pick the next hop related to the "main" table because we may have multiple tables
-			if v.Get("destination").String() == "0.0.0.0/0" && v.Get("table-id").Int() == mainRoutingTableID {
-				found = v.Get("next-hop-address")
+			if (v.Get("destination").String() == "0.0.0.0/0" || v.Get("destination").String() == "::/0") &&
+				v.Get("table-id").Int() == mainRoutingTableID {
+				found.nextHop = net.ParseIP(v.Get("next-hop-address").String())
+				found.iface = v.Get("next-hop-interface").String()
 				return false
 			}
 			return true
 		},
 	)
 
-	if !found.Exists() {
+	if found.nextHop == nil {
 		msg := "default gw missing"
 		defaultGwLog := log.WithValues("path", "routes.running.next-hop-address", "table-id", mainRoutingTableID)
 		defaultGwLogDebug := defaultGwLog.V(1)
@@ -157,9 +164,9 @@ func defaultGw(currentState gjson.Result) (string, error) {
 		} else {
 			defaultGwLog.Info(msg)
 		}
-		return "", errors.New(msg)
+		return Route{}, errors.New(msg)
 	}
-	return found.String(), nil
+	return found, nil
 }
 
 func pingCondition(cli client.Client, timeout time.Duration) wait.ConditionFunc {
@@ -188,8 +195,14 @@ func runPing(_ client.Client) (bool, error) {
 	return true, nil
 }
 
-func ping(target string) (string, error) {
-	cmd := exec.Command("ping", "-c", "1", target)
+func ping(target Route) (string, error) {
+	// If next hop is IPv6 link-local, we need to append an interface otherwise it is
+	// not clear which interface should be used for communication (e.g. ping test).
+	// As this syntax works always, we simply append it always.
+	//
+	// It is safe to ignore gosec error about concatenated strings as the Route struct
+	// is not directly taking any user input.
+	cmd := exec.Command("ping", "-I", target.iface, "-c", "1", target.nextHop.String()) // #nosec G204
 	var outputBuffer bytes.Buffer
 	cmd.Stdout = &outputBuffer
 	cmd.Stderr = &outputBuffer
