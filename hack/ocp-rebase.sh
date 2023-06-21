@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# This script helps with rebasing the openshift repo to upstream. 
-# It follows the procedure from https://github.com/openshift/kubernetes-nmstate/pull/298. 
+# This script helps with rebasing the openshift repo to upstream.
+# It follows the procedure from https://github.com/openshift/kubernetes-nmstate/pull/298.
 # Anyhow the user should check that all "UPSTREAM: <carry>" commits got carried,
 # especially in case some were merged between creating and merging the last
 # rebase.
@@ -58,7 +58,7 @@ echo "Commit ID selected: ${commitID}"
 
 if ! git log ${downstream_remote}/${downstream_target_branch} | grep -q ${last_merge_commit}; then
     echo "commit ${last_merge_commit} not found in ${downstream_remote}/${downstream_target_branch}. Aborting..."
-    exit 1   
+    exit 1
 fi
 
 git branch -D merge-tmp || true # make sure old merge-tmp branch does not exist
@@ -75,7 +75,13 @@ git branch ${merge_branch} ${merge_commit} # create a new branch for the cherry-
 git checkout ${merge_branch}
 
 echo "Cherry-picking commits since ${last_merge_commit}..."
-for commit in $(git --no-pager log --oneline --reverse --no-merges ${last_merge_commit}..${downstream_remote}/${downstream_target_branch} | awk '{print $1}'); do
+
+# There is a problem with "git log" ordering when merge requests are used. From our trials it seems that
+# using "--graph" fixes those but it can't be used together with "--reverse". Because of that we use
+# a temporary file.
+tmpfile=$(mktemp /tmp/nmstate-rebase-script.XXXXXX)
+$(git --no-pager log --oneline --graph --no-merges ${last_merge_commit}..${downstream_remote}/${downstream_target_branch} > ${tmpfile})
+for commit in $(tac ${tmpfile} | awk '{print $2}'); do
     echo "cherry-picking "$(git --no-pager log --format=%s -n 1 ${commit} ${downstream_remote}/${downstream_target_branch})
 
     if ! git cherry-pick -s -x $commit; then
@@ -97,5 +103,5 @@ for commit in $(git --no-pager log --oneline --reverse --no-merges ${merge_commi
     echo "${commit_msg} (${commit})"
 done
 
-echo "Please make sure the commits have the \"UPSTREAM: <carry>:\" prefix and check if you can squash commits" 
+echo "Please make sure the commits have the \"UPSTREAM: <carry>:\" prefix and check if you can squash commits"
 echo "Please make also sure all commits were carried. Maybe even check for some merged commits before the last merge commit (${last_merge_commit}) and cherry-pick them manually if needed."
