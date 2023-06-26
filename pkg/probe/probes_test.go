@@ -17,14 +17,19 @@ limitations under the License.
 
 package probe
 
-import "testing"
+import (
+	"net"
+	"testing"
+)
 
+//nolint: funlen
 func TestDefaultGatewayParsing(t *testing.T) {
 	tests := []struct {
-		desc       string
-		status     string
-		expectedGw string
-		shouldErr  bool
+		desc          string
+		status        string
+		expectedGw    string
+		expectedIface string
+		shouldErr     bool
 	}{
 		{
 			desc: "one single gateway",
@@ -40,7 +45,8 @@ func TestDefaultGatewayParsing(t *testing.T) {
     metric: 48
     table-id: 254
 `,
-			expectedGw: "10.46.55.254",
+			expectedGw:    "10.46.55.254",
+			expectedIface: "eth1",
 		}, {
 			desc: "two gateways, one on custom routing table",
 			status: `routes:
@@ -59,7 +65,8 @@ func TestDefaultGatewayParsing(t *testing.T) {
     metric: 48
     table-id: 254
 `,
-			expectedGw: "10.46.55.254",
+			expectedGw:    "10.46.55.254",
+			expectedIface: "eth1",
 		}, {
 			desc: "no next-hop-address",
 			status: `routes:
@@ -70,6 +77,62 @@ func TestDefaultGatewayParsing(t *testing.T) {
     table-id: 254
 `,
 			shouldErr: true,
+		}, {
+			desc: "one single IPv6 gateway",
+			status: `routes:
+  running:
+  - destination: ::/0
+    next-hop-interface: eth0
+    next-hop-address: fe80::dead:beef:fe51:782d
+    table-id: 254
+`,
+			expectedGw:    "fe80::dead:beef:fe51:782d",
+			expectedIface: "eth0",
+		}, {
+			desc: "two IPv6 gateways, one on custom routing table",
+			status: `routes:
+  running:
+  - destination: ::/0
+    next-hop-interface: eth0
+    next-hop-address: fe80::dead:beef:fe51:782d
+    table-id: 254
+  - destination: ::/0
+    next-hop-interface: eth1
+    next-hop-address: fe80::baad:cafe:fe51:782d
+    table-id: 56
+`,
+			expectedGw:    "fe80::dead:beef:fe51:782d",
+			expectedIface: "eth0",
+		}, {
+			desc: "dual-stack with single gateway per IP stack",
+			status: `routes:
+  running:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth0
+    next-hop-address: 10.46.55.254
+    table-id: 254
+  - destination: ::/0
+    next-hop-interface: eth0
+    next-hop-address: fe80::dead:beef:fe51:782d
+    table-id: 254
+`,
+			expectedGw:    "10.46.55.254",
+			expectedIface: "eth0",
+		}, {
+			desc: "dual-stack with missing IPv4 default gateway",
+			status: `routes:
+  running:
+  - destination: 172.30.0.0/16
+    next-hop-interface: eth0
+    next-hop-address: 169.254.169.4
+    table-id: 254
+  - destination: ::/0
+    next-hop-interface: eth1
+    next-hop-address: fe80::dead:beef:fe51:782d
+    table-id: 254
+`,
+			expectedGw:    "fe80::dead:beef:fe51:782d",
+			expectedIface: "eth1",
 		},
 	}
 
@@ -86,8 +149,14 @@ func TestDefaultGatewayParsing(t *testing.T) {
 			if test.shouldErr && err == nil {
 				t.Fatalf("expecting error, did not fail")
 			}
-			if defaultGw != test.expectedGw {
-				t.Fatalf("expecting %s, got %s", test.expectedGw, defaultGw)
+
+			expectedRoute := Route{
+				nextHop: net.ParseIP(test.expectedGw),
+				iface:   test.expectedIface,
+			}
+
+			if !expectedRoute.nextHop.Equal(defaultGw.nextHop) || expectedRoute.iface != defaultGw.iface {
+				t.Fatalf("expecting %+v, got %+v", expectedRoute, defaultGw)
 			}
 		})
 	}
