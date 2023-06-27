@@ -83,6 +83,12 @@ toc_sticky: true
 {% include_absolute 'examples/vlan.yaml' %}
 ```
 
+## VRF
+
+```yaml
+{% include_absolute 'examples/vrf.yaml' %}
+```
+
 ## Worker selector
 
 ```yaml

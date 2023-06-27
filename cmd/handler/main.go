@@ -207,6 +207,7 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		APIClient: apiClient,
 		Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
 		Scheme:    mgr.GetScheme(),
+		Recorder:  mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 		return err
