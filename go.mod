@@ -8,7 +8,7 @@ require (
 	github.com/gofrs/flock v0.8.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0
-	github.com/nmstate/nmpolicy v0.5.0
+	github.com/nmstate/nmpolicy v0.6.0
 	github.com/onsi/ginkgo/v2 v2.1.3
 	github.com/onsi/gomega v1.18.1
 	github.com/openshift/api v0.0.0-20220722144142-ac5cee47c2a0

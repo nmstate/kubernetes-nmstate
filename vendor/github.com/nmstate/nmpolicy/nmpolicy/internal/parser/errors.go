@@ -65,6 +65,13 @@ func wrapWithInvalidEqualityFilterError(err error) *parserError {
 	}
 }
 
+func wrapWithInvalidInequalityFilterError(err error) *parserError {
+	return &parserError{
+		prefix: "invalid inequality filter",
+		inner:  err,
+	}
+}
+
 func wrapWithInvalidReplaceError(err error) *parserError {
 	return &parserError{
 		prefix: "invalid replace",

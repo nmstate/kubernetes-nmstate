@@ -185,7 +185,7 @@ github.com/nmstate/kubernetes-nmstate/api/shared
 github.com/nmstate/kubernetes-nmstate/api/v1
 github.com/nmstate/kubernetes-nmstate/api/v1alpha1
 github.com/nmstate/kubernetes-nmstate/api/v1beta1
-# github.com/nmstate/nmpolicy v0.5.0
+# github.com/nmstate/nmpolicy v0.6.0
 ## explicit; go 1.17
 github.com/nmstate/nmpolicy/nmpolicy
 github.com/nmstate/nmpolicy/nmpolicy/internal

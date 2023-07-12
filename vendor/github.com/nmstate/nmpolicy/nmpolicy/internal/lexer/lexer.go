@@ -102,6 +102,8 @@ func (l *lexer) lexCurrentRune() (*Token, error) {
 		return l.lexEqualAs(REPLACE)
 	} else if l.isEqual() {
 		return l.lexEqualAs(EQFILTER)
+	} else if l.isExclamationMark() {
+		return l.lexEqualAs(NEFILTER)
 	} else if l.isPlus() {
 		return &Token{l.scn.Position(), MERGE, string(l.scn.Rune())}, nil
 	} else if l.isPipe() {
