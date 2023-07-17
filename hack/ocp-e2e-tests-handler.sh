@@ -18,6 +18,7 @@ export PRIMARY_NIC=enp2s0
 export FIRST_SECONDARY_NIC=enp3s0
 export SECOND_SECONDARY_NIC=enp4s0
 export FLAKE_ATTEMPTS="${FLAKE_ATTEMPTS:-3}"
+export NAMESPACE="${HANDLER_NAMESPACE:-nmstate}"
 
 SKIPPED_TESTS="user-guide|bridged|\
 when desiredState is updated with ovs-bridge with linux bond as port" # https://bugzilla.redhat.com/show_bug.cgi?id=2005240 is not yet fixed in nmstate 1.2
@@ -46,8 +47,8 @@ make cluster-sync-operator
 oc create -f test/e2e/nmstate.yaml
 # On first deployment, it can take a while for all of the pods to come up
 # First wait for the handler pods to be created
-while ! oc get pods -n nmstate | grep handler; do sleep 1; done
+while ! oc get pods -n ${NAMESPACE} | grep handler; do sleep 1; done
 # Then wait for them to be ready
-while oc get pods -n nmstate | grep "0/1"; do sleep 1; done
+while oc get pods -n ${NAMESPACE} | grep "0/1"; do sleep 1; done
 # NOTE(bnemec): The test being filtered with "bridged" was re-enabled in 4.8, but seems to be consistently failing on OCP.
 make test-e2e-handler E2E_TEST_ARGS="--skip=\"${SKIPPED_TESTS}\" --flake-attempts=${FLAKE_ATTEMPTS}" E2E_TEST_TIMEOUT=4h
