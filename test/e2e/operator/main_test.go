@@ -42,7 +42,7 @@ var (
 	nodes            []string
 	knmstateReporter *knmstatereporter.KubernetesNMStateReporter
 	manifestFiles    = []string{"namespace.yaml", "service_account.yaml", "operator.yaml", "role.yaml", "role_binding.yaml"}
-	defaultOperator  = NewOperatorTestData("nmstate", manifestsDir, manifestFiles)
+	defaultOperator  = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE"), manifestsDir, manifestFiles)
 )
 
 func TestE2E(t *testing.T) {
