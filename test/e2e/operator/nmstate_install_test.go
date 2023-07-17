@@ -20,6 +20,7 @@ package operator
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -107,7 +108,7 @@ var _ = Describe("NMState operator", func() {
 		})
 		Context("and another handler is installed with different namespace", func() {
 			var (
-				altOperator = NewOperatorTestData("nmstate-alt", manifestsDir, manifestFiles)
+				altOperator = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE")+"-alt", manifestsDir, manifestFiles)
 			)
 			BeforeEach(func() {
 				By("Wait for operand to be ready")
