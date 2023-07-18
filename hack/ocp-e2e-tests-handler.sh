@@ -24,9 +24,9 @@ when desiredState is updated with ovs-bridge with linux bond as port" # https://
 
 if [ "${CI}" == "true" ]; then
     source ${SHARED_DIR}/fix-uid.sh
-    export SSH=./hack/ssh-ci.sh
+    export SSH="./hack/ssh-ci.sh"
 else
-    export SSH=./hack/ssh.sh
+    export SSH="./hack/ssh.sh"
 fi
 
 if oc get ns openshift-ovn-kubernetes &> /dev/null; then
