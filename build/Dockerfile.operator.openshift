@@ -3,7 +3,7 @@ WORKDIR /go/src/github.com/openshift/kubernetes-nmstate
 COPY . .
 RUN GO111MODULE=on go build --mod=vendor -o build/_output/bin/manager ./cmd/operator
 
-FROM registry.ci.openshift.org/ocp/4.14:base
+FROM registry.ci.openshift.org/ocp/4.14:base-rhel9
 
 COPY --from=builder /go/src/github.com/openshift/kubernetes-nmstate/build/_output/bin/manager /usr/bin/
 COPY deploy/crds/nmstate.io_nodenetwork*.yaml /bindata/kubernetes-nmstate/crds/
