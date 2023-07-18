@@ -24,10 +24,10 @@ SKIPPED_TESTS="user-guide|bridged|\
 when desiredState is updated with ovs-bridge with linux bond as port" # https://bugzilla.redhat.com/show_bug.cgi?id=2005240 is not yet fixed in nmstate 1.2
 
 if [ "${CI}" == "true" ]; then
-    source ${SHARED_DIR}/fix-uid.sh
-    export SSH=./hack/ssh-ci.sh
+    source ${SHARED_DIR}/packet-conf.sh
+    export SSH="./hack/ssh-ci.sh"
 else
-    export SSH=./hack/ssh.sh
+    export SSH="./hack/ssh.sh"
 fi
 
 if oc get ns openshift-ovn-kubernetes &> /dev/null; then
