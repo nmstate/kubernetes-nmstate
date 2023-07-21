@@ -38,7 +38,7 @@ export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 80m
 
-e2e_test_args = -v -timeout=$(E2E_TEST_TIMEOUT) --slow-spec-threshold=60s $(E2E_TEST_ARGS)
+e2e_test_args = -vv --show-node-events -timeout=$(E2E_TEST_TIMEOUT) $(E2E_TEST_ARGS)
 
 ifeq ($(findstring k8s,$(KUBEVIRT_PROVIDER)),k8s)
 export PRIMARY_NIC ?= eth0
@@ -61,7 +61,7 @@ export KUBECTL ?= ./cluster/kubectl.sh
 KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK_VERSION ?= 1.21.0
 
-GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.5
+GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
 OPM = hack/opm.sh
 
