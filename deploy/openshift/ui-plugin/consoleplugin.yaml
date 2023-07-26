@@ -9,5 +9,5 @@ spec:
   service:
     name: {{ .PluginName }}
     namespace: {{ .PluginNamespace }}
-    port: 9443
+    port: {{ .PluginPort }}
     basePath: '/'
