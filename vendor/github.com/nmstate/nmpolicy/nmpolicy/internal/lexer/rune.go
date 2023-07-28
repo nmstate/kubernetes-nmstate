@@ -63,6 +63,10 @@ func (l *lexer) isPipe() bool {
 	return l.scn.Rune() == '|'
 }
 
+func (l *lexer) isExclamationMark() bool {
+	return l.scn.Rune() == '!'
+}
+
 func (l *lexer) isDelimiter() bool {
-	return l.isEOF() || l.isSpace() || l.isDot() || l.isEqual() || l.isColon() || l.isPlus() || l.isPipe()
+	return l.isEOF() || l.isSpace() || l.isDot() || l.isEqual() || l.isColon() || l.isPlus() || l.isPipe() || l.isExclamationMark()
 }

@@ -51,6 +51,10 @@ func wrapWithEqFilterError(err error) error {
 	return fmt.Errorf("eqfilter error: %w", err)
 }
 
+func wrapWithNeFilterError(err error) error {
+	return fmt.Errorf("nefilter error: %w", err)
+}
+
 func replaceError(format string, a ...interface{}) error {
 	return wrapWithReplaceError(fmt.Errorf(format, a...))
 }

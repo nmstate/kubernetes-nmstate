@@ -78,6 +78,10 @@ func (p *parser) parse() (ast.Node, error) {
 			if err := p.parseEqFilter(); err != nil {
 				return ast.Node{}, err
 			}
+		} else if p.currentToken().Type == lexer.NEFILTER {
+			if err := p.parseNeFilter(); err != nil {
+				return ast.Node{}, err
+			}
 		} else if p.currentToken().Type == lexer.REPLACE {
 			if err := p.parseReplace(); err != nil {
 				return ast.Node{}, err
@@ -222,6 +226,18 @@ func (p *parser) parseEqFilter() error {
 	}
 	if err := p.fillInTernaryOperator(operator.EqFilter); err != nil {
 		return wrapWithInvalidEqualityFilterError(err)
+	}
+	p.lastNode = operator
+	return nil
+}
+
+func (p *parser) parseNeFilter() error {
+	operator := &ast.Node{
+		Meta:     ast.Meta{Position: p.currentToken().Position},
+		NeFilter: &ast.TernaryOperator{},
+	}
+	if err := p.fillInTernaryOperator(operator.NeFilter); err != nil {
+		return wrapWithInvalidInequalityFilterError(err)
 	}
 	p.lastNode = operator
 	return nil

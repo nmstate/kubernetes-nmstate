@@ -66,7 +66,6 @@ interfaces:
     enabled: false
   mac-address: 02:42:BB:10:B8:9F
   mtu: 1500
-  name: br1
   state: up
   type: linux-bridge
 routes:
@@ -111,7 +110,6 @@ interfaces:
     enabled: false
   mac-address: 02:42:BB:10:B8:9F
   mtu: 1500
-  name: br1
   state: up
   type: linux-bridge
 routes:

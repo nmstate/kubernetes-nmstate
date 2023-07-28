@@ -23,7 +23,7 @@ spec:
         - name: {{ .PluginName }}
           image: {{ .PluginImage }}
           ports:
-            - containerPort: 9443
+            - containerPort: {{ .PluginPort }}
               protocol: TCP
           imagePullPolicy: Always
           resources:

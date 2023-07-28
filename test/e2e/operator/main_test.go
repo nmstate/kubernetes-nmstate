@@ -42,7 +42,7 @@ var (
 	nodes            []string
 	knmstateReporter *knmstatereporter.KubernetesNMStateReporter
 	manifestFiles    = []string{"namespace.yaml", "service_account.yaml", "operator.yaml", "role.yaml", "role_binding.yaml"}
-	defaultOperator  = NewOperatorTestData("nmstate", manifestsDir, manifestFiles)
+	defaultOperator  = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE"), manifestsDir, manifestFiles)
 )
 
 func TestE2E(t *testing.T) {
@@ -81,13 +81,6 @@ var _ = ReportBeforeEach(func(specReport ginkgotypes.SpecReport) {
 })
 
 var _ = ReportAfterEach(func(specReport ginkgotypes.SpecReport) {
-	// XXX(mko) This is a hack because in OCP CI we notice that AfterEach reporter is hanging
-	// indefinitely. We are simply ignoring it so that tests can proceed. An ultimate solution
-	// would be to implement a proper WithTimeout context which runs "runAndWait" function in the
-	// test/reporter/reporter.go
-	if !isKubevirtciCluster() {
-		return
-	}
 	knmstateReporter.ReportAfterEach(specReport)
 })
 
