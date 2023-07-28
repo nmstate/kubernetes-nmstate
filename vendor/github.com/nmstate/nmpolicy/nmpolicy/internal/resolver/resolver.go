@@ -114,6 +114,8 @@ func (r *resolver) resolveCaptureEntryName(captureEntryName string) (types.NMSta
 func (r *resolver) resolveCaptureASTEntry() (types.NMState, error) {
 	if r.currentNode.EqFilter != nil {
 		return r.resolveEqFilter()
+	} else if r.currentNode.NeFilter != nil {
+		return r.resolveNeFilter()
 	} else if r.currentNode.Replace != nil {
 		return r.resolveReplace()
 	} else if r.currentNode.Path != nil {
@@ -124,9 +126,18 @@ func (r *resolver) resolveCaptureASTEntry() (types.NMState, error) {
 
 func (r *resolver) resolveEqFilter() (types.NMState, error) {
 	operator := r.currentNode.EqFilter
-	filteredState, err := r.resolveTernaryOperator(operator, filter)
+	filteredState, err := r.resolveTernaryOperator(operator, eqfilter)
 	if err != nil {
 		return nil, wrapWithEqFilterError(err)
+	}
+	return filteredState, nil
+}
+
+func (r *resolver) resolveNeFilter() (types.NMState, error) {
+	operator := r.currentNode.NeFilter
+	filteredState, err := r.resolveTernaryOperator(operator, nefilter)
+	if err != nil {
+		return nil, wrapWithNeFilterError(err)
 	}
 	return filteredState, nil
 }
@@ -141,7 +152,7 @@ func (r *resolver) resolveReplace() (types.NMState, error) {
 }
 
 func (r *resolver) resolvePathFilter() (types.NMState, error) {
-	return filter(r.currentState, *r.currentNode.Path, nil)
+	return eqfilter(r.currentState, *r.currentNode.Path, nil)
 }
 
 func (r *resolver) resolveTernaryOperator(operator *ast.TernaryOperator,

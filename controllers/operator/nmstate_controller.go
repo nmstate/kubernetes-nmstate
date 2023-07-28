@@ -316,6 +316,7 @@ func (r *NMStateReconciler) applyOpenshiftUIPlugin(instance *nmstatev1.NMState) 
 	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "openshift-nmstate")
 	data.Data["PluginName"] = environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
 	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")
+	data.Data["PluginPort"] = environment.GetEnvVar("PLUGIN_PORT", "9443")
 	return r.renderAndApply(instance, data, filepath.Join("openshift", "ui-plugin"), true)
 }
 

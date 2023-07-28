@@ -12,10 +12,10 @@ metadata:
     app.kubernetes.io/part-of: {{ .PluginName }}
 spec:
   ports:
-    - name: 9443-tcp
+    - name: {{ .PluginPort }}-tcp
       protocol: TCP
-      port: 9443
-      targetPort: 9443
+      port: {{ .PluginPort }}
+      targetPort: {{ .PluginPort }}
   selector:
     app: {{ .PluginName }}
   type: ClusterIP

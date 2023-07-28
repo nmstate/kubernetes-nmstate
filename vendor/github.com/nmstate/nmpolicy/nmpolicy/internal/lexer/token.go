@@ -31,6 +31,7 @@ const (
 	PIPE     // |
 	REPLACE  // :=
 	EQFILTER // ==
+	NEFILTER // !=
 	MERGE    // +
 	operatorsEnd
 )
@@ -47,6 +48,7 @@ var tokens = []string{
 
 	REPLACE:  "REPLACE",
 	EQFILTER: "EQFILTER",
+	NEFILTER: "NEFILTER",
 	MERGE:    "MERGE",
 }
 

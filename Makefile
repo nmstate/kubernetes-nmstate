@@ -66,7 +66,7 @@ export KUBECTL ?= ./cluster/kubectl.sh
 KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK_VERSION ?= 1.22.2
 
-GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.1.5
+GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
 OPM = hack/opm.sh
 

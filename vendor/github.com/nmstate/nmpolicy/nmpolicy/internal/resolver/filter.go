@@ -23,8 +23,15 @@ import (
 	"github.com/nmstate/nmpolicy/nmpolicy/internal/ast"
 )
 
-func filter(inputState map[string]interface{}, pathSteps ast.VariadicOperator, expectedValue interface{}) (map[string]interface{}, error) {
-	filtered, err := visitState(newPath(pathSteps), inputState, &filterVisitor{expectedValue: expectedValue})
+func filter(
+	inputState map[string]interface{},
+	pathSteps ast.VariadicOperator,
+	operator func(interface{}, interface{}) bool,
+	expectedValue interface{}) (map[string]interface{}, error) {
+	filtered, err := visitState(newPath(pathSteps), inputState, &filterVisitor{
+		operator:      operator,
+		expectedValue: expectedValue,
+	})
 
 	if err != nil {
 		return nil, fmt.Errorf("failed applying operation on the path: %w", err)
@@ -40,9 +47,22 @@ func filter(inputState map[string]interface{}, pathSteps ast.VariadicOperator, e
 	}
 	return filteredMap, nil
 }
+func eqfilter(
+	inputState map[string]interface{},
+	pathSteps ast.VariadicOperator,
+	expectedValue interface{}) (map[string]interface{}, error) {
+	return filter(inputState, pathSteps, func(lhs, rhs interface{}) bool { return lhs == rhs }, expectedValue)
+}
+func nefilter(
+	inputState map[string]interface{},
+	pathSteps ast.VariadicOperator,
+	expectedValue interface{}) (map[string]interface{}, error) {
+	return filter(inputState, pathSteps, func(lhs, rhs interface{}) bool { return lhs != rhs }, expectedValue)
+}
 
 type filterVisitor struct {
 	mergeVisitResult bool
+	operator         func(interface{}, interface{}) bool
 	expectedValue    interface{}
 }
 
@@ -61,7 +81,7 @@ func (e filterVisitor) visitLastMap(p path, mapToFilter map[string]interface{}) 
 		return nil, pathError(p.currentStep, `type missmatch: the value in the path doesn't match the value to filter. `+
 			`"%T" != "%T" -> %+v != %+v`, obtainedValue, e.expectedValue, obtainedValue, e.expectedValue)
 	}
-	if obtainedValue == e.expectedValue {
+	if e.operator(obtainedValue, e.expectedValue) {
 		return mapToFilter, nil
 	}
 	return nil, nil
@@ -109,7 +129,10 @@ func (e filterVisitor) visitSlice(p path, sliceToVisit []interface{}) (interface
 	for _, interfaceToVisit := range sliceToVisit {
 		// Filter only the first slice by forcing "mergeVisitResult" to true
 		// for the the following ones.
-		visitResult, err := visitState(p, interfaceToVisit, &filterVisitor{mergeVisitResult: true, expectedValue: e.expectedValue})
+		visitResult, err := visitState(p, interfaceToVisit, &filterVisitor{
+			mergeVisitResult: true,
+			operator:         e.operator,
+			expectedValue:    e.expectedValue})
 		if err != nil {
 			return nil, err
 		}
