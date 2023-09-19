@@ -123,6 +123,34 @@ type NetworkMigration struct {
 	// changing the MTU for the default network will be rejected.
 	// +optional
 	MTU *MTUMigration `json:"mtu,omitempty"`
+
+	// features contains the features migration configuration. Set this to migrate
+	// feature configuration when changing the cluster default network provider.
+	// if unset, the default operation is to migrate all the configuration of
+	// supported features.
+	// +optional
+	Features *FeaturesMigration `json:"features,omitempty"`
+}
+
+type FeaturesMigration struct {
+	// egressIP specifies whether or not the Egress IP configuration is migrated
+	// automatically when changing the cluster default network provider.
+	// If unset, this property defaults to 'true' and Egress IP configure is migrated.
+	// +optional
+	// +kubebuilder:default:=true
+	EgressIP bool `json:"egressIP,omitempty"`
+	// egressFirewall specifies whether or not the Egress Firewall configuration is migrated
+	// automatically when changing the cluster default network provider.
+	// If unset, this property defaults to 'true' and Egress Firewall configure is migrated.
+	// +optional
+	// +kubebuilder:default:=true
+	EgressFirewall bool `json:"egressFirewall,omitempty"`
+	// multicast specifies whether or not the multicast configuration is migrated
+	// automatically when changing the cluster default network provider.
+	// If unset, this property defaults to 'true' and multicast configure is migrated.
+	// +optional
+	// +kubebuilder:default:=true
+	Multicast bool `json:"multicast,omitempty"`
 }
 
 // MTUMigration MTU contains infomation about MTU migration.
@@ -376,7 +404,8 @@ type KuryrConfig struct {
 	// mtu is the MTU that Kuryr should use when creating pod networks in Neutron.
 	// The value has to be lower or equal to the MTU of the nodes network and Neutron has
 	// to allow creation of tenant networks with such MTU. If unset Pod networks will be
-	// created with the same MTU as the nodes network has.
+	// created with the same MTU as the nodes network has. This also affects the services
+	// network created by cluster-network-operator.
 	// +kubebuilder:validation:Minimum=0
 	// +optional
 	MTU *uint32 `json:"mtu,omitempty"`

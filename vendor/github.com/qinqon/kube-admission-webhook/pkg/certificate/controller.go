@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Kube Admission Webhook Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *	  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package certificate
 
 import (
@@ -22,11 +38,11 @@ import (
 // Add creates a new Node Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func (m *Manager) Add(mgr manager.Manager) error {
-	return m.add(mgr, m)
+	return m.add(mgr)
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
-func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
+func (m *Manager) add(mgr manager.Manager) error {
 	logger := m.log.WithName("add")
 	// Create a new controller
 	c, err := controller.New("certificate-controller", mgr, controller.Options{Reconciler: m})
@@ -34,57 +50,20 @@ func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return errors.Wrap(err, "failed instanciating certificate controller")
 	}
 
-	isAnnotatedResource := func(object client.Object) bool {
-		_, foundAnnotation := object.GetAnnotations()[secretManagedAnnotatoinKey]
-		return foundAnnotation
-	}
-
-	isWebhookConfig := func(object client.Object) bool {
-		return object.GetName() == m.webhookName
-	}
-
-	isCASecret := func(object client.Object) bool {
-		return object.GetName() == m.caSecretKey().Name
-	}
-
-	isServiceSecret := func(object client.Object) bool {
-		webhookConf, err := m.readyWebhookConfiguration()
-		if err != nil {
-			m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration: %v", err))
-			return false
-		}
-
-		services, err := m.getServicesFromConfiguration(webhookConf)
-		if err != nil {
-			m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration services: %v", err))
-			return false
-		}
-
-		for service, _ := range services {
-			if object.GetName() == service.Name {
-				return true
-			}
-		}
-		return false
-	}
-
-	isGeneratedSecret := func(object client.Object) bool {
-		return isCASecret(object) || isServiceSecret(object)
-	}
-
 	// Watch only events for selected m.webhookName
 	onEventForThisWebhook := predicate.Funcs{
 		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return isWebhookConfig(createEvent.Object) || (isAnnotatedResource(createEvent.Object) && isGeneratedSecret(createEvent.Object))
+			return m.isWebhookConfig(createEvent.Object) || (isAnnotatedResource(createEvent.Object) && m.isGeneratedSecret(createEvent.Object))
 		},
 		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return isAnnotatedResource(deleteEvent.Object) && isGeneratedSecret(deleteEvent.Object)
+			return isAnnotatedResource(deleteEvent.Object) && m.isGeneratedSecret(deleteEvent.Object)
 		},
 		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return isWebhookConfig(updateEvent.ObjectOld) || (isAnnotatedResource(updateEvent.ObjectOld) && isGeneratedSecret(updateEvent.ObjectOld))
+			return m.isWebhookConfig(updateEvent.ObjectOld) ||
+				(isAnnotatedResource(updateEvent.ObjectOld) && m.isGeneratedSecret(updateEvent.ObjectOld))
 		},
 		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return isWebhookConfig(genericEvent.Object) || (isAnnotatedResource(genericEvent.Object) && isGeneratedSecret(genericEvent.Object))
+			return m.isWebhookConfig(genericEvent.Object) || (isAnnotatedResource(genericEvent.Object) && m.isGeneratedSecret(genericEvent.Object))
 		},
 	}
 
@@ -95,18 +74,58 @@ func (m *Manager) add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	logger.Info("Starting to watch validatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
+	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}},
+		&handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching ValidatingWebhookConfiguration")
 	}
 
 	logger.Info("Starting to watch mutatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.MutatingWebhookConfiguration{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
+	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.MutatingWebhookConfiguration{}},
+		&handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching MutatingWebhookConfiguration")
 	}
 
 	return nil
+}
+
+func isAnnotatedResource(object client.Object) bool {
+	_, foundAnnotation := object.GetAnnotations()[secretManagedAnnotatoinKey]
+	return foundAnnotation
+}
+
+func (m *Manager) isWebhookConfig(object client.Object) bool {
+	return object.GetName() == m.webhookName
+}
+
+func (m *Manager) isCASecret(object client.Object) bool {
+	return object.GetName() == m.caSecretKey().Name
+}
+
+func (m *Manager) isServiceSecret(object client.Object) bool {
+	webhookConf, err := m.readyWebhookConfiguration()
+	if err != nil {
+		m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration: %v", err))
+		return false
+	}
+
+	services, err := m.getServicesFromConfiguration(webhookConf)
+	if err != nil {
+		m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration services: %v", err))
+		return false
+	}
+
+	for service := range services {
+		if object.GetName() == service.Name {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *Manager) isGeneratedSecret(object client.Object) bool {
+	return m.isCASecret(object) || m.isServiceSecret(object)
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -134,7 +153,6 @@ func (m *Manager) Reconcile(ctx context.Context, request reconcile.Request) (rec
 
 	// We have pass expiration time for the CA
 	if elapsedToRotateCA <= 0 {
-
 		// If rotate fails runtime-controller manager will re-enqueue it, so
 		// it will be retried
 		err := m.rotateAll()
@@ -150,7 +168,6 @@ func (m *Manager) Reconcile(ctx context.Context, request reconcile.Request) (rec
 		// Also recalculate it for serices certificate since they has changed
 		m.nextRotationDeadlineForServices()
 		elapsedToRotateServices = m.elapsedToRotateServicesFromLastDeadline()
-
 	} else if elapsedToRotateServices <= 0 {
 		// CA is ok but expiration but we have passed expiration time for service certificates
 		err := m.rotateServicesWithOverlap()
@@ -202,9 +219,11 @@ func (m *Manager) Reconcile(ctx context.Context, request reconcile.Request) (rec
 		}
 	}
 
-	// Return the event that is going to happend sonner all services certificates rotation,
+	// Return the event that is going to happened sonner all services certificates rotation,
 	// services certificate rotation or ca bundle cleanup
-	m.log.Info("Calculating RequeueAfter", "elapsedToRotateCA", elapsedToRotateCA, "elapsedToRotateServices", elapsedToRotateServices, "elapsedForCABundleCleanup", elapsedForCABundleCleanup, "elapsedForServiceCertsCleanup", elapsedForServiceCertsCleanup)
+	m.log.Info("Calculating RequeueAfter", "elapsedToRotateCA", elapsedToRotateCA,
+		"elapsedToRotateServices", elapsedToRotateServices, "elapsedForCABundleCleanup",
+		elapsedForCABundleCleanup, "elapsedForServiceCertsCleanup", elapsedForServiceCertsCleanup)
 	requeueAfter := min(elapsedToRotateCA, elapsedToRotateServices, elapsedForCABundleCleanup, elapsedForServiceCertsCleanup)
 
 	m.log.Info(fmt.Sprintf("Certificates will be Reconcile on %s", m.now().Add(requeueAfter)))

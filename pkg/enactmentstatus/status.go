@@ -60,16 +60,19 @@ func Update(cli client.Client, key types.NamespacedName, statusSetter func(*nmst
 
 		// Wait until enactment has being updated at the node
 		expectedStatus := instance.Status
-		return wait.PollImmediate(1*time.Second, 30*time.Second, func() (bool, error) { //nolint:gomnd
-			err = cli.Get(context.TODO(), key, instance)
-			if err != nil {
-				return false, err
-			}
+		interval := time.Second
+		timeout := 30 * time.Second
+		return wait.PollUntilContextTimeout(context.TODO(), interval, timeout, true, /*immediate*/
+			func(ctx context.Context) (bool, error) {
+				err = cli.Get(ctx, key, instance)
+				if err != nil {
+					return false, err
+				}
 
-			isEqual := reflect.DeepEqual(expectedStatus, instance.Status)
-			logger.Info(fmt.Sprintf("enactment updated at the node: %t", isEqual))
-			return isEqual, nil
-		})
+				isEqual := reflect.DeepEqual(expectedStatus, instance.Status)
+				logger.Info(fmt.Sprintf("enactment updated at the node: %t", isEqual))
+				return isEqual, nil
+			})
 	})
 }
 

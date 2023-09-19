@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Kube Admission Webhook Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *	  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package certificate
 
 import (
@@ -18,12 +34,13 @@ import (
 )
 
 const (
+	//nolint:gosec
 	secretManagedAnnotatoinKey = "kubevirt.io/kube-admission-webhook"
 	CACertKey                  = "ca.crt"
 	CAPrivateKeyKey            = "ca.key"
 )
 
-func populateCASecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
+func populateCASecret(secret *corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
 	if secret.Annotations == nil {
 		secret.Annotations = map[string]string{}
 	}
@@ -32,14 +49,13 @@ func populateCASecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Se
 		CACertKey:       triple.EncodeCertPEM(keyPair.Cert),
 		CAPrivateKeyKey: triple.EncodePrivateKeyPEM(keyPair.Key),
 	}
-	return &secret, nil
+	return secret, nil
 }
 
 func addTLSCertificate(data map[string][]byte, cert *x509.Certificate) error {
-
 	certsPEM, hasCerts := data[corev1.TLSCertKey]
 	if hasCerts {
-		certsPEMBytes, err := triple.AddCertToPEM(cert, []byte(certsPEM), triple.CertsListSizeLimit)
+		certsPEMBytes, err := triple.AddCertToPEM(cert, certsPEM, triple.CertsListSizeLimit)
 		if err != nil {
 			return err
 		}
@@ -58,18 +74,18 @@ func setAnnotation(secret *corev1.Secret) {
 	secret.Annotations[secretManagedAnnotatoinKey] = ""
 }
 
-func resetTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
-	setAnnotation(&secret)
+func resetTLSSecret(secret *corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
+	setAnnotation(secret)
 
 	secret.Data = map[string][]byte{
 		corev1.TLSPrivateKeyKey: triple.EncodePrivateKeyPEM(keyPair.Key),
 		corev1.TLSCertKey:       triple.EncodeCertPEM(keyPair.Cert),
 	}
-	return &secret, nil
+	return secret, nil
 }
 
-func appendTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
-	setAnnotation(&secret)
+func appendTLSSecret(secret *corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
+	setAnnotation(secret)
 
 	if secret.Data == nil {
 		secret.Data = map[string][]byte{}
@@ -82,7 +98,7 @@ func appendTLSSecret(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Sec
 
 	secret.Data[corev1.TLSPrivateKeyKey] = triple.EncodePrivateKeyPEM(keyPair.Key)
 
-	return &secret, nil
+	return secret, nil
 }
 
 func (m *Manager) resetAndApplyTLSSecret(secret types.NamespacedName, keyPair *triple.KeyPair) error {
@@ -98,14 +114,14 @@ func (m *Manager) applyCASecret(keyPair *triple.KeyPair) error {
 }
 
 func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.SecretType, keyPair *triple.KeyPair,
-	populateSecretFn func(corev1.Secret, *triple.KeyPair) (*corev1.Secret, error)) error {
-	secret := corev1.Secret{}
+	populateSecretFn func(*corev1.Secret, *triple.KeyPair) (*corev1.Secret, error)) error {
+	secret := &corev1.Secret{}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		err := m.get(secretKey, &secret)
+		err := m.get(secretKey, secret)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
-				newSecret := corev1.Secret{
+				newSecret := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        secretKey.Name,
 						Namespace:   secretKey.Namespace,
@@ -114,7 +130,8 @@ func (m *Manager) applySecret(secretKey types.NamespacedName, secretType corev1.
 					},
 					Type: secretType,
 				}
-				populatedSecret, err := populateSecretFn(newSecret, keyPair)
+				var populatedSecret *corev1.Secret
+				populatedSecret, err = populateSecretFn(newSecret, keyPair)
 				if err != nil {
 					return errors.Wrap(err, "failed populating secret")
 				}
@@ -261,7 +278,7 @@ func (m *Manager) getTLSCerts(secretKey types.NamespacedName) ([]*x509.Certifica
 	return certs, nil
 }
 
-//FIXME: Is this default/webhookname good key for ca secret
+// FIXME: Is this default/webhookname good key for ca secret
 func (m *Manager) caSecretKey() types.NamespacedName {
 	return types.NamespacedName{Namespace: m.namespace, Name: m.webhookName + "-ca"}
 }

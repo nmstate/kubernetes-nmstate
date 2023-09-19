@@ -391,18 +391,21 @@ func (r *NodeNetworkConfigurationPolicyReconciler) enactmentForPolicy(
 
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmentKey types.NamespacedName) error {
 	var enactmentInstance nmstatev1beta1.NodeNetworkConfigurationEnactment
-	pollErr := wait.PollImmediate(1*time.Second, 10*time.Second, func() (bool, error) { //nolint:gomnd
-		err := r.APIClient.Get(context.TODO(), enactmentKey, &enactmentInstance)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				// Let's retry after a while, sometimes it takes some time
-				// for enactment to be created
-				return false, nil
+	interval := time.Second
+	timeout := 10 * time.Second
+	pollErr := wait.PollUntilContextTimeout(context.TODO(), interval, timeout, true, /*immediate*/
+		func(ctx context.Context) (bool, error) {
+			err := r.APIClient.Get(ctx, enactmentKey, &enactmentInstance)
+			if err != nil {
+				if apierrors.IsNotFound(err) {
+					// Let's retry after a while, sometimes it takes some time
+					// for enactment to be created
+					return false, nil
+				}
+				return false, err
 			}
-			return false, err
-		}
-		return true, nil
-	})
+			return true, nil
+		})
 
 	return pollErr
 }

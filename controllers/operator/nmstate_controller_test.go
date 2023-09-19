@@ -20,7 +20,6 @@ package controllers
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -82,7 +81,7 @@ var _ = Describe("NMState controller reconcile", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		manifestsDir, err = ioutil.TempDir("/tmp", "knmstate-test-manifests")
+		manifestsDir, err = os.MkdirTemp("/tmp", "knmstate-test-manifests")
 		Expect(err).ToNot(HaveOccurred())
 		err = copyManifests(manifestsDir)
 		Expect(err).ToNot(HaveOccurred())

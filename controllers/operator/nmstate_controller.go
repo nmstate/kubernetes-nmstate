@@ -194,7 +194,7 @@ func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	return r.renderAndApply(instance, data, "rbac", true)
 }
 
-//nolint: funlen
+// nolint: funlen
 func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	// Register ToYaml template method

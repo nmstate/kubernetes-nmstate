@@ -22,7 +22,7 @@ import (
 	"testing"
 )
 
-//nolint: funlen
+// nolint: funlen
 func TestDefaultGatewayParsing(t *testing.T) {
 	tests := []struct {
 		desc          string
