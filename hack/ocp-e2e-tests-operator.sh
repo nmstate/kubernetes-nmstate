@@ -17,7 +17,7 @@ export KUBEVIRTCI_RUNTIME="${KUBEVIRTCI_RUNTIME:-podman}"
 export FLAKE_ATTEMPTS="${FLAKE_ATTEMPTS:-3}"
 
 if [ "${CI}" == "true" ]; then
-    source ${SHARED_DIR}/fix-uid.sh
+    source ${SHARED_DIR}/packet-conf.sh
     export SSH=./hack/ssh-ci.sh
 else
     export SSH=./hack/ssh.sh
