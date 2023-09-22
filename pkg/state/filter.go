@@ -21,7 +21,6 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
-	goyaml "gopkg.in/yaml.v2"
 	yaml "sigs.k8s.io/yaml"
 )
 
@@ -116,9 +115,6 @@ func filterOut(currentState shared.State) (shared.State, error) {
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
 		return currentState, err
 	}
-	if err := normalizeInterfacesNames(currentState.Raw, &state); err != nil {
-		return currentState, err
-	}
 
 	state.Interfaces = filterOutInterfaces(state.Interfaces)
 	if state.Routes != nil {
@@ -132,27 +128,4 @@ func filterOut(currentState shared.State) (shared.State, error) {
 	}
 
 	return shared.NewState(string(filteredState)), nil
-}
-
-// normalizeInterfacesNames fixes the unmarshal of numeric values in the interfaces names
-// Numeric values, including the ones with a base prefix (e.g. 0x123) should be stringify.
-func normalizeInterfacesNames(rawState []byte, state *rootState) error {
-	var stateForNormalization rootState
-	if err := goyaml.Unmarshal(rawState, &stateForNormalization); err != nil {
-		return err
-	}
-
-	for i, iface := range stateForNormalization.Interfaces {
-		state.Interfaces[i].Name = iface.Name
-	}
-
-	if stateForNormalization.Routes != nil {
-		for i, route := range stateForNormalization.Routes.Config {
-			state.Routes.Config[i].NextHopInterface = route.NextHopInterface
-		}
-		for i, route := range stateForNormalization.Routes.Running {
-			state.Routes.Running[i].NextHopInterface = route.NextHopInterface
-		}
-	}
-	return nil
 }
