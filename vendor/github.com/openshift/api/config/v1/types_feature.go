@@ -98,7 +98,8 @@ type FeatureGateEnabledDisabled struct {
 // version of this file. In this upgrade scenario the map could return nil.
 //
 // example:
-//   if featureSet, ok := FeatureSets["SomeNewFeature"]; ok { }
+//
+//	if featureSet, ok := FeatureSets["SomeNewFeature"]; ok { }
 //
 // If you put an item in either of these lists, put your area and name on it so we can find owners.
 var FeatureSets = map[FeatureSet]*FeatureGateEnabledDisabled{
@@ -108,15 +109,17 @@ var FeatureSets = map[FeatureSet]*FeatureGateEnabledDisabled{
 		Disabled: []string{},
 	},
 	TechPreviewNoUpgrade: newDefaultFeatures().
-		with("CSIMigrationAWS").             // sig-storage, jsafrane, Kubernetes feature gate
-		with("CSIMigrationGCE").             // sig-storage, fbertina, Kubernetes feature gate
-		with("CSIMigrationAzureFile").       // sig-storage, fbertina, Kubernetes feature gate
-		with("CSIMigrationvSphere").         // sig-storage, fbertina, Kubernetes feature gate
-		with("ExternalCloudProvider").       // sig-cloud-provider, jspeed, OCP specific
-		with("CSIDriverSharedResource").     // sig-build, adkaplan, OCP specific
-		with("BuildCSIVolumes").             // sig-build, adkaplan, OCP specific
-		with("NodeSwap").                    // sig-node, ehashman, Kubernetes feature gate
-		with("MachineAPIProviderOpenStack"). // openstack, egarcia (#forum-openstack), OCP specific
+		with("ExternalCloudProvider").             // sig-cloud-provider, jspeed, OCP specific
+		with("CSIDriverSharedResource").           // sig-build, adkaplan, OCP specific
+		with("BuildCSIVolumes").                   // sig-build, adkaplan, OCP specific
+		with("NodeSwap").                          // sig-node, ehashman, Kubernetes feature gate
+		with("MachineAPIProviderOpenStack").       // openstack, egarcia (#forum-openstack), OCP specific
+		with("InsightsConfigAPI").                 // insights, tremes (#ccx), OCP specific
+		with("MatchLabelKeysInPodTopologySpread"). // sig-scheduling, ingvagabund (#forum-workloads), Kubernetes feature gate
+		with("RetroactiveDefaultStorageClass").    // sig-storage, RomanBednar, Kubernetes feature gate
+		with("PDBUnhealthyPodEvictionPolicy").     // sig-apps, atiratree (#forum-workloads), Kubernetes feature gate
+		with("DynamicResourceAllocation").         // sig-scheduling, jchaloup (#forum-workloads), Kubernetes feature gate
+		with("OpenShiftPodSecurityAdmission").     // bz-auth, stlaz, OCP specific
 		toFeatures(),
 	LatencySensitive: newDefaultFeatures().
 		with(
@@ -130,13 +133,9 @@ var defaultFeatures = &FeatureGateEnabledDisabled{
 		"APIPriorityAndFairness",         // sig-apimachinery, deads2k
 		"RotateKubeletServerCertificate", // sig-pod, sjenning
 		"DownwardAPIHugePages",           // sig-node, rphillips
-		"PodSecurity",                    // sig-auth, s-urbaniak
 	},
 	Disabled: []string{
-		"CSIMigrationAWS",       // sig-storage, jsafrane
-		"CSIMigrationGCE",       // sig-storage, jsafrane
-		"CSIMigrationAzureFile", // sig-storage, jsafrane
-		"CSIMigrationvSphere",   // sig-storage, jsafrane
+		"RetroactiveDefaultStorageClass", // sig-storage, RomanBednar, Kubernetes feature gate
 	},
 }
 

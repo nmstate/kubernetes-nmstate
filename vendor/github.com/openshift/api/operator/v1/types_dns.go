@@ -2,9 +2,8 @@ package v1
 
 import (
 	v1 "github.com/openshift/api/config/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // +genclient
@@ -101,6 +100,47 @@ type DNSSpec struct {
 	// +optional
 	// +kubebuilder:default=Normal
 	LogLevel DNSLogLevel `json:"logLevel,omitempty"`
+
+	// cache describes the caching configuration that applies to all server blocks listed in the Corefile.
+	// This field allows a cluster admin to optionally configure:
+	// * positiveTTL which is a duration for which positive responses should be cached.
+	// * negativeTTL which is a duration for which negative responses should be cached.
+	// If this is not configured, OpenShift will configure positive and negative caching with a default value that is
+	// subject to change. At the time of writing, the default positiveTTL is 900 seconds and the default negativeTTL is
+	// 30 seconds or as noted in the respective Corefile for your version of OpenShift.
+	// +optional
+	Cache DNSCache `json:"cache,omitempty"`
+}
+
+// DNSCache defines the fields for configuring DNS caching.
+type DNSCache struct {
+	// positiveTTL is optional and specifies the amount of time that a positive response should be cached.
+	//
+	// If configured, it must be a value of 1s (1 second) or greater up to a theoretical maximum of several years. This
+	// field expects an unsigned duration string of decimal numbers, each with optional fraction and a unit suffix,
+	// e.g. "100s", "1m30s", "12h30m10s". Values that are fractions of a second are rounded down to the nearest second.
+	// If the configured value is less than 1s, the default value will be used.
+	// If not configured, the value will be 0s and OpenShift will use a default value of 900 seconds unless noted
+	// otherwise in the respective Corefile for your version of OpenShift. The default value of 900 seconds is subject
+	// to change.
+	// +kubebuilder:validation:Pattern=^(0|([0-9]+(\.[0-9]+)?(ns|us|µs|μs|ms|s|m|h))+)$
+	// +kubebuilder:validation:Type:=string
+	// +optional
+	PositiveTTL metav1.Duration `json:"positiveTTL,omitempty"`
+
+	// negativeTTL is optional and specifies the amount of time that a negative response should be cached.
+	//
+	// If configured, it must be a value of 1s (1 second) or greater up to a theoretical maximum of several years. This
+	// field expects an unsigned duration string of decimal numbers, each with optional fraction and a unit suffix,
+	// e.g. "100s", "1m30s", "12h30m10s". Values that are fractions of a second are rounded down to the nearest second.
+	// If the configured value is less than 1s, the default value will be used.
+	// If not configured, the value will be 0s and OpenShift will use a default value of 30 seconds unless noted
+	// otherwise in the respective Corefile for your version of OpenShift. The default value of 30 seconds is subject
+	// to change.
+	// +kubebuilder:validation:Pattern=^(0|([0-9]+(\.[0-9]+)?(ns|us|µs|μs|ms|s|m|h))+)$
+	// +kubebuilder:validation:Type:=string
+	// +optional
+	NegativeTTL metav1.Duration `json:"negativeTTL,omitempty"`
 }
 
 // +kubebuilder:validation:Enum:=Normal;Debug;Trace
@@ -247,6 +287,25 @@ type ForwardPlugin struct {
 	//
 	// +optional
 	TransportConfig DNSTransportConfig `json:"transportConfig,omitempty"`
+
+
+	// protocolStrategy specifies the protocol to use for upstream DNS
+	// requests.
+	// Valid values for protocolStrategy are "TCP" and omitted.
+	// When omitted, this means no opinion and the platform is left to choose
+	// a reasonable default, which is subject to change over time.
+	// The current default is to use the protocol of the original client request.
+	// "TCP" specifies that the platform should use TCP for all upstream DNS requests,
+	// even if the client request uses UDP.
+	// "TCP" is useful for UDP-specific issues such as those created by
+	// non-compliant upstream resolvers, but may consume more bandwidth or
+	// increase DNS response time. Note that protocolStrategy only affects
+	// the protocol of DNS requests that CoreDNS makes to upstream resolvers.
+	// It does not affect the protocol of DNS requests between clients and
+	// CoreDNS.
+	//
+	// +optional
+	ProtocolStrategy ProtocolStrategy `json:"protocolStrategy"`
 }
 
 // UpstreamResolvers defines a schema for configuring the CoreDNS forward plugin in the
@@ -289,6 +348,24 @@ type UpstreamResolvers struct {
 	//
 	// +optional
 	TransportConfig DNSTransportConfig `json:"transportConfig,omitempty"`
+
+	// protocolStrategy specifies the protocol to use for upstream DNS
+	// requests.
+	// Valid values for protocolStrategy are "TCP" and omitted.
+	// When omitted, this means no opinion and the platform is left to choose
+	// a reasonable default, which is subject to change over time.
+	// The current default is to use the protocol of the original client request.
+	// "TCP" specifies that the platform should use TCP for all upstream DNS requests,
+	// even if the client request uses UDP.
+	// "TCP" is useful for UDP-specific issues such as those created by
+	// non-compliant upstream resolvers, but may consume more bandwidth or
+	// increase DNS response time. Note that protocolStrategy only affects
+	// the protocol of DNS requests that CoreDNS makes to upstream resolvers.
+	// It does not affect the protocol of DNS requests between clients and
+	// CoreDNS.
+	//
+	// +optional
+	ProtocolStrategy ProtocolStrategy `json:"protocolStrategy"`
 }
 
 // Upstream can either be of type SystemResolvConf, or of type Network.
@@ -334,6 +411,23 @@ type UpstreamType string
 const (
 	SystemResolveConfType UpstreamType = "SystemResolvConf"
 	NetworkResolverType   UpstreamType = "Network"
+)
+
+// ProtocolStrategy is a preference for the protocol to use for DNS queries.
+// + ---
+// + When consumers observe an unknown value, they should use the default strategy.
+// +kubebuilder:validation:Enum:=TCP;""
+type ProtocolStrategy string
+
+var (
+	// ProtocolStrategyDefault specifies no opinion for DNS protocol.
+	// If empty, the default behavior of CoreDNS is used. Currently, this means that CoreDNS uses the protocol of the
+	// originating client request as the upstream protocol.
+	// Note that the default behavior of CoreDNS is subject to change.
+	ProtocolStrategyDefault ProtocolStrategy = ""
+
+	// ProtocolStrategyTCP instructs CoreDNS to always use TCP, regardless of the originating client's request protocol.
+	ProtocolStrategyTCP ProtocolStrategy = "TCP"
 )
 
 // DNSNodePlacement describes the node scheduling configuration for DNS pods.
