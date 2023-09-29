@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Kube Admission Webhook Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *	  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package certificate
 
 import (
@@ -36,13 +52,13 @@ func (m *Manager) earliestElapsedForServiceCertsCleanup() (time.Duration, error)
 	}
 
 	elapsedTimesForCleanup := []time.Duration{}
-	for service, _ := range services {
-
+	for service := range services {
 		certs, err := m.getTLSCerts(service)
 		if err != nil {
 			return time.Duration(0), fmt.Errorf("failed getting TLS keypair from service %s to calculate cleanup next run: %w", service, err)
 		}
-		elapsedTimeForCleanup, err := m.earliestElapsedForCleanup(m.log.WithName("earliestElapsedForServiceCertsCleanup").WithValues("service", service), certs)
+		elapsedTimeForCleanup, err := m.earliestElapsedForCleanup(
+			m.log.WithName("earliestElapsedForServiceCertsCleanup").WithValues("service", service), certs)
 		if err != nil {
 			return time.Duration(0), err
 		}
@@ -84,7 +100,7 @@ func (m *Manager) earliestCleanupDeadlineForCerts(certificates []*x509.Certifica
 
 func (m *Manager) cleanUpCABundle() error {
 	m.log.Info("cleanUpCABundle")
-	_, err := m.updateWebhookCABundleWithFunc(func([]byte) ([]byte, error) {
+	err := m.updateWebhookCABundleWithFunc(func([]byte) ([]byte, error) {
 		cas, err := m.getCACertsFromCABundle()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed getting ca certs to start cleanup")
@@ -112,23 +128,27 @@ func (m *Manager) cleanUpServiceCerts() error {
 		return fmt.Errorf("failed getting services to do the cleanup: %w", err)
 	}
 
-	for service, _ := range services {
-		m.applySecret(service, corev1.SecretTypeTLS, nil, func(secret corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
-			certPEM, found := secret.Data[corev1.TLSCertKey]
-			if !found {
-				return nil, errors.Wrapf(err, "TLS cert not found at secret %s to clean up ", service)
-			}
+	for service := range services {
+		applyErr := m.applySecret(service, corev1.SecretTypeTLS, nil,
+			func(secret *corev1.Secret, keyPair *triple.KeyPair) (*corev1.Secret, error) {
+				certPEM, found := secret.Data[corev1.TLSCertKey]
+				if !found {
+					return nil, errors.Wrapf(err, "TLS cert not found at secret %s to clean up ", service)
+				}
 
-			certs, err := triple.ParseCertsPEM(certPEM)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed parsing TLS cert PEM at secret %s to clean up", service)
-			}
+				certs, err := triple.ParseCertsPEM(certPEM)
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed parsing TLS cert PEM at secret %s to clean up", service)
+				}
 
-			cleanedCerts := m.cleanUpCertificates(certs)
-			pem := triple.EncodeCertsPEM(cleanedCerts)
-			secret.Data[corev1.TLSCertKey] = pem
-			return &secret, nil
-		})
+				cleanedCerts := m.cleanUpCertificates(certs)
+				pem := triple.EncodeCertsPEM(cleanedCerts)
+				secret.Data[corev1.TLSCertKey] = pem
+				return secret, nil
+			})
+		if applyErr != nil {
+			return applyErr
+		}
 	}
 	return nil
 }

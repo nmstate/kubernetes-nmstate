@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -286,7 +287,7 @@ func retrieveCertAndCAIntervals() (certificate.Options, error) {
 }
 
 func setupCertManager(mgr manager.Manager, certManagerOpts certificate.Options) error {
-	certManager, err := certificate.NewManager(mgr.GetClient(), certManagerOpts)
+	certManager, err := certificate.NewManager(mgr.GetClient(), &certManagerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to create cert-manager", "controller", "cert-manager")
 		return err
@@ -324,13 +325,15 @@ func lockHandler() (*flock.Flock, error) {
 	}
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
 	handlerLock := flock.New(lockFilePath)
-	err := wait.PollImmediateInfinite(5*time.Second, func() (done bool, err error) { //nolint:gomnd
-		locked, err := handlerLock.TryLock()
-		if err != nil {
-			setupLog.Error(err, "retrying to lock handler")
-			return false, nil // Don't return the error here, it will not re-poll if we do
-		}
-		return locked, nil
-	})
+	interval := 5 * time.Second
+	err := wait.PollUntilContextCancel(context.TODO(), interval, true, /*immediate*/
+		func(context.Context) (done bool, err error) {
+			locked, err := handlerLock.TryLock()
+			if err != nil {
+				setupLog.Error(err, "retrying to lock handler")
+				return false, nil // Don't return the error here, it will not re-poll if we do
+			}
+			return locked, nil
+		})
 	return handlerLock, err
 }

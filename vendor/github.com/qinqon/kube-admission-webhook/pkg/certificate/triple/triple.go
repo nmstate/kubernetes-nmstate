@@ -1,15 +1,18 @@
 /*
-Copyright 2016 The Kubernetes Authors.
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-    http://www.apache.org/licenses/LICENSE-2.0
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Copyright 2016 Kube Admission Webhook Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *	  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 // Package triple generates key-certificate pairs for the
 // triple (CA, Server, Client).
@@ -38,7 +41,7 @@ func NewCA(name string, duration time.Duration) (*KeyPair, error) {
 		CommonName: name,
 	}
 
-	cert, err := NewSelfSignedCACert(config, key, duration)
+	cert, err := NewSelfSignedCACert(&config, key, duration)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create a self-signed certificate for a new CA: %v", err)
 	}
@@ -48,7 +51,8 @@ func NewCA(name string, duration time.Duration) (*KeyPair, error) {
 	}, nil
 }
 
-func NewServerKeyPair(ca *KeyPair, commonName, svcName, svcNamespace, dnsDomain string, ips, hostnames []string, duration time.Duration) (*KeyPair, error) {
+func NewServerKeyPair(ca *KeyPair, commonName, svcName, svcNamespace,
+	dnsDomain string, ips, hostnames []string, duration time.Duration) (*KeyPair, error) {
 	key, err := NewPrivateKey()
 	if err != nil {
 		return nil, fmt.Errorf("unable to create a server private key: %v", err)
@@ -72,7 +76,7 @@ func NewServerKeyPair(ca *KeyPair, commonName, svcName, svcNamespace, dnsDomain 
 	altNames.DNSNames = append(altNames.DNSNames, hostnames...)
 	altNames.DNSNames = append(altNames.DNSNames, internalAPIServerFQDN...)
 
-	config := Config{
+	config := &Config{
 		CommonName: commonName,
 		AltNames:   altNames,
 		Usages:     []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
@@ -94,7 +98,7 @@ func NewClientKeyPair(ca *KeyPair, commonName string, organizations []string, du
 		return nil, fmt.Errorf("unable to create a client private key: %v", err)
 	}
 
-	config := Config{
+	config := &Config{
 		CommonName:   commonName,
 		Organization: organizations,
 		Usages:       []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},

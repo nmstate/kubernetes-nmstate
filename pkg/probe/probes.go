@@ -48,7 +48,7 @@ var (
 type Probe struct {
 	name      string
 	timeout   time.Duration
-	condition func(client.Client, time.Duration) wait.ConditionFunc
+	condition func(client.Client, time.Duration) wait.ConditionWithContextFunc
 }
 
 type Route struct {
@@ -90,12 +90,12 @@ func yamlToGJson(rawYaml string) (gjson.Result, error) {
 	return gjson.ParseBytes(json), nil
 }
 
-func apiServerCondition(_ client.Client, _ time.Duration) wait.ConditionFunc {
+func apiServerCondition(_ client.Client, _ time.Duration) wait.ConditionWithContextFunc {
 	return checkAPIServerConnectivity
 }
 
 // This probes use its own client to bypass cache
-func checkAPIServerConnectivity() (bool, error) {
+func checkAPIServerConnectivity(ctx context.Context) (bool, error) {
 	// Create new custom client to bypass cache [1]
 	// [1] https://github.com/operator-framework/operator-sdk/blob/master/doc/user/client.md#non-default-client
 	currentConfig, err := config.GetConfig()
@@ -110,7 +110,7 @@ func checkAPIServerConnectivity() (bool, error) {
 		log.Error(err, "failed to creating new custom client")
 		return false, nil
 	}
-	err = cli.Get(context.TODO(), types.NamespacedName{Name: metav1.NamespaceDefault}, &corev1.Namespace{})
+	err = cli.Get(ctx, types.NamespacedName{Name: metav1.NamespaceDefault}, &corev1.Namespace{})
 	if err != nil {
 		log.Error(err, "failed reaching the apiserver")
 		return false, nil
@@ -118,8 +118,8 @@ func checkAPIServerConnectivity() (bool, error) {
 	return true, nil
 }
 
-func nodeReadinessCondition(cli client.Client, _ time.Duration) wait.ConditionFunc {
-	return func() (bool, error) {
+func nodeReadinessCondition(cli client.Client, _ time.Duration) wait.ConditionWithContextFunc {
+	return func(context.Context) (bool, error) {
 		return checkNodeReadiness(cli)
 	}
 }
@@ -169,8 +169,8 @@ func defaultGw(currentState gjson.Result) (Route, error) {
 	return found, nil
 }
 
-func pingCondition(cli client.Client, timeout time.Duration) wait.ConditionFunc {
-	return func() (bool, error) {
+func pingCondition(cli client.Client, timeout time.Duration) wait.ConditionWithContextFunc {
+	return func(context.Context) (bool, error) {
 		return runPing(cli)
 	}
 }
@@ -214,8 +214,8 @@ func ping(target Route) (string, error) {
 	return output, nil
 }
 
-func dnsCondition(cli client.Client, timeout time.Duration) wait.ConditionFunc {
-	return func() (bool, error) {
+func dnsCondition(cli client.Client, timeout time.Duration) wait.ConditionWithContextFunc {
+	return func(context.Context) (bool, error) {
 		return runDNS(cli, timeout)
 	}
 }
@@ -274,7 +274,7 @@ func Select(cli client.Client) []Probe {
 	}
 
 	for _, p := range externalConnectivityProbes {
-		err := wait.PollImmediate(time.Second, p.timeout, p.condition(cli, p.timeout))
+		err := wait.PollUntilContextTimeout(context.TODO(), time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
 		if err == nil {
 			probes = append(probes, p)
 		} else {
@@ -307,7 +307,7 @@ func Run(cli client.Client, probes []Probe) error {
 
 	for _, p := range probes {
 		log.Info(fmt.Sprintf("Running '%s' probe", p.name))
-		err = wait.PollImmediate(time.Second, p.timeout, p.condition(cli, p.timeout))
+		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
 		if err != nil {
 			return errors.Wrapf(
 				err,

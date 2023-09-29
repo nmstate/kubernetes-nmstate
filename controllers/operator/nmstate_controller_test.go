@@ -20,7 +20,6 @@ package controllers
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -82,7 +81,7 @@ var _ = Describe("NMState controller reconcile", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		manifestsDir, err = ioutil.TempDir("/tmp", "knmstate-test-manifests")
+		manifestsDir, err = os.MkdirTemp("/tmp", "knmstate-test-manifests")
 		Expect(err).ToNot(HaveOccurred())
 		err = copyManifests(manifestsDir)
 		Expect(err).ToNot(HaveOccurred())
@@ -101,7 +100,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
-		os.Setenv("HANDLER_IMAGE", handlerImage)
+		os.Setenv("RELATED_IMAGE_HANDLER_IMAGE", handlerImage)
 		os.Setenv("HANDLER_IMAGE_PULL_POLICY", imagePullPolicy)
 		os.Setenv("HANDLER_PREFIX", handlerPrefix)
 	})

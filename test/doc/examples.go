@@ -29,7 +29,7 @@ type ExampleSpec struct {
 	CleanupState *nmstate.State
 }
 
-//nolint: funlen
+// nolint: funlen
 func ExampleSpecs() []ExampleSpec {
 	cleanDNSDesiredState := nmstate.NewState(`dns-resolver:
   config:
