@@ -1,5 +1,7 @@
 export KUBEVIRT_PROVIDER=${KUBEVIRT_PROVIDER:-'k8s-1.26-centos9'}
 export KUBEVIRTCI_TAG=2303201102-ef46217
+export KUBEVIRT_DEPLOY_PROMETHEUS=true
+export KUBEVIRT_DEPLOY_GRAFANA=true
 
 KUBEVIRTCI_REPO='https://github.com/kubevirt/kubevirtci.git'
 KUBEVIRTCI_PATH="${PWD}/_kubevirtci"

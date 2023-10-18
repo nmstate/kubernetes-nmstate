@@ -53,6 +53,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmpolicy"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -221,6 +222,18 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 	enactmentConditions.NotifyProgressing()
 	if policyconditions.IsUnknown(&instance.Status.Conditions) {
 		policyconditions.Update(r.Client, r.APIClient, request.NamespacedName)
+	}
+
+	stats, err := nmstatectl.Statistic(enactmentInstance.Status.DesiredState)
+	if err != nil {
+		log.Error(err, "failed retrieving stats for desired state")
+	} else {
+		for _, t := range stats.Topology {
+			monitoring.ApplyTopologyTotal.WithLabelValues(t).Inc()
+		}
+		for _, f := range stats.Features {
+			monitoring.ApplyFeaturesTotal.WithLabelValues(f).Inc()
+		}
 	}
 
 	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, enactmentInstance.Status.DesiredState)

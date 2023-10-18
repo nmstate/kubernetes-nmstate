@@ -1,4 +1,4 @@
-{{define "handlerPrefix"}}{{with $prefix := .HandlerPrefix}}{{$prefix | printf "%s-"}}{{end -}}{{end}}
+{{define "handlerPrefix"}}{{with $prefix := .HandlerPrefix}}{{$prefix | printf "s-"}}{{end -}}{{end}}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -185,6 +185,7 @@ metadata:
   labels:
     app: kubernetes-nmstate
     component: kubernetes-nmstate-handler
+    prometheus.nmstate.io: "true"
 spec:
   selector:
     matchLabels:
@@ -192,13 +193,14 @@ spec:
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 10%
+      maxUnavailable: 10
   template:
     metadata:
       labels:
         app: kubernetes-nmstate
         component: kubernetes-nmstate-handler
         name: {{template "handlerPrefix" .}}nmstate-handler
+        prometheus.nmstate.io: "true"
       annotations:
         description: kubernetes-nmstate-handler configures and presents node networking, reconciling declerative NNCP and reports with NNS and NNCE
     spec:
@@ -215,6 +217,27 @@ spec:
       affinity: {{ toYaml .HandlerAffinity | nindent 8 }}
       priorityClassName: system-node-critical
       containers:
+        - args:
+          - --logtostderr
+          - --secure-listen-address=:8443
+          - --upstream=http://127.0.0.1:8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+          image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
+          imagePullPolicy: IfNotPresent
+          name: kube-rbac-proxy
+          ports:
+          - containerPort: 8443
+            name: metrics
+            protocol: TCP
+          resources:
+            requests:
+              cpu: 10m
+              memory: 20Mi
+          terminationMessagePolicy: FallbackToLogsOnError
         - name: nmstate-handler
           args:
           - --zap-time-encoding=iso8601
@@ -306,6 +329,24 @@ spec:
   selector:
     name: {{template "handlerPrefix" .}}nmstate-webhook
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-monitor
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    prometheus.nmstate.io: "true"
+spec:
+  ports:
+    - name: metrics
+      port: 8443
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    prometheus.nmstate.io: "true"
+  sessionAffinity: None
+  type: ClusterIP
+---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -389,3 +430,27 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
+---
+apiVersion: monitoring.coreos.com/v1                                            
+kind: ServiceMonitor                                                            
+metadata:                                                                       
+  labels:                                                                       
+    openshift.io/cluster-monitoring: ""
+    prometheus.nmstate.io: "true"
+  name: controller-manager-metrics-monitor                                      
+  namespace: {{ .HandlerNamespace }}
+spec:                                                                           
+  endpoints:                                                                    
+  - scheme: https                                                             
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token      
+    tlsConfig:                                                                
+      insecureSkipVerify: true    
+    relabelings:
+    - action: labeldrop
+      regex: (instance|pod|container|job|namespace|service)
+  namespaceSelector:
+    matchNames:
+      - {{ .HandlerNamespace }}
+  selector:                                                                     
+    matchLabels: 
+      prometheus.nmstate.io: "true"

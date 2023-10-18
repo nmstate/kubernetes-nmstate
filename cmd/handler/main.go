@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	// +kubebuilder:scaffold:imports
 
@@ -54,6 +55,7 @@ import (
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
@@ -77,6 +79,8 @@ func init() {
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
+	metrics.Registry.MustRegister(monitoring.ApplyTopologyTotal, monitoring.ApplyFeaturesTotal)
 }
 
 func main() {
@@ -115,10 +119,9 @@ func mainHandler() int {
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
 	}
-
 	ctrlOptions := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: "0", // disable metrics
+		Scheme: scheme,
+		//MetricsBindAddress: "0", // disable metrics
 	}
 
 	if environment.IsHandler() {
@@ -157,7 +160,6 @@ func mainHandler() int {
 	}
 
 	setProfiler()
-
 	setupLog.Info("starting manager")
 	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")

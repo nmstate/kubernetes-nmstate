@@ -11,7 +11,7 @@ require (
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
-	github.com/prometheus/client_golang v1.16.0 // indirect
+	github.com/prometheus/client_golang v1.16.0
 	github.com/prometheus/client_model v0.4.0 // indirect
 	go.uber.org/zap v1.25.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
