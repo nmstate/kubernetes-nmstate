@@ -14,6 +14,8 @@ teardown() {
 }
 
 main() {
+    export KUBEVIRT_DEPLOY_PROMETHEUS=false
+    export KUBEVIRT_DEPLOY_GRAFANA=false
     export KUBEVIRT_NUM_NODES=3 # 1 control-plane, 2 workers
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}

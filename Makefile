@@ -30,10 +30,12 @@ export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; 
 
 WHAT ?= ./pkg/... ./controllers/...
 
+LINTER_IMAGE_TAG ?= v0.0.3
+
 unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
 export KUBEVIRT_PROVIDER ?= k8s-1.26-centos9
-export KUBEVIRT_NUM_NODES ?= 2 # 1 control-plane, 1 worker needed for e2e tests
+export KUBEVIRT_NUM_NODES ?= 3 # 1 control-plane, 2 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
 export E2E_TEST_TIMEOUT ?= 80m
@@ -93,7 +95,7 @@ SKIP_IMAGE_BUILD ?= false
 
 all: check handler operator
 
-check: lint vet whitespace-check gofmt-check
+check: lint vet whitespace-check gofmt-check promlint-check
 
 format: whitespace-format gofmt
 
@@ -111,6 +113,9 @@ whitespace-check:
 
 gofmt-check:
 	test -z "`gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/"`" || (gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
+
+promlint-check:
+	LINTER_IMAGE_TAG=${LINTER_IMAGE_TAG} hack/prom_metric_linter.sh
 
 lint:
 	hack/lint.sh

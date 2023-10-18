@@ -3,6 +3,98 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  name: {{template "handlerPrefix" .}}nmstate-metrics
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    prometheus.nmstate.io: "true"
+    app: kubernetes-nmstate
+    component: kubernetes-nmstate-metrics
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      name: {{template "handlerPrefix" .}}nmstate-metrics
+  template:
+    metadata:
+      labels:
+        prometheus.nmstate.io: "true"
+        app: kubernetes-nmstate
+        component: kubernetes-nmstate-metrics
+        name: {{template "handlerPrefix" .}}nmstate-metrics
+      annotations:
+        description: kubernetes-nmstate-metrics dump nmstate metrics
+    spec:
+      serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
+      nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
+      tolerations: {{ toYaml .InfraTolerations | nindent 8 }}
+      affinity: {{ toYaml .WebhookAffinity | nindent 8 }}
+      topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            component: kubernetes-nmstate-metrics
+      priorityClassName: system-cluster-critical
+      containers:
+        - name: nmstate-metrics
+          args:
+          - --zap-time-encoding=iso8601
+          # Replace this with the built image name
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+          - manager
+          resources:
+            requests:
+              cpu: "30m"
+              memory: "20Mi"
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: RUN_METRICS_MANAGER
+              value: ""
+            - name: OPERATOR_NAME
+              value: "{{template "handlerPrefix" .}}nmstate"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
+        - args:
+          - --logtostderr
+          - --secure-listen-address=:8443
+          - --upstream=http://127.0.0.1:8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+          image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
+          imagePullPolicy: IfNotPresent
+          name: kube-rbac-proxy
+          ports:
+          - containerPort: 8443
+            name: metrics
+            protocol: TCP
+          resources:
+            requests:
+              cpu: 10m
+              memory: 20Mi
+          terminationMessagePolicy: FallbackToLogsOnError
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
   name: {{template "handlerPrefix" .}}nmstate-webhook
   namespace: {{ .HandlerNamespace }}
   labels:
@@ -306,6 +398,24 @@ spec:
   selector:
     name: {{template "handlerPrefix" .}}nmstate-webhook
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-monitor
+  namespace: {{ .HandlerNamespace }}
+  labels:
+    prometheus.nmstate.io: "true"
+spec:
+  ports:
+    - name: metrics
+      port: 8443
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    prometheus.nmstate.io: "true"
+  sessionAffinity: None
+  type: ClusterIP
+---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
@@ -389,3 +499,27 @@ spec:
   selector:
     matchLabels:
       name: {{template "handlerPrefix" .}}nmstate-webhook
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  labels:
+    openshift.io/cluster-monitoring: ""
+    prometheus.nmstate.io: "true"
+  name: controller-manager-metrics-monitor
+  namespace: {{ .HandlerNamespace }}
+spec:
+  endpoints:
+  - scheme: https
+    bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+    tlsConfig:
+      insecureSkipVerify: true
+    relabelings:
+    - action: labeldrop
+      regex: (instance|pod|container|job|namespace|service)
+  namespaceSelector:
+    matchNames:
+      - {{ .HandlerNamespace }}
+  selector:
+    matchLabels:
+      prometheus.nmstate.io: "true"

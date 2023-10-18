@@ -41,6 +41,8 @@ type NodeNetworkConfigurationEnactmentStatus struct {
 	PolicyGeneration int64 `json:"policyGeneration,omitempty"`
 
 	Conditions ConditionList `json:"conditions,omitempty"`
+
+	Features []string `json:"features,omitempty"`
 }
 
 type NodeNetworkConfigurationEnactmentCapturedState struct {

@@ -20,6 +20,9 @@ package operator
 import (
 	"context"
 	"fmt"
+	"os"
+	"path"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -44,12 +47,13 @@ type TestData struct {
 	Ns                                     string
 	Nmstate                                nmstatev1.NMState
 	WebhookKey, HandlerKey, CertManagerKey types.NamespacedName
+	MetricsKey                             *types.NamespacedName
 	ManifestsDir                           string
 	ManifestFiles                          []string
 }
 
 func NewOperatorTestData(ns string, manifestsDir string, manifestFiles []string) TestData {
-	return TestData{
+	td := TestData{
 		Ns: ns,
 		Nmstate: nmstatev1.NMState{
 			ObjectMeta: metav1.ObjectMeta{
@@ -63,6 +67,17 @@ func NewOperatorTestData(ns string, manifestsDir string, manifestFiles []string)
 		ManifestsDir:   manifestsDir,
 		ManifestFiles:  manifestFiles,
 	}
+	// If there is a "servicemonitors" RBAC then nmstate-metrics deployment
+	// should be  there
+	for _, manifestFile := range manifestFiles {
+		manifest, err := os.ReadFile(path.Join(manifestsDir, manifestFile))
+		Expect(err).ToNot(HaveOccurred(), "should successfully open manifests to check if nmstate-metrics is needed")
+		if strings.Contains(string(manifest), "servicemonitors") {
+			td.MetricsKey = &types.NamespacedName{Namespace: ns, Name: "nmstate-metrics"}
+			break
+		}
+	}
+	return td
 }
 
 func InstallNMState(nmstate nmstatev1.NMState) {
@@ -106,12 +121,19 @@ func EventuallyOperandIsReady(testData TestData) {
 	deployment.GetEventually(testData.WebhookKey).Should(deployment.BeReady(), "should start webhook deployment")
 	By("Wait deployment cert-manager is ready")
 	deployment.GetEventually(testData.CertManagerKey).Should(deployment.BeReady(), "should start cert-manager deployment")
+	if testData.MetricsKey != nil {
+		By("Wait deployment metrics is ready")
+		deployment.GetEventually(*testData.MetricsKey).Should(deployment.BeReady(), "should start metrics deployment")
+	}
 }
 
 func EventuallyOperandIsNotFound(testData TestData) {
 	EventuallyIsNotFound(testData.HandlerKey, &appsv1.DaemonSet{}, "should delete handler daemonset")
 	EventuallyIsNotFound(testData.WebhookKey, &appsv1.Deployment{}, "should delete webhook deployment")
 	EventuallyIsNotFound(testData.CertManagerKey, &appsv1.Deployment{}, "should delete cert-manager deployment")
+	if testData.MetricsKey != nil {
+		EventuallyIsNotFound(*testData.MetricsKey, &appsv1.Deployment{}, "should delete metrics deployment")
+	}
 	By("Wait for operand pods to terminate")
 	Eventually(func() ([]corev1.Pod, error) {
 		podList := corev1.PodList{}
@@ -128,6 +150,9 @@ func EventuallyOperandIsFound(testData TestData) {
 	EventuallyIsFound(testData.HandlerKey, &appsv1.DaemonSet{}, "should create handler daemonset")
 	EventuallyIsFound(testData.WebhookKey, &appsv1.Deployment{}, "should create webhook deployment")
 	EventuallyIsFound(testData.CertManagerKey, &appsv1.Deployment{}, "should create cert-manager deployment")
+	if testData.MetricsKey != nil {
+		EventuallyIsFound(*testData.MetricsKey, &appsv1.Deployment{}, "should create metrics deployment")
+	}
 }
 
 func InstallOperator(operator TestData) {

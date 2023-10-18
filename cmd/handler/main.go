@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"net/http"
@@ -36,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
 	// +kubebuilder:scaffold:imports
 
@@ -52,8 +54,10 @@ import (
 	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
+	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
@@ -77,6 +81,8 @@ func init() {
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
+
+	metrics.Registry.MustRegister(monitoring.AppliedFeatures)
 }
 
 func main() {
@@ -92,10 +98,16 @@ func mainHandler() int {
 	opt := zap.Options{}
 	opt.BindFlags(flag.CommandLine)
 	var logType string
+	var dumpMetricFamilies bool
 	pflag.StringVar(&logType, "v", "production", "Log type (debug/production).")
+	pflag.BoolVar(&dumpMetricFamilies, "dump-metric-families", false, "Dump the prometheus metric families and exit.")
 	pflag.CommandLine.MarkDeprecated("v", "please use the --zap-devel flag for debug logging instead")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
+
+	if dumpMetricFamilies {
+		return dumpMetricFamiliesToStdout()
+	}
 
 	if logType == "debug" {
 		// workaround until --v flag got removed
@@ -115,10 +127,9 @@ func mainHandler() int {
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
 	}
-
 	ctrlOptions := ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: "0", // disable metrics
+		MetricsBindAddress: metrics.DefaultBindAddress, // Explicitly enable metrics
 	}
 
 	if environment.IsHandler() {
@@ -145,6 +156,10 @@ func mainHandler() int {
 			setupLog.Error(err, "Cannot initialize webhook")
 			return generalExitStatus
 		}
+	} else if environment.IsMetricsManager() {
+		if err = setupMetricsManager(mgr); err != nil {
+			return generalExitStatus
+		}
 	} else if environment.IsHandler() {
 		if err = setupHandlerControllers(mgr); err != nil {
 			return generalExitStatus
@@ -158,7 +173,6 @@ func mainHandler() int {
 	}
 
 	setProfiler()
-
 	setupLog.Info("starting manager")
 	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
@@ -307,6 +321,19 @@ func setupCertManager(mgr manager.Manager, certManagerOpts certificate.Options) 
 	return nil
 }
 
+func setupMetricsManager(mgr manager.Manager) error {
+	setupLog.Info("Creating Metrics NodeNetworkConfigurationEnactment controller")
+	if err := (&controllersmetrics.NodeNetworkConfigurationEnactmentReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("metrics").WithName("NodeNetworkConfigurationEnactment"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create NodeNetworkConfigurationEnactment metrics controller", "metrics", "NMState")
+		return err
+	}
+	return nil
+}
+
 // Start profiler on given port if ENABLE_PROFILER is True
 func setProfiler() {
 	cfg := ProfilerConfig{}
@@ -343,4 +370,14 @@ func lockHandler() (*flock.Flock, error) {
 			return locked, nil
 		})
 	return handlerLock, err
+}
+
+func dumpMetricFamiliesToStdout() int {
+	metricFamiliesJSON, err := json.Marshal(monitoring.Families())
+	if err != nil {
+		setupLog.Error(err, "Failed dumping metric families")
+		return generalExitStatus
+	}
+	fmt.Printf("%s", string(metricFamiliesJSON))
+	return 0
 }
