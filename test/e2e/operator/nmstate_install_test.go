@@ -197,6 +197,7 @@ func drainNode(nodeName string) func() {
 		Ctx:                 context.TODO(),
 		Client:              testenv.KubeClient,
 		IgnoreAllDaemonSets: true,
+		DeleteEmptyDirData:  true,
 		Out:                 GinkgoWriter,
 		ErrOut:              GinkgoWriter,
 	}

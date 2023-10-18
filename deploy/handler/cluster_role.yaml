@@ -6,6 +6,10 @@ metadata:
   labels:
     rbac.authorization.k8s.io/aggregate-to-cluster-reader: "true"
 rules:
+- nonResourceURLs:
+  - "/metrics"
+  verbs:
+  - get
 - apiGroups:
   - nmstate.io
   resources:

@@ -93,7 +93,7 @@ SKIP_IMAGE_BUILD ?= false
 
 all: check handler operator
 
-check: lint vet whitespace-check gofmt-check
+check: lint vet whitespace-check gofmt-check promlint-check
 
 format: whitespace-format gofmt
 
@@ -111,6 +111,9 @@ whitespace-check:
 
 gofmt-check:
 	test -z "`gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ | grep -v "/vendor/"`" || (gofmt -l cmd/ test/ hack/ api/ controllers/ pkg/ && exit 1)
+
+promlint-check:
+	hack/prom_metric_linter.sh
 
 lint:
 	hack/lint.sh
