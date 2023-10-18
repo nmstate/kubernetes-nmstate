@@ -1,18 +1,18 @@
 /*
-Copyright 2014 The Kubernetes Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Copyright 2014 Kube Admission Webhook Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *	  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package triple
 
@@ -21,7 +21,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	cryptorand "crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -42,7 +41,7 @@ const (
 )
 
 var (
-	Now = func() time.Time { return time.Now() }
+	Now = time.Now
 )
 
 // Config contains the basic fields required for creating a certificate
@@ -63,11 +62,11 @@ type AltNames struct {
 
 // NewPrivateKey creates an RSA private key
 func NewPrivateKey() (*rsa.PrivateKey, error) {
-	return rsa.GenerateKey(cryptorand.Reader, rsaKeySize)
+	return rsa.GenerateKey(rand.Reader, rsaKeySize)
 }
 
 // NewSelfSignedCACert creates a CA certificate
-func NewSelfSignedCACert(cfg Config, key crypto.Signer, duration time.Duration) (*x509.Certificate, error) {
+func NewSelfSignedCACert(cfg *Config, key crypto.Signer, duration time.Duration) (*x509.Certificate, error) {
 	now := Now()
 	tmpl := x509.Certificate{
 		SerialNumber: new(big.Int).SetInt64(0),
@@ -81,7 +80,7 @@ func NewSelfSignedCACert(cfg Config, key crypto.Signer, duration time.Duration) 
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	certDERBytes, err := x509.CreateCertificate(cryptorand.Reader, &tmpl, &tmpl, key.Public(), key)
+	certDERBytes, err := x509.CreateCertificate(rand.Reader, &tmpl, &tmpl, key.Public(), key)
 	if err != nil {
 		return nil, err
 	}
@@ -89,12 +88,13 @@ func NewSelfSignedCACert(cfg Config, key crypto.Signer, duration time.Duration) 
 }
 
 // NewSignedCert creates a signed certificate using the given CA certificate and key
-func NewSignedCert(cfg Config, key crypto.Signer, caCert *x509.Certificate, caKey crypto.Signer, duration time.Duration) (*x509.Certificate, error) {
+func NewSignedCert(cfg *Config, key crypto.Signer, caCert *x509.Certificate,
+	caKey crypto.Signer, duration time.Duration) (*x509.Certificate, error) {
 	serial, err := rand.Int(rand.Reader, new(big.Int).SetInt64(math.MaxInt64))
 	if err != nil {
 		return nil, err
 	}
-	if len(cfg.CommonName) == 0 {
+	if cfg.CommonName == "" {
 		return nil, errors.New("must specify a CommonName")
 	}
 	if len(cfg.Usages) == 0 {
@@ -115,7 +115,7 @@ func NewSignedCert(cfg Config, key crypto.Signer, caCert *x509.Certificate, caKe
 		ExtKeyUsage:  cfg.Usages,
 	}
 
-	certDERBytes, err := x509.CreateCertificate(cryptorand.Reader, &certTmpl, caCert, key.Public(), caKey)
+	certDERBytes, err := x509.CreateCertificate(rand.Reader, &certTmpl, caCert, key.Public(), caKey)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func NewSignedCert(cfg Config, key crypto.Signer, caCert *x509.Certificate, caKe
 
 // MakeEllipticPrivateKeyPEM creates an ECDSA private key
 func MakeEllipticPrivateKeyPEM() ([]byte, error) {
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), cryptorand.Reader)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, err
 	}
@@ -141,14 +141,6 @@ func MakeEllipticPrivateKeyPEM() ([]byte, error) {
 	return pem.EncodeToMemory(privateKeyPemBlock), nil
 }
 
-func ipsToStrings(ips []net.IP) []string {
-	ss := make([]string, 0, len(ips))
-	for _, ip := range ips {
-		ss = append(ss, ip.String())
-	}
-	return ss
-}
-
 func VerifyTLS(certsPEM, keyPEM, caBundle []byte) error {
 	logger := logf.Log.WithName("kube-admission-webhook.VerifyTLS")
 
@@ -163,7 +155,7 @@ func VerifyTLS(certsPEM, keyPEM, caBundle []byte) error {
 	}
 
 	cas := x509.NewCertPool()
-	ok := cas.AppendCertsFromPEM([]byte(caBundle))
+	ok := cas.AppendCertsFromPEM(caBundle)
 	if !ok {
 		return errors.New("failed to parse CA bundle")
 	}
@@ -174,7 +166,7 @@ func VerifyTLS(certsPEM, keyPEM, caBundle []byte) error {
 		CurrentTime: Now(),
 	}
 
-	if _, err := certs[0].Verify(opts); err != nil {
+	if _, err = certs[0].Verify(opts); err != nil {
 		return errors.Wrap(err, "failed to verify certificate")
 	}
 

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Kube Admission Webhook Authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *	  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package certificate
 
 import (
@@ -38,13 +54,13 @@ func (m *Manager) clientConfigList(webhook client.Object) []*admissionregistrati
 	clientConfigList := []*admissionregistrationv1.WebhookClientConfig{}
 	if m.webhookType == MutatingWebhook {
 		mutatingWebhookConfig := mutatingWebhookConfig(webhook)
-		for i, _ := range mutatingWebhookConfig.Webhooks {
+		for i := range mutatingWebhookConfig.Webhooks {
 			clientConfig := &mutatingWebhookConfig.Webhooks[i].ClientConfig
 			clientConfigList = append(clientConfigList, clientConfig)
 		}
 	} else if m.webhookType == ValidatingWebhook {
 		validatingWebhookConfig := validatingWebhookConfig(webhook)
-		for i, _ := range validatingWebhookConfig.Webhooks {
+		for i := range validatingWebhookConfig.Webhooks {
 			clientConfig := &validatingWebhookConfig.Webhooks[i].ClientConfig
 			clientConfigList = append(clientConfigList, clientConfig)
 		}
@@ -59,11 +75,12 @@ func (m *Manager) readyWebhookConfiguration() (client.Object, error) {
 	} else if m.webhookType == ValidatingWebhook {
 		webhook = &admissionregistrationv1.ValidatingWebhookConfiguration{}
 	} else {
-		return nil, fmt.Errorf("Unknown webhook type %s", m.webhookType)
+		return nil, fmt.Errorf("unknown webhook type %s", m.webhookType)
 	}
-
+	pollInterval := time.Second
+	pollTimeout := 120 * time.Second
 	// Do some polling to wait for manifest to be deployed
-	err := wait.PollImmediate(1*time.Second, 120*time.Second, func() (bool, error) {
+	err := wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
 		webhookKey := types.NamespacedName{Name: m.webhookName}
 		err := m.get(webhookKey, webhook)
 		if err != nil {
@@ -82,7 +99,7 @@ func (m *Manager) readyWebhookConfiguration() (client.Object, error) {
 
 func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 	m.log.Info("Reset CA bundle with one cert for webhook")
-	_, err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
+	err := m.updateWebhookCABundleWithFunc(func(currentCABundle []byte) ([]byte, error) {
 		return triple.AddCertToPEM(caCert, currentCABundle, triple.CertsListSizeLimit)
 	})
 	if err != nil {
@@ -91,7 +108,7 @@ func (m *Manager) addCertificateToCABundle(caCert *x509.Certificate) error {
 	return nil
 }
 
-func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]byte, error)) (client.Object, error) {
+func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]byte, error)) error {
 	m.log.Info("Updating CA bundle for webhook")
 	var webhook client.Object
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -103,7 +120,8 @@ func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]b
 
 		for _, clientConfig := range m.clientConfigList(webhook) {
 			// Update the CA bundle at webhook
-			updatedCABundle, err := updateCABundle(clientConfig.CABundle)
+			var updatedCABundle []byte
+			updatedCABundle, err = updateCABundle(clientConfig.CABundle)
 			if err != nil {
 				return errors.Wrap(err, "failed updating CA bundle")
 			}
@@ -117,9 +135,9 @@ func (m *Manager) updateWebhookCABundleWithFunc(updateCABundle func([]byte) ([]b
 		return nil
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to update webhook CABundle")
+		return errors.Wrap(err, "failed to update webhook CABundle")
 	}
-	return webhook, nil
+	return nil
 }
 
 func (m *Manager) CABundle() ([]byte, error) {
@@ -129,8 +147,9 @@ func (m *Manager) CABundle() ([]byte, error) {
 	}
 
 	clientConfigList := m.clientConfigList(webhook)
-	if clientConfigList == nil || len(clientConfigList) == 0 {
-		return nil, errors.Wrapf(err, "failed to access CABundle clientConfigList is empty in %s webhook configuration %s", m.webhookType, m.webhookName)
+	if len(clientConfigList) == 0 {
+		return nil, errors.Wrapf(err,
+			"failed to access CABundle clientConfigList is empty in %s webhook configuration %s", m.webhookType, m.webhookName)
 	}
 
 	return clientConfigList[0].CABundle, nil
@@ -141,11 +160,9 @@ func (m *Manager) CABundle() ([]byte, error) {
 // ServiceRef it will reference fake one with webhook name, mgr namespace and
 // passing the url hostname at map value
 func (m *Manager) getServicesFromConfiguration(configuration client.Object) (map[types.NamespacedName][]string, error) {
-
 	services := map[types.NamespacedName][]string{}
 
 	for _, clientConfig := range m.clientConfigList(configuration) {
-
 		service := types.NamespacedName{}
 		hostnames := []string{}
 
