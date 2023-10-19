@@ -245,7 +245,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	allPolicies := handler.MapFunc(
-		func(client.Object) []reconcile.Request {
+		func(_ context.Context, _ client.Object) []reconcile.Request {
 			log := r.Log.WithName("allPolicies")
 			allPoliciesAsRequest := []reconcile.Request{}
 			policyList := nmstatev1.NodeNetworkConfigurationPolicyList{}
@@ -274,7 +274,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 
 	// Add watch for NNCP
 	err = c.Watch(
-		&source.Kind{Type: &nmstatev1.NodeNetworkConfigurationPolicy{}},
+		source.Kind(mgr.GetCache(), &nmstatev1.NodeNetworkConfigurationPolicy{}),
 		&handler.EnqueueRequestForObject{},
 		onCreateOrUpdateWithDifferentGenerationOrDelete,
 	)
@@ -284,7 +284,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 
 	// Add watch to enque all NNCPs on nod label changes
 	err = c.Watch(
-		&source.Kind{Type: &corev1.Node{}},
+		source.Kind(mgr.GetCache(), &corev1.Node{}),
 		handler.EnqueueRequestsFromMapFunc(allPolicies),
 		onLabelsUpdatedForThisNode,
 	)

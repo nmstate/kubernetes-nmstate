@@ -198,7 +198,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// Add watch for Node
 	err = c.Watch(
-		&source.Kind{Type: &corev1.Node{}},
+		source.Kind(mgr.GetCache(), &corev1.Node{}),
 		&handler.EnqueueRequestForObject{},
 		onCreationForThisNode,
 	)
@@ -208,8 +208,8 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// Add watch for NNS
 	err = c.Watch(
-		&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}},
-		&handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}},
+		source.Kind(mgr.GetCache(), &nmstatev1beta1.NodeNetworkState{}),
+		handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &corev1.Node{}),
 		onDeleteOrForceUpdateForThisNode,
 	)
 	if err != nil {
