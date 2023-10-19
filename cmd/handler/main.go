@@ -172,8 +172,9 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 	nodeName := environment.NodeName()
 	metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": nodeName}.AsSelector()
 	nodeLabelMatchingNodeNameSelector := labels.Set{nmstateapi.EnactmentNodeLabel: nodeName}.AsSelector()
-	ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
-		SelectorsByObject: cache.SelectorsByObject{
+
+	ctrlOptions.Cache = cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Node{}: {
 				Field: metadataNameMatchingNodeNameSelector,
 			},
@@ -184,7 +185,7 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 				Label: nodeLabelMatchingNodeNameSelector,
 			},
 		},
-	})
+	}
 }
 
 func setupHandlerControllers(mgr manager.Manager) error {
