@@ -274,7 +274,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/qinqon/kube-admission-webhook v0.21.0
+# github.com/qinqon/kube-admission-webhook v0.21.0 => github.com/mkowalski/kube-admission-webhook v0.0.0-20231019174925-ab9afed5ba63
 ## explicit; go 1.19
 github.com/qinqon/kube-admission-webhook/pkg/certificate
 github.com/qinqon/kube-admission-webhook/pkg/certificate/triple
@@ -923,3 +923,4 @@ sigs.k8s.io/yaml
 # github.com/nmstate/kubernetes-nmstate/api => ./api
 # k8s.io/client-go => k8s.io/client-go v0.27.6
 # k8s.io/api => k8s.io/api v0.27.6
+# github.com/qinqon/kube-admission-webhook => github.com/mkowalski/kube-admission-webhook v0.0.0-20231019174925-ab9afed5ba63

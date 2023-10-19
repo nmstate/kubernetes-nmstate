@@ -124,3 +124,5 @@ replace github.com/nmstate/kubernetes-nmstate/api => ./api
 replace k8s.io/client-go => k8s.io/client-go v0.27.6
 
 replace k8s.io/api => k8s.io/api v0.27.6
+
+replace github.com/qinqon/kube-admission-webhook => github.com/mkowalski/kube-admission-webhook v0.0.0-20231019174925-ab9afed5ba63

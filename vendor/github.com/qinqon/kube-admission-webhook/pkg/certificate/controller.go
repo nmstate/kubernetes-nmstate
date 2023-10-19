@@ -68,20 +68,20 @@ func (m *Manager) add(mgr manager.Manager) error {
 	}
 
 	logger.Info("Starting to watch secrets")
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
+	err = c.Watch(source.Kind(mgr.GetCache(), &corev1.Secret{}), &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching Secret")
 	}
 
 	logger.Info("Starting to watch validatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}},
+	err = c.Watch(source.Kind(mgr.GetCache(), &admissionregistrationv1.ValidatingWebhookConfiguration{}),
 		&handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching ValidatingWebhookConfiguration")
 	}
 
 	logger.Info("Starting to watch mutatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.MutatingWebhookConfiguration{}},
+	err = c.Watch(source.Kind(mgr.GetCache(), &admissionregistrationv1.MutatingWebhookConfiguration{}),
 		&handler.EnqueueRequestForObject{}, onEventForThisWebhook)
 	if err != nil {
 		return errors.Wrap(err, "failed watching MutatingWebhookConfiguration")
