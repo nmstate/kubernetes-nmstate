@@ -18,6 +18,8 @@ limitations under the License.
 package nodenetworkconfigurationpolicy
 
 import (
+	"crypto/tls"
+
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -31,12 +33,19 @@ func Add(mgr manager.Manager) error {
 	// 1.- User changes nncp desiredState so it triggers deleteConditionsHook()
 	// 2.- Since we have deleted the condition the status-mutate webhook is called and
 	//     there we set conditions to Unknown. This final result will be updated.
-	server := &webhook.Server{}
+	server := webhook.Server{
+		// Disable HTTP2 to avoid CVE-2023-39325
+		TLSOpts: []func(config *tls.Config){
+			func(c *tls.Config) {
+				c.NextProtos = []string{"http/1.1"}
+			},
+		},
+	}
 	server.Register("/readyz", healthz.CheckHandler{Checker: healthz.Ping})
 	server.Register("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook())
 	server.Register("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook())
 	server.Register("/nodenetworkconfigurationpolicies-timestamp-mutate", setTimestampAnnotationHook())
 	server.Register("/nodenetworkconfigurationpolicies-update-validate", validatePolicyUpdateHook(mgr.GetClient()))
 	server.Register("/nodenetworkconfigurationpolicies-create-validate", validatePolicyCreateHook(mgr.GetClient()))
-	return mgr.Add(server)
+	return mgr.Add(&server)
 }
