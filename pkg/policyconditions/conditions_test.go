@@ -211,7 +211,12 @@ var _ = Describe("Policy Conditions", func() {
 
 			objs = append(objs, updatedPolicy)
 
-			client := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			client := fake.
+				NewClientBuilder().
+				WithScheme(s).
+				WithRuntimeObjects(objs...).
+				WithStatusSubresource(&nmstatev1.NodeNetworkConfigurationPolicy{}).
+				Build()
 			key := types.NamespacedName{Name: updatedPolicy.Name}
 			err := Update(client, client, key)
 			Expect(err).ToNot(HaveOccurred())

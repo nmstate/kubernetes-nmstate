@@ -93,7 +93,12 @@ var _ = Describe("NMState controller reconcile", func() {
 		)
 		objs := []runtime.Object{&nmstate}
 		// Create a fake client to mock API calls.
-		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+		cl = fake.
+			NewClientBuilder().
+			WithScheme(s).
+			WithRuntimeObjects(objs...).
+			WithStatusSubresource(&nmstatev1.NMState{}).
+			Build()
 		names.ManifestDir = manifestsDir
 		reconciler.Client = cl
 		reconciler.APIClient = cl

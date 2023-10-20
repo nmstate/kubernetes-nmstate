@@ -143,6 +143,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			clb := fake.ClientBuilder{}
 			clb.WithScheme(s)
 			clb.WithRuntimeObjects(objs...)
+			clb.WithStatusSubresource(
+				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
+			)
 			cl := clb.Build()
 
 			reconciler.Client = cl

@@ -82,7 +82,12 @@ var _ = Describe("Node controller reconcile", func() {
 		objs := []runtime.Object{&node, &nodenetworkstate}
 
 		// Create a fake client to mock API calls.
-		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+		cl = fake.
+			NewClientBuilder().
+			WithScheme(s).
+			WithRuntimeObjects(objs...).
+			WithStatusSubresource(&nmstatev1beta1.NodeNetworkState{}).
+			Build()
 
 		reconciler.Client = cl
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("Node")
