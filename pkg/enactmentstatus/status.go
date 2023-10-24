@@ -34,12 +34,17 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("enactmentstatus")
+	log       = logf.Log.WithName("enactmentstatus")
+	allErrors = func(error) bool { return true }
 )
 
 func Update(cli client.Client, key types.NamespacedName, statusSetter func(*nmstate.NodeNetworkConfigurationEnactmentStatus)) error {
 	logger := log.WithValues("enactment", key.Name)
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+
+	// Some network configuration can break api server connectivity temporally and that
+	// prevents the NNCE to final state so is forever at in progress makeing the NNCP also
+	// forever in progress too, this retry allow to overcome that issue.
+	return retry.OnError(retry.DefaultRetry, allErrors, func() error {
 		instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
 		err := cli.Get(context.TODO(), key, instance)
 		if err != nil {
