@@ -441,7 +441,7 @@ func isSuperset(ss, t corev1.Toleration) bool {
 	}
 }
 
-//allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
+// allTolerationsPresent check if all tolerations from toBeCheckedTolerations are superseded by actualTolerations.
 func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
 	tolerationsFound := true
 	for _, toleration := range toBeCheckedTolerations {
@@ -450,7 +450,7 @@ func allTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTol
 	return tolerationsFound
 }
 
-//anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
+// anyTolerationsPresent check whether any tolerations from toBeCheckedTolerations are part of actualTolerations.
 func anyTolerationsPresent(toBeCheckedTolerations []corev1.Toleration, actualTolerations []corev1.Toleration) bool {
 	tolerationsFound := false
 	for _, toleration := range toBeCheckedTolerations {

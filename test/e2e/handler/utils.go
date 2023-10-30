@@ -168,7 +168,8 @@ func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstat
 }
 
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have
-//       to remove this
+//
+//	to remove this
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries down")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
@@ -504,7 +505,7 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 }
 
 // return a json with all node interfaces and their state e.g.
-//{"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
+// {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
 // use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) []byte {
 	var currentStateYaml nmstate.State
