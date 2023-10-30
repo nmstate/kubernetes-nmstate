@@ -5,12 +5,12 @@ spec:
   - name: kubernetes-nmstate-operator
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-kubernetes-nmstate-operator:4.14
+      name: quay.io/openshift/origin-kubernetes-nmstate-operator:4.15
   - name: kubernetes-nmstate-handler
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-kubernetes-nmstate-handler:4.14
+      name: quay.io/openshift/origin-kubernetes-nmstate-handler:4.15
   - name: nmstate-console-plugin-rhel8
     from:
       kind: DockerImage
-      name: quay.io/openshift/origin-nmstate-console-plugin:4.14
+      name: quay.io/openshift/origin-nmstate-console-plugin:4.15
