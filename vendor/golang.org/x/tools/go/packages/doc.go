@@ -35,7 +35,7 @@ The Package struct provides basic information about the package, including
   - Imports, a map from source import strings to the Packages they name;
   - Types, the type information for the package's exported symbols;
   - Syntax, the parsed syntax trees for the package's source code; and
-  - TypeInfo, the result of a complete type-check of the package syntax trees.
+  - TypesInfo, the result of a complete type-check of the package syntax trees.
 
 (See the documentation for type Package for the complete list of fields
 and more detailed descriptions.)
@@ -67,7 +67,6 @@ Most tools should pass their command-line arguments (after any flags)
 uninterpreted to the loader, so that the loader can interpret them
 according to the conventions of the underlying build system.
 See the Example function for typical usage.
-
 */
 package packages // import "golang.org/x/tools/go/packages"
 

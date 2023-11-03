@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1 contains API Schema definitions for the nmstate.io v1 API group
-//+kubebuilder:object:generate=true
-//+groupName=nmstate.io
+// +kubebuilder:object:generate=true
+// +groupName=nmstate.io
 package v1
 
 import (
