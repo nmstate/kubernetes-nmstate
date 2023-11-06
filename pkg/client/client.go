@@ -30,9 +30,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/yaml"
+
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
@@ -79,7 +81,7 @@ func InitializeNodeNetworkState(cli client.Client, node *corev1.Node) (*nmstatev
 func CreateOrUpdateNodeNetworkState(
 	cli client.Client,
 	node *corev1.Node,
-	observedState shared.State,
+	observedState *nmstateapiv2.NetworkState,
 	nns *nmstatev1beta1.NodeNetworkState,
 	versions *DependencyVersions,
 ) error {
@@ -96,7 +98,7 @@ func CreateOrUpdateNodeNetworkState(
 func UpdateCurrentState(
 	cli client.Client,
 	nodeNetworkState *nmstatev1beta1.NodeNetworkState,
-	observedState shared.State,
+	observedState *nmstateapiv2.NetworkState,
 	versions *DependencyVersions,
 ) error {
 	if observedState.String() == nodeNetworkState.Status.CurrentState.String() {
@@ -107,9 +109,11 @@ func UpdateCurrentState(
 	nodeNetworkState.Status.HandlerNmstateVersion = versions.HandlerNmstateVersion
 	nodeNetworkState.Status.HostNetworkManagerVersion = versions.HostNmstateVersion
 
-	nodeNetworkState.Status.CurrentState = observedState
+	nodeNetworkState.Status.CurrentState = *observedState
+
 	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
 
+	//TODO: Now that nmstate is not a blob we can use patch
 	err := cli.Status().Update(context.Background(), nodeNetworkState)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -149,8 +153,13 @@ func rollback(cli client.Client, probes []probe.Probe, cause error) error {
 	return errors.New(message)
 }
 
-func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, error) {
-	if string(desiredState.Raw) == "" {
+func ApplyDesiredState(cli client.Client, desiredState *nmstateapiv2.NetworkState) (string, error) {
+	desiredStateRaw, err := yaml.Marshal(desiredState)
+	if err != nil {
+		return "", errors.Wrap(err, "failed marshaling desired state before apply")
+	}
+
+	if len(desiredStateRaw) == 0 {
 		return "Ignoring empty desired state", nil
 	}
 
@@ -162,7 +171,7 @@ func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, er
 	// before Commit)
 	nmstatectl.Rollback()
 
-	setOutput, err := nmstatectl.Set(desiredState, DesiredStateConfigurationTimeout)
+	setOutput, err := nmstatectl.Apply(desiredStateRaw, DesiredStateConfigurationTimeout)
 	if err != nil {
 		return setOutput, err
 	}

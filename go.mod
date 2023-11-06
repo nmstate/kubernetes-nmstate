@@ -106,6 +106,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0-00010101000000-000000000000
 	github.com/nmstate/nmpolicy v0.6.0
+	github.com/nmstate/nmstate/rust/src/go/api/v2 v2.2.16
 	github.com/openshift/api v0.0.0-20230803134339-2d9b46419536
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/phoracek/networkmanager-go v0.3.0
@@ -113,11 +114,13 @@ require (
 	github.com/qinqon/kube-admission-webhook v0.21.0
 	github.com/spf13/pflag v1.0.5
 	github.com/tidwall/gjson v1.16.0
-	github.com/tidwall/sjson v1.2.5
 	k8s.io/kubectl v0.26.3
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
-replace github.com/nmstate/kubernetes-nmstate/api => ./api
+replace (
+	github.com/nmstate/kubernetes-nmstate/api => ./api
+	github.com/nmstate/nmstate/rust/src/go/api/v2 => github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20240219064638-f44ee0a96b05
+)
 
 replace k8s.io/client-go => k8s.io/client-go v0.26.3

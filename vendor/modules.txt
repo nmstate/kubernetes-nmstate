@@ -200,6 +200,9 @@ github.com/nmstate/nmpolicy/nmpolicy/internal/parser
 github.com/nmstate/nmpolicy/nmpolicy/internal/resolver
 github.com/nmstate/nmpolicy/nmpolicy/internal/types
 github.com/nmstate/nmpolicy/nmpolicy/types
+# github.com/nmstate/nmstate/rust/src/go/api/v2 v2.2.16 => github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20240219064638-f44ee0a96b05
+## explicit; go 1.19
+github.com/nmstate/nmstate/rust/src/go/api/v2
 # github.com/onsi/ginkgo/v2 v2.11.0
 ## explicit; go 1.18
 github.com/onsi/ginkgo/v2
@@ -296,9 +299,6 @@ github.com/tidwall/match
 # github.com/tidwall/pretty v1.2.0
 ## explicit; go 1.16
 github.com/tidwall/pretty
-# github.com/tidwall/sjson v1.2.5
-## explicit; go 1.14
-github.com/tidwall/sjson
 # github.com/xlab/treeprint v1.1.0
 ## explicit; go 1.13
 github.com/xlab/treeprint
@@ -916,4 +916,5 @@ sigs.k8s.io/structured-merge-diff/v4/value
 ## explicit; go 1.12
 sigs.k8s.io/yaml
 # github.com/nmstate/kubernetes-nmstate/api => ./api
+# github.com/nmstate/nmstate/rust/src/go/api/v2 => github.com/qinqon/nmstate/rust/src/go/api/v2 v2.0.0-20240219064638-f44ee0a96b05
 # k8s.io/client-go => k8s.io/client-go v0.26.3

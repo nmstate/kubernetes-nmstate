@@ -20,6 +20,8 @@ package handler
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 var _ = Describe("Simple OVS bridge", func() {
@@ -37,9 +39,9 @@ var _ = Describe("Simple OVS bridge", func() {
 		It("should have the ovs bridge at currentState", func() {
 			for _, node := range nodes {
 				interfacesForNode(node).Should(ContainElement(SatisfyAll(
-					HaveKeyWithValue("name", bridge1),
-					HaveKeyWithValue("type", "ovs-bridge"),
-					HaveKeyWithValue("state", "up"),
+					HaveField("Name", bridge1),
+					HaveField("Type", nmstateapiv2.InterfaceTypeOVSBridge),
+					HaveField("State", nmstateapiv2.InterfaceStateUp),
 				)))
 			}
 		})
@@ -59,14 +61,14 @@ var _ = Describe("Simple OVS bridge", func() {
 			for _, node := range nodes {
 				interfacesForNode(node).Should(SatisfyAll(
 					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", bridge1),
-						HaveKeyWithValue("type", "ovs-bridge"),
-						HaveKeyWithValue("state", "up"),
+						HaveField("Name", bridge1),
+						HaveField("Type", nmstateapiv2.InterfaceTypeOVSBridge),
+						HaveField("State", nmstateapiv2.InterfaceStateUp),
 					)),
 					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", "ovs0"),
-						HaveKeyWithValue("type", "ovs-interface"),
-						HaveKeyWithValue("state", "up"),
+						HaveField("Name", "ovs0"),
+						HaveField("Type", nmstateapiv2.InterfaceTypeOVSInterface),
+						HaveField("State", nmstateapiv2.InterfaceStateUp),
 					)),
 				))
 			}

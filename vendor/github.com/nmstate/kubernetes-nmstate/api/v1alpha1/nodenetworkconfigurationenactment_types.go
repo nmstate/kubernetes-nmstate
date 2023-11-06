@@ -21,6 +21,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
+
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 )
@@ -62,7 +64,7 @@ func NewEnactment(nodeName string, policy *NodeNetworkConfigurationPolicy) NodeN
 			Labels: names.IncludeRelationshipLabels(map[string]string{shared.EnactmentPolicyLabel: policy.Name}),
 		},
 		Status: shared.NodeNetworkConfigurationEnactmentStatus{
-			DesiredState: shared.NewState(""),
+			DesiredState: nmstateapiv2.NetworkState{},
 			Conditions:   shared.ConditionList{},
 		},
 	}

@@ -25,6 +25,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
+
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
@@ -317,17 +319,16 @@ routes:
 `)
 }
 
-func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
-	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]interface{})
-	expectedOptions := expectedLinkAggregation["options"].(map[string]interface{})
+func matchingBond(expectedBond nmstateapiv2.Interface) types.GomegaMatcher {
 	return SatisfyAll(
-		HaveKeyWithValue("name", expectedBond["name"]),
-		HaveKeyWithValue("type", expectedBond["type"]),
-		HaveKeyWithValue("state", expectedBond["state"]),
-		HaveKeyWithValue("link-aggregation", SatisfyAll(
-			HaveKeyWithValue("mode", expectedLinkAggregation["mode"]),
-			HaveKeyWithValue(portFieldName, ConsistOf(expectedLinkAggregation[portFieldName])),
-			HaveKeyWithValue("options", HaveKeyWithValue("miimon", expectedOptions["miimon"])),
-		)),
+		HaveField("Name", expectedBond.Name),
+		HaveField("Type", expectedBond.Type),
+		HaveField("State", expectedBond.State),
+		HaveField("BondInterface", Not(BeNil())),
+		HaveField("BondInterface.Bond", Not(BeNil())),
+		HaveField("BondInterface.Bond.Mode", expectedBond.Bond.Mode),
+		HaveField("BondInterface.Bond.Options", Not(BeNil())),
+		HaveField("BondInterface.Bond.Options.Miimon", expectedBond.Bond.Options.Miimon),
+		HaveField("BondInterface.Bond.Port", expectedBond.Bond.Port),
 	)
 }

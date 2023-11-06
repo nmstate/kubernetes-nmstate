@@ -22,6 +22,8 @@ import (
 	"fmt"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,7 +38,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -47,8 +48,8 @@ var _ = Describe("Node controller reconcile", func() {
 	var (
 		cl                       client.Client
 		reconciler               NodeReconciler
-		observedState            string
-		filteredOutObservedState shared.State
+		observedState            *nmstateapiv2.NetworkState
+		filteredOutObservedState *nmstateapiv2.NetworkState
 		existingNodeName         = "node01"
 		node                     = corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
@@ -89,24 +90,30 @@ var _ = Describe("Node controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
 		reconciler.nmstatectlShow = nmstatectl.Show
-		reconciler.lastState = shared.NewState("lastState")
-		observedState = `
----
-interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
-routes:
-  running: []
-  config: []
-`
+		reconciler.lastState = &nmstateapiv2.NetworkState{}
+		observedState = &nmstateapiv2.NetworkState{
+			Interfaces: []nmstateapiv2.Interface{{
+				BaseInterface: nmstateapiv2.BaseInterface{
+					Name:  "eth1",
+					Type:  nmstateapiv2.InterfaceTypeEthernet,
+					State: nmstateapiv2.InterfaceStateUp,
+				},
+			}},
+			Routes: &nmstateapiv2.Routes{
+				Running: &[]nmstateapiv2.RouteEntry{},
+				Config:  &[]nmstateapiv2.RouteEntry{},
+			},
+		}
 
 		var err error
-		filteredOutObservedState, err = state.FilterOut(shared.NewState(observedState))
+		observedStateYaml, err := yaml.Marshal(observedState)
+		Expect(err).ToNot(HaveOccurred())
+
+		filteredOutObservedState, err = state.FilterOut(observedState)
 		Expect(err).ToNot(HaveOccurred())
 
 		reconciler.nmstatectlShow = func() (string, error) {
-			return observedState, nil
+			return string(observedStateYaml), nil
 		}
 	})
 	Context("and nmstatectl show is failing", func() {
@@ -132,7 +139,7 @@ routes:
 			reconciler.lastState = filteredOutObservedState
 
 			reconciler.nmstateUpdater = func(client.Client, *corev1.Node,
-				shared.State, *nmstatev1beta1.NodeNetworkState, *nmstate.DependencyVersions) error {
+				*nmstateapiv2.NetworkState, *nmstatev1beta1.NodeNetworkState, *nmstate.DependencyVersions) error {
 				return fmt.Errorf("we are not suppose to catch this error")
 			}
 
@@ -165,28 +172,38 @@ routes:
 			request.Name = existingNodeName
 		})
 		Context(", nodenetworkstate is there too with last state and observed state is different", func() {
-			var (
-				expectedStateRaw = `---
-interfaces:
-  - name: eth1
-    type: ethernet
-    state: up
-  - name: eth2
-    type: ethernet
-    state: up
-routes:
-  running: []
-  config: []
-`
-			)
-
+			expectedState := &nmstateapiv2.NetworkState{
+				Interfaces: []nmstateapiv2.Interface{
+					{
+						BaseInterface: nmstateapiv2.BaseInterface{
+							Name:  "eth1",
+							Type:  nmstateapiv2.InterfaceTypeEthernet,
+							State: nmstateapiv2.InterfaceStateUp,
+						},
+					},
+					{
+						BaseInterface: nmstateapiv2.BaseInterface{
+							Name:  "eth1",
+							Type:  nmstateapiv2.InterfaceTypeEthernet,
+							State: nmstateapiv2.InterfaceStateUp,
+						},
+					},
+				},
+				Routes: &nmstateapiv2.Routes{
+					Running: &[]nmstateapiv2.RouteEntry{},
+					Config:  &[]nmstateapiv2.RouteEntry{},
+				},
+			}
 			BeforeEach(func() {
 				By("Set last state")
 				reconciler.lastState = filteredOutObservedState
 
+				expectedStateYaml, err := yaml.Marshal(expectedState)
+				Expect(err).ToNot(HaveOccurred())
+
 				By("Mock nmstate show so we return different value from last state")
 				reconciler.nmstatectlShow = func() (string, error) {
-					return expectedStateRaw, nil
+					return string(expectedStateYaml), nil
 				}
 
 			})
@@ -197,7 +214,7 @@ routes:
 				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
 				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 				Expect(err).ToNot(HaveOccurred())
-				filteredOutExpectedState, err := state.FilterOut(shared.NewState(expectedStateRaw))
+				filteredOutExpectedState, err := state.FilterOut(expectedState)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(obtainedNNS.Status.CurrentState.String()).To(Equal(filteredOutExpectedState.String()))
 			})

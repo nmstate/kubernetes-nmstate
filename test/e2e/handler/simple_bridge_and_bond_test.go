@@ -19,11 +19,14 @@ package handler
 
 import (
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 func bondAbsent(bondName string) nmstate.State {
@@ -241,9 +244,10 @@ var _ = Describe("NodeNetworkState", func() {
 				resetDesiredStateForNodes()
 			})
 			It("should have the bond interface at currentState", func() {
-				var (
-					expectedBond = interfaceByName(interfaces(bondUp(bond1)), bond1)
-				)
+
+				expectedNetworkState := nmstateapiv2.NetworkState{}
+				Expect(yaml.Unmarshal(bondUp(bond1).Raw, &expectedNetworkState)).To(Succeed())
+				expectedBond := expectedNetworkState.Interfaces[0]
 
 				for _, node := range nodes {
 					interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
@@ -263,21 +267,31 @@ var _ = Describe("NodeNetworkState", func() {
 				resetDesiredStateForNodes()
 			})
 			It("should have the bond in the linux bridge as port at currentState", func() {
-				var (
-					expectedInterfaces = interfaces(brWithBondUp(bridge1, bond1))
-					expectedBond       = interfaceByName(expectedInterfaces, bond1)
-					expectedBridge     = interfaceByName(expectedInterfaces, bridge1)
-				)
+				expectedNetworkState := nmstateapiv2.NetworkState{}
+				Expect(yaml.Unmarshal(brWithBondUp(bridge1, bond1).Raw, &expectedNetworkState)).To(Succeed())
+
+				filterInPortName := func(ports *[]nmstateapiv2.BridgePortConfig) []nmstateapiv2.BridgePortConfig {
+					if ports == nil {
+						return nil
+					}
+					filteredPorts := []nmstateapiv2.BridgePortConfig{}
+					for _, p := range *ports {
+						filteredPorts = append(filteredPorts, nmstateapiv2.BridgePortConfig{
+							BridgePortConfigMetaData: nmstateapiv2.BridgePortConfigMetaData{
+								Name: p.Name,
+							},
+						})
+					}
+					return filteredPorts
+				}
+				expectedBond := findInterfaceByName(bond1, expectedNetworkState.Interfaces)
+				expectedBridge := findInterfaceByName(bridge1, expectedNetworkState.Interfaces)
+				obtainedBridge := &nmstateapiv2.Interface{}
 				for _, node := range nodes {
 					interfacesForNode(node).Should(SatisfyAll(
-						ContainElement(matchingBond(expectedBond)),
-						ContainElement(SatisfyAll(
-							HaveKeyWithValue("name", expectedBridge["name"]),
-							HaveKeyWithValue("type", expectedBridge["type"]),
-							HaveKeyWithValue("state", expectedBridge["state"]),
-							HaveKeyWithValue("bridge", HaveKeyWithValue("port",
-								ContainElement(HaveKeyWithValue("name", bond1)))),
-						))))
+						ContainElement(matchingBond(*expectedBond)),
+						ContainElement(HaveField("Name", expectedBridge.Name), obtainedBridge),
+					))
 
 					getVLANFlagsEventually(node, bridge1, 1).Should(ConsistOf("PVID", Or(Equal("Egress Untagged"), Equal("untagged"))))
 					hasVlans(node, bond1, 2, 4094).Should(Succeed())
@@ -285,6 +299,11 @@ var _ = Describe("NodeNetworkState", func() {
 					vlansCardinality(node, firstSecondaryNic).Should(Equal(0))
 					vlansCardinality(node, secondSecondaryNic).Should(Equal(0))
 				}
+				Expect(obtainedBridge.Type).To(Equal(expectedBridge.Type))
+				Expect(obtainedBridge.State).To(Equal(expectedBridge.State))
+				Expect(obtainedBridge.BridgeInterface).ToNot(BeNil())
+				Expect(obtainedBridge.BridgeInterface.BridgeConfig).ToNot(BeNil())
+				Expect(obtainedBridge.BridgeConfig.Ports).To(WithTransform(filterInPortName, ConsistOf(*expectedBridge.BridgeConfig.Ports)))
 			})
 		})
 		Context("with bond interface that has 2 eths as ports", func() {
@@ -299,12 +318,12 @@ var _ = Describe("NodeNetworkState", func() {
 				resetDesiredStateForNodes()
 			})
 			It("should have the bond interface with 2 ports at currentState", func() {
-				var (
-					expectedBond = interfaceByName(interfaces(bondUpWithEth1AndEth2(bond1)), bond1)
-				)
+				expectedNetworkState := nmstateapiv2.NetworkState{}
+				Expect(yaml.Unmarshal(bondUpWithEth1AndEth2(bond1).Raw, &expectedNetworkState)).To(Succeed())
+				expectedBond := findInterfaceByName(bond1, expectedNetworkState.Interfaces)
 
 				for _, node := range nodes {
-					interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
+					interfacesForNode(node).Should(ContainElement(matchingBond(*expectedBond)))
 				}
 			})
 		})
@@ -320,18 +339,18 @@ var _ = Describe("NodeNetworkState", func() {
 				resetDesiredStateForNodes()
 			})
 			It("should have the bond interface with 2 ports at currentState", func() {
-				var (
-					expectedBond        = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), bond1)
-					expectedVlanBond102 = interfaceByName(interfaces(bondUpWithEth1Eth2AndVlan(bond1)), fmt.Sprintf("%s.102", bond1))
-				)
+				expectedNetworkState := nmstateapiv2.NetworkState{}
+				Expect(yaml.Unmarshal(bondUpWithEth1Eth2AndVlan(bond1).Raw, &expectedNetworkState)).To(Succeed())
+				expectedBond := findInterfaceByName(bond1, expectedNetworkState.Interfaces)
+				expectedVlanBond102 := findInterfaceByName(fmt.Sprintf("%s.102", bond1), expectedNetworkState.Interfaces)
 
 				for _, node := range nodes {
-					interfacesForNode(node).Should(SatisfyAll(
-						ContainElement(matchingBond(expectedBond)),
+					interfacesForNode(node).WithTimeout(5 * time.Second).WithPolling(time.Second).Should(SatisfyAll(
+						ContainElement(matchingBond(*expectedBond)),
 						ContainElement(SatisfyAll(
-							HaveKeyWithValue("name", expectedVlanBond102["name"]),
-							HaveKeyWithValue("type", expectedVlanBond102["type"]),
-							HaveKeyWithValue("state", expectedVlanBond102["state"])))))
+							HaveField("Name", expectedVlanBond102.Name),
+							HaveField("Type", expectedVlanBond102.Type),
+							HaveField("State", expectedVlanBond102.State)))))
 				}
 			})
 		})

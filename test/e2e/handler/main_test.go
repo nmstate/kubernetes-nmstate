@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/types"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/format"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -57,6 +58,8 @@ var (
 )
 
 var _ = BeforeSuite(func() {
+
+	format.MaxLength = 0
 
 	// Change to root directory some test expect that
 	os.Chdir("../../../")

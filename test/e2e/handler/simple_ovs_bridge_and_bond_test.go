@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 func ovsBrUpLAGEth1AndEth2(bridgeName, bondName, port1Name, port2Name string) nmstate.State {
@@ -119,9 +120,9 @@ var _ = Describe("OVS Bridge", func() {
 		verifyInterfaces := func() {
 			for _, node := range nodes {
 				interfacesForNode(node).Should(ContainElement(SatisfyAll(
-					HaveKeyWithValue("name", bridge1),
-					HaveKeyWithValue("type", "ovs-bridge"),
-					HaveKeyWithValue("state", "up"),
+					HaveField("Name", bridge1),
+					HaveField("Type", nmstateapiv2.InterfaceTypeOVSBridge),
+					HaveField("State", nmstateapiv2.InterfaceStateUp),
 				)))
 			}
 		}
@@ -184,14 +185,14 @@ var _ = Describe("OVS Bridge", func() {
 			for _, node := range nodes {
 				interfacesForNode(node).Should(SatisfyAll(
 					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", bridge1),
-						HaveKeyWithValue("type", "ovs-bridge"),
-						HaveKeyWithValue("state", "up"),
+						HaveField("Name", bridge1),
+						HaveField("Type", nmstateapiv2.InterfaceTypeOVSBridge),
+						HaveField("State", nmstateapiv2.InterfaceStateUp),
 					)),
 					ContainElement(SatisfyAll(
-						HaveKeyWithValue("name", bond1),
-						HaveKeyWithValue("type", "bond"),
-						HaveKeyWithValue("state", "up"),
+						HaveField("Name", bond1),
+						HaveField("Type", nmstateapiv2.InterfaceTypeBond),
+						HaveField("State", nmstateapiv2.InterfaceStateUp),
 					))))
 			}
 		})
@@ -208,14 +209,14 @@ var _ = Describe("OVS Bridge", func() {
 			By("Verify all required interfaces are present at currentState")
 			interfacesForNode(designatedNode).Should(SatisfyAll(
 				ContainElement(SatisfyAll(
-					HaveKeyWithValue("name", bridge1),
-					HaveKeyWithValue("type", "ovs-bridge"),
-					HaveKeyWithValue("state", "up"),
+					HaveField("Name", bridge1),
+					HaveField("Type", nmstateapiv2.InterfaceTypeOVSBridge),
+					HaveField("State", nmstateapiv2.InterfaceStateUp),
 				)),
 				ContainElement(SatisfyAll(
-					HaveKeyWithValue("name", ovsPortName),
-					HaveKeyWithValue("type", "ovs-interface"),
-					HaveKeyWithValue("state", "up"),
+					HaveField("Name", ovsPortName),
+					HaveField("Type", nmstateapiv2.InterfaceTypeOVSInterface),
+					HaveField("State", nmstateapiv2.InterfaceStateUp),
 				))))
 		}
 

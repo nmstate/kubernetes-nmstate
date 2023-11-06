@@ -20,14 +20,13 @@ package bridge
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 var (
-	badYaml = nmstate.NewState("}")
-	empty   = nmstate.NewState("")
-
 	noBridges = nmstate.NewState(`interfaces:
   - name: bond1
     type: bond
@@ -55,6 +54,8 @@ var (
   - name: br1
     type: linux-bridge
     state: up
+    bridge:
+      port: []
 `)
 
 	someBridgesUp = nmstate.NewState(`interfaces:
@@ -220,24 +221,14 @@ var _ = Describe("Network desired state bridge parser", func() {
 		err                 error
 	)
 	JustBeforeEach(func() {
-		updatedDesiredState, err = ApplyDefaultVlanFiltering(desiredState)
-	})
-	Context("when desired state is not a yaml", func() {
-		BeforeEach(func() {
-			desiredState = badYaml
-		})
-		It("should return error", func() {
-			Expect(err).To(HaveOccurred())
-		})
-	})
-	Context("when desired state is empty", func() {
-		BeforeEach(func() {
-			desiredState = empty
-		})
-		It("should not be changed", func() {
+		desiredStateStructured := &nmstateapiv2.NetworkState{}
+		Expect(yaml.Unmarshal(desiredState.Raw, desiredStateStructured)).To(Succeed())
+		var updatedDesiredStateStructured nmstateapiv2.NetworkState
+		updatedDesiredStateStructured, err = ApplyDefaultVlanFiltering(*desiredStateStructured)
+		if err == nil {
+			updatedDesiredState.Raw, err = yaml.Marshal(updatedDesiredStateStructured)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(updatedDesiredState).To(MatchYAML(desiredState))
-		})
+		}
 	})
 	Context("when there are no bridges", func() {
 		BeforeEach(func() {

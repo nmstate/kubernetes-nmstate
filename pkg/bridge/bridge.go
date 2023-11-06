@@ -18,68 +18,43 @@ limitations under the License.
 package bridge
 
 import (
-	"fmt"
-
-	"github.com/tidwall/gjson"
-	"github.com/tidwall/sjson"
-
-	yaml "sigs.k8s.io/yaml"
-
-	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 const minVlanID = 2
 const maxVlanID = 4094
 
-var defaultVlanFiltering = map[string]interface{}{
-	"mode": "trunk",
-	"trunk-tags": []map[string]interface{}{
-		{
-			"id-range": map[string]interface{}{
-				"min": minVlanID,
-				"max": maxVlanID,
-			},
-		},
-	},
-}
-
-func ApplyDefaultVlanFiltering(desiredState nmstate.State) (nmstate.State, error) {
-	result, err := yaml.YAMLToJSON(desiredState.Raw)
-	if err != nil {
-		return desiredState, fmt.Errorf("error converting desiredState to JSON: %v", err)
-	}
-
-	ifaces := gjson.ParseBytes(result).Get("interfaces").Array()
-	for ifaceIndex, iface := range ifaces {
-		if !isLinuxBridgeUp(iface) {
+func ApplyDefaultVlanFiltering(desiredState nmstateapiv2.NetworkState) (nmstateapiv2.NetworkState, error) {
+	// Make linter happy use index since iface is too big
+	for ifaceIndex := range desiredState.Interfaces {
+		iface := &desiredState.Interfaces[ifaceIndex]
+		if !isLinuxBridgeUp(iface) || iface.BridgeInterface == nil || iface.BridgeConfig == nil || iface.BridgeConfig.Ports == nil {
 			continue
 		}
-		for portIndex, port := range iface.Get("bridge.port").Array() {
+
+		for portIndex, port := range *iface.BridgeConfig.Ports {
 			if hasVlanConfiguration(port) {
 				continue
 			}
-			result, err = sjson.SetBytes(
-				result,
-				fmt.Sprintf("interfaces.%d.bridge.port.%d.vlan", ifaceIndex, portIndex),
-				defaultVlanFiltering,
-			)
-			if err != nil {
-				return desiredState, err
+			trunkMode := nmstateapiv2.BridgePortVlanModeTrunk
+			(*desiredState.Interfaces[ifaceIndex].BridgeConfig.Ports)[portIndex].Vlan = &nmstateapiv2.BridgePortVlanConfig{
+				Mode: &trunkMode,
+				TrunkTags: &[]nmstateapiv2.BridgePortTrunkTag{{
+					IDRange: &nmstateapiv2.BridgePortVlanRange{
+						Min: minVlanID,
+						Max: maxVlanID,
+					},
+				}},
 			}
 		}
 	}
-
-	resultYaml, err := yaml.JSONToYAML(result)
-	if err != nil {
-		return desiredState, err
-	}
-	return nmstate.State{Raw: resultYaml}, nil
+	return desiredState, nil
 }
 
-func isLinuxBridgeUp(iface gjson.Result) bool {
-	return iface.Get("type").String() == "linux-bridge" && iface.Get("state").String() == "up"
+func isLinuxBridgeUp(iface *nmstateapiv2.Interface) bool {
+	return iface.Type == nmstateapiv2.InterfaceTypeLinuxBridge && iface.State == nmstateapiv2.InterfaceStateUp
 }
 
-func hasVlanConfiguration(port gjson.Result) bool {
-	return port.Get("vlan").Exists()
+func hasVlanConfiguration(port nmstateapiv2.BridgePortConfig) bool {
+	return port.Vlan != nil
 }
