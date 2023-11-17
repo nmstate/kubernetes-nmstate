@@ -15,7 +15,7 @@ function yq4 {
       echo ${INSTALL_DIR}/yq
     else
       # yq is not installed/in wrong version --> install v4
-      GOBIN=$INSTALL_DIR GOFLAGS= go install github.com/mikefarah/yq/v4@latest
+      GOBIN=$INSTALL_DIR GOFLAGS= go install github.com/mikefarah/yq/v4@v4.35.2
       echo ${INSTALL_DIR}/yq
     fi
   fi
