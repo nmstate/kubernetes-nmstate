@@ -27,9 +27,12 @@ from requests_kerberos import HTTPKerberosAuth
 import sys
 
 check_version = sys.argv[1]
+rhel_version = 8
+if float(check_version) > 4.13:
+    rhel_version = 9
 
 base_url = 'https://errata.devel.redhat.com'
-start_page = base_url + '/package/show/openshift-kubernetes-nmstate-handler-rhel-8-container'
+start_page = base_url + f'/package/show/openshift-kubernetes-nmstate-handler-rhel-{rhel_version}-container'
 r = requests.get(start_page, auth=HTTPKerberosAuth())
 page = r.text
 version_re = re.compile('title=".* (\d+\.\d+\.\d+) .*".*\n.*\n.*\n.*href="(/release_engineering/show_released_build/\d+)"', flags=re.M)
