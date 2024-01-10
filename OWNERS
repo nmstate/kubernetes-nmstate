@@ -3,7 +3,6 @@ approvers:
   - qinqon
   - rhrazdil
   - cybertron
-  - dougsland
   - mkowalski
 reviewers:
   - phoracek
@@ -11,7 +10,6 @@ reviewers:
   - RamLavi
   - rhrazdil
   - cybertron
-  - dougsland
   - mkowalski
 
 # Bugzilla info;
