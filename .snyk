@@ -6,4 +6,3 @@ exclude:
     - vendor/**
     - api/vendor/**
     - "**/*_test.go"
-    - hack/nmstate-version.py
