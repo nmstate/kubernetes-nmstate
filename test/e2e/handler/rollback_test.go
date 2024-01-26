@@ -95,6 +95,15 @@ interfaces:
 `, nic))
 }
 
+func setBadNameServersGlobal(addr string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`dns-resolver:
+  config:
+    search: []
+    server:
+      - %s
+`, addr))
+}
+
 func discoverNameServers(nic string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`
 dns-resolver:
@@ -230,6 +239,32 @@ var _ = Describe("rollback", func() {
 				return autoDNS(nodes[0], primaryNic)
 			}, 5*time.Second, 1*time.Second).Should(BeTrue(), "should consistently have auto-dns=true")
 
+		})
+	})
+
+	Context("when name servers (configured globally) are wrong after state configuration", func() {
+		BeforeEach(func() {
+			updateDesiredStateAtNode(nodes[0], setBadNameServersGlobal("192.168.100.3"))
+		})
+		AfterEach(func() {
+			By("Clean up desired state")
+			resetDesiredStateForNodes()
+		})
+		It("should rollback to previous name servers", func() {
+			By("Should not be available") // Fail fast
+			policy.StatusConsistently().ShouldNot(policy.ContainPolicyAvailable())
+
+			By("Wait for reconcile to fail")
+			policy.WaitForDegradedTestPolicy()
+			By("Check that global DNS is rolled back")
+			Eventually(func() []string {
+				return dnsResolverForNode(nodes[0], "dns-resolver.running.server")
+			}, 480*time.Second, ReadInterval).ShouldNot(ContainElement("192.168.100.3"), "should eventually lose wrong name server")
+
+			By("Check that global DNS continue with rolled back state")
+			Consistently(func() []string {
+				return dnsResolverForNode(nodes[0], "dns-resolver.running.server")
+			}, 5*time.Second, 1*time.Second).ShouldNot(ContainElement("192.168.100.3"), "should consistently not contain wrong name server")
 		})
 	})
 })
