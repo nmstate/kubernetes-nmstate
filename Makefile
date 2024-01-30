@@ -213,8 +213,8 @@ release:
 	hack/release.sh
 
 vendor:
-	cd api && go mod tidy -compat=$(GO_VERSION)
-	go mod tidy -compat=$(GO_VERSION)
+	cd api && go mod tidy
+	go mod tidy
 	go mod vendor
 
 # Generate bundle manifests and metadata, then validate generated files.

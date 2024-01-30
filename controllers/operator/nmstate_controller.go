@@ -111,7 +111,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	if _, err = r.applyManifests(instance, ctx); err != nil {
+	if err := r.applyManifests(instance, ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -125,25 +125,25 @@ func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx context.Context) (ctrl.Result, error) {
+func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx context.Context) error {
 	if err := r.applyCRDs(instance); err != nil {
 		errors.Wrap(err, "failed applying CRDs")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	if err := r.applyNamespace(instance); err != nil {
 		errors.Wrap(err, "failed applying Namespace")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	if err := r.applyRBAC(instance); err != nil {
 		errors.Wrap(err, "failed applying RBAC")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	if err := r.applyHandler(instance); err != nil {
 		errors.Wrap(err, "failed applying Handler")
-		return ctrl.Result{}, err
+		return err
 	}
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
@@ -151,15 +151,15 @@ func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx cont
 	_, errUIPluginPathExists := os.Stat(filepath.Join(names.ManifestDir, "kubernetes-nmstate", "openshift", "ui-plugin"))
 	if err == nil && isOpenShift && errUIPluginPathExists == nil {
 		if err = r.applyOpenshiftUIPlugin(instance); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed applying UI Plugin")
+			return errors.Wrap(err, "failed applying UI Plugin")
 		}
 		if err = r.patchOpenshiftConsolePlugin(ctx); err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed enabling the plugin in cluster's console")
+			return errors.Wrap(err, "failed enabling the plugin in cluster's console")
 		}
 	} else if err != nil {
 		r.Log.Info("Warning: could not determine if running on OpenShift")
 	}
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *NMStateReconciler) applyCRDs(instance *nmstatev1.NMState) error {
