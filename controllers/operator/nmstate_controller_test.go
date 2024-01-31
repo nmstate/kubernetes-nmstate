@@ -75,6 +75,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		}
 		handlerPrefix    = "handler"
 		handlerNamespace = "nmstate"
+		handlerKey       = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+		webhookKey       = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 		handlerImage     = "quay.io/some_image"
 		imagePullPolicy  = "Always"
 		manifestsDir     = ""
@@ -184,7 +186,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should not add default NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			for k, v := range defaultHandlerNodeSelector {
@@ -193,7 +194,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should add NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			for k, v := range customHandlerNodeSelector {
@@ -202,7 +202,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should NOT add NodeSelector to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
-			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			for k, v := range customHandlerNodeSelector {
@@ -233,14 +232,12 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should add Tolerations to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(allTolerationsPresent(handlerTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeTrue())
 		})
 		It("should NOT add Tolerations to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
-			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(anyTolerationsPresent(handlerTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeFalse())
@@ -269,7 +266,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should add InfraNodeSelector to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
-			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			for k, v := range infraNodeSelector {
@@ -287,7 +283,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should NOT add InfraNodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			for k, v := range infraNodeSelector {
@@ -318,7 +313,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should add InfraTolerations to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
-			webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
@@ -332,7 +326,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("should NOT add InfraTolerations to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
-			handlerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 			err := cl.Get(context.TODO(), handlerKey, ds)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(anyTolerationsPresent(infraTolerations, ds.Spec.Template.Spec.Tolerations)).To(BeFalse())
@@ -393,7 +386,7 @@ var _ = Describe("NMState controller reconcile", func() {
 
 			It("should have a minAvailable = 0 in the pod disruption budget", func() {
 				pdb := policyv1.PodDisruptionBudget{}
-				pdbKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+				pdbKey := webhookKey
 
 				err := cl.Get(context.TODO(), pdbKey, &pdb)
 				Expect(err).ToNot(HaveOccurred())
@@ -402,7 +395,6 @@ var _ = Describe("NMState controller reconcile", func() {
 
 			It("should have one replica of the webhook deployment", func() {
 				deployment := &appsv1.Deployment{}
-				webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 				err := cl.Get(context.TODO(), webhookKey, deployment)
 
 				Expect(err).ToNot(HaveOccurred())
@@ -420,7 +412,7 @@ var _ = Describe("NMState controller reconcile", func() {
 
 				It("should have a minAvailable = 1 in the pod disruption budget", func() {
 					pdb := policyv1.PodDisruptionBudget{}
-					pdbKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+					pdbKey := webhookKey
 
 					err := cl.Get(context.TODO(), pdbKey, &pdb)
 					Expect(err).ToNot(HaveOccurred())
@@ -429,7 +421,6 @@ var _ = Describe("NMState controller reconcile", func() {
 
 				It("should have two replica of the webhook deployment", func() {
 					deployment := &appsv1.Deployment{}
-					webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 					err := cl.Get(context.TODO(), webhookKey, deployment)
 
 					Expect(err).ToNot(HaveOccurred())
@@ -447,7 +438,7 @@ var _ = Describe("NMState controller reconcile", func() {
 
 				It("should have a minAvailable = 0 in the pod disruption budget", func() {
 					pdb := policyv1.PodDisruptionBudget{}
-					pdbKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+					pdbKey := webhookKey
 
 					err := cl.Get(context.TODO(), pdbKey, &pdb)
 					Expect(err).ToNot(HaveOccurred())
@@ -456,7 +447,6 @@ var _ = Describe("NMState controller reconcile", func() {
 
 				It("should have one replica of the webhook deployment", func() {
 					deployment := &appsv1.Deployment{}
-					webhookKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 					err := cl.Get(context.TODO(), webhookKey, deployment)
 
 					Expect(err).ToNot(HaveOccurred())

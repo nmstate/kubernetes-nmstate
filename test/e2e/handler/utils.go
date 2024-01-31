@@ -63,17 +63,21 @@ func Byf(message string, arguments ...interface{}) {
 	By(fmt.Sprintf(message, arguments...))
 }
 
+func interfaceName(iface interface{}) string {
+	name, hasName := iface.(map[string]interface{})["name"]
+	Expect(hasName).
+		To(
+			BeTrue(),
+			"should have name field in the interfaces, "+
+				"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
+		)
+	return name.(string)
+}
+
 func interfacesName(interfaces []interface{}) []string {
 	var names []string
 	for _, iface := range interfaces {
-		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).
-			To(
-				BeTrue(),
-				"should have name field in the interfaces, "+
-					"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
-			)
-		names = append(names, name.(string))
+		names = append(names, interfaceName(iface))
 	}
 	return names
 }
@@ -81,14 +85,7 @@ func interfacesName(interfaces []interface{}) []string {
 func interfaceByName(interfaces []interface{}, searchedName string) map[string]interface{} {
 	var dummy map[string]interface{}
 	for _, iface := range interfaces {
-		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).
-			To(
-				BeTrue(),
-				"should have name field in the interfaces, "+
-					"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
-			)
-		if name == searchedName {
+		if interfaceName(iface) == searchedName {
 			return iface.(map[string]interface{})
 		}
 	}
@@ -563,21 +560,15 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	interfaces := interfaces(currentStateYaml)
 	ifacesState := make(map[string]string)
 	for _, iface := range interfaces {
-		name, hasName := iface.(map[string]interface{})["name"]
-		Expect(hasName).
-			To(
-				BeTrue(),
-				"should have name field in the interfaces, "+
-					"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
-			)
-		if ifaceInSlice(name.(string), exclude) {
+		name := interfaceName(iface)
+		if ifaceInSlice(name, exclude) {
 			continue
 		}
 		state, hasState := iface.(map[string]interface{})["state"]
 		if !hasState {
 			state = "unknown"
 		}
-		ifacesState[name.(string)] = state.(string)
+		ifacesState[name] = state.(string)
 	}
 	ret, err := json.Marshal(ifacesState)
 	if err != nil {
