@@ -77,10 +77,10 @@ func setBadNameServers(nic string) nmstate.State {
   config:
     search: []
     server:
-      - 192.168.100.3
-      - 192.168.100.4
+      - "fe80::deef:1%%%[1]s"
+      - "fe80::deef:2%%%[1]s"
 interfaces:
-- name: %s
+- name: %[1]s
   type: ethernet
   state: up
   ipv4:
