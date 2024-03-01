@@ -54,7 +54,7 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 
 		It("should have the VRF interface configured", func() {
-			vrfForNodeInterfaceEventually(node, vrfID).Should(Equal(vrfID))
+			vrfForNodeInterfaceEventually(node, "vrf"+vrfID).Should(Equal(vrfID))
 			ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
 			routeNextHopInterfaceWithTableID(node, destIPAddress, vrfID).Should(Equal(firstSecondaryNic))
 		})

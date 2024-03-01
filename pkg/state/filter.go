@@ -18,10 +18,9 @@ limitations under the License.
 package state
 
 import (
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
-	yaml "sigs.k8s.io/yaml"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 const (
@@ -34,98 +33,75 @@ func init() {
 	}
 }
 
-func FilterOut(currentState shared.State) (shared.State, error) {
+func FilterOut(currentState *nmstateapiv2.NetworkState) (*nmstateapiv2.NetworkState, error) {
 	return filterOut(currentState)
 }
 
-func filterOutRoutes(routes []routeState, filteredInterfaces []interfaceState) []routeState {
-	filteredRoutes := []routeState{}
-	for _, route := range routes {
-		name := route.NextHopInterface
-		if isInInterfaces(name, filteredInterfaces) {
-			filteredRoutes = append(filteredRoutes, route)
+func filterOutRoutes(routes *[]nmstateapiv2.RouteEntry, filteredInterfaces []nmstateapiv2.Interface) *[]nmstateapiv2.RouteEntry {
+	if routes == nil {
+		return nil
+	}
+	filteredRoutes := []nmstateapiv2.RouteEntry{}
+	for _, route := range *routes {
+		name := route.NextHopIface
+		if name != nil {
+			if isInInterfaces(*name, filteredInterfaces) {
+				filteredRoutes = append(filteredRoutes, route)
+			}
 		}
 	}
-	return filteredRoutes
+	return &filteredRoutes
 }
 
-func isInInterfaces(interfaceName string, interfaces []interfaceState) bool {
-	for _, iface := range interfaces {
-		if iface.Name == interfaceName {
+func isInInterfaces(interfaceName string, interfaces []nmstateapiv2.Interface) bool {
+	for i := range interfaces {
+		if interfaces[i].Name == interfaceName {
 			return true
 		}
 	}
 	return false
 }
 
-func filterOutDynamicAttributes(iface map[string]interface{}) {
+func filterOutDynamicAttributes(iface *nmstateapiv2.Interface) *nmstateapiv2.Interface {
 	// The gc-timer and hello-time are deep into linux-bridge like this
 	//    - bridge:
 	//        options:
 	//          gc-timer: 13715
 	//          hello-timer: 0
-	if iface["type"] != "linux-bridge" {
-		return
+	if iface.Type != nmstateapiv2.InterfaceTypeLinuxBridge {
+		return iface
 	}
 
-	bridgeRaw, hasBridge := iface["bridge"]
-	if !hasBridge {
-		return
-	}
-	bridge, ok := bridgeRaw.(map[string]interface{})
-	if !ok {
-		return
+	if iface.BridgeConfig == nil {
+		return iface
 	}
 
-	optionsRaw, hasOptions := bridge["options"]
-	if !hasOptions {
-		return
+	if iface.BridgeConfig.Options == nil {
+		return iface
 	}
-	options, ok := optionsRaw.(map[string]interface{})
-	if !ok {
-		return
-	}
-
-	delete(options, "gc-timer")
-	delete(options, "hello-timer")
+	iface.BridgeConfig.Options.GcTimer = nil
+	iface.BridgeConfig.Options.HelloTimer = nil
+	return iface
 }
 
-func filterOutInterfaces(ifacesState []interfaceState) []interfaceState {
-	filteredInterfaces := []interfaceState{}
-	for _, iface := range ifacesState {
-		if isVeth(iface.Data) && isUnmanaged(iface.Data) {
+func filterOutInterfaces(interfaces []nmstateapiv2.Interface) []nmstateapiv2.Interface {
+	filteredInterfaces := []nmstateapiv2.Interface{}
+	for i := range interfaces {
+		iface := &interfaces[i]
+		if iface.Type == nmstateapiv2.InterfaceTypeVeth && iface.State == nmstateapiv2.InterfaceStateIgnore {
 			continue
 		}
-		filterOutDynamicAttributes(iface.Data)
-		filteredInterfaces = append(filteredInterfaces, iface)
+		filteredInterfaces = append(filteredInterfaces, *filterOutDynamicAttributes(iface))
 	}
 	return filteredInterfaces
 }
 
-func isVeth(ifaceData map[string]interface{}) bool {
-	return ifaceData["type"] == "veth"
-}
-
-func isUnmanaged(ifaceData map[string]interface{}) bool {
-	return ifaceData["state"] == "ignore"
-}
-
-func filterOut(currentState shared.State) (shared.State, error) {
-	var state rootState
-	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
-		return currentState, err
+func filterOut(currentState *nmstateapiv2.NetworkState) (*nmstateapiv2.NetworkState, error) {
+	currentState.Interfaces = filterOutInterfaces(currentState.Interfaces)
+	if currentState.Routes != nil {
+		currentState.Routes.Running = filterOutRoutes(currentState.Routes.Running, currentState.Interfaces)
+		currentState.Routes.Config = filterOutRoutes(currentState.Routes.Config, currentState.Interfaces)
 	}
 
-	state.Interfaces = filterOutInterfaces(state.Interfaces)
-	if state.Routes != nil {
-		state.Routes.Running = filterOutRoutes(state.Routes.Running, state.Interfaces)
-		state.Routes.Config = filterOutRoutes(state.Routes.Config, state.Interfaces)
-	}
-
-	filteredState, err := yaml.Marshal(state)
-	if err != nil {
-		return currentState, err
-	}
-
-	return shared.NewState(string(filteredState)), nil
+	return currentState, nil
 }

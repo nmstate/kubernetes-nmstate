@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"sigs.k8s.io/yaml"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -33,7 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
+
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
@@ -47,7 +49,7 @@ import (
 type NmstateUpdater func(
 	client client.Client,
 	node *corev1.Node,
-	observedState shared.State,
+	observedState *nmstateapiv2.NetworkState,
 	nns *nmstatev1beta1.NodeNetworkState,
 	versions *nmstate.DependencyVersions,
 ) error
@@ -58,7 +60,7 @@ type NodeReconciler struct {
 	client.Client
 	Log            logr.Logger
 	Scheme         *runtime.Scheme
-	lastState      shared.State
+	lastState      *nmstateapiv2.NetworkState
 	nmstateUpdater NmstateUpdater
 	nmstatectlShow NmstatectlShow
 }
@@ -75,7 +77,13 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
+	currentState := &nmstateapiv2.NetworkState{}
+	err = yaml.Unmarshal([]byte(currentStateRaw), &currentState)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	currentState, err = state.FilterOut(currentState)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -90,7 +98,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		}
 	}
 	// Reduce apiserver hits by checking node's network state with last one
-	if nnsInstance != nil && r.lastState.String() == currentState.String() {
+	if nnsInstance != nil && r.lastState != nil && r.lastState.String() == currentState.String() {
 		return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 	} else {
 		r.Log.Info("Creating/updating NodeNetworkState")

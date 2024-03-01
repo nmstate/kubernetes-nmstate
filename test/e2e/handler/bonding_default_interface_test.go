@@ -23,9 +23,11 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 )
 
 func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
@@ -115,9 +117,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 		})
 
 		It("should successfully move default IP address on top of the bond", func() {
-			var (
-				expectedBond = interfaceByName(interfaces(boundUpWithPrimaryAndSecondary(bond1)), bond1)
-			)
+			expectedNetworkState := nmstateapiv2.NetworkState{}
+			Expect(yaml.Unmarshal(boundUpWithPrimaryAndSecondary(bond1).Raw, &expectedNetworkState)).To(Succeed())
+			expectedBond := expectedNetworkState.Interfaces[0]
 
 			By("Checking that bond was configured and obtained the same IP address")
 			for _, node := range nodes {
@@ -138,7 +140,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 	})
 })
 
-func verifyBondIsUpWithPrimaryNicIP(node string, expectedBond map[string]interface{}, ip string) {
+func verifyBondIsUpWithPrimaryNicIP(node string, expectedBond nmstateapiv2.Interface, ip string) {
 	interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
 
 	Eventually(func() string {

@@ -1,4 +1,4 @@
-ARG GO_VERSION=1.18
+ARG GO_VERSION=1.19
 FROM registry.access.redhat.com/ubi9/go-toolset:${GO_VERSION} AS build
 
 COPY . .

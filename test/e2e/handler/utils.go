@@ -33,9 +33,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"sigs.k8s.io/yaml"
 
 	dynclient "sigs.k8s.io/controller-runtime/pkg/client"
+
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
@@ -63,34 +64,12 @@ func Byf(message string, arguments ...interface{}) {
 	By(fmt.Sprintf(message, arguments...))
 }
 
-func interfaceName(iface interface{}) string {
-	name, hasName := iface.(map[string]interface{})["name"]
-	Expect(hasName).
-		To(
-			BeTrue(),
-			"should have name field in the interfaces, "+
-				"https://github.com/nmstate/nmstate/blob/base/libnmstate/schemas/operational-state.yaml",
-		)
-	return name.(string)
-}
-
-func interfacesName(interfaces []interface{}) []string {
+func interfacesName(interfaces []nmstateapiv2.Interface) []string {
 	var names []string
 	for _, iface := range interfaces {
-		names = append(names, interfaceName(iface))
+		names = append(names, iface.Name)
 	}
 	return names
-}
-
-func interfaceByName(interfaces []interface{}, searchedName string) map[string]interface{} {
-	var dummy map[string]interface{}
-	for _, iface := range interfaces {
-		if interfaceName(iface) == searchedName {
-			return iface.(map[string]interface{})
-		}
-	}
-	Fail(fmt.Sprintf("interface %s not found at %+v", searchedName, interfaces))
-	return dummy
 }
 
 func setDesiredStateWithPolicyAndCaptureAndNodeSelector(
@@ -339,30 +318,20 @@ func deleteConnectionAndWait(nodesToModify []string, interfaceName string) {
 	waitForInterfaceDeletion(nodesToModify, interfaceName)
 }
 
-func interfaces(state nmstate.State) []interface{} {
-	var stateUnstructured map[string]interface{}
-	err := yaml.Unmarshal(state.Raw, &stateUnstructured)
-	Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", state)
-	interfaces := stateUnstructured["interfaces"].([]interface{})
-	return interfaces
-}
-
-func currentState(node string, currentStateYaml *nmstate.State) AsyncAssertion {
+func currentState(node string, currentState *nmstateapiv2.NetworkState) AsyncAssertion {
 	key := types.NamespacedName{Name: node}
-	return Eventually(func() nmstate.RawState {
-		*currentStateYaml = nodeNetworkState(key).Status.CurrentState
-		return currentStateYaml.Raw
+	return Eventually(func() *nmstateapiv2.NetworkState {
+		*currentState = nodeNetworkState(key).Status.CurrentState
+		return currentState
 	}, ReadTimeout, ReadInterval)
 }
 
 func interfacesNameForNode(node string) []string {
-	var currentStateYaml nmstate.State
-	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
+	var currentStateStruct nmstateapiv2.NetworkState
+	currentState(node, &currentStateStruct).ShouldNot(Equal(nmstateapiv2.NetworkState{}))
+	Expect(currentStateStruct.Interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
 
-	interfaces := interfaces(currentStateYaml)
-	Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
-
-	return interfacesName(interfaces)
+	return interfacesName(currentStateStruct.Interfaces)
 }
 
 func interfacesNameForNodeEventually(node string) AsyncAssertion {
@@ -384,7 +353,7 @@ func ipV6AddressForNodeInterfaceEventually(node, iface string) AsyncAssertion {
 }
 
 func routeDestForNodeInterfaceEventually(node, destIP string) AsyncAssertion {
-	return Eventually(func() string {
+	return Eventually(func() *nmstateapiv2.RouteEntry {
 		return routeDest(node, destIP)
 	}, ReadTimeout, ReadInterval)
 }
@@ -403,14 +372,13 @@ func vrfForNodeInterfaceEventually(node, vrfID string) AsyncAssertion {
 }
 
 func interfacesForNode(node string) AsyncAssertion {
-	return Eventually(func() []interface{} {
-		var currentStateYaml nmstate.State
-		currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
+	return Eventually(func() []nmstateapiv2.Interface {
+		var currentStateStruct nmstateapiv2.NetworkState
+		currentState(node, &currentStateStruct).ShouldNot(Equal(nmstateapiv2.NetworkState{}))
 
-		interfaces := interfaces(currentStateYaml)
-		Expect(interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
+		Expect(currentStateStruct.Interfaces).ToNot(BeEmpty(), "Node %s should have network interfaces", node)
 
-		return interfaces
+		return currentStateStruct.Interfaces
 	}, ReadTimeout, ReadInterval)
 }
 
@@ -523,22 +491,46 @@ func nextBond() string {
 	return fmt.Sprintf("bond%d", bondCounter)
 }
 
-func currentStateJSON(node string) []byte {
+func currentStateByNode(node string) nmstateapiv2.NetworkState {
 	key := types.NamespacedName{Name: node}
-	currentState := nodeNetworkState(key).Status.CurrentState
-	currentStateJSON, err := yaml.YAMLToJSON(currentState.Raw)
-	ExpectWithOffset(1, err).ToNot(HaveOccurred())
-	return currentStateJSON
+	return nodeNetworkState(key).Status.CurrentState
+}
+
+func findInterfaceByName(name string, ifaces []nmstateapiv2.Interface) *nmstateapiv2.Interface {
+	for _, iface := range ifaces {
+		if iface.Name == name {
+			return &iface
+		}
+	}
+	return nil
+}
+
+func findRouteByDestination(destination string, routes []nmstateapiv2.RouteEntry) *nmstateapiv2.RouteEntry {
+	for _, route := range routes {
+		if route.Destination != nil && *route.Destination == destination {
+			return &route
+		}
+	}
+	return nil
+}
+
+func findRouteByTableID(tableID uint32, routes []nmstateapiv2.RouteEntry) *nmstateapiv2.RouteEntry {
+	for _, route := range routes {
+		if route.TableID != nil && route.TableID.Type == intstr.Int && route.TableID.IntVal == int32(tableID) {
+			return &route
+		}
+	}
+	return nil
 }
 
 func dhcpFlag(node, name string) bool {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.dhcp", name)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
+	iface := findInterfaceByName(name, currentStateByNode(node).Interfaces)
+	return iface != nil && iface.Ipv4 != nil && iface.Ipv4.Dhcp != nil && *iface.Ipv4.Dhcp
 }
 
 func autoDNS(node, name string) bool {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.auto-dns", name)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).Bool()
+	iface := findInterfaceByName(name, currentStateByNode(node).Interfaces)
+	return iface != nil && iface.Ipv4 != nil && iface.Ipv4.AutoDNS != nil && *iface.Ipv4.AutoDNS
 }
 
 func ifaceInSlice(ifaceName string, names []string) bool {
@@ -554,21 +546,15 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 // {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
 // use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) []byte {
-	var currentStateYaml nmstate.State
-	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
+	var currentStateStruct nmstateapiv2.NetworkState
+	currentState(node, &currentStateStruct).ShouldNot(Equal(nmstateapiv2.NetworkState{}))
 
-	interfaces := interfaces(currentStateYaml)
-	ifacesState := make(map[string]string)
-	for _, iface := range interfaces {
-		name := interfaceName(iface)
-		if ifaceInSlice(name, exclude) {
+	ifacesState := map[string]nmstateapiv2.InterfaceState{}
+	for _, iface := range currentStateStruct.Interfaces {
+		if ifaceInSlice(iface.Name, exclude) {
 			continue
 		}
-		state, hasState := iface.(map[string]interface{})["state"]
-		if !hasState {
-			state = "unknown"
-		}
-		ifacesState[name] = state.(string)
+		ifacesState[iface.Name] = iface.State
 	}
 	ret, err := json.Marshal(ifacesState)
 	if err != nil {
@@ -577,36 +563,47 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	return ret
 }
 
-func lldpEnabled(node, iface string) string {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").lldp.enabled", iface)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+func lldpEnabled(node, ifaceName string) bool {
+	iface := findInterfaceByName(ifaceName, currentStateByNode(node).Interfaces)
+	return iface != nil && iface.Lldp != nil && iface.Lldp.Enabled
 }
 
-func ipv4Address(node, iface string) string {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv4.address.0.ip", iface)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+func ipv4Address(node, ifaceName string) string {
+	iface := findInterfaceByName(ifaceName, currentStateByNode(node).Interfaces)
+	if iface == nil || iface.Ipv4 == nil || iface.Ipv4.Addresses == nil || len(*iface.Ipv4.Addresses) == 0 {
+		return ""
+	}
+	return (*iface.Ipv4.Addresses)[0].IP
 }
 
-func ipv6Address(node, iface string) string {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").ipv6.address.0.ip", iface)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+func ipv6Address(node, ifaceName string) string {
+	iface := findInterfaceByName(ifaceName, currentStateByNode(node).Interfaces)
+	if iface == nil || iface.Ipv6 == nil || iface.Ipv6.Addresses == nil || len(*iface.Ipv6.Addresses) == 0 {
+		return ""
+	}
+	return (*iface.Ipv6.Addresses)[0].IP
 }
 
-func macAddress(node, iface string) string {
-	path := fmt.Sprintf("interfaces.#(name==\"%s\").mac-address", iface)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+func macAddress(node, ifaceName string) string {
+	iface := findInterfaceByName(ifaceName, currentStateByNode(node).Interfaces)
+	if iface == nil || iface.MacAddress == nil {
+		return ""
+	}
+	return *iface.MacAddress
 }
 
 func defaultRouteNextHopInterface(node string) AsyncAssertion {
 	return Eventually(func() string {
-		path := "routes.running.#(destination==\"0.0.0.0/0\").next-hop-interface"
-		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+		route := findRouteByDestination("0.0.0.0/0", *currentStateByNode(node).Routes.Running)
+		if route == nil || route.NextHopIface == nil {
+			return ""
+		}
+		return *route.NextHopIface
 	}, 15*time.Second, 1*time.Second)
 }
 
-func routeDest(node, destIP string) string {
-	path := fmt.Sprintf("routes.running.#(destination==%q)", destIP)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+func routeDest(node, destIP string) *nmstateapiv2.RouteEntry {
+	return findRouteByDestination(destIP, *currentStateByNode(node).Routes.Running)
 }
 
 // routeNextHopInterfaceWithTableID checks if a route with destIP exists in the default routing table.
@@ -620,21 +617,45 @@ func routeNextHopInterfaceWithTableID(node, destIP, tableID string) AsyncAsserti
 	if tableID == "" {
 		tableID = "254"
 	}
+	routes := *currentStateByNode(node).Routes.Running
 	return Eventually(func() string {
-		path := fmt.Sprintf("routes.running.#(table-id==%s)#|#(destination==%q).next-hop-interface", tableID, destIP)
-		return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+		tableIDInt, err := strconv.Atoi(tableID)
+		Expect(err).ToNot(HaveOccurred())
+		route := findRouteByTableID(uint32(tableIDInt), routes)
+		if route == nil {
+			route = findRouteByDestination(destIP, routes)
+			if route == nil {
+				return ""
+			}
+		}
+		if route.NextHopIface == nil {
+			return ""
+		}
+		return *route.NextHopIface
 	}, 15*time.Second, 1*time.Second)
 }
 
-func vlan(node, iface string) string {
-	vlanFilter := fmt.Sprintf("interfaces.#(name==\"%s\").vlan.id", iface)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(vlanFilter).String()
+func vlan(node, ifaceName string) string {
+	iface := findInterfaceByName(ifaceName, currentStateByNode(node).Interfaces)
+	if iface == nil {
+		return ""
+	}
+	if iface.Vlan == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", iface.Vlan.ID)
 }
 
 // vrf verifies if the VRF with vrfID was created on node.
 func vrf(node, vrfID string) string {
-	vrfFilter := fmt.Sprintf("interfaces.#(name==vrf%s).vrf.route-table-id", vrfID)
-	return gjson.ParseBytes(currentStateJSON(node)).Get(vrfFilter).String()
+	iface := findInterfaceByName(vrfID, currentStateByNode(node).Interfaces)
+	if iface == nil {
+		return ""
+	}
+	if iface.Vrf == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", iface.Vrf.TableID)
 }
 
 func kubectlAndCheck(command ...string) {
@@ -656,22 +677,20 @@ func maxUnavailableNodes() int {
 
 func dnsResolverServerForNodeEventually(node string) AsyncAssertion {
 	return Eventually(func() []string {
-		return dnsResolverForNode(node, "dns-resolver.running.server")
+		currentState := currentStateByNode(node)
+		if currentState.DNS == nil || currentState.DNS.Running == nil || currentState.DNS.Running.Server == nil {
+			return []string{}
+		}
+		return *currentState.DNS.Running.Server
 	}, ReadTimeout, ReadInterval)
 }
 
 func dnsResolverSearchForNodeEventually(node string) AsyncAssertion {
 	return Eventually(func() []string {
-		return dnsResolverForNode(node, "dns-resolver.running.search")
+		currentState := currentStateByNode(node)
+		if currentState.DNS == nil || currentState.DNS.Running == nil || currentState.DNS.Running.Search == nil {
+			return []string{}
+		}
+		return *currentState.DNS.Running.Search
 	}, ReadTimeout, ReadInterval)
-}
-
-func dnsResolverForNode(node, path string) []string {
-	var arr []string
-
-	elemList := gjson.ParseBytes(currentStateJSON(node)).Get(path).Array()
-	for _, elem := range elemList {
-		arr = append(arr, elem.String())
-	}
-	return arr
 }

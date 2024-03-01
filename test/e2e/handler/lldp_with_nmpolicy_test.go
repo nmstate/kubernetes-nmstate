@@ -60,11 +60,11 @@ var _ = Describe("LLDP configuration with nmpolicy", func() {
 		Byf("Check %s has lldp enabled", primaryNic)
 		for _, node := range nodes {
 			Eventually(
-				func() string {
+				func() bool {
 					return lldpEnabled(node, primaryNic)
 				},
 				30*time.Second, 1*time.Second,
-			).Should(Equal("true"), fmt.Sprintf("Interface %s should have enabled lldp", primaryNic))
+			).Should(BeTrue(), fmt.Sprintf("Interface %s should have enabled lldp", primaryNic))
 		}
 	})
 })

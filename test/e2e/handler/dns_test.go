@@ -158,7 +158,7 @@ interfaces:
 `, dnsTestNic))
 }
 
-var _ = Describe("Dns configuration", func() {
+var _ = Describe("DNS configuration", func() {
 	Context("when desiredState is configured", func() {
 		var (
 			searchDomain1 = "fufu.ostest.test.metalkube.org"
@@ -174,12 +174,12 @@ var _ = Describe("Dns configuration", func() {
 			Context("with V4 upstream servers", func() {
 				BeforeEach(func() {
 					// read primary DNS server from one of the nodes
-					serverList := dnsResolverForNode(nodes[0], "dns-resolver.running.server")
+					serverList := currentStateByNode(nodes[0]).DNS.Running.Server
 					updateDesiredStateAndWait(
 						dhcpAwareDNSConfig(
 							searchDomain1,
 							searchDomain2,
-							extractDNSServerAddress(serverList[0]),
+							extractDNSServerAddress((*serverList)[0]),
 							server1V4,
 							dnsTestNic,
 						),
@@ -205,12 +205,12 @@ var _ = Describe("Dns configuration", func() {
 			Context("with V6 upstream servers", func() {
 				BeforeEach(func() {
 					// read primary DNS server from one of the nodes
-					serverList := dnsResolverForNode(nodes[0], "dns-resolver.running.server")
+					serverList := currentStateByNode(nodes[0]).DNS.Running.Server
 					updateDesiredStateAndWait(
 						dhcpAwareDNSConfig(
 							searchDomain1,
 							searchDomain2,
-							extractDNSServerAddress(serverList[0]),
+							extractDNSServerAddress((*serverList)[0]),
 							server1V6,
 							dnsTestNic,
 						),
@@ -246,13 +246,13 @@ var _ = Describe("Dns configuration", func() {
 			Context("with V4 upstream servers", func() {
 				BeforeEach(func() {
 					// read primary DNS server from one of the nodes
-					serverList := dnsResolverForNode(designatedNode, "dns-resolver.running.server")
+					serverList := currentStateByNode(nodes[0]).DNS.Running.Server
 					updateDesiredStateAtNodeAndWait(
 						designatedNode,
 						staticIPAndGwConfig(
 							searchDomain1,
 							searchDomain2,
-							extractDNSServerAddress(serverList[0]),
+							extractDNSServerAddress((*serverList)[0]),
 							server1V4,
 							dnsTestNic,
 							designatedNodeIP,
@@ -275,13 +275,13 @@ var _ = Describe("Dns configuration", func() {
 			Context("with V6 upstream servers", func() {
 				BeforeEach(func() {
 					// read primary DNS server from one of the nodes
-					serverList := dnsResolverForNode(designatedNode, "dns-resolver.running.server")
+					serverList := currentStateByNode(nodes[0]).DNS.Running.Server
 					updateDesiredStateAtNodeAndWait(
 						designatedNode,
 						staticIPAndGwConfig(
 							searchDomain1,
 							searchDomain2,
-							extractDNSServerAddress(serverList[0]),
+							extractDNSServerAddress((*serverList)[0]),
 							server1V6,
 							dnsTestNic,
 							designatedNodeIP,

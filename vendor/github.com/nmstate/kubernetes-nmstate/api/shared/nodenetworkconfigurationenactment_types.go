@@ -20,6 +20,7 @@ package shared
 import (
 	"fmt"
 
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -29,7 +30,7 @@ type NodeNetworkConfigurationEnactmentStatus struct {
 	// +kubebuilder:validation:XPreserveUnknownFields
 	// The desired state rendered for the enactment's node using
 	// the policy desiredState as template
-	DesiredState State `json:"desiredState,omitempty"`
+	DesiredState nmstateapiv2.NetworkState `json:"desiredState,omitempty"`
 
 	DesiredStateMetaInfo NodeNetworkConfigurationEnactmentMetaInfo `json:"desiredStateMetaInfo,omitempty"`
 

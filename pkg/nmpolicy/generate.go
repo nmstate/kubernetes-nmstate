@@ -18,10 +18,13 @@ limitations under the License.
 package nmpolicy
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
+
 	"github.com/nmstate/nmpolicy/nmpolicy"
 	nmpolicytypes "github.com/nmstate/nmpolicy/nmpolicy/types"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
@@ -50,7 +53,7 @@ func GenerateState(desiredState nmstateapi.State,
 	currentState nmstateapi.State,
 	cachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState) (
 	map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState, /* resolved captures */
-	nmstateapi.State, /* updated desired state */
+	nmstateapiv2.NetworkState, /* updated desired state */
 	error) {
 	return GenerateStateWithStateGenerator(GenerateStateWithNMPolicy{}, desiredState, policySpec, currentState, cachedState)
 }
@@ -62,7 +65,7 @@ func GenerateStateWithStateGenerator(stateGenerator NMPolicyGenerator,
 	currentState nmstateapi.State,
 	cachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState) (
 	map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState,
-	nmstateapi.State, error) {
+	nmstateapiv2.NetworkState, error) {
 	nmpolicySpec := nmpolicytypes.PolicySpec{
 		Capture:      policySpec.Capture,
 		DesiredState: []byte(desiredState.Raw),
@@ -74,15 +77,19 @@ func GenerateStateWithStateGenerator(stateGenerator NMPolicyGenerator,
 	)
 	if err != nil {
 		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
-			nmstateapi.State{}, err
+			nmstateapiv2.NetworkState{}, err
 	}
 
-	capturedStates, desiredState := convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState)
-	return capturedStates, desiredState, nil
+	capturedStates, generatedDesiredState, err := convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState)
+	if err != nil {
+		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+			nmstateapiv2.NetworkState{}, err
+	}
+	return capturedStates, generatedDesiredState, nil
 }
 
 func convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState nmpolicytypes.GeneratedState) (
-	map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState, nmstateapi.State) {
+	map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState, nmstateapiv2.NetworkState, error) {
 	capturedStates := map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{}
 
 	for captureKey, capturedState := range nmpolicyGeneratedState.Cache.Capture {
@@ -94,7 +101,11 @@ func convertGeneratedStateToEnactmentConfig(nmpolicyGeneratedState nmpolicytypes
 		}
 		capturedStates[captureKey] = capturedState
 	}
-	return capturedStates, nmstateapi.State{Raw: []byte(nmpolicyGeneratedState.DesiredState)}
+	generatedDesiredState := nmstateapiv2.NetworkState{}
+	if err := yaml.Unmarshal([]byte(nmpolicyGeneratedState.DesiredState), &generatedDesiredState); err != nil {
+		return nil, generatedDesiredState, err
+	}
+	return capturedStates, generatedDesiredState, nil
 }
 
 func convertCachedStateFromEnactment(

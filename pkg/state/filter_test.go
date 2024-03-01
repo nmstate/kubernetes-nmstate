@@ -21,6 +21,10 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"sigs.k8s.io/yaml"
+
+	nmstateapiv2 "github.com/nmstate/nmstate/rust/src/go/api/v2"
+
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
@@ -28,6 +32,18 @@ var _ = Describe("FilterOut", func() {
 	var (
 		state, filteredState nmstate.State
 	)
+
+	var unmarshalState = func() *nmstateapiv2.NetworkState {
+		unmarshaledState := &nmstateapiv2.NetworkState{}
+		Expect(yaml.Unmarshal(state.Raw, unmarshaledState)).To(Succeed())
+		return unmarshaledState
+	}
+
+	var marshalState = func(networkState *nmstateapiv2.NetworkState) []byte {
+		marshaledState, err := yaml.Marshal(networkState)
+		Expect(err).ToNot(HaveOccurred())
+		return marshaledState
+	}
 
 	Context("when there is a linux bridge with gc-timer and hello-timer", func() {
 		BeforeEach(func() {
@@ -123,9 +139,9 @@ routes:
 `)
 		})
 		It("should remove dynamic attributes from linux-bridge interface", func() {
-			returnedState, err := filterOut(state)
+			returnedState, err := filterOut(unmarshalState())
 			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(marshalState(returnedState)).To(MatchYAML(filteredState))
 		})
 	})
 
@@ -164,9 +180,9 @@ routes:
 		})
 
 		It("should keep managed veth interface", func() {
-			returnedState, err := filterOut(state)
+			returnedState, err := filterOut(unmarshalState())
 			Expect(err).NotTo(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(marshalState(returnedState)).To(MatchYAML(filteredState))
 		})
 	})
 
@@ -187,7 +203,7 @@ routes:
     next-hop-interface: vethab6030bd
     table-id: 254
 `)
-			filteredState = nmstate.NewState(`interfaces: []
+			filteredState = nmstate.NewState(`
 routes:
   config: []
   running: []
@@ -195,9 +211,9 @@ routes:
 		})
 
 		It("should filter unmanaged veth interface", func() {
-			returnedState, err := filterOut(state)
+			returnedState, err := filterOut(unmarshalState())
 			Expect(err).NotTo(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(marshalState(returnedState)).To(MatchYAML(filteredState))
 		})
 	})
 
@@ -291,9 +307,9 @@ routes:
 `)
 		})
 		It("should filter out all unmanaged veth interfaces", func() {
-			returnedState, err := filterOut(state)
+			returnedState, err := filterOut(unmarshalState())
 			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(marshalState(returnedState)).To(MatchYAML(filteredState))
 		})
 	})
 
@@ -320,9 +336,9 @@ dns-resolver:
 		})
 
 		It("Should keep the DNS Resolver intact", func() {
-			returnedState, err := filterOut(state)
+			returnedState, err := filterOut(unmarshalState())
 			Expect(err).ToNot(HaveOccurred())
-			Expect(returnedState).To(MatchYAML(state))
+			Expect(marshalState(returnedState)).To(MatchYAML(state))
 		})
 	})
 })
