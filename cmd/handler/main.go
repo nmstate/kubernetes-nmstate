@@ -124,6 +124,7 @@ func mainHandler() int {
 	if environment.IsHandler() {
 		cacheResourcesOnNodes(&ctrlOptions)
 	}
+	setupLog.Info("Creating manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -188,6 +189,7 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 }
 
 func setupHandlerControllers(mgr manager.Manager) error {
+	setupLog.Info("Creating Node controller")
 	if err := (&controllers.NodeReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("Node"),
@@ -197,12 +199,14 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		return err
 	}
 
+	setupLog.Info("Creating non cached client")
 	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme(), Mapper: mgr.GetRESTMapper()})
 	if err != nil {
 		setupLog.Error(err, "failed creating non cached client")
 		return err
 	}
 
+	setupLog.Info("Creating NodeNetworkConfigurationPolicy controller")
 	if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
 		Client:    mgr.GetClient(),
 		APIClient: apiClient,
@@ -214,6 +218,7 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		return err
 	}
 
+	setupLog.Info("Creating NodeNetworkConfigurationEnactment controller")
 	if err = (&controllers.NodeNetworkConfigurationEnactmentReconciler{
 		Client: mgr.GetClient(),
 		Log:    ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationEnactment"),
@@ -242,6 +247,7 @@ func createHealthyFile() error {
 }
 
 func checkNmstateIsWorking() error {
+	setupLog.Info("Checking availability of nmstatectl")
 	_, err := nmstatectl.Show()
 	if err != nil {
 		setupLog.Error(err, "failed checking nmstatectl health")
@@ -287,6 +293,7 @@ func retrieveCertAndCAIntervals() (certificate.Options, error) {
 }
 
 func setupCertManager(mgr manager.Manager, certManagerOpts certificate.Options) error {
+	setupLog.Info("Creating cert-manager")
 	certManager, err := certificate.NewManager(mgr.GetClient(), &certManagerOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to create cert-manager", "controller", "cert-manager")
