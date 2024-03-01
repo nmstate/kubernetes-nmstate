@@ -146,8 +146,9 @@ var _ = Describe("OVS Bridge", func() {
 		Context("with capture", func() {
 			BeforeEach(func() {
 				capture := map[string]string{
-					"ethernet-ifaces":  `interfaces.type=="ethernet"`,
-					"secondary-ifaces": `capture.ethernet-ifaces | interfaces.ipv4.enabled==false`,
+					"ethernet-ifaces":             `interfaces.type=="ethernet"`,
+					"ethernet-not-ignored-ifaces": `capture.ethernet-ifaces | interfaces.state!="ignore"`,
+					"secondary-ifaces":            `capture.ethernet-not-ignored-ifaces | interfaces.ipv4.enabled==false`,
 				}
 				updateDesiredStateWithCaptureAndWait(
 					ovsBrUpLAGEth1AndEth2(
@@ -254,9 +255,10 @@ var _ = Describe("OVS Bridge", func() {
 			BeforeEach(func() {
 				By("Creating policy with desiredState")
 				capture := map[string]string{
-					"first-secondary-iface": fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
-					"ethernet-ifaces":       `interfaces.type=="ethernet"`,
-					"secondary-ifaces":      `capture.ethernet-ifaces | interfaces.ipv4.enabled==false`,
+					"first-secondary-iface":       fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
+					"ethernet-ifaces":             `interfaces.type=="ethernet"`,
+					"ethernet-not-ignored-ifaces": `capture.ethernet-ifaces | interfaces.state!="ignore"`,
+					"secondary-ifaces":            `capture.ethernet-not-ignored-ifaces | interfaces.ipv4.enabled==false`,
 				}
 
 				macAddr = `"{{ capture.first-secondary-iface.interfaces.0.mac-address }}"`
