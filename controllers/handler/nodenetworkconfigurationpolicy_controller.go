@@ -53,6 +53,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmpolicy"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
@@ -177,7 +178,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 	}
 
 	enactmentConditions := enactmentconditions.New(r.APIClient, nmstateapi.EnactmentKey(nodeName, instance.Name))
-
 	err = r.fillInEnactmentStatus(instance, enactmentInstance, enactmentConditions)
 	if err != nil {
 		log.Error(err, "failed filling in the NNCE status")
@@ -331,6 +331,36 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 	return &enactmentInstance, nil
 }
 
+func (r *NodeNetworkConfigurationPolicyReconciler) reportStatistics(oldDesiredState, newDesiredState nmstateapi.State) {
+	log := r.Log.WithName("reportStatistics")
+	oldStats, err := nmstatectl.Statistic(oldDesiredState)
+	if err != nil {
+		log.Error(err, "failed retrieving stats for old desired state")
+		return
+	}
+	newStats, err := nmstatectl.Statistic(newDesiredState)
+	if err != nil {
+		log.Error(err, "failed retrieving stats for new desired state")
+		return
+	}
+
+	statsToInc := newStats.Substract(oldStats)
+	for t, _ := range statsToInc.Topology {
+		monitoring.ApplyTopologyTotal.WithLabelValues(t).Inc()
+	}
+	for f, _ := range statsToInc.Features {
+		monitoring.ApplyFeaturesTotal.WithLabelValues(f).Inc()
+	}
+
+	statsToDel := oldStats.Substract(newStats)
+	for t, _ := range statsToDel.Topology {
+		monitoring.ApplyTopologyTotal.WithLabelValues(t).Dec()
+	}
+	for f, _ := range statsToDel.Features {
+		monitoring.ApplyFeaturesTotal.WithLabelValues(f).Dec()
+	}
+}
+
 func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	enactmentInstance *nmstatev1beta1.NodeNetworkConfigurationEnactment,
@@ -340,12 +370,15 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		return err
 	}
 
+	oldDesiredState := enactmentInstance.Status.DesiredState
+
 	capturedStates, generatedDesiredState, err := nmpolicy.GenerateState(
 		policy.Spec.DesiredState,
 		policy.Spec,
 		nmstateapi.NewState(currentState),
 		enactmentInstance.Status.CapturedStates,
 	)
+
 	if err != nil {
 		err2 := enactmentstatus.Update(
 			r.APIClient,
@@ -365,6 +398,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	if err != nil {
 		return err
 	}
+
+	r.reportStatistics(oldDesiredState, generatedDesiredState)
 
 	return enactmentstatus.Update(
 		r.APIClient,
