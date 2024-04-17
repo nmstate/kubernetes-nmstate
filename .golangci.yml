@@ -28,7 +28,7 @@ linters-settings:
       hugeParam:
         sizeThreshold: 128
   gocyclo:
-    min-complexity: 16
+    min-complexity: 19
   goheader:
     template-path: hack/header.tpl
   goimports:

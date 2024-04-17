@@ -102,6 +102,10 @@ spec:
                   version:
                     type: string
                 type: object
+              features:
+                items:
+                  type: string
+                type: array
               policyGeneration:
                 description: The generation from policy needed to check if an enactment
                   condition status belongs to the same policy version
@@ -201,6 +205,10 @@ spec:
                   version:
                     type: string
                 type: object
+              features:
+                items:
+                  type: string
+                type: array
               policyGeneration:
                 description: The generation from policy needed to check if an enactment
                   condition status belongs to the same policy version

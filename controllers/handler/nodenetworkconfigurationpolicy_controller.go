@@ -335,6 +335,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	enactmentInstance *nmstatev1beta1.NodeNetworkConfigurationEnactment,
 	enactmentConditions enactmentconditions.EnactmentConditions) error {
+	log := r.Log.WithValues("nodenetworkconfigurationpolicy.fillInEnactmentStatus", enactmentInstance.Name)
 	currentState, err := nmstatectlShowFn()
 	if err != nil {
 		return err
@@ -366,6 +367,16 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		return err
 	}
 
+	features := []string{}
+	stats, err := nmstatectl.Statistic(desiredStateWithDefaults)
+	if err != nil {
+		log.Error(err, "failed calculating nmstate statistics")
+	} else {
+		for feature := range stats.Features {
+			features = append(features, feature)
+		}
+	}
+
 	return enactmentstatus.Update(
 		r.APIClient,
 		nmstateapi.EnactmentKey(nodeName, policy.Name),
@@ -373,6 +384,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 			status.DesiredState = desiredStateWithDefaults
 			status.CapturedStates = capturedStates
 			status.PolicyGeneration = policy.Generation
+			status.Features = features
 		},
 	)
 }

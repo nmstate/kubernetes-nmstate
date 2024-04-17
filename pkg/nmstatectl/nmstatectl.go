@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
@@ -93,4 +94,50 @@ func Rollback() error {
 		return errors.Wrapf(err, "failed calling nmstatectl rollback")
 	}
 	return nil
+}
+
+type Stats struct {
+	Features map[string]bool
+}
+
+func NewStats(features []string) *Stats {
+	stats := Stats{
+		Features: map[string]bool{},
+	}
+	for _, f := range features {
+		stats.Features[f] = true
+	}
+	return &stats
+}
+
+func (s *Stats) Subtract(statsToSubstract *Stats) Stats {
+	// Clone the features
+	result := Stats{Features: map[string]bool{}}
+	for k, v := range s.Features {
+		result.Features[k] = v
+	}
+
+	// Subtract the selected ones
+	for f := range statsToSubstract.Features {
+		delete(result.Features, f)
+	}
+	return result
+}
+
+func Statistic(desiredState nmstate.State) (*Stats, error) {
+	statsOutput, err := nmstatectlWithInput(
+		[]string{"st", "-"},
+		string(desiredState.Raw),
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed calling nmstatectl statistics")
+	}
+	stats := struct {
+		Features []string `json:"features"`
+	}{}
+	err = yaml.Unmarshal([]byte(statsOutput), &stats)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshaling nmstatectl statistics")
+	}
+	return NewStats(stats.Features), nil
 }
