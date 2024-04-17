@@ -60,6 +60,16 @@ rules:
   verbs:
   - '*'
 - apiGroups:
+  - monitoring.coreos.com
+  resources:
+  - servicemonitors
+  verbs:
+  - create
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
   - nmstate.io
   resources:
   - '*'

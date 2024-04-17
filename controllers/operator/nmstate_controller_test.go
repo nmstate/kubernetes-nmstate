@@ -281,6 +281,15 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
 			}
 		})
+		It("should add InfraNodeSelector to metrics deployment", func() {
+			deployment := &appsv1.Deployment{}
+			metricsKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-metrics"}
+			err := cl.Get(context.TODO(), metricsKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			for k, v := range infraNodeSelector {
+				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
+			}
+		})
 		It("should NOT add InfraNodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
 			err := cl.Get(context.TODO(), handlerKey, ds)
@@ -324,6 +333,14 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
 		})
+		It("should add InfraTolerations to metrics deployment", func() {
+			deployment := &appsv1.Deployment{}
+			metricsKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-metrics"}
+			err := cl.Get(context.TODO(), metricsKey, deployment)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
+		})
+
 		It("should NOT add InfraTolerations to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
 			err := cl.Get(context.TODO(), handlerKey, ds)

@@ -51,13 +51,6 @@ rules:
   verbs:
   - '*'
 - apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - get
-  - create
-- apiGroups:
   - apps
   resourceNames:
   - nmstate-handler
@@ -73,6 +66,23 @@ rules:
   - get
   - create
   - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-monitor
+  namespace: {{ .HandlerNamespace }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - endpoints
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -118,6 +128,18 @@ rules:
   - configmaps
   verbs:
   - "*"
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
 {{- if .IsOpenShift }}
 - apiGroups:
   - security.openshift.io

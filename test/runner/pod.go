@@ -18,6 +18,7 @@ limitations under the License.
 package runner
 
 import (
+	"fmt"
 	"strings"
 
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ import (
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
-func nmstateHandlerPods() ([]string, error) {
+func nmstatePods(component string) ([]string, error) {
 	output, err := cmd.Kubectl(
 		"get",
 		"pod",
@@ -37,11 +38,19 @@ func nmstateHandlerPods() ([]string, error) {
 		"-o",
 		"custom-columns=:metadata.name",
 		"-l",
-		"component=kubernetes-nmstate-handler",
+		fmt.Sprintf("component=%s", component),
 	)
 	ExpectWithOffset(2, err).ToNot(HaveOccurred())
 	names := strings.Split(strings.TrimSpace(output), "\n")
 	return names, err
+}
+
+func nmstateHandlerPods() ([]string, error) {
+	return nmstatePods("kubernetes-nmstate-handler")
+}
+
+func nmstateMetricsPods() ([]string, error) {
+	return nmstatePods("kubernetes-nmstate-metrics")
 }
 
 func runAtPod(pod string, arguments ...string) string {
@@ -69,4 +78,11 @@ func RunAtHandlerPods(arguments ...string) {
 	handlerPods, err := nmstateHandlerPods()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	runAtPods(handlerPods, arguments...)
+}
+
+func RunAtMetricsPod(arguments ...string) string {
+	metricsPods, err := nmstateMetricsPods()
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	ExpectWithOffset(1, metricsPods).ToNot(BeEmpty())
+	return runAtPod(metricsPods[0], arguments...)
 }
