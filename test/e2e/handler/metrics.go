@@ -20,8 +20,6 @@ package handler
 import (
 	"strings"
 
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
-
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/runner"
 )
@@ -29,7 +27,7 @@ import (
 func getMetrics(token string) map[string]string {
 	bearer := "Authorization: Bearer " + token
 	return indexMetrics(runner.RunAtMetricsPod("curl", "-s", "-k", "--header",
-		bearer, metrics.DefaultBindAddress, "https://127.0.0.1:8443/metrics"))
+		bearer, ":8089", "https://127.0.0.1:8443/metrics"))
 }
 
 func getPrometheusToken() (string, error) {
