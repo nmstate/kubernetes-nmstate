@@ -129,7 +129,7 @@ func mainHandler() int {
 	}
 	ctrlOptions := ctrl.Options{
 		Scheme:             scheme,
-		MetricsBindAddress: metrics.DefaultBindAddress, // Explicitly enable metrics
+		MetricsBindAddress: ":8089", // Explicitly enable metrics
 	}
 
 	if environment.IsHandler() {
