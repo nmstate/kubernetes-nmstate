@@ -73,7 +73,7 @@ spec:
         - args:
           - --logtostderr
           - --secure-listen-address=:8443
-          - --upstream=http://127.0.0.1:8080
+          - --upstream=http://127.0.0.1:8089
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
