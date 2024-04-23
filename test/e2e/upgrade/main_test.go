@@ -53,9 +53,14 @@ var (
 )
 
 var (
-	manifestFiles           = []string{"namespace.yaml", "service_account.yaml", "operator.yaml", "role.yaml", "role_binding.yaml"}
-	latestOperator          = operator.NewOperatorTestData("nmstate", latestManifestsDir, manifestFiles)
-	previousReleaseOperator = operator.NewOperatorTestData("nmstate", previousReleaseManifestsDir, manifestFiles)
+	manifestFiles = []string{
+		"namespace.yaml",
+		"service_account.yaml",
+		"operator.yaml",
+		"role.yaml",
+		"role_binding.yaml",
+	}
+	latestOperator, previousReleaseOperator operator.TestData
 )
 
 func TestE2E(t *testing.T) {
@@ -68,6 +73,9 @@ func TestE2E(t *testing.T) {
 var _ = BeforeSuite(func() {
 	// Change to root directory some test expect that
 	os.Chdir("../../../")
+
+	latestOperator = operator.NewOperatorTestData("nmstate", latestManifestsDir, manifestFiles)
+	previousReleaseOperator = operator.NewOperatorTestData("nmstate", previousReleaseManifestsDir, manifestFiles)
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 

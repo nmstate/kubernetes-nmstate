@@ -108,9 +108,10 @@ var _ = Describe("NMState operator", func() {
 		})
 		Context("and another handler is installed with different namespace", func() {
 			var (
-				altOperator = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE")+"-alt", manifestsDir, manifestFiles)
+				altOperator TestData
 			)
 			BeforeEach(func() {
+				altOperator = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE")+"-alt", manifestsDir, manifestFiles)
 				By("Wait for operand to be ready")
 				EventuallyOperandIsReady(defaultOperator)
 
@@ -197,6 +198,7 @@ func drainNode(nodeName string) func() {
 		Ctx:                 context.TODO(),
 		Client:              testenv.KubeClient,
 		IgnoreAllDaemonSets: true,
+		DeleteEmptyDirData:  true,
 		Out:                 GinkgoWriter,
 		ErrOut:              GinkgoWriter,
 	}

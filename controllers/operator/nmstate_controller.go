@@ -70,6 +70,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;get
 // +kubebuilder:rbac:groups="console.openshift.io",resources=consoleplugins,verbs="*"
 // +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
+// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors,verbs=list;get;watch;update;create
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()

@@ -88,8 +88,6 @@ func networkManagerLogsWriter(nodes []string, sinceTime time.Time) func(io.Write
 }
 
 func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
-	podLogOpts := corev1.PodLogOptions{}
-	podLogOpts.SinceTime = &metav1.Time{Time: sinceTime}
 	podList := &corev1.PodList{}
 	err := testenv.Client.List(context.TODO(), podList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
@@ -101,20 +99,28 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 		if !hasAppLabel || appLabel != "kubernetes-nmstate" {
 			continue
 		}
-		req := podsClientset.GetLogs(pod.Name, &podLogOpts)
-		podLogs, err := req.Stream(context.TODO())
-		if err != nil {
-			io.WriteString(GinkgoWriter, fmt.Sprintf("error in opening stream: %v\n", err))
-			continue
+		for containerIndex := range pod.Spec.Containers {
+			containerName := pod.Spec.Containers[containerIndex].Name
+			podLogOpts := corev1.PodLogOptions{
+				SinceTime: &metav1.Time{Time: sinceTime},
+				Container: containerName,
+			}
+			podLogOpts.SinceTime = &metav1.Time{Time: sinceTime}
+			req := podsClientset.GetLogs(pod.Name, &podLogOpts)
+			podLogs, err := req.Stream(context.TODO())
+			if err != nil {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("error in opening stream: %v\n", err))
+				continue
+			}
+			defer podLogs.Close()
+			rawLogs, err := io.ReadAll(podLogs)
+			if err != nil {
+				io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
+				continue
+			}
+			formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
+			io.WriteString(writer, formattedLogs)
 		}
-		defer podLogs.Close()
-		rawLogs, err := io.ReadAll(podLogs)
-		if err != nil {
-			io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
-			continue
-		}
-		formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
-		io.WriteString(writer, formattedLogs)
 	}
 }
 

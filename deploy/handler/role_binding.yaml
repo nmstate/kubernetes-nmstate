@@ -42,3 +42,17 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   name: {{template "handlerPrefix" .}}nmstate-handler-events
   namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-monitor
+  namespace: {{ .HandlerNamespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{template "handlerPrefix" .}}nmstate-monitor
+subjects:
+- kind: ServiceAccount
+  name: prometheus-k8s
+  namespace: {{template "handlerPrefix" .}}monitoring

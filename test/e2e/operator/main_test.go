@@ -42,7 +42,7 @@ var (
 	nodes            []string
 	knmstateReporter *knmstatereporter.KubernetesNMStateReporter
 	manifestFiles    = []string{"namespace.yaml", "service_account.yaml", "operator.yaml", "role.yaml", "role_binding.yaml"}
-	defaultOperator  = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE"), manifestsDir, manifestFiles)
+	defaultOperator  TestData
 )
 
 func TestE2E(t *testing.T) {
@@ -53,9 +53,10 @@ func TestE2E(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-
 	// Change to root directory some test expect that
 	os.Chdir("../../../")
+
+	defaultOperator = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE"), manifestsDir, manifestFiles)
 
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
