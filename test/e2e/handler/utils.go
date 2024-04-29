@@ -675,3 +675,11 @@ func dnsResolverForNode(node, path string) []string {
 	}
 	return arr
 }
+
+func ovnBridgeMappings(node string) string {
+	result := gjson.ParseBytes(currentStateJSON(node)).Get("ovn.bridge-mappings")
+	if result.String() == "" {
+		return "null"
+	}
+	return result.String()
+}
