@@ -576,6 +576,10 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 	}
 	return ret
 }
+func lldpNeighbors(node, iface string) string {
+	path := fmt.Sprintf("interfaces.#(name==\"%s\").lldp.neighbors", iface)
+	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
+}
 
 func lldpEnabled(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").lldp.enabled", iface)
