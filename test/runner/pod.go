@@ -84,5 +84,5 @@ func RunAtMetricsPod(arguments ...string) string {
 	metricsPods, err := nmstateMetricsPods()
 	ExpectWithOffset(1, err).ToNot(HaveOccurred())
 	ExpectWithOffset(1, metricsPods).ToNot(BeEmpty())
-	return runAtPod(metricsPods[0], arguments...)
+	return runAtPod(metricsPods[0], append([]string{"-c", "nmstate-metrics"}, arguments...)...)
 }
