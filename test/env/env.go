@@ -33,15 +33,17 @@ import (
 )
 
 var (
-	cfg               *rest.Config
-	Client            client.Client         // You'll be using this client in your tests.
-	KubeClient        *kubernetes.Clientset // You'll be using this client in your tests.
-	testEnv           *envtest.Environment
-	OperatorNamespace string
+	cfg                 *rest.Config
+	Client              client.Client         // You'll be using this client in your tests.
+	KubeClient          *kubernetes.Clientset // You'll be using this client in your tests.
+	testEnv             *envtest.Environment
+	OperatorNamespace   string
+	MonitoringNamespace string
 )
 
 func TestMain() {
 	OperatorNamespace = environment.GetVarWithDefault("OPERATOR_NAMESPACE", "nmstate")
+	MonitoringNamespace = environment.GetVarWithDefault("MONITORING_NAMESPACE", "monitoring")
 }
 
 func Start() {
