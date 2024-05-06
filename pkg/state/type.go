@@ -28,6 +28,7 @@ type rootState struct {
 	Interfaces  []interfaceState `json:"interfaces"             yaml:"interfaces"`
 	Routes      *routes          `json:"routes,omitempty"       yaml:"routes,omitempty"`
 	DNSResolver *dnsResolver     `json:"dns-resolver,omitempty" yaml:"dns-resolver,omitempty"`
+	Ovn         *bridgeMappings  `json:"ovn,omitempty"          yaml:"ovn,omitempty"`
 }
 
 type routes struct {
@@ -101,4 +102,14 @@ func (r *routeState) UnmarshalJSON(b []byte) error {
 	r.Data["next-hop-interface"] = fields.NextHopInterface
 	r.routeFields = fields
 	return nil
+}
+
+type bridgeMappings struct {
+	PhysicalNetworkMappings []PhysicalNetworks `json:"bridge-mappings,omitempty" yaml:"bridge-mappings,omitempty"`
+}
+
+type PhysicalNetworks struct {
+	Name   string `json:"localnet" yaml:"localnet"`
+	Bridge string `json:"bridge" yaml:"bridge"`
+	State  string `json:"state,omitempty" yaml:"state,omitempty"`
 }
