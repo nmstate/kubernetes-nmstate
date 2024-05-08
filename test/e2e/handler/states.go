@@ -331,3 +331,22 @@ func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 		)),
 	)
 }
+
+func bridgeMappings(networkName string, bridgeName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`
+ovn:
+  bridge-mappings:
+  - localnet: %s
+    bridge: %s
+    state: present
+`, networkName, bridgeName))
+}
+
+func cleanBridgeMappings(networkName string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`
+ovn:
+  bridge-mappings:
+  - localnet: %s
+    state: absent
+`, networkName))
+}

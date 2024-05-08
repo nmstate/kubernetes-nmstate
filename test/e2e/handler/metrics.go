@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
+	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
@@ -32,13 +33,12 @@ func getMetrics(token string) map[string]string {
 
 func getPrometheusToken() (string, error) {
 	const (
-		monitoringNamespace = "monitoring"
-		prometheusPod       = "prometheus-k8s-0"
-		container           = "prometheus"
-		tokenPath           = "/var/run/secrets/kubernetes.io/serviceaccount/token" // #nosec G101
+		prometheusPod = "prometheus-k8s-0"
+		container     = "prometheus"
+		tokenPath     = "/var/run/secrets/kubernetes.io/serviceaccount/token" // #nosec G101
 	)
 
-	return cmd.Kubectl("exec", "-n", monitoringNamespace, prometheusPod, "-c", container, "--", "cat", tokenPath)
+	return cmd.Kubectl("exec", "-n", testenv.MonitoringNamespace, prometheusPod, "-c", container, "--", "cat", tokenPath)
 }
 
 func indexMetrics(metrics string) map[string]string {
