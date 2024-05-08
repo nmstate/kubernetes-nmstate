@@ -29,6 +29,7 @@ PLUGIN_IMAGE ?= $(IMAGE_REGISTRY)/$(PLUGIN_IMAGE_FULL_NAME)
 
 export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
+export MONITORING_NAMESPACE ?= monitoring
 HANDLER_PULL_POLICY ?= Always
 OPERATOR_PULL_POLICY ?= Always
 export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
@@ -186,14 +187,14 @@ test/unit: test/unit/api
 	NODE_NAME=node01 $(GINKGO) --junit-report=junit-pkg-controller-unit-test.xml $(unit_test_args) $(WHAT)
 
 test-e2e-handler:
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
 
 test-e2e-operator: manifests
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
 
 test-e2e-upgrade: manifests
 	./hack/prepare-e2e-test-upgrade.sh
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/upgrade ...
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/upgrade ...
 
 test-e2e: test-e2e-operator test-e2e-handler
 
