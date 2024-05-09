@@ -25,15 +25,20 @@ import re
 import requests
 from requests_kerberos import HTTPKerberosAuth
 import sys
+import urllib3
 
 check_version = sys.argv[1]
 rhel_version = 8
 if float(check_version) > 4.13:
     rhel_version = 9
 
+# Some of the URLs used below use custom CA not always present in the default Python bundle.
+# Skipping them and disabling warnings so that console output is not polluted.
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
 base_url = 'https://errata.devel.redhat.com'
 start_page = base_url + f'/package/show/openshift-kubernetes-nmstate-handler-rhel-{rhel_version}-container'
-r = requests.get(start_page, auth=HTTPKerberosAuth())
+r = requests.get(start_page, auth=HTTPKerberosAuth(), verify=False)
 page = r.text
 version_re = re.compile('title=".* (\d+\.\d+\.\d+) .*".*\n.*\n.*\n.*href="(/release_engineering/show_released_build/\d+)"', flags=re.M)
 links = version_re.findall(page)
@@ -44,17 +49,17 @@ for link in links:
     if not version.startswith(check_version):
         continue
     # Find link to brew build
-    build_r = requests.get(base_url + build, auth=HTTPKerberosAuth(), headers={'Accept': 'text/html'})
+    build_r = requests.get(base_url + build, auth=HTTPKerberosAuth(), headers={'Accept': 'text/html'}, verify=False)
     build_page = build_r.text
     brew_re = re.compile('href="(https://brewweb.engineering.redhat.com/brew/buildinfo\?buildID=\d+)')
     brews = brew_re.findall(build_page)
     # Find link to x86_64.log
-    brew_r = requests.get(brews[0])
+    brew_r = requests.get(brews[0], verify=False)
     brew_page = brew_r.text
     log_re = re.compile('"(https://download.eng.bos.redhat.com/brewroot[^\'"]*/x86_64.log)"')
     logs = log_re.findall(brew_page)
     # Grab the NMState and NetworkManager versions from Brew logs
-    log_r = requests.get(logs[0])
+    log_r = requests.get(logs[0], verify=False)
     log_page = log_r.text
     nmstate_re = re.compile('Installing *: *(nmstate-\d[^ ]*)')
     nmstates = nmstate_re.findall(log_page)
