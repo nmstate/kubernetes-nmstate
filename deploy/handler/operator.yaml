@@ -205,7 +205,7 @@ spec:
         component: kubernetes-nmstate-cert-manager
         name: {{template "handlerPrefix" .}}nmstate-cert-manager
       annotations:
-        description: kubernetes-nmstate-webhook rotate webhook certs
+        description: kubernetes-nmstate-cert-manager rotate webhook certs
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
