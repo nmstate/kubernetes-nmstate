@@ -78,3 +78,5 @@ spec:
               value: {{ .HandlerPullPolicy }}
             - name: HANDLER_NAMESPACE
               value: {{ .HandlerNamespace }}
+            - name: KUBE_RBAC_PROXY_IMAGE
+              value: {{ .KubeRBACProxyImage }}
