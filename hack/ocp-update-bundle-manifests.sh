@@ -57,6 +57,10 @@ spec:
     from:
       kind: DockerImage
       name: quay.io/openshift/origin-nmstate-console-plugin:${VERSION_MAJOR_MINOR}
+  - name: kube-rbac-proxy
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-kube-rbac-proxy:${VERSION_MAJOR_MINOR}
 EOF
 
 # undo changes on "root" bundle.Dockerfile (gets updated by `make bundle`)
