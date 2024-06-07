@@ -14,3 +14,7 @@ spec:
     from:
       kind: DockerImage
       name: quay.io/openshift/origin-nmstate-console-plugin:4.16
+  - name: kube-rbac-proxy
+    from:
+      kind: DockerImage
+      name: quay.io/openshift/origin-kube-rbac-proxy:4.16
