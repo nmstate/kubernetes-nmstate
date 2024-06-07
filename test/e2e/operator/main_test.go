@@ -82,13 +82,6 @@ var _ = ReportBeforeEach(func(specReport ginkgotypes.SpecReport) {
 })
 
 var _ = ReportAfterEach(func(specReport ginkgotypes.SpecReport) {
-	// XXX(mko) This is a hack because in OCP CI we notice that AfterEach reporter is hanging
-	// indefinitely. We are simply ignoring it so that tests can proceed. An ultimate solution
-	// would be to implement a proper WithTimeout context which runs "runAndWait" function in the
-	// test/reporter/reporter.go
-	if !isKubevirtciCluster() {
-		return
-	}
 	knmstateReporter.ReportAfterEach(specReport)
 })
 
