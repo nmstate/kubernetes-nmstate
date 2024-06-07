@@ -49,6 +49,9 @@ export PLUGIN_IMAGE_NAME="${PLUGIN_IMAGE_NAME:-origin-nmstate-console-plugin}"
 export PLUGIN_IMAGE_TAG="${PLUGIN_IMAGE_TAG:-${VERSION_MAJOR_MINOR}}" # TODO(chocobomb) Do we tag as "stable" or still "4.x" ?
 export PLUGIN_NAMESPACE="${NAMESPACE}"
 
+export KUBE_RBAC_PROXY_NAME="${KUBE_RBAC_PROXY_NAME:-origin-kube-rbac-proxy}"
+export KUBE_RBAC_PROXY_TAG="${KUBE_RBAC_PROXY_TAG:-${VERSION_MAJOR_MINOR}}"
+
 export BUNDLE_VERSION="${BUNDLE_VERSION:-${VERSION_MAJOR_MINOR}}" # TODO(chocobomb) X.Y or X.Y.Z here? Is this variable even used?
 export BUNDLE_IMG="${BUNDLE_IMG:-${IMAGE_REGISTRY}/${IMAGE_REPO}/kubernetes-nmstate-operator-bundle:${BUNDLE_VERSION}}" # TODO(chocobomb) Is this variable even used?
 
