@@ -278,6 +278,8 @@ spec:
                   value: Always
                 - name: HANDLER_NAMESPACE
                   value: nmstate
+                - name: KUBE_RBAC_PROXY_IMAGE
+                  value: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
                 image: quay.io/nmstate/kubernetes-nmstate-operator:latest
                 imagePullPolicy: Always
                 name: nmstate-operator
