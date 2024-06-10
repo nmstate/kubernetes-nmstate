@@ -72,7 +72,7 @@ KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK_VERSION ?= 1.21.0
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
-CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0
+CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.15.0
 OPM = hack/opm.sh
 
 LOCAL_REGISTRY ?= registry:5000
@@ -150,7 +150,7 @@ gen-crds:
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
 
 gen-rbac:
-	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/nmstate_controller.go" output:rbac:artifacts:config=deploy/operator
+	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=deploy/operator
 
 check-gen: check-manifests check-bundle
 
