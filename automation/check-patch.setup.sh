@@ -9,7 +9,10 @@ rm -rf $tmp_dir
 mkdir -p $tmp_dir
 
 if gimme --help > /dev/null 2>&1; then
-    export GIMME_GO_VERSION=$(grep '^go' go.mod |sed 's/go //')
+
+    go_mod_version=$(grep '^go' go.mod |sed 's/go //')
+    full_version=$(curl -s https://go.dev/dl/?mode=json |jq -r .[].version |grep "$go_mod_version")
+    export GIMME_GO_VERSION=$(echo $full_version |sed 's/go//')
     echo "Installing go $GIMME_GO_VERSION with gimme"
     eval "$(gimme)"
 else
