@@ -1,6 +1,6 @@
 module github.com/nmstate/kubernetes-nmstate
 
-go 1.22
+go 1.22.4
 
 require (
 	github.com/evanphx/json-patch v5.6.0+incompatible
