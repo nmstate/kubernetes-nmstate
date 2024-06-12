@@ -41,6 +41,7 @@ func main() {
 		OperatorNamespace  string
 		OperatorImage      string
 		OperatorPullPolicy string
+		KubeRBACProxyImage string
 		PluginImage        string
 	}
 
@@ -51,6 +52,7 @@ func main() {
 	operatorNamespace := flag.String("operator-namespace", "nmstate-operator", "Namespace for the NMState operator")
 	operatorImage := flag.String("operator-image", "", "Image for the NMState operator")
 	operatorPullPolicy := flag.String("operator-pull-policy", "Always", "Pull policy for the NMState operator image")
+	kubeRBACProxyImage := flag.String("kube-rbac-proxy-image", "", "Image for the kube RBAC proxy needed for metrics")
 	pluginImage := flag.String("plugin-image", "", "Image for the NMState console plugin")
 	inputDir := flag.String("input-dir", "", "Input directory")
 	outputDir := flag.String("output-dir", "", "Output directory")
@@ -64,6 +66,7 @@ func main() {
 		OperatorNamespace:  *operatorNamespace,
 		OperatorImage:      *operatorImage,
 		OperatorPullPolicy: *operatorPullPolicy,
+		KubeRBACProxyImage: *kubeRBACProxyImage,
 		PluginImage:        *pluginImage,
 	}
 
