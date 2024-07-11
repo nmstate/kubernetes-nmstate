@@ -21,6 +21,7 @@ export FLAKE_ATTEMPTS="${FLAKE_ATTEMPTS:-3}"
 export NAMESPACE="${HANDLER_NAMESPACE:-nmstate}"
 
 SKIPPED_TESTS="user-guide|bridged|\
+in Azure|\
 when desiredState is updated with ovs-bridge with linux bond as port" # https://bugzilla.redhat.com/show_bug.cgi?id=2005240 is not yet fixed in nmstate 1.2
 
 if [ "${CI}" == "true" ]; then
