@@ -8,5 +8,5 @@ set -xe
 # then we shouldn't alter the existing configuration to avoid the
 # risk of possibly breaking it
 if ! grep -E '^enabled$' /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null; then
-    ${IMAGE_BUILDER} run --rm --privileged multiarch/qemu-user-static --reset -p yes
+    ${IMAGE_BUILDER} run --rm --privileged docker.io/multiarch/qemu-user-static --reset -p yes
 fi
