@@ -25,10 +25,22 @@ import (
 )
 
 func runAtNodeWithExtras(node string, quiet bool, command ...string) (string, error) {
-	ssh := environment.GetVarWithDefault("SSH", "./cluster/ssh.sh")
-	sshCommand := []string{node, "--"}
-	sshCommand = append(sshCommand, command...)
-	output, err := cmd.Run(ssh, quiet, sshCommand...)
+	var output string
+	var err error
+	useKubectlDebugNode := environment.GetVarWithDefault("USE_KUBECTL_DEBUG_NODE", "false")
+
+	if useKubectlDebugNode == "false" {
+		ssh := environment.GetVarWithDefault("SSH", "./cluster/ssh.sh")
+		sshCommand := []string{node, "--"}
+		sshCommand = append(sshCommand, command...)
+		output, err = cmd.Run(ssh, quiet, sshCommand...)
+	} else {
+		kubectl := environment.GetVarWithDefault("KUBECTL", "./cluster/kubectl.sh")
+		nodeCommand := []string{"debug", "node/" + node, "--", "chroot", "/host"}
+		nodeCommand = append(nodeCommand, command...)
+		output, err = cmd.Run(kubectl, quiet, nodeCommand...)
+	}
+
 	// Remove first two lines from output, ssh.sh add garbage there
 	outputLines := strings.Split(output, "\n")
 	if len(outputLines) > 2 {

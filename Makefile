@@ -67,6 +67,7 @@ export GOPROXY=direct
 export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
 export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
+export USE_KUBECTL_DEBUG_NODE ?= false
 
 KUBECTL ?= ./cluster/kubectl.sh
 OPERATOR_SDK_VERSION ?= 1.21.0
