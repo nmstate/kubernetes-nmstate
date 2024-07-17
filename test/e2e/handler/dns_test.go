@@ -158,6 +158,26 @@ interfaces:
 `, dnsTestNic))
 }
 
+func customGlobalDNSConfig(searchDomain1, searchDomain2, server1, server2 string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`dns-resolver:
+  config:
+   search:
+   - %s
+   - %s
+   server:
+   - %s
+   - %s
+`, searchDomain1, searchDomain2, server1, server2))
+}
+
+func emptyGlobalDNSConfig() nmstate.State {
+	return nmstate.NewState(`dns-resolver:
+  config:
+    server: []
+    search: []
+`)
+}
+
 var _ = Describe("Dns configuration", func() {
 	Context("when desiredState is configured", func() {
 		var (
@@ -299,6 +319,68 @@ var _ = Describe("Dns configuration", func() {
 					dnsResolverServerForNodeEventually(designatedNode).Should(ContainElement(server1V6))
 					dnsResolverSearchForNodeEventually(designatedNode).Should(ContainElement(searchDomain1))
 					dnsResolverSearchForNodeEventually(designatedNode).Should(ContainElement(searchDomain2))
+				})
+			})
+		})
+		Context("without interface", func() {
+			Context("with V4 upstream servers", func() {
+				BeforeEach(func() {
+					// read primary DNS server from one of the nodes
+					serverList := dnsResolverForNode(nodes[0], "dns-resolver.running.server")
+					updateDesiredStateAndWait(
+						customGlobalDNSConfig(
+							searchDomain1,
+							searchDomain2,
+							extractDNSServerAddress(serverList[0]),
+							server1V4,
+						),
+					)
+				})
+				AfterEach(func() {
+					updateDesiredStateAndWait(emptyGlobalDNSConfig())
+					for _, node := range nodes {
+						dnsResolverServerForNodeEventually(node).ShouldNot(ContainElement(server1V4))
+						dnsResolverSearchForNodeEventually(node).ShouldNot(ContainElement(searchDomain1))
+						dnsResolverSearchForNodeEventually(node).ShouldNot(ContainElement(searchDomain2))
+					}
+					resetDesiredStateForNodes()
+				})
+				It("should have the static V4 address", func() {
+					for _, node := range nodes {
+						dnsResolverServerForNodeEventually(node).Should(ContainElement(server1V4))
+						dnsResolverSearchForNodeEventually(node).Should(ContainElement(searchDomain1))
+						dnsResolverSearchForNodeEventually(node).Should(ContainElement(searchDomain2))
+					}
+				})
+			})
+			Context("with V6 upstream servers", func() {
+				BeforeEach(func() {
+					// read primary DNS server from one of the nodes
+					serverList := dnsResolverForNode(nodes[0], "dns-resolver.running.server")
+					updateDesiredStateAndWait(
+						customGlobalDNSConfig(
+							searchDomain1,
+							searchDomain2,
+							extractDNSServerAddress(serverList[0]),
+							server1V6,
+						),
+					)
+				})
+				AfterEach(func() {
+					updateDesiredStateAndWait(emptyGlobalDNSConfig())
+					for _, node := range nodes {
+						dnsResolverServerForNodeEventually(node).ShouldNot(ContainElement(server1V6))
+						dnsResolverSearchForNodeEventually(node).ShouldNot(ContainElement(searchDomain1))
+						dnsResolverSearchForNodeEventually(node).ShouldNot(ContainElement(searchDomain2))
+					}
+					resetDesiredStateForNodes()
+				})
+				It("should have the static V6 address", func() {
+					for _, node := range nodes {
+						dnsResolverServerForNodeEventually(node).Should(ContainElement(server1V6))
+						dnsResolverSearchForNodeEventually(node).Should(ContainElement(searchDomain1))
+						dnsResolverSearchForNodeEventually(node).Should(ContainElement(searchDomain2))
+					}
 				})
 			})
 		})
