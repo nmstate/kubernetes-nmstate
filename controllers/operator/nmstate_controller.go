@@ -299,6 +299,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+	data.Data["MonitoringNamespace"] = os.Getenv("MONITORING_NAMESPACE")
 	data.Data["KubeRBACProxyImage"] = os.Getenv("KUBE_RBAC_PROXY_IMAGE")
 	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations

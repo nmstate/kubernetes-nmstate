@@ -78,5 +78,7 @@ spec:
               value: {{ .HandlerPullPolicy }}
             - name: HANDLER_NAMESPACE
               value: {{ .HandlerNamespace }}
+            - name: MONITORING_NAMESPACE
+              value: {{ .MonitoringNamespace }}
             - name: KUBE_RBAC_PROXY_IMAGE
               value: {{ .KubeRBACProxyImage }}
