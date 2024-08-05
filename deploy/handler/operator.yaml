@@ -514,9 +514,18 @@ spec:
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+    metricRelabelings:
+      - action: labeldrop
+        regex: instance
+      - action: labeldrop
+        regex: job
     relabelings:
-    - action: labeldrop
-      regex: (instance|pod|container|job|namespace|service)
+      - action: labeldrop
+        regex: pod
+      - action: labeldrop
+        regex: container
+      - action: labeldrop
+        regex: endpoint
   namespaceSelector:
     matchNames:
       - {{ .HandlerNamespace }}
