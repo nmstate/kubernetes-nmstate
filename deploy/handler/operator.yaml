@@ -511,6 +511,7 @@ metadata:
 spec:
   endpoints:
   - scheme: https
+    port: metrics
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
