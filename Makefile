@@ -171,7 +171,7 @@ check-ocp-bundle: ocp-update-bundle-manifests
 generate: gen-k8s gen-crds gen-rbac
 
 manifests:
-	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -kube-rbac-proxy-image=$(KUBE_RBAC_PROXY_IMAGE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -plugin-image=$(PLUGIN_IMAGE) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -kube-rbac-proxy-image=$(KUBE_RBAC_PROXY_IMAGE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -plugin-image=$(PLUGIN_IMAGE) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 handler: SKIP_PUSH=true
 handler: push-handler
