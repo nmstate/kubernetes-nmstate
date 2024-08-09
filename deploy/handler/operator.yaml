@@ -511,15 +511,56 @@ metadata:
 spec:
   endpoints:
   - scheme: https
+    port: metrics
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
       insecureSkipVerify: true
+    metricRelabelings:
+      - action: labeldrop
+        regex: instance
+      - action: labeldrop
+        regex: job
     relabelings:
-    - action: labeldrop
-      regex: (instance|pod|container|job|namespace|service)
+      - action: labeldrop
+        regex: pod
+      - action: labeldrop
+        regex: container
+      - action: labeldrop
+        regex: endpoint
   namespaceSelector:
     matchNames:
       - {{ .HandlerNamespace }}
   selector:
     matchLabels:
       prometheus.nmstate.io: "true"
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: prometheus-k8s
+  namespace: {{ .HandlerNamespace }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - services
+      - endpoints
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: prometheus-k8s
+  namespace: {{ .HandlerNamespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prometheus-k8s
+subjects:
+  - kind: ServiceAccount
+    name: prometheus-k8s
+    namespace: {{ .MonitoringNamespace }}

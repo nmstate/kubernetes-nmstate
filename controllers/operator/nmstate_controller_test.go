@@ -73,14 +73,15 @@ var _ = Describe("NMState controller reconcile", func() {
 				UID:  "12345",
 			},
 		}
-		handlerPrefix      = "handler"
-		handlerNamespace   = "nmstate"
-		handlerKey         = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
-		webhookKey         = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
-		handlerImage       = "quay.io/some_image"
-		kubeRBACProxyImage = "quay.io/some_kube_rbac_proxy_image"
-		imagePullPolicy    = "Always"
-		manifestsDir       = ""
+		handlerPrefix       = "handler"
+		handlerNamespace    = "nmstate"
+		handlerKey          = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
+		webhookKey          = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
+		handlerImage        = "quay.io/some_image"
+		monitoringNamespace = "monitoring"
+		kubeRBACProxyImage  = "quay.io/some_kube_rbac_proxy_image"
+		imagePullPolicy     = "Always"
+		manifestsDir        = ""
 	)
 	BeforeEach(func() {
 		var err error
@@ -103,9 +104,10 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
-		os.Setenv("HANDLER_IMAGE", handlerImage)
+		os.Setenv("RELATED_IMAGE_HANDLER_IMAGE", handlerImage)
 		os.Setenv("HANDLER_IMAGE_PULL_POLICY", imagePullPolicy)
 		os.Setenv("HANDLER_PREFIX", handlerPrefix)
+		os.Setenv("MONITORING_NAMESPACE", monitoringNamespace)
 		os.Setenv("KUBE_RBAC_PROXY_IMAGE", kubeRBACProxyImage)
 	})
 	AfterEach(func() {
