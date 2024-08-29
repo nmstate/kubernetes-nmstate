@@ -211,7 +211,7 @@ spec:
                       - name: HANDLER_NAMESPACE
                         value: openshift-nmstate
                       - name: MONITORING_NAMESPACE
-                        value: monitoring
+                        value: openshift-monitoring
                       - name: KUBE_RBAC_PROXY_IMAGE
                         value: quay.io/openshift/origin-kube-rbac-proxy:4.17
                     image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.17
