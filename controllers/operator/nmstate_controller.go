@@ -33,8 +33,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/openshift/cluster-network-operator/pkg/apply"
@@ -116,6 +118,10 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
+	if err := r.cleanupObsoleteResources(ctx, instance.Namespace); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	r.Log.Info("Reconcile complete.")
 	return ctrl.Result{}, nil
 }
@@ -178,7 +184,7 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 
@@ -296,7 +302,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["MonitoringNamespace"] = os.Getenv("MONITORING_NAMESPACE")
@@ -310,6 +316,12 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = handlerAffinity
 	data.Data["SelfSignConfiguration"] = selfSignConfiguration
+
+	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
+	if err != nil {
+		return err
+	}
+	data.Data["IsOpenShift"] = isOpenShift
 
 	return r.renderAndApply(instance, data, "handler", true)
 }
@@ -341,6 +353,26 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 			r.Log.Error(err, fmt.Sprintf("Could not update resource - APIVersion: %s, Kind: %s, Name: %s",
 				consoleObj.APIVersion, consoleObj.Kind, consoleObj.Name))
 			return err
+		}
+	}
+	return nil
+}
+
+func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context, namespace string) error {
+	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
+	if err != nil {
+		return err
+	}
+	// We are no longer using cert-manager at openshift, let's remove it
+	if isOpenShift {
+		err = r.Client.Delete(ctx, &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: namespace,
+				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
+			},
+		})
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed deleting obsolete cert-manager deployment at openshift: %w", err)
 		}
 	}
 	return nil
