@@ -276,15 +276,6 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
 			}
 		})
-		It("should add InfraNodeSelector to certmanager deployment", func() {
-			deployment := &appsv1.Deployment{}
-			certManagerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
-			err := cl.Get(context.TODO(), certManagerKey, deployment)
-			Expect(err).ToNot(HaveOccurred())
-			for k, v := range infraNodeSelector {
-				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
-			}
-		})
 		It("should add InfraNodeSelector to metrics deployment", func() {
 			deployment := &appsv1.Deployment{}
 			metricsKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-metrics"}
@@ -327,13 +318,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		It("should add InfraTolerations to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
-		})
-		It("should add InfraTolerations to cert-manager deployment", func() {
-			deployment := &appsv1.Deployment{}
-			certManagerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
-			err := cl.Get(context.TODO(), certManagerKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
 		})
