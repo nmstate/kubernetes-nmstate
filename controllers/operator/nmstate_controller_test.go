@@ -104,7 +104,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
-		os.Setenv("HANDLER_IMAGE", handlerImage)
+		os.Setenv("RELATED_IMAGE_HANDLER_IMAGE", handlerImage)
 		os.Setenv("HANDLER_IMAGE_PULL_POLICY", imagePullPolicy)
 		os.Setenv("HANDLER_PREFIX", handlerPrefix)
 		os.Setenv("MONITORING_NAMESPACE", monitoringNamespace)
@@ -276,15 +276,6 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
 			}
 		})
-		It("should add InfraNodeSelector to certmanager deployment", func() {
-			deployment := &appsv1.Deployment{}
-			certManagerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
-			err := cl.Get(context.TODO(), certManagerKey, deployment)
-			Expect(err).ToNot(HaveOccurred())
-			for k, v := range infraNodeSelector {
-				Expect(deployment.Spec.Template.Spec.NodeSelector).To(HaveKeyWithValue(k, v))
-			}
-		})
 		It("should add InfraNodeSelector to metrics deployment", func() {
 			deployment := &appsv1.Deployment{}
 			metricsKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-metrics"}
@@ -327,13 +318,6 @@ var _ = Describe("NMState controller reconcile", func() {
 		It("should add InfraTolerations to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
 			err := cl.Get(context.TODO(), webhookKey, deployment)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
-		})
-		It("should add InfraTolerations to cert-manager deployment", func() {
-			deployment := &appsv1.Deployment{}
-			certManagerKey := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
-			err := cl.Get(context.TODO(), certManagerKey, deployment)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(allTolerationsPresent(infraTolerations, deployment.Spec.Template.Spec.Tolerations)).To(BeTrue())
 		})
