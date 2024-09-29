@@ -118,7 +118,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, err
 	}
 
-	if err := r.cleanupObsoleteResources(ctx, instance.Namespace); err != nil {
+	if err := r.cleanupObsoleteResources(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -358,7 +358,7 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 	return nil
 }
 
-func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context, namespace string) error {
+func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error {
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
 	if err != nil {
 		return err
@@ -367,7 +367,7 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context, namesp
 	if isOpenShift {
 		err = r.Client.Delete(ctx, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
+				Namespace: os.Getenv("HANDLER_NAMESPACE"),
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
 			},
 		})
