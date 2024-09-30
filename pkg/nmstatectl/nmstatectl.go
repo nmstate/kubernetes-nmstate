@@ -78,7 +78,7 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	defer close(setDoneCh)
 
 	setOutput, err := nmstatectlWithInput(
-		[]string{"set", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
+		[]string{"apply", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
 		string(desiredState.Raw),
 	)
 	return setOutput, err
