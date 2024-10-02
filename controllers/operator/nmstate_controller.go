@@ -184,7 +184,7 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 
@@ -302,7 +302,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("HANDLER_IMAGE")
+	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["MonitoringNamespace"] = os.Getenv("MONITORING_NAMESPACE")
@@ -371,8 +371,19 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
 			},
 		})
-		if !apierrors.IsNotFound(err) {
+		if err != nil && apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed deleting obsolete cert-manager deployment at openshift: %w", err)
+		}
+
+		// Remove the non openshift secret
+		err = r.Client.Delete(ctx, &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: os.Getenv("HANDLER_NAMESPACE"),
+				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-webhook",
+			},
+		})
+		if err != nil && apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed deleting old webhook secret at openshift: %w", err)
 		}
 	}
 	return nil
