@@ -181,7 +181,11 @@ spec:
       volumes:
         - name: tls-key-pair
           secret:
+{{- if not .IsOpenShift }}
             secretName: {{template "handlerPrefix" .}}nmstate-webhook
+{{- else }}
+            secretName: {{template "handlerPrefix" .}}openshift-nmstate-webhook
+{{- end }}
 {{- if not .IsOpenShift }}
 ---
 apiVersion: apps/v1
@@ -391,7 +395,7 @@ metadata:
   name: {{template "handlerPrefix" .}}nmstate-webhook
   namespace: {{ .HandlerNamespace }}
   annotations:
-    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}nmstate-webhook
+    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}openshift-nmstate-webhook
   labels:
     app: kubernetes-nmstate
 spec:
