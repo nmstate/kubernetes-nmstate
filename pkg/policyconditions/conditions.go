@@ -38,7 +38,8 @@ import (
 )
 
 var (
-	log = logf.Log.WithName("policyconditions")
+	log       = logf.Log.WithName("policyconditions")
+	allErrors = func(error) bool { return true }
 )
 
 type policyConditionStatus struct {
@@ -172,8 +173,9 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
 	// conflict can denote that the calculated policy conditions
-	// are now not accurate.
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	// are now not accurate, also at node restart we have to retry en error
+	// related to certificates until nmstate-webhook pod settles.
+	return retry.OnError(retry.DefaultRetry, allErrors, func() error {
 		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 		if err := policyReader.Get(context.TODO(), policyKey, policy); err != nil {
 			return errors.Wrap(err, "getting policy failed")
