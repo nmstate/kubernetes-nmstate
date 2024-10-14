@@ -447,7 +447,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNod
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(policy *nmstatev1.NodeNetworkConfigurationPolicy) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	return retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
 		err := r.Client.Get(context.TODO(), policyKey, policy)
 		if err != nil {
 			return err
@@ -485,7 +485,7 @@ func tryDecrementingUnavailableNodeCount(
 	policyKey types.NamespacedName,
 ) error {
 	instance := &nmstatev1.NodeNetworkConfigurationPolicy{}
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
 		err := readerClient.Get(context.TODO(), policyKey, instance)
 		if err != nil {
 			return err
