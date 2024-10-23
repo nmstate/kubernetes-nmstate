@@ -16,11 +16,11 @@ metadata:
     capabilities: Basic Install
     categories: OpenShift Optional
     certified: "false"
-    containerImage: quay.io/openshift/origin-kubernetes-nmstate-operator:4.17
+    containerImage: quay.io/openshift/origin-kubernetes-nmstate-operator:4.18
     createdAt: "2022-02-21 08:46:16"
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
-    olm.skipRange: '>=4.3.0 <4.17.0'
+    olm.skipRange: '>=4.3.0 <4.18.0'
     operatorframework.io/suggested-namespace: openshift-nmstate
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/builder: operator-sdk-v1.22.2
@@ -39,7 +39,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: kubernetes-nmstate-operator.v4.17.0
+  name: kubernetes-nmstate-operator.v4.18.0
   namespace: openshift-nmstate
 spec:
   apiservicedefinitions: {}
@@ -203,9 +203,9 @@ spec:
                         value: "6060"
                       - name: RUN_OPERATOR
                       - name: HANDLER_IMAGE
-                        value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.17
+                        value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.18
                       - name: PLUGIN_IMAGE
-                        value: quay.io/openshift/origin-nmstate-console-plugin:4.17
+                        value: quay.io/openshift/origin-nmstate-console-plugin:4.18
                       - name: HANDLER_IMAGE_PULL_POLICY
                         value: Always
                       - name: HANDLER_NAMESPACE
@@ -213,8 +213,8 @@ spec:
                       - name: MONITORING_NAMESPACE
                         value: openshift-monitoring
                       - name: KUBE_RBAC_PROXY_IMAGE
-                        value: quay.io/openshift/origin-kube-rbac-proxy:4.17
-                    image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.17
+                        value: quay.io/openshift/origin-kube-rbac-proxy:4.18
+                    image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.18
                     imagePullPolicy: Always
                     name: nmstate-operator
                     resources:
@@ -273,7 +273,7 @@ spec:
     - NetworkManager
   labels:
     olm-owner-enterprise-app: kubernetes-nmstate-operator
-    olm-status-descriptors: kubernetes-nmstate-operator.v4.17.0
+    olm-status-descriptors: kubernetes-nmstate-operator.v4.18.0
   links:
     - name: Kubernetes Nmstate Operator
       url: https://github.com/nmstate/kubernetes-nmstate
@@ -286,4 +286,4 @@ spec:
   selector:
     matchLabels:
       name: kubernetes-nmstate-operator
-  version: 4.17.0
+  version: 4.18.0
