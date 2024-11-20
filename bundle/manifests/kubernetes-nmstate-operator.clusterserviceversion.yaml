@@ -343,8 +343,10 @@ spec:
   - name: Kubernetes Nmstate Operator
     url: https://github.com/nmstate/kubernetes-nmstate
   maintainers:
-  - email: brad@redhat.com
-    name: Brad P. Crochet
+  - email: ellorent@redhat.com
+    name: Enrique Llorente Pastora
+  - email: phoracek@redhat.com
+    name: Petr Horacek
   maturity: alpha
   provider:
     name: NMState
