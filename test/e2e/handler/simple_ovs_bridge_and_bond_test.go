@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
 func ovsBrUpLAGEth1AndEth2(bridgeName, bondName, port1Name, port2Name string) nmstate.State {
@@ -146,20 +147,21 @@ var _ = Describe("OVS Bridge", func() {
 		Context("with capture", func() {
 			BeforeEach(func() {
 				capture := map[string]string{
-					"ethernet-ifaces":             `interfaces.type=="ethernet"`,
-					"ethernet-not-ignored-ifaces": `capture.ethernet-ifaces | interfaces.state!="ignore"`,
-					"secondary-ifaces":            `capture.ethernet-not-ignored-ifaces | interfaces.ipv4.enabled==false`,
+					"first-secondary-nic":  fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
+					"second-secondary-nic": fmt.Sprintf(`interfaces.name=="%s"`, secondSecondaryNic),
 				}
-				updateDesiredStateWithCaptureAndWait(
+				setDesiredStateWithPolicyAndCapture(bridge1,
 					ovsBrUpLAGEth1AndEth2(
 						bridge1,
 						bond1,
-						`"{{ capture.secondary-ifaces.interfaces.0.name }}"`,
-						`"{{ capture.secondary-ifaces.interfaces.1.name }}"`,
+						`"{{ capture.first-secondary-nic.interfaces.0.name }}"`,
+						`"{{ capture.second-secondary-nic.interfaces.0.name }}"`,
 					),
 					capture,
 				)
-				deletePolicy(TestPolicy)
+
+				policy.WaitForAvailablePolicy(bridge1)
+				deletePolicy(bridge1)
 			})
 
 			It("should have the ovs-bridge at currentState", func() {
@@ -255,22 +257,21 @@ var _ = Describe("OVS Bridge", func() {
 			BeforeEach(func() {
 				By("Creating policy with desiredState")
 				capture := map[string]string{
-					"first-secondary-iface":       fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
-					"ethernet-ifaces":             `interfaces.type=="ethernet"`,
-					"ethernet-not-ignored-ifaces": `capture.ethernet-ifaces | interfaces.state!="ignore"`,
-					"secondary-ifaces":            `capture.ethernet-not-ignored-ifaces | interfaces.ipv4.enabled==false`,
+					"first-secondary-iface":  fmt.Sprintf(`interfaces.name=="%s"`, firstSecondaryNic),
+					"second-secondary-iface": fmt.Sprintf(`interfaces.name=="%s"`, secondSecondaryNic),
 				}
 
 				macAddr = `"{{ capture.first-secondary-iface.interfaces.0.mac-address }}"`
-				port1 := `"{{ capture.secondary-ifaces.interfaces.0.name }}"`
-				port2 := `"{{ capture.secondary-ifaces.interfaces.1.name }}"`
+				port1 := `"{{ capture.first-secondary-iface.interfaces.0.name }}"`
+				port2 := `"{{ capture.second-secondary-iface.interfaces.0.name }}"`
 
-				updateDesiredStateWithCaptureAtNodeAndWait(
-					designatedNode,
+				setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(bridge1,
 					ovsBrUpLAGEth1Eth2WithInternalPort(bridge1, ovsPortName, macAddr, port1, port2),
 					capture,
+					map[string]string{"kubernetes.io/hostname": designatedNode},
 				)
-				deletePolicy(TestPolicy)
+				policy.WaitForAvailablePolicy(bridge1)
+				deletePolicy(bridge1)
 			})
 
 			It("should have the ovs-bridge and internal port at currentState", func() {
