@@ -39,8 +39,7 @@ if oc get ns openshift-ovn-kubernetes &> /dev/null; then
 with ping fail|\
 when connectivity to default gw is lost after state configuration|\
 when name servers are lost after state configuration|\
-when name servers are wrong after state configuration|\
-with capture"
+when name servers are wrong after state configuration"
 fi
 
 make cluster-sync-operator
