@@ -9,7 +9,15 @@
 package shared
 
 import (
+	"fmt"
+
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
+
 	yaml "sigs.k8s.io/yaml"
+)
+
+var (
+	log = logf.Log.WithName("api_shared")
 )
 
 // We are using behind the scenes the golang encode/json so we need to return
@@ -22,6 +30,7 @@ func (t State) MarshalJSON() (output []byte, err error) {
 // Bypass State parsing and directly store it as yaml string to later on
 // pass it to namestatectl using it as transparet data at kubernetes-nmstate
 func (t *State) UnmarshalJSON(b []byte) error {
+	log.Info(fmt.Sprintf("TODO, UnmarshalJSON, b: %s", string(b)))
 	output, err := yaml.JSONToYAML(b)
 	if err != nil {
 		return err
