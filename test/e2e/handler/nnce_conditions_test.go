@@ -18,7 +18,6 @@ limitations under the License.
 package handler
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -29,14 +28,6 @@ import (
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
-
-func invalidConfig(bridgeName string) nmstate.State {
-	return nmstate.NewState(fmt.Sprintf(`interfaces:
-  - name: %s
-    type: linux-bridge
-    state: invalid_state
-`, bridgeName))
-}
 
 var _ = Describe("EnactmentCondition", func() {
 	Context("when applying valid config", func() {
@@ -76,7 +67,11 @@ var _ = Describe("EnactmentCondition", func() {
 
 	Context("when applying invalid configuration", func() {
 		BeforeEach(func() {
-			updateDesiredState(invalidConfig(bridge1))
+			updateDesiredState(nmstate.NewState(`interfaces:
+  - name: bad1
+    type: ethernet
+    state: up
+`))
 		})
 
 		AfterEach(func() {
