@@ -42,7 +42,7 @@ LINTER_IMAGE_TAG ?= v0.0.3
 
 unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
-export KUBEVIRT_PROVIDER ?= k8s-1.26-centos9
+export KUBEVIRT_PROVIDER ?= k8s-1.32
 export KUBEVIRT_NUM_NODES ?= 3 # 1 control-plane, 2 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
