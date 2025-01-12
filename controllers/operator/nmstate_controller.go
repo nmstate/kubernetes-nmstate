@@ -328,10 +328,17 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 
 func (r *NMStateReconciler) applyOpenshiftUIPlugin(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
+	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
 	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "openshift-nmstate")
 	data.Data["PluginName"] = environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
 	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")
 	data.Data["PluginPort"] = environment.GetEnvVar("PLUGIN_PORT", "9443")
+
+	// if not set in the NMState CR, these entries are nil
+	data.Data["InfraNodeSelector"] = instance.Spec.InfraNodeSelector
+	data.Data["InfraTolerations"] = instance.Spec.InfraTolerations
+	data.Data["InfraAffinity"] = instance.Spec.InfraAffinity
+
 	return r.renderAndApply(instance, data, filepath.Join("openshift", "ui-plugin"), true)
 }
 

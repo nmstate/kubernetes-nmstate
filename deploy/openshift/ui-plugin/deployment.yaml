@@ -19,6 +19,15 @@ spec:
       labels:
         app: {{ .PluginName }}
     spec:
+      {{- if .InfraNodeSelector }}
+      nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .InfraTolerations }}
+      tolerations: {{ toYaml .InfraTolerations | nindent 8 }}
+      {{- end }}
+      {{- if .InfraAffinity }}
+      affinity: {{ toYaml .InfraAffinity | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .PluginName }}
           image: {{ .PluginImage }}
