@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kubernetes-nmstate
+description: Declarative node network configuration driven through Kubernetes API.
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
