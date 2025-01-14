@@ -28,7 +28,7 @@ type NMStateSpec struct {
 	// Affinity is an optional affinity selector that will be added to handler DaemonSet manifest.
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
-	// Affinity is an optional affinity selector that will be added to webhook & certmanager Deployment manifests.
+	// InfraAffinity is an optional affinity selector that will be added to webhook, metrics & console-plugin Deployment manifests.
 	// +optional
 	InfraAffinity *corev1.Affinity `json:"infraAffinity,omitempty"`
 	// NodeSelector is an optional selector that will be added to handler DaemonSet manifest
@@ -41,13 +41,14 @@ type NMStateSpec struct {
 	// If Tolerations is specified, the handler daemonset will be also scheduled on nodes with corresponding taints
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// InfraNodeSelector is an optional selector that will be added to webhook & certmanager Deployment manifests
-	// If InfraNodeSelector is specified, the webhook and certmanager will run only on nodes that have each of the indicated
-	// key-value pairs as labels applied to the node.
+	// InfraNodeSelector is an optional selector that will be added to webhook, metrics & console-plugin Deployment manifests
+	// If InfraNodeSelector is specified, the webhook, metrics and the console plugin will run only on nodes that have each
+	// of the indicated key-value pairs as labels applied to the node.
 	// +optional
 	InfraNodeSelector map[string]string `json:"infraNodeSelector,omitempty"`
-	// InfraTolerations is an optional list of tolerations to be added to webhook & certmanager Deployment manifests
-	// If InfraTolerations is specified, the webhook and certmanager will be able to be scheduled on nodes with corresponding taints
+	// InfraTolerations is an optional list of tolerations to be added to webhook, metrics & console-plugin Deployment manifests
+	// If InfraTolerations is specified, the webhook, metrics and the console plugin will be able to be scheduled on nodes with
+	// corresponding taints
 	// +optional
 	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
 	// SelfSignConfiguration defines self signed certificate configuration
