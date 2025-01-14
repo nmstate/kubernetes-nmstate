@@ -21,6 +21,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -140,4 +141,64 @@ func Statistic(desiredState nmstate.State) (*Stats, error) {
 		return nil, errors.Wrapf(err, "failed unmarshaling nmstatectl statistics")
 	}
 	return NewStats(stats.Features), nil
+}
+
+func Policy(policy, currentState, capturedState []byte) (desiredState, generatedCapturedState []byte, err error) {
+	policyFile, err := generateFileWithContent("policy", policy)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() {
+		os.Remove(policyFile)
+	}()
+
+	args := []string{"policy"}
+	if len(currentState) > 0 {
+		var currentStateFile string
+		currentStateFile, err = generateFileWithContent("currentState", currentState)
+		if err != nil {
+			return nil, nil, err
+		}
+		defer func() {
+			os.Remove(currentStateFile)
+		}()
+		args = append(args, "--current", currentStateFile)
+	}
+
+	args = append(args, "--json")
+
+	capturedStateFile, err := generateFileWithContent("capturedState", capturedState)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer func() {
+		os.Remove(capturedStateFile)
+	}()
+	args = append(args, "--output-captured", capturedStateFile)
+	if len(capturedState) > 0 {
+		args = append(args, "--captured", capturedStateFile)
+	}
+
+	args = append(args, policyFile)
+	out, err := nmstatectl(args)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed calling nmstatectl rollback")
+	}
+	capturedState, err = os.ReadFile(capturedStateFile)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed failed reading captured state")
+	}
+	return []byte(out), capturedState, nil
+}
+
+func generateFileWithContent(name string, content []byte) (string, error) {
+	file, err := os.CreateTemp("/tmp", name)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	if _, err := file.Write(content); err != nil {
+		return "", err
+	}
+	return file.Name(), nil
 }
