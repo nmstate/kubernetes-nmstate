@@ -803,8 +803,8 @@ spec:
                     type: object
                 type: object
               infraAffinity:
-                description: Affinity is an optional affinity selector that will be
-                  added to webhook & certmanager Deployment manifests.
+                description: InfraAffinity is an optional affinity selector that will
+                  be added to webhook, metrics & console-plugin Deployment manifests.
                 properties:
                   nodeAffinity:
                     description: Describes node affinity scheduling rules for the
@@ -1569,14 +1569,15 @@ spec:
                 additionalProperties:
                   type: string
                 description: |-
-                  InfraNodeSelector is an optional selector that will be added to webhook & certmanager Deployment manifests
-                  If InfraNodeSelector is specified, the webhook and certmanager will run only on nodes that have each of the indicated
-                  key-value pairs as labels applied to the node.
+                  InfraNodeSelector is an optional selector that will be added to webhook, metrics & console-plugin Deployment manifests
+                  If InfraNodeSelector is specified, the webhook, metrics and the console plugin will run only on nodes that have each
+                  of the indicated key-value pairs as labels applied to the node.
                 type: object
               infraTolerations:
                 description: |-
-                  InfraTolerations is an optional list of tolerations to be added to webhook & certmanager Deployment manifests
-                  If InfraTolerations is specified, the webhook and certmanager will be able to be scheduled on nodes with corresponding taints
+                  InfraTolerations is an optional list of tolerations to be added to webhook, metrics & console-plugin Deployment manifests
+                  If InfraTolerations is specified, the webhook, metrics and the console plugin will be able to be scheduled on nodes with
+                  corresponding taints
                 items:
                   description: |-
                     The pod this Toleration is attached to tolerates any taint that matches
