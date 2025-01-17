@@ -28,7 +28,7 @@ import (
 func getMetrics(token string) map[string]string {
 	bearer := "Authorization: Bearer " + token
 	return indexMetrics(runner.RunAtMetricsPod("curl", "-s", "-k", "--header",
-		bearer, ":8089", "https://127.0.0.1:8443/metrics"))
+		bearer, ":8089", "https://127.0.0.1:8443/metrics", "# notsecret"))
 }
 
 func getPrometheusToken() (string, error) {
