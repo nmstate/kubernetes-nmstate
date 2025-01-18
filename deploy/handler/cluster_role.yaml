@@ -13,6 +13,7 @@ rules:
 - apiGroups:
   - nmstate.io
   resources:
+  - nmstates
   - nodenetworkstates
   - nodenetworkconfigurationpolicies
   - nodenetworkconfigurationenactments
