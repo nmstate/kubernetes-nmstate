@@ -22,7 +22,7 @@ implies following dependency requirements:
 
 ## Local Kubernetes cluster
 
-See [local virtualized cluster guide](docs/deployment-local-cluster.md) to learn
+See [local virtualized cluster guide](docs/deployment/local-cluster.md) to learn
 how to deploy a cluster that can be used to try kubernetes-nmstate, run e2e
 tests and perform debugging.
 
