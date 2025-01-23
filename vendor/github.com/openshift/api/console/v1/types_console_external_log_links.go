@@ -9,9 +9,23 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // ConsoleExternalLogLink is an extension for customizing OpenShift web console log links.
 //
 // Compatibility level 2: Stable within a major release for a minimum of 9 months or 3 minor releases (whichever is longer).
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=consoleexternalloglinks,scope=Cluster
+// +kubebuilder:subresource:status
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/481
+// +openshift:file-pattern=operatorOrdering=00
+// +openshift:capability=Console
+// +kubebuilder:metadata:annotations="description=ConsoleExternalLogLink is an extension for customizing OpenShift web console log links."
+// +kubebuilder:metadata:annotations="displayName=ConsoleExternalLogLinks"
+// +kubebuilder:printcolumn:name=Text,JSONPath=.spec.text,type=string
+// +kubebuilder:printcolumn:name=HrefTemplate,JSONPath=.spec.hrefTemplate,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,type=date
 // +openshift:compatibility-gen:level=2
 type ConsoleExternalLogLink struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec ConsoleExternalLogLinkSpec `json:"spec"`
@@ -53,6 +67,9 @@ type ConsoleExternalLogLinkSpec struct {
 // +openshift:compatibility-gen:level=2
 type ConsoleExternalLogLinkList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ConsoleExternalLogLink `json:"items"`

@@ -1,5 +1,5 @@
 #!/bin/bash -xe
-golangci_lint_version=1.55.2
+golangci_lint_version=1.63.4
 golangci_lint_url=https://github.com/golangci/golangci-lint/releases/download/v${golangci_lint_version}/golangci-lint-${golangci_lint_version}-linux-amd64.tar.gz
 golangci_cmd=/tmp/golangci-lint-${golangci_lint_version}-linux-amd64/golangci-lint
 if [ ! -f "${golangci_cmd}" ]; then

@@ -76,7 +76,7 @@ func main() {
 		exitWithError(err, "failed cleaning up output dir %s", *outputDir)
 	}
 
-	err = os.MkdirAll(*outputDir, 0755) //nolint:gomnd
+	err = os.MkdirAll(*outputDir, 0755) //nolint:mnd
 	if err != nil {
 		exitWithError(err, "failed to create output dir %s", *outputDir)
 	}

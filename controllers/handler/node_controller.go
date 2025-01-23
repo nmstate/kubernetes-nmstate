@@ -158,35 +158,35 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
-	onCreationForThisNode := predicate.Funcs{
-		CreateFunc: func(createEvent event.CreateEvent) bool {
+	onCreationForThisNode := predicate.TypedFuncs[*corev1.Node]{
+		CreateFunc: func(createEvent event.TypedCreateEvent[*corev1.Node]) bool {
 			return node.EventIsForThisNode(createEvent.Object)
 		},
-		DeleteFunc: func(event.DeleteEvent) bool {
+		DeleteFunc: func(event.TypedDeleteEvent[*corev1.Node]) bool {
 			return false
 		},
-		UpdateFunc: func(event.UpdateEvent) bool {
+		UpdateFunc: func(event.TypedUpdateEvent[*corev1.Node]) bool {
 			return false
 		},
-		GenericFunc: func(event.GenericEvent) bool {
+		GenericFunc: func(event.TypedGenericEvent[*corev1.Node]) bool {
 			return false
 		},
 	}
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch delete/update for current node.
-	onDeleteOrForceUpdateForThisNode := predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool {
+	onDeleteOrForceUpdateForThisNode := predicate.TypedFuncs[*nmstatev1beta1.NodeNetworkState]{
+		CreateFunc: func(createEvent event.TypedCreateEvent[*nmstatev1beta1.NodeNetworkState]) bool {
 			return false
 		},
-		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+		DeleteFunc: func(deleteEvent event.TypedDeleteEvent[*nmstatev1beta1.NodeNetworkState]) bool {
 			return node.EventIsForThisNode(deleteEvent.Object)
 		},
-		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+		UpdateFunc: func(updateEvent event.TypedUpdateEvent[*nmstatev1beta1.NodeNetworkState]) bool {
 			return node.EventIsForThisNode(updateEvent.ObjectNew) &&
 				shouldForceRefresh(updateEvent)
 		},
-		GenericFunc: func(event.GenericEvent) bool {
+		GenericFunc: func(event.TypedGenericEvent[*nmstatev1beta1.NodeNetworkState]) bool {
 			return false
 		},
 	}
@@ -198,9 +198,10 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// Add watch for Node
 	err = c.Watch(
-		&source.Kind{Type: &corev1.Node{}},
-		&handler.EnqueueRequestForObject{},
-		onCreationForThisNode,
+		source.Kind(mgr.GetCache(), &corev1.Node{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Node]{},
+			onCreationForThisNode,
+		),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to add watch for Nodes")
@@ -208,9 +209,11 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// Add watch for NNS
 	err = c.Watch(
-		&source.Kind{Type: &nmstatev1beta1.NodeNetworkState{}},
-		&handler.EnqueueRequestForOwner{OwnerType: &corev1.Node{}},
-		onDeleteOrForceUpdateForThisNode,
+		source.Kind(mgr.GetCache(),
+			&nmstatev1beta1.NodeNetworkState{},
+			handler.TypedEnqueueRequestForOwner[*nmstatev1beta1.NodeNetworkState](mgr.GetScheme(), mgr.GetRESTMapper(), &corev1.Node{}),
+			onDeleteOrForceUpdateForThisNode,
+		),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to add watch for NNSes")
@@ -219,7 +222,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-func shouldForceRefresh(updateEvent event.UpdateEvent) bool {
+func shouldForceRefresh(updateEvent event.TypedUpdateEvent[*nmstatev1beta1.NodeNetworkState]) bool {
 	newForceRefresh, hasForceRefreshNow := updateEvent.ObjectNew.GetLabels()[forceRefreshLabel]
 	if !hasForceRefreshNow {
 		return false

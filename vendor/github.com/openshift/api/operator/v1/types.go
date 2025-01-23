@@ -10,10 +10,12 @@ import (
 // Compatibility level 4: No compatibility is provided, the API can change at any point for any reason. These capabilities should not be used by applications needing long term support.
 // +openshift:compatibility-gen:internal
 type MyOperatorResource struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata"`
 
-	// +kubebuilder:validation:Required
 	// +required
 	Spec   MyOperatorResourceSpec   `json:"spec"`
 	Status MyOperatorResourceStatus `json:"status"`
@@ -70,11 +72,11 @@ type OperatorSpec struct {
 	// +kubebuilder:default=Normal
 	OperatorLogLevel LogLevel `json:"operatorLogLevel,omitempty"`
 
-	// unsupportedConfigOverrides holds a sparse config that will override any previously set options.  It only needs to be the fields to override
-	// it will end up overlaying in the following order:
-	// 1. hardcoded defaults
-	// 2. observedConfig
-	// 3. unsupportedConfigOverrides
+	// unsupportedConfigOverrides overrides the final configuration that was computed by the operator.
+	// Red Hat does not support the use of this field.
+	// Misuse of this field could lead to unexpected behavior or conflict with other configuration options.
+	// Seek guidance from the Red Hat support before using this field.
+	// Use of this property blocks cluster upgrades, it must be removed before upgrading your cluster.
 	// +optional
 	// +nullable
 	// +kubebuilder:pruning:PreserveUnknownFields
@@ -112,6 +114,8 @@ type OperatorStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
 	// conditions is a list of conditions and their status
+	// +listType=map
+	// +listMapKey=type
 	// +optional
 	Conditions []OperatorCondition `json:"conditions,omitempty"`
 
@@ -122,7 +126,17 @@ type OperatorStatus struct {
 	// readyReplicas indicates how many replicas are ready and at the desired state
 	ReadyReplicas int32 `json:"readyReplicas"`
 
+	// latestAvailableRevision is the deploymentID of the most recent deployment
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self >= oldSelf",message="must only increase"
+	LatestAvailableRevision int32 `json:"latestAvailableRevision,omitempty"`
+
 	// generations are used to determine when an item needs to be reconciled or has changed in a way that needs a reaction.
+	// +listType=map
+	// +listMapKey=group
+	// +listMapKey=resource
+	// +listMapKey=namespace
+	// +listMapKey=name
 	// +optional
 	Generations []GenerationStatus `json:"generations,omitempty"`
 }
@@ -130,15 +144,29 @@ type OperatorStatus struct {
 // GenerationStatus keeps track of the generation for a given resource so that decisions about forced updates can be made.
 type GenerationStatus struct {
 	// group is the group of the thing you're tracking
+	// +required
 	Group string `json:"group"`
+
 	// resource is the resource type of the thing you're tracking
+	// +required
 	Resource string `json:"resource"`
+
 	// namespace is where the thing you're tracking is
+	// +required
 	Namespace string `json:"namespace"`
+
 	// name is the name of the thing you're tracking
+	// +required
 	Name string `json:"name"`
+
+	// TODO: Add validation for lastGeneration. The value for this field should generally increase, except when the associated
+	// resource has been deleted and re-created. To accurately validate this field, we should introduce a new UID field and only
+	// enforce an increasing value in lastGeneration when the UID remains unchanged. A change in the UID indicates that the resource
+	// was re-created, allowing the lastGeneration value to reset or decrease.
+
 	// lastGeneration is the last generation of the workload controller involved
 	LastGeneration int64 `json:"lastGeneration"`
+
 	// hash is an optional field set for resources without generation that are content sensitive like secrets and configmaps
 	Hash string `json:"hash"`
 }
@@ -159,11 +187,31 @@ var (
 
 // OperatorCondition is just the standard condition fields.
 type OperatorCondition struct {
-	Type               string          `json:"type"`
-	Status             ConditionStatus `json:"status"`
-	LastTransitionTime metav1.Time     `json:"lastTransitionTime,omitempty"`
-	Reason             string          `json:"reason,omitempty"`
-	Message            string          `json:"message,omitempty"`
+	// type of condition in CamelCase or in foo.example.com/CamelCase.
+	// ---
+	// Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+	// useful (see .node.status.conditions), the ability to deconflict is important.
+	// The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+	// +required
+	// +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
+	// +kubebuilder:validation:MaxLength=316
+	Type string `json:"type" protobuf:"bytes,1,opt,name=type"`
+
+	// status of the condition, one of True, False, Unknown.
+	// +required
+	// +kubebuilder:validation:Enum=True;False;Unknown
+	Status ConditionStatus `json:"status"`
+
+	// lastTransitionTime is the last time the condition transitioned from one status to another.
+	// This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+	// +required
+	// +kubebuilder:validation:Type=string
+	// +kubebuilder:validation:Format=date-time
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+
+	Reason string `json:"reason,omitempty"`
+
+	Message string `json:"message,omitempty"`
 }
 
 type ConditionStatus string
@@ -196,15 +244,13 @@ type StaticPodOperatorSpec struct {
 type StaticPodOperatorStatus struct {
 	OperatorStatus `json:",inline"`
 
-	// latestAvailableRevision is the deploymentID of the most recent deployment
-	// +optional
-	LatestAvailableRevision int32 `json:"latestAvailableRevision,omitEmpty"`
-
 	// latestAvailableRevisionReason describe the detailed reason for the most recent deployment
 	// +optional
-	LatestAvailableRevisionReason string `json:"latestAvailableRevisionReason,omitEmpty"`
+	LatestAvailableRevisionReason string `json:"latestAvailableRevisionReason,omitempty"`
 
 	// nodeStatuses track the deployment values and errors across individual nodes
+	// +listType=map
+	// +listMapKey=nodeName
 	// +optional
 	NodeStatuses []NodeStatus `json:"nodeStatuses,omitempty"`
 }
@@ -212,6 +258,7 @@ type StaticPodOperatorStatus struct {
 // NodeStatus provides information about the current state of a particular node managed by this operator.
 type NodeStatus struct {
 	// nodeName is the name of the node
+	// +required
 	NodeName string `json:"nodeName"`
 
 	// currentRevision is the generation of the most recently successful deployment
@@ -230,5 +277,6 @@ type NodeStatus struct {
 	// lastFallbackCount is how often a fallback to a previous revision happened.
 	LastFallbackCount int `json:"lastFallbackCount,omitempty"`
 	// lastFailedRevisionErrors is a list of human readable errors during the failed deployment referenced in lastFailedRevision.
+	// +listType=atomic
 	LastFailedRevisionErrors []string `json:"lastFailedRevisionErrors,omitempty"`
 }
