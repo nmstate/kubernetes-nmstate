@@ -366,7 +366,7 @@ spec:
             - name: nmstate-lock
               mountPath: /var/k8s_nmstate
             - name: ovs-socket
-              mountPath: /run/openvswitch/db.sock
+              mountPath: /run/openvswitch
           securityContext:
             privileged: true
           readinessProbe:
@@ -387,7 +387,7 @@ spec:
             path: /var/k8s_nmstate
         - name: ovs-socket
           hostPath:
-            path: /run/openvswitch/db.sock
+            path: /run/openvswitch
 ---
 apiVersion: v1
 kind: Service
