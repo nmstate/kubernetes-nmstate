@@ -22,7 +22,7 @@ on:
         - release-0.52
         - release-0.47
 env:
-  REGISTRY: ghcr.io
+  HELM_REGISTRY: ghcr.io
   CHART_DIR: deploy/helm
 jobs:
   release:
@@ -50,10 +50,6 @@ jobs:
       uses: azure/setup-helm@v4
       env:
         GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-    - name: Setup Go 1.21.x
-      uses: actions/setup-go@v5
-      with:
-        go-version: '1.21.x'
     - name: Log into registry ${{ env.REGISTRY }}
       uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
       with:
@@ -65,4 +61,4 @@ jobs:
         make manifests
         helm dependency update ./${{ env.CHART_DIR }}
         helm package ./${{ env.CHART_DIR }} --destination ./charts --app-version ${{ steps.bump-semver.outputs.new_version }} --version ${{ steps.bump-semver.outputs.new_version }}
-        helm push ./charts/${{ github.event.repository.name }}-${{ steps.bump-semver.outputs.new_version }}.tgz oci://ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
+        helm push ./charts/${{ github.event.repository.name }}-${{ steps.bump-semver.outputs.new_version }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}
