@@ -105,7 +105,6 @@ require (
 	github.com/gofrs/flock v0.7.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0-00010101000000-000000000000
-	github.com/nmstate/nmpolicy v0.6.0
 	github.com/openshift/api v0.0.0-20230803134339-2d9b46419536
 	github.com/openshift/cluster-network-operator v0.0.0-20200922032245-f47200e8dbc0
 	github.com/phoracek/networkmanager-go v0.3.0
