@@ -25,12 +25,11 @@ import (
 
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -39,6 +38,27 @@ import (
 // and Start it when the Manager is Started.
 func (m *Manager) Add(mgr manager.Manager) error {
 	return m.add(mgr)
+}
+
+type ctrlPredicate[T metav1.Object] struct {
+	m *Manager
+}
+
+func (p ctrlPredicate[T]) Create(e event.TypedCreateEvent[T]) bool {
+	return p.m.isWebhookConfig(e.Object) || (isAnnotatedResource(e.Object) && p.m.isGeneratedSecret(e.Object))
+}
+
+func (p ctrlPredicate[T]) Delete(e event.TypedDeleteEvent[T]) bool {
+	return isAnnotatedResource(e.Object) && p.m.isGeneratedSecret(e.Object)
+}
+
+func (p ctrlPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	return p.m.isWebhookConfig(e.ObjectOld) ||
+		(isAnnotatedResource(e.ObjectOld) && p.m.isGeneratedSecret(e.ObjectOld))
+}
+
+func (p ctrlPredicate[T]) Generic(e event.TypedGenericEvent[T]) bool {
+	return p.m.isWebhookConfig(e.Object) || (isAnnotatedResource(e.Object) && p.m.isGeneratedSecret(e.Object))
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -50,60 +70,59 @@ func (m *Manager) add(mgr manager.Manager) error {
 		return errors.Wrap(err, "failed instanciating certificate controller")
 	}
 
-	// Watch only events for selected m.webhookName
-	onEventForThisWebhook := predicate.Funcs{
-		CreateFunc: func(createEvent event.CreateEvent) bool {
-			return m.isWebhookConfig(createEvent.Object) || (isAnnotatedResource(createEvent.Object) && m.isGeneratedSecret(createEvent.Object))
-		},
-		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
-			return isAnnotatedResource(deleteEvent.Object) && m.isGeneratedSecret(deleteEvent.Object)
-		},
-		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-			return m.isWebhookConfig(updateEvent.ObjectOld) ||
-				(isAnnotatedResource(updateEvent.ObjectOld) && m.isGeneratedSecret(updateEvent.ObjectOld))
-		},
-		GenericFunc: func(genericEvent event.GenericEvent) bool {
-			return m.isWebhookConfig(genericEvent.Object) || (isAnnotatedResource(genericEvent.Object) && m.isGeneratedSecret(genericEvent.Object))
-		},
-	}
-
 	logger.Info("Starting to watch secrets")
-	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForObject{}, onEventForThisWebhook)
-	if err != nil {
-		return errors.Wrap(err, "failed watching Secret")
+	if err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.Secret{},
+			&handler.TypedEnqueueRequestForObject[*corev1.Secret]{},
+			&ctrlPredicate[*corev1.Secret]{m: m},
+		),
+	); err != nil {
+		return fmt.Errorf("unable to watch secrets: %w", err)
 	}
 
 	logger.Info("Starting to watch validatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.ValidatingWebhookConfiguration{}},
-		&handler.EnqueueRequestForObject{}, onEventForThisWebhook)
-	if err != nil {
+	if err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&admissionregistrationv1.ValidatingWebhookConfiguration{},
+			&handler.TypedEnqueueRequestForObject[*admissionregistrationv1.ValidatingWebhookConfiguration]{},
+			&ctrlPredicate[*admissionregistrationv1.ValidatingWebhookConfiguration]{m: m},
+		),
+	); err != nil {
 		return errors.Wrap(err, "failed watching ValidatingWebhookConfiguration")
 	}
 
 	logger.Info("Starting to watch mutatingwebhookconfiguration")
-	err = c.Watch(&source.Kind{Type: &admissionregistrationv1.MutatingWebhookConfiguration{}},
-		&handler.EnqueueRequestForObject{}, onEventForThisWebhook)
-	if err != nil {
+	if err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&admissionregistrationv1.MutatingWebhookConfiguration{},
+			&handler.TypedEnqueueRequestForObject[*admissionregistrationv1.MutatingWebhookConfiguration]{},
+			&ctrlPredicate[*admissionregistrationv1.MutatingWebhookConfiguration]{m: m},
+		),
+	); err != nil {
 		return errors.Wrap(err, "failed watching MutatingWebhookConfiguration")
 	}
 
 	return nil
 }
 
-func isAnnotatedResource(object client.Object) bool {
+func isAnnotatedResource(object metav1.Object) bool {
 	_, foundAnnotation := object.GetAnnotations()[secretManagedAnnotatoinKey]
 	return foundAnnotation
 }
 
-func (m *Manager) isWebhookConfig(object client.Object) bool {
+func (m *Manager) isWebhookConfig(object metav1.Object) bool {
 	return object.GetName() == m.webhookName
 }
 
-func (m *Manager) isCASecret(object client.Object) bool {
+func (m *Manager) isCASecret(object metav1.Object) bool {
 	return object.GetName() == m.caSecretKey().Name
 }
 
-func (m *Manager) isServiceSecret(object client.Object) bool {
+func (m *Manager) isServiceSecret(object metav1.Object) bool {
 	webhookConf, err := m.readyWebhookConfiguration()
 	if err != nil {
 		m.log.Info(fmt.Sprintf("failed checking if it's a generated secret: failed getting webhook configuration: %v", err))
@@ -124,7 +143,7 @@ func (m *Manager) isServiceSecret(object client.Object) bool {
 	return false
 }
 
-func (m *Manager) isGeneratedSecret(object client.Object) bool {
+func (m *Manager) isGeneratedSecret(object metav1.Object) bool {
 	return m.isCASecret(object) || m.isServiceSecret(object)
 }
 
@@ -219,18 +238,18 @@ func (m *Manager) Reconcile(ctx context.Context, request reconcile.Request) (rec
 		}
 	}
 
-	// Return the event that is going to happened sonner all services certificates rotation,
+	// Return the event that is going to happen sooner all services certificates rotation,
 	// services certificate rotation or ca bundle cleanup
 	m.log.Info("Calculating RequeueAfter", "elapsedToRotateCA", elapsedToRotateCA,
 		"elapsedToRotateServices", elapsedToRotateServices, "elapsedForCABundleCleanup",
 		elapsedForCABundleCleanup, "elapsedForServiceCertsCleanup", elapsedForServiceCertsCleanup)
-	requeueAfter := min(elapsedToRotateCA, elapsedToRotateServices, elapsedForCABundleCleanup, elapsedForServiceCertsCleanup)
+	requeueAfter := minDuration(elapsedToRotateCA, elapsedToRotateServices, elapsedForCABundleCleanup, elapsedForServiceCertsCleanup)
 
 	m.log.Info(fmt.Sprintf("Certificates will be Reconcile on %s", m.now().Add(requeueAfter)))
 	return reconcile.Result{RequeueAfter: requeueAfter}, nil
 }
 
-func min(values ...time.Duration) time.Duration {
+func minDuration(values ...time.Duration) time.Duration {
 	m := time.Duration(0)
 	for i, e := range values {
 		if i == 0 || e < m {

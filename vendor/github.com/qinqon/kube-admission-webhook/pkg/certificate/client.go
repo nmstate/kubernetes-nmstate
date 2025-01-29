@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -37,10 +38,11 @@ const (
 // cache is still not ready, specially if you webhook or plain runnable
 // is being used since it miss some controller bits.
 func (m *Manager) get(key types.NamespacedName, value client.Object) error {
-	return wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
-		err := m.client.Get(context.TODO(), key, value)
+	return wait.PollUntilContextTimeout(context.TODO(), pollInterval, pollTimeout, true, func(ctx context.Context) (bool, error) {
+		err := m.client.Get(ctx, key, value)
 		if err != nil {
-			if _, cacheNotStarted := err.(*cache.ErrCacheNotStarted); cacheNotStarted {
+			var errCacheNotStarted *cache.ErrCacheNotStarted
+			if errors.As(err, &errCacheNotStarted) {
 				return false, nil
 			} else {
 				return true, err

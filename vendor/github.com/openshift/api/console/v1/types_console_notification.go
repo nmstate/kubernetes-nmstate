@@ -9,9 +9,23 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // ConsoleNotification is the extension for configuring openshift web console notifications.
 //
 // Compatibility level 2: Stable within a major release for a minimum of 9 months or 3 minor releases (whichever is longer).
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=consolenotifications,scope=Cluster
+// +kubebuilder:subresource:status
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/481
+// +openshift:file-pattern=operatorOrdering=00
+// +openshift:capability=Console
+// +kubebuilder:metadata:annotations="description=Extension for configuring openshift web console notifications."
+// +kubebuilder:metadata:annotations="displayName=ConsoleNotification"
+// +kubebuilder:printcolumn:name=Text,JSONPath=.spec.text,type=string
+// +kubebuilder:printcolumn:name=Location,JSONPath=.spec.location,type=string
+// +kubebuilder:printcolumn:name=Age,JSONPath=.metadata.creationTimestamp,type=date
 // +openshift:compatibility-gen:level=2
 type ConsoleNotification struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec ConsoleNotificationSpec `json:"spec"`
@@ -56,6 +70,9 @@ const (
 // +openshift:compatibility-gen:level=2
 type ConsoleNotificationList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ConsoleNotification `json:"items"`
