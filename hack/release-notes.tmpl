@@ -16,6 +16,8 @@
 
 # Installation
 
+## Kubectl
+
 First, install kubernetes-nmstate operator:
 
 ```
@@ -39,4 +41,8 @@ metadata:
 EOF
 ```
 
+## Helm
+```
+helm upgrade --install nmstate --create-namespace -n nmstate oci://ghcr.io/nmstate/kubernetes-nmstate/kubernetes-nmstate --version {{ .CurrentRevision }}
+```
 {{- /* This removes any extra line at the end. */ -}}
