@@ -46,10 +46,13 @@ var _ = Describe("EnactmentCondition", func() {
 				go func() {
 					defer wg.Done()
 					defer GinkgoRecover()
-					policyconditions.EnactmentConditionsStatusEventually(node).
+					By("Check nnce is progressing")
+					policyconditions.EnactmentConditionsStatusEventually(node).WithPolling(500*time.Millisecond).
 						Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetProgressing), "should reach progressing state at %s", node)
+					By("Check reach success")
 					policyconditions.EnactmentConditionsStatusEventually(node).
 						Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetSuccess), "should reach available state at %s", node)
+					By("Check continue at success")
 					policyconditions.EnactmentConditionsStatusConsistently(node).
 						Should(policyconditions.MatchConditionsFrom(enactmentconditions.SetSuccess), "should keep available state at %s", node)
 				}()
