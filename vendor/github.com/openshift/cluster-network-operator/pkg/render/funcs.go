@@ -1,5 +1,9 @@
 package render
 
+import (
+	"strings"
+)
+
 // Functions available for all templates
 
 // getOr returns the value of m[key] if it exists, fallback otherwise.
@@ -27,4 +31,10 @@ func isSet(m map[string]interface{}, key string) interface{} {
 		return false
 	}
 	return val
+}
+
+// iniEscapeCharacters returns the given string with any
+// possible reference of '$' escaped.
+func iniEscapeCharacters(text string) string {
+	return strings.ReplaceAll(text, "$", "\\$")
 }
