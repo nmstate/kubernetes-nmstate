@@ -10,18 +10,12 @@ rules:
   - configmaps
   - endpoints
   - events
+  - namespaces
   - persistentvolumeclaims
   - pods
   - secrets
-  - services
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - namespaces
   - serviceaccounts
+  - services
   verbs:
   - '*'
 - apiGroups:
@@ -39,6 +33,7 @@ rules:
   - '*'
 - apiGroups:
   - apiextensions.k8s.io
+  - nmstate.io
   resources:
   - '*'
   verbs:
@@ -68,12 +63,6 @@ rules:
   - list
   - update
   - watch
-- apiGroups:
-  - nmstate.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
 - apiGroups:
   - operator.openshift.io
   resources:
