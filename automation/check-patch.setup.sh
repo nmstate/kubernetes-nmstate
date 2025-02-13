@@ -10,9 +10,11 @@ mkdir -p $tmp_dir
 
 if gimme --help > /dev/null 2>&1; then
 
-    go_mod_version=$(grep '^go' go.mod |sed 's/go //')
-    full_version=$(curl -s https://go.dev/dl/?mode=json |jq -r .[].version |grep "$go_mod_version")
-    export GIMME_GO_VERSION=$(echo $full_version |sed 's/go//')
+    version=$(grep '^go' go.mod |sed 's/go //')
+    if [ "$(echo $version | grep "[0-9]*\.[0-9]*\.[0-9]*$")" == "" ] ; then
+        version=$(curl -s https://go.dev/dl/?mode=json |jq -r .[].version |grep "$go_mod_version")
+    fi
+    export GIMME_GO_VERSION=$(echo $version |sed 's/go//')
     echo "Installing go $GIMME_GO_VERSION with gimme"
     eval "$(gimme)"
 else

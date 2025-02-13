@@ -83,7 +83,7 @@ func validatePolicyHandler(
 		if err != nil && !apierrors.IsNotFound(err) {
 			errMsg := fmt.Sprintf("failed getting policy %s", string(original))
 			log.Error(err, errMsg)
-			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, errMsg))
+			return admission.Errored(http.StatusInternalServerError, errors.Wrap(err, errMsg))
 		}
 
 		if !neededValidationFor(req.Operation, &policy, &currentPolicy) {

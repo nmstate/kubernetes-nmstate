@@ -59,16 +59,16 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			predicate := onCreateOrUpdateWithDifferentGenerationOrDelete
 
 			Expect(predicate.
-				CreateFunc(event.CreateEvent{
+				CreateFunc(event.TypedCreateEvent[*nmstatev1.NodeNetworkConfigurationPolicy]{
 					Object: &newNNCP,
 				})).To(BeTrue())
 			Expect(predicate.
-				UpdateFunc(event.UpdateEvent{
+				UpdateFunc(event.TypedUpdateEvent[*nmstatev1.NodeNetworkConfigurationPolicy]{
 					ObjectOld: &oldNNCP,
 					ObjectNew: &newNNCP,
 				})).To(Equal(c.ReconcileUpdate))
 			Expect(predicate.
-				DeleteFunc(event.DeleteEvent{
+				DeleteFunc(event.TypedDeleteEvent[*nmstatev1.NodeNetworkConfigurationPolicy]{
 					Object: &oldNNCP,
 				})).To(BeTrue())
 		},
@@ -143,6 +143,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			clb := fake.ClientBuilder{}
 			clb.WithScheme(s)
 			clb.WithRuntimeObjects(objs...)
+			clb.WithStatusSubresource(&nncp)
+			clb.WithStatusSubresource(&nnce)
+			clb.WithStatusSubresource(&nns)
 			cl := clb.Build()
 
 			reconciler.Client = cl

@@ -39,7 +39,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 
 	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
@@ -471,12 +470,27 @@ func (r *NMStateReconciler) renderAndApply(
 				return errors.Wrap(err, "failed to set owner reference")
 			}
 		}
-
-		// Now apply the object
-		err = apply.ApplyObject(context.TODO(), r.Client, obj)
-		if err != nil {
+		if err := r.apply(context.TODO(), obj); err != nil {
 			return errors.Wrapf(err, "failed to apply object %v", obj)
 		}
+	}
+	return nil
+}
+
+func (r *NMStateReconciler) apply(ctx context.Context, obj client.Object) error {
+	key := client.ObjectKeyFromObject(obj)
+	if err := r.Client.Get(ctx, key, obj); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		if err := r.Client.Create(ctx, obj); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	if err := r.Client.Update(ctx, obj); err != nil {
+		return err
 	}
 	return nil
 }

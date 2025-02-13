@@ -5,7 +5,7 @@ linters-settings:
     lines: 100
     statements: 50
   gci:
-    local-prefixes: github.com/nmstate/nmpolicy
+    prefix: github.com/nmstate/nmpolicy
   goconst:
     min-len: 2
     min-occurrences: 3
@@ -32,8 +32,8 @@ linters-settings:
   goheader:
     template-path: hack/header.tpl
   goimports:
-    local-prefixes: github.com/nmstate/nmpolicy
-  gomnd:
+    prefix: github.com/nmstate/nmpolicy
+  mnd:
     # don't include the "operation" and "assign"
     checks:
       - argument
@@ -41,7 +41,7 @@ linters-settings:
       - condition
       - return
   govet:
-    check-shadowing: true
+    shadow: true
   lll:
     line-length: 140
   maligned:
@@ -61,13 +61,13 @@ issues:
     # Exclude some linters from running on tests files.
     - path: test/
       linters:
-        - gomnd
+        - mnd
         - dupl
         - gocritic
     - path: _test.go
       linters:
         - unparam
-        - gomnd
+        - mnd
         - dupl
         - gocritic
 
@@ -78,7 +78,7 @@ linters:
     - dogsled
     - dupl
       #- errcheck
-    - exportloopref
+    - copyloopvar
     - exhaustive
     - funlen
       #- gochecknoinits
@@ -88,7 +88,7 @@ linters:
     - gofmt
     - goheader
     - goimports
-    - gomnd
+    - mnd
     - goprintffuncname
     - gosec
     - gosimple
