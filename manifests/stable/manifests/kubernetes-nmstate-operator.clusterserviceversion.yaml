@@ -39,7 +39,7 @@ metadata:
     operatorframework.io/arch.arm64: supported
     operatorframework.io/arch.ppc64le: supported
     operatorframework.io/arch.s390x: supported
-  name: kubernetes-nmstate-operator.v4.18.0
+  name: kubernetes-nmstate-operator.v4.19.0
   namespace: openshift-nmstate
 spec:
   apiservicedefinitions: {}
@@ -203,9 +203,9 @@ spec:
                         value: "6060"
                       - name: RUN_OPERATOR
                       - name: HANDLER_IMAGE
-                        value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.18
+                        value: quay.io/openshift/origin-kubernetes-nmstate-handler:4.19
                       - name: PLUGIN_IMAGE
-                        value: quay.io/openshift/origin-nmstate-console-plugin:4.18
+                        value: quay.io/openshift/origin-nmstate-console-plugin:4.19
                       - name: HANDLER_IMAGE_PULL_POLICY
                         value: Always
                       - name: HANDLER_NAMESPACE
@@ -213,8 +213,8 @@ spec:
                       - name: MONITORING_NAMESPACE
                         value: openshift-monitoring
                       - name: KUBE_RBAC_PROXY_IMAGE
-                        value: quay.io/openshift/origin-kube-rbac-proxy:4.18
-                    image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.18
+                        value: quay.io/openshift/origin-kube-rbac-proxy:4.19
+                    image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.19
                     imagePullPolicy: Always
                     name: nmstate-operator
                     resources:
@@ -286,4 +286,4 @@ spec:
   selector:
     matchLabels:
       name: kubernetes-nmstate-operator
-  version: 4.18.0
+  version: 4.19.0
