@@ -7,17 +7,25 @@ import (
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:path=insightsoperators,scope=Cluster
+// +kubebuilder:subresource:status
+// +openshift:api-approved.openshift.io=https://github.com/openshift/api/pull/1237
+// +openshift:file-pattern=cvoRunLevel=0000_50,operatorName=insights,operatorOrdering=00
 //
 // InsightsOperator holds cluster-wide information about the Insights Operator.
 //
 // Compatibility level 1: Stable within a major release for a minimum of 12 months or 3 minor releases (whichever is longer).
 // +openshift:compatibility-gen:level=1
 type InsightsOperator struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard object's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ObjectMeta `json:"metadata"`
 
 	// spec is the specification of the desired behavior of the Insights.
-	// +kubebuilder:validation:Required
+	// +required
 	Spec InsightsOperatorSpec `json:"spec"`
 
 	// status is the most recently observed status of the Insights operator.
@@ -77,25 +85,25 @@ type InsightsReport struct {
 // healthCheck represents an Insights health check attributes.
 type HealthCheck struct {
 	// description provides basic description of the healtcheck.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MaxLength=2048
 	// +kubebuilder:validation:MinLength=10
 	Description string `json:"description"`
 	// totalRisk of the healthcheck. Indicator of the total risk posed
 	// by the detected issue; combination of impact and likelihood. The values can be from 1 to 4,
 	// and the higher the number, the more important the issue.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=4
 	TotalRisk int32 `json:"totalRisk"`
 	// advisorURI provides the URL link to the Insights Advisor.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Pattern=`^https:\/\/\S+`
 	AdvisorURI string `json:"advisorURI"`
 	// state determines what the current state of the health check is.
 	// Health check is enabled by default and can be disabled
 	// by the user in the Insights advisor user interface.
-	// +kubebuilder:validation:Required
+	// +required
 	State HealthCheckState `json:"state"`
 }
 
@@ -116,16 +124,16 @@ const (
 type GathererStatus struct {
 	// conditions provide details on the status of each gatherer.
 	// +listType=atomic
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MinItems=1
 	Conditions []metav1.Condition `json:"conditions"`
 	// name is the name of the gatherer.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MaxLength=256
 	// +kubebuilder:validation:MinLength=5
 	Name string `json:"name"`
 	// lastGatherDuration represents the time spent gathering.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern="^([1-9][0-9]*(\\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$"
 	LastGatherDuration metav1.Duration `json:"lastGatherDuration"`
@@ -139,6 +147,10 @@ type GathererStatus struct {
 // +openshift:compatibility-gen:level=1
 type InsightsOperatorList struct {
 	metav1.TypeMeta `json:",inline"`
+
+	// metadata is the standard list's metadata.
+	// More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
 	metav1.ListMeta `json:"metadata"`
-	Items           []InsightsOperator `json:"items"`
+
+	Items []InsightsOperator `json:"items"`
 }
