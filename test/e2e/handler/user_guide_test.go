@@ -46,9 +46,7 @@ var _ = Describe("[user-guide] Introduction", func() {
 		deletePolicy("vlan100")
 		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, interfaceAbsent("eth1.100"))
 		policy.WaitForAvailableTestPolicy()
-		setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
-		policy.WaitForAvailableTestPolicy()
-		deletePolicy(TestPolicy)
+		resetDesiredStateForAllNodes()
 	}
 
 	runTroubleshooting := func() {

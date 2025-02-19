@@ -40,20 +40,20 @@ import (
 )
 
 var (
-	allNodes             []string
-	nodes                []string
-	startTime            time.Time
-	bond1                string
-	bridge1              string
-	primaryNic           string
-	firstSecondaryNic    string
-	secondSecondaryNic   string
-	dnsTestNic           string
-	portFieldName        string
-	miimonFormat         string
-	nodesInterfacesState = make(map[string][]byte)
-	interfacesToIgnore   = []string{"flannel.1", "dummy0", "tunl0"}
-	knmstateReporter     *knmstatereporter.KubernetesNMStateReporter
+	allNodes                    []string
+	nodes                       []string
+	startTime                   time.Time
+	bond1                       string
+	bridge1                     string
+	primaryNic                  string
+	firstSecondaryNic           string
+	secondSecondaryNic          string
+	dnsTestNic                  string
+	portFieldName               string
+	miimonFormat                string
+	nodesInitialInterfacesState = make(map[string]map[string]string)
+	interfacesToIgnore          = []string{"flannel.1", "dummy0", "tunl0"}
+	knmstateReporter            *knmstatereporter.KubernetesNMStateReporter
 )
 
 var _ = BeforeSuite(func() {
@@ -93,14 +93,24 @@ var _ = BeforeSuite(func() {
 		}
 	}
 
-	resetDesiredStateForNodes()
-
+	resetDesiredStateForAllNodes()
+	for _, node := range allNodes {
+		Eventually(func() map[string]string {
+			By("Wait for network configuration to show up at NNS to retrieve it")
+			nodeState := nodeInterfacesState(node, interfacesToIgnore)
+			return nodeState
+		}, 20*time.Second, time.Second).Should(SatisfyAll(
+			HaveKeyWithValue(primaryNic, "up"),
+			HaveKeyWithValue(firstSecondaryNic, "up"),
+			HaveKeyWithValue(secondSecondaryNic, "up")),
+		)
+	}
 	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
 	knmstateReporter.Cleanup()
 	By("Getting nodes initial state")
 	for _, node := range allNodes {
 		nodeState := nodeInterfacesState(node, interfacesToIgnore)
-		nodesInterfacesState[node] = nodeState
+		nodesInitialInterfacesState[node] = nodeState
 	}
 })
 
@@ -123,11 +133,11 @@ var _ = BeforeEach(func() {
 var _ = AfterEach(func() {
 	By("Verifying initial state")
 	for _, node := range allNodes {
-		Eventually(func() []byte {
+		Eventually(func() map[string]string {
 			By("Verifying initial state eventually")
 			nodeState := nodeInterfacesState(node, interfacesToIgnore)
 			return nodeState
-		}, 120*time.Second, 5*time.Second).Should(MatchJSON(nodesInterfacesState[node]), fmt.Sprintf("Test didn't return "+
+		}, 120*time.Second, 5*time.Second).Should(Equal(nodesInitialInterfacesState[node]), fmt.Sprintf("Test didn't return "+
 			"to initial state on node %s", node))
 	}
 })

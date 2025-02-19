@@ -39,7 +39,7 @@ func (m *Manager) earliestElapsedForCACertsCleanup() (time.Duration, error) {
 
 // earliestElapsedForServiceCertsCleanup will iterate all the services and
 // retrieve the secrets associate, calculate the elapsed time for
-// cleanup for each and return the min.
+// cleanup for each and return the minDuration.
 func (m *Manager) earliestElapsedForServiceCertsCleanup() (time.Duration, error) {
 	webhookConf, err := m.readyWebhookConfiguration()
 	if err != nil {
@@ -64,7 +64,7 @@ func (m *Manager) earliestElapsedForServiceCertsCleanup() (time.Duration, error)
 		}
 		elapsedTimesForCleanup = append(elapsedTimesForCleanup, elapsedTimeForCleanup)
 	}
-	return min(elapsedTimesForCleanup...), nil
+	return minDuration(elapsedTimesForCleanup...), nil
 }
 
 // earliestElapsedForCleanup return a subtraction between earliestCleanupDeadline and

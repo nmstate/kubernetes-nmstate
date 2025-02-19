@@ -37,9 +37,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/openshift/cluster-network-operator/pkg/apply"
 	"github.com/openshift/cluster-network-operator/pkg/render"
 
 	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
@@ -72,7 +72,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;get
 // +kubebuilder:rbac:groups="console.openshift.io",resources=consoleplugins,verbs="*"
 // +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
-// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors,verbs=list;get;watch;update;create
+// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors,verbs=list;get;watch;update;create;patch
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -471,12 +471,29 @@ func (r *NMStateReconciler) renderAndApply(
 				return errors.Wrap(err, "failed to set owner reference")
 			}
 		}
-
-		// Now apply the object
-		err = apply.ApplyObject(context.TODO(), r.Client, obj)
-		if err != nil {
-			return errors.Wrapf(err, "failed to apply object %v", obj)
+		if err := r.apply(context.TODO(), obj); err != nil {
+			return fmt.Errorf("failed to apply object %v: %w", obj, err)
 		}
+	}
+	return nil
+}
+
+func (r *NMStateReconciler) apply(ctx context.Context, newObj *unstructured.Unstructured) error {
+	key := client.ObjectKeyFromObject(newObj)
+	oldObj := &unstructured.Unstructured{}
+	oldObj.SetGroupVersionKind(newObj.GroupVersionKind())
+	if err := r.Client.Get(ctx, key, oldObj); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return err
+		}
+		if err := r.Client.Create(ctx, newObj); err != nil {
+			return fmt.Errorf("failed creating %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
+		}
+		return nil
+	}
+	newObj.SetResourceVersion(oldObj.GetResourceVersion())
+	if err := r.Client.Patch(ctx, newObj, client.MergeFrom(oldObj)); err != nil {
+		return fmt.Errorf("failed patching %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
 	}
 	return nil
 }

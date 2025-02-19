@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	// +kubebuilder:scaffold:imports
 
@@ -128,8 +129,10 @@ func mainHandler() int {
 		setupLog.Info("Successfully took nmstate exclusive lock")
 	}
 	ctrlOptions := ctrl.Options{
-		Scheme:             scheme,
-		MetricsBindAddress: ":8089", // Explicitly enable metrics
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: ":8089", // Explicitly enable metrics
+		},
 	}
 
 	if environment.IsHandler() {
@@ -187,8 +190,8 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 	nodeName := environment.NodeName()
 	metadataNameMatchingNodeNameSelector := fields.Set{"metadata.name": nodeName}.AsSelector()
 	nodeLabelMatchingNodeNameSelector := labels.Set{nmstateapi.EnactmentNodeLabel: nodeName}.AsSelector()
-	ctrlOptions.NewCache = cache.BuilderWithOptions(cache.Options{
-		SelectorsByObject: cache.SelectorsByObject{
+	ctrlOptions.Cache = cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
 			&corev1.Node{}: {
 				Field: metadataNameMatchingNodeNameSelector,
 			},
@@ -199,7 +202,7 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 				Label: nodeLabelMatchingNodeNameSelector,
 			},
 		},
-	})
+	}
 }
 
 func setupHandlerControllers(mgr manager.Manager) error {

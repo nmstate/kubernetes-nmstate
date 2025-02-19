@@ -41,7 +41,7 @@ func setConditionsUnknown(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 }
 
 func atEmptyConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) bool {
-	return policy.Status.Conditions == nil || len(policy.Status.Conditions) == 0
+	return len(policy.Status.Conditions) == 0
 }
 
 func deleteConditionsHook() *webhook.Admission {
