@@ -94,15 +94,16 @@ var _ = BeforeSuite(func() {
 	}
 
 	resetDesiredStateForAllNodes()
-	expectedInitialState := interfacesState(resetPrimaryAndSecondaryNICs(), interfacesToIgnore)
 	for _, node := range allNodes {
-		Eventually(func(g Gomega) {
+		Eventually(func() map[string]string {
 			By("Wait for network configuration to show up at NNS to retrieve it")
 			nodeState := nodeInterfacesState(node, interfacesToIgnore)
-			for name, state := range expectedInitialState {
-				g.Expect(nodeState).To(HaveKeyWithValue(name, state))
-			}
-		}, 20*time.Second, time.Second).Should(Succeed())
+			return nodeState
+		}, 20*time.Second, time.Second).Should(SatisfyAll(
+			HaveKeyWithValue(primaryNic, "up"),
+			HaveKeyWithValue(firstSecondaryNic, "up"),
+			HaveKeyWithValue(secondSecondaryNic, "up")),
+		)
 	}
 	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
 	knmstateReporter.Cleanup()
