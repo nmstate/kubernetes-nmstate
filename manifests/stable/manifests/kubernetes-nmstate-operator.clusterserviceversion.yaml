@@ -65,18 +65,12 @@ spec:
                 - configmaps
                 - endpoints
                 - events
+                - namespaces
                 - persistentvolumeclaims
                 - pods
                 - secrets
-                - services
-              verbs:
-                - '*'
-            - apiGroups:
-                - ""
-              resources:
-                - configmaps
-                - namespaces
                 - serviceaccounts
+                - services
               verbs:
                 - '*'
             - apiGroups:
@@ -94,6 +88,7 @@ spec:
                 - '*'
             - apiGroups:
                 - apiextensions.k8s.io
+                - nmstate.io
               resources:
                 - '*'
               verbs:
@@ -121,14 +116,9 @@ spec:
                 - create
                 - get
                 - list
+                - patch
                 - update
                 - watch
-            - apiGroups:
-                - nmstate.io
-              resources:
-                - '*'
-              verbs:
-                - '*'
             - apiGroups:
                 - operator.openshift.io
               resources:
