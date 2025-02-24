@@ -566,11 +566,8 @@ func nodeInterfacesState(node string, exclude []string) map[string]string {
 // return a json with all node interfaces and their state e.g.
 // {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
 // use exclude to filter out interfaces you don't care about
-func nodeInterfacesState(node string, exclude []string) map[string]string {
-	var currentStateYaml nmstate.State
-	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
-
-	interfaces := interfaces(currentStateYaml)
+func interfacesState(state nmstate.State, exclude []string) map[string]string {
+	interfaces := interfaces(state)
 	ifacesState := make(map[string]string)
 	for _, iface := range interfaces {
 		name := interfaceName(iface)
