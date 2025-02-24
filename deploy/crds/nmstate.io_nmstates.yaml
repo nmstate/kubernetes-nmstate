@@ -37,6 +37,7 @@ spec:
           metadata:
             type: object
           spec:
+            default: {}
             description: NMStateSpec defines the desired state of NMState
             properties:
               affinity:
@@ -1939,6 +1940,23 @@ spec:
                   for both workers and control-plane (https://github.com/nmstate/kubernetes-nmstate/blob/main/deploy/handler/operator.yaml).
                   If NodeSelector is specified, the handler will run only on nodes that have each of the indicated key-value pairs
                   as labels applied to the node.
+                type: object
+              probeConfiguration:
+                default: {}
+                description: |-
+                  ProbeConfiguration is an optional configuration of NMstate probes testing various functionalities.
+                  If ProbeConfiguration is specified, the handler will use the config defined here instead of its default values.
+                properties:
+                  dns:
+                    default:
+                      host: root-servers.net
+                    properties:
+                      host:
+                        default: root-servers.net
+                        type: string
+                    required:
+                    - host
+                    type: object
                 type: object
               selfSignConfiguration:
                 description: SelfSignConfiguration defines self signed certificate

@@ -360,6 +360,8 @@ spec:
               value: "6060"
             - name: NMSTATE_INSTANCE_NODE_LOCK_FILE
               value: "/var/k8s_nmstate/handler_lock"
+            - name: PROBE_DNS_HOST
+              value: "{{ .ProbeConfiguration.DNS.Host }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
