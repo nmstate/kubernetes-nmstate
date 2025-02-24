@@ -53,6 +53,9 @@ type NMStateSpec struct {
 	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
 	// SelfSignConfiguration defines self signed certificate configuration
 	SelfSignConfiguration *SelfSignConfiguration `json:"selfSignConfiguration,omitempty"`
+	// ProbeConfiguration is an optional configuration of NMstate probes testing various functionalities.
+	// If ProbeConfiguration is specified, the handler will use the config defined here instead of its default values.
+	ProbeConfiguration *NMStateProbeConfiguration `json:"probeConfiguration,omitempty"`
 }
 
 type SelfSignConfiguration struct {
@@ -66,6 +69,14 @@ type SelfSignConfiguration struct {
 	// CertOverlapInterval defines the duration where expired service certificate
 	// can overlap with new one, in order to allow fluent service rotation transitioning
 	CertOverlapInterval string `json:"certOverlapInterval,omitempty"`
+}
+
+type NMStateProbeConfiguration struct {
+	DNS NMStateDNSProbeConfiguration `json:"dns,omitempty"`
+}
+
+type NMStateDNSProbeConfiguration struct {
+	Host string `json:"host,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState

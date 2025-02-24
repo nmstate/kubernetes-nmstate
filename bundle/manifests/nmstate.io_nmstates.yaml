@@ -1940,6 +1940,17 @@ spec:
                   If NodeSelector is specified, the handler will run only on nodes that have each of the indicated key-value pairs
                   as labels applied to the node.
                 type: object
+              probeConfiguration:
+                description: |-
+                  ProbeConfiguration is an optional configuration of NMstate probes testing various functionalities.
+                  If ProbeConfiguration is specified, the handler will use the config defined here instead of its default values.
+                properties:
+                  dns:
+                    properties:
+                      host:
+                        type: string
+                    type: object
+                type: object
               selfSignConfiguration:
                 description: SelfSignConfiguration defines self signed certificate
                   configuration
