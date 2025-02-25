@@ -21,6 +21,9 @@ on:
         - release-0.64
         - release-0.52
         - release-0.47
+env:
+  HELM_REGISTRY: ghcr.io
+  CHART_DIR: deploy/helm
 jobs:
   release:
     runs-on: ubuntu-latest
@@ -43,3 +46,19 @@ jobs:
       uses: actions-ecosystem/action-push-tag@v1
       with:
         tag: ${{ steps.bump-semver.outputs.new_version }}
+    - name: Install Helm
+      uses: azure/setup-helm@v4
+      env:
+        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+    - name: Log into registry ${{ env.HELM_REGISTRY }}
+      uses: docker/login-action@28218f9b04b4f3f62068d7b6ce6ca5b26e35336c
+      with:
+        registry: ${{ env.HELM_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Template Helm charts
+      run: |
+        make manifests
+        helm dependency update ./${{ env.CHART_DIR }}
+        helm package ./${{ env.CHART_DIR }} --destination ./charts --app-version ${{ steps.bump-semver.outputs.new_version }} --version ${{ steps.bump-semver.outputs.new_version }}
+        helm push ./charts/${{ github.event.repository.name }}-${{ steps.bump-semver.outputs.new_version }}.tgz oci://${{ env.HELM_REGISTRY }}/${{ github.repository_owner }}/${{ github.event.repository.name }}
