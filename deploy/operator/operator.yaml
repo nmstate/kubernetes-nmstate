@@ -57,6 +57,27 @@ spec:
             capabilities:
               drop:
               - ALL
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8081
+              name: healthprobe
           resources:
             requests:
               cpu: 60m

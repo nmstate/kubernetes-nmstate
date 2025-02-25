@@ -35,6 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -133,6 +134,7 @@ func mainHandler() int {
 		Metrics: metricsserver.Options{
 			BindAddress: ":8089", // Explicitly enable metrics
 		},
+		HealthProbeBindAddress: ":8081",
 	}
 
 	if environment.IsHandler() {
@@ -173,6 +175,15 @@ func mainHandler() int {
 		if err = createHealthyFile(); err != nil {
 			return generalExitStatus
 		}
+	}
+
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		return generalExitStatus
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		return generalExitStatus
 	}
 
 	setProfiler()
