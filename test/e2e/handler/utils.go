@@ -557,14 +557,17 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 	return false
 }
 
-// return a json with all node interfaces and their state e.g.
-// {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
-// use exclude to filter out interfaces you don't care about
 func nodeInterfacesState(node string, exclude []string) map[string]string {
 	var currentStateYaml nmstate.State
 	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
+	return interfacesState(currentStateYaml, exclude)
+}
 
-	interfaces := interfaces(currentStateYaml)
+// return a json with all node interfaces and their state e.g.
+// {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
+// use exclude to filter out interfaces you don't care about
+func interfacesState(state nmstate.State, exclude []string) map[string]string {
+	interfaces := interfaces(state)
 	ifacesState := make(map[string]string)
 	for _, iface := range interfaces {
 		name := interfaceName(iface)
@@ -582,6 +585,7 @@ func nodeInterfacesState(node string, exclude []string) map[string]string {
 	}
 	return ifacesState
 }
+
 func lldpNeighbors(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").lldp.neighbors", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
