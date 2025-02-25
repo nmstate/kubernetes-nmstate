@@ -88,7 +88,7 @@ func main() {
 	ctrlOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			BindAddress: "0", // disable metrics
+			BindAddress: ":8089", // Explicitly enable metrics
 		},
 	}
 
