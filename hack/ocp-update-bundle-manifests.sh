@@ -26,6 +26,7 @@ $(yq4) --inplace eval '.spec.install.spec.clusterPermissions[] |= select(.rules[
 $(yq4) --inplace eval '.spec.customresourcedefinitions.owned |= [{"kind":"NMState","name":"nmstates.nmstate.io","version":"v1","description":"Represents an NMState deployment.","displayName":"NMState"}]' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 
 # Add OpenShift required annotations (https://docs.engineering.redhat.com/pages/viewpage.action?spaceKey=CFC&title=Best_Practices)
+$(yq4) --inplace eval '.metadata.annotations += {"operators.openshift.io/valid-subscription": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/disconnected": "true"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/fips-compliant": "true"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/proxy-aware": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
@@ -33,6 +34,9 @@ $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.i
 $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/token-auth-aws": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/token-auth-azure": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 $(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/token-auth-gcp": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+$(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/cnf": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+$(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/cni": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+$(yq4) --inplace eval '.metadata.annotations += {"features.operators.openshift.io/csi": "false"}' ${BUNDLE_DIR}/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 
 # delete unneeded files
 rm -f ${BUNDLE_DIR}/manifests/nmstate.io_nodenetwork*.yaml
