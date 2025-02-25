@@ -34,11 +34,28 @@ spec:
           ports:
             - containerPort: {{ .PluginPort }}
               protocol: TCP
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           resources:
             requests:
-              cpu: 10m
-              memory: 50Mi
+              cpu: "10m"
+              memory: "50Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+          terminationMessagePolicy: FallbackToLogsOnError
+          readinessProbe:
+            tcpSocket:
+              port: {{ .PluginPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: {{ .PluginPort }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           volumeMounts:
             - name: plugin-serving-cert
               readOnly: true
