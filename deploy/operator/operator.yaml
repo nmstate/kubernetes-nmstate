@@ -57,6 +57,29 @@ spec:
             capabilities:
               drop:
               - ALL
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: monitoring
+              host: 127.0.0.1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: monitoring
+              host: 127.0.0.1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8089
+              name: monitoring
           resources:
             requests:
               cpu: 60m

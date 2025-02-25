@@ -51,6 +51,33 @@ spec:
             requests:
               cpu: "30m"
               memory: "20Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+          terminationMessagePolicy: FallbackToLogsOnError
+          ports:
+            - containerPort: 8089
+              name: monitoring
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: monitoring
+              host: 127.0.0.1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: monitoring
+              host: 127.0.0.1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -86,10 +113,26 @@ spec:
           - containerPort: 8443
             name: metrics
             protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           resources:
             requests:
-              cpu: 10m
-              memory: 20Mi
+              cpu: "10m"
+              memory: "20Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           terminationMessagePolicy: FallbackToLogsOnError
 ---
 apiVersion: apps/v1
@@ -141,6 +184,10 @@ spec:
             requests:
               cpu: "30m"
               memory: "20Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+          terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -174,6 +221,19 @@ spec:
                 value: application/json
             initialDelaySeconds: 10
             periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /readyz
+              port: webhook-server
+              scheme: HTTPS
+              httpHeaders:
+                - name: Content-Type
+                  value: application/json
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           volumeMounts:
           - name: tls-key-pair
             readOnly: true
@@ -230,6 +290,10 @@ spec:
             requests:
               cpu: "30m"
               memory: "30Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+          terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -325,6 +389,10 @@ spec:
             requests:
               cpu: "100m"
               memory: "100Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
+          terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -377,6 +445,19 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 1
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: monitoring
+              host: 127.0.0.1
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8089
+              name: monitoring
       volumes:
         - name: dbus-socket
           hostPath:
