@@ -68,32 +68,32 @@ const (
 var (
 	nodeName                                        string
 	nodeRunningUpdateRetryTime                      = 5 * time.Second
-	onCreateOrUpdateWithDifferentGenerationOrDelete = predicate.Funcs{
-		CreateFunc: func(createEvent event.CreateEvent) bool {
+	onCreateOrUpdateWithDifferentGenerationOrDelete = predicate.TypedFuncs[*nmstatev1.NodeNetworkConfigurationPolicy]{
+		CreateFunc: func(createEvent event.TypedCreateEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) bool {
 			return true
 		},
-		DeleteFunc: func(deleteEvent event.DeleteEvent) bool {
+		DeleteFunc: func(deleteEvent event.TypedDeleteEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) bool {
 			return true
 		},
-		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+		UpdateFunc: func(updateEvent event.TypedUpdateEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) bool {
 			// [1] https://blog.openshift.com/kubernetes-operators-best-practices/
 			generationIsDifferent := updateEvent.ObjectNew.GetGeneration() != updateEvent.ObjectOld.GetGeneration()
 			return generationIsDifferent
 		},
 	}
 
-	onLabelsUpdatedForThisNode = predicate.Funcs{
-		CreateFunc: func(createEvent event.CreateEvent) bool {
+	onLabelsUpdatedForThisNode = predicate.TypedFuncs[*corev1.Node]{
+		CreateFunc: func(createEvent event.TypedCreateEvent[*corev1.Node]) bool {
 			return false
 		},
-		DeleteFunc: func(event.DeleteEvent) bool {
+		DeleteFunc: func(event.TypedDeleteEvent[*corev1.Node]) bool {
 			return false
 		},
-		UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+		UpdateFunc: func(updateEvent event.TypedUpdateEvent[*corev1.Node]) bool {
 			labelsChanged := !reflect.DeepEqual(updateEvent.ObjectOld.GetLabels(), updateEvent.ObjectNew.GetLabels())
 			return labelsChanged && node.EventIsForThisNode(updateEvent.ObjectNew)
 		},
-		GenericFunc: func(event.GenericEvent) bool {
+		GenericFunc: func(event.TypedGenericEvent[*corev1.Node]) bool {
 			return false
 		},
 	}
@@ -244,8 +244,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	allPolicies := handler.MapFunc(
-		func(client.Object) []reconcile.Request {
+	allPolicies := handler.TypedMapFunc[*corev1.Node, reconcile.Request](
+		func(context.Context, *corev1.Node) []reconcile.Request {
 			log := r.Log.WithName("allPolicies")
 			allPoliciesAsRequest := []reconcile.Request{}
 			policyList := nmstatev1.NodeNetworkConfigurationPolicyList{}
@@ -274,9 +274,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 
 	// Add watch for NNCP
 	err = c.Watch(
-		&source.Kind{Type: &nmstatev1.NodeNetworkConfigurationPolicy{}},
-		&handler.EnqueueRequestForObject{},
-		onCreateOrUpdateWithDifferentGenerationOrDelete,
+		source.Kind(
+			mgr.GetCache(),
+			&nmstatev1.NodeNetworkConfigurationPolicy{},
+			&handler.TypedEnqueueRequestForObject[*nmstatev1.NodeNetworkConfigurationPolicy]{},
+			onCreateOrUpdateWithDifferentGenerationOrDelete,
+		),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to add watch for NNCPs")
@@ -284,9 +287,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 
 	// Add watch to enque all NNCPs on nod label changes
 	err = c.Watch(
-		&source.Kind{Type: &corev1.Node{}},
-		handler.EnqueueRequestsFromMapFunc(allPolicies),
-		onLabelsUpdatedForThisNode,
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.Node{},
+			handler.TypedEnqueueRequestsFromMapFunc[*corev1.Node](allPolicies),
+			onLabelsUpdatedForThisNode,
+		),
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to add watch to enqueue NNCPs reconcile on node label change")

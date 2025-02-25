@@ -19,7 +19,6 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -197,6 +196,14 @@ func updateDesiredStateWithCaptureAtNodeAndWait(node string, desiredState nmstat
 func resetDesiredStateForNodes() {
 	By("Resetting nics state primary up and secondaries disable ipv4 and ipv6")
 	updateDesiredState(resetPrimaryAndSecondaryNICs())
+	defer deletePolicy(TestPolicy)
+	policy.WaitForAvailableTestPolicy()
+}
+
+// TODO: After we implement policy delete (it will cleanUp desiredState) we have to remove this.
+func resetDesiredStateForAllNodes() {
+	By("Resetting nics state primary up and secondaries disable ipv4 and ipv6 at all nodes")
+	setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
 	defer deletePolicy(TestPolicy)
 	policy.WaitForAvailableTestPolicy()
 }
@@ -550,14 +557,17 @@ func ifaceInSlice(ifaceName string, names []string) bool {
 	return false
 }
 
+func nodeInterfacesState(node string, exclude []string) map[string]string {
+	var currentStateYaml nmstate.State
+	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
+	return interfacesState(currentStateYaml, exclude)
+}
+
 // return a json with all node interfaces and their state e.g.
 // {"cni0":"up","docker0":"up","eth0":"up","eth1":"down","eth2":"down","lo":"down"}
 // use exclude to filter out interfaces you don't care about
-func nodeInterfacesState(node string, exclude []string) []byte {
-	var currentStateYaml nmstate.State
-	currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
-
-	interfaces := interfaces(currentStateYaml)
+func interfacesState(state nmstate.State, exclude []string) map[string]string {
+	interfaces := interfaces(state)
 	ifacesState := make(map[string]string)
 	for _, iface := range interfaces {
 		name := interfaceName(iface)
@@ -568,14 +578,14 @@ func nodeInterfacesState(node string, exclude []string) []byte {
 		if !hasState {
 			state = "unknown"
 		}
+		if state == "ignore" {
+			continue
+		}
 		ifacesState[name] = state.(string)
 	}
-	ret, err := json.Marshal(ifacesState)
-	if err != nil {
-		return []byte{}
-	}
-	return ret
+	return ifacesState
 }
+
 func lldpNeighbors(node, iface string) string {
 	path := fmt.Sprintf("interfaces.#(name==\"%s\").lldp.neighbors", iface)
 	return gjson.ParseBytes(currentStateJSON(node)).Get(path).String()
