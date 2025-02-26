@@ -36,22 +36,22 @@ networking and install operators
 
 ### Workflow Description (go back to default DNS probe)
 
-1. The cluster admin remove the DNS probe customization 
+1. The cluster admin remove the DNS probe customization
 2. The cluster admin creates an NNCP and the default name resolution is use for the DNS probe
 
 ### Alternatives
 
 #### Add a DNS probe fallback using global name
 
-A possible alternative is the DNS probe in case of current implementation 
+A possible alternative is the DNS probe in case of current implementation
 failing doing a fallback to use a global name like "redhat.com" or the like and
 the golang call `LookupNetIP` this can be done before apply the NNCP to select
-the proper mechanism to check after apply NNCP, it can be done at installation 
+the proper mechanism to check after apply NNCP, it can be done at installation
 time too.
 
 ### API Extensions
 
-This proposal add a new `probes` field under the `NMState` CR to configure the 
+This proposal add a new `probes` field under the `NMState` CR to configure the
 DNS probes name resolution, this way if the other probes need to be customize
 in the future more fields can be added there
 
@@ -64,9 +64,9 @@ metadata:
   name: nmstate
 spec:
   probes:
-    DNS: 
+    DNS:
       name: "redhat.com"
 ```
 
-After doing this the probe will use golang `LookupNetIP` function instead of 
+After doing this the probe will use golang `LookupNetIP` function instead of
 current `LookupNS` to resolve the specified `spec.probes.DNS.name` "redhat.com".
