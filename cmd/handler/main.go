@@ -114,6 +114,14 @@ func mainHandler() int {
 		flag.CommandLine.Set("zap-devel", "true")
 	}
 
+	ctrlOptions := ctrl.Options{
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: ":8089", // Explicitly enable metrics
+		},
+		HealthProbeBindAddress: ":8081",
+	}
+
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opt)))
 	// Lock only for handler, we can run old and new version of
 	// webhook without problems, policy status will be updated
@@ -126,18 +134,9 @@ func mainHandler() int {
 		}
 		defer handlerLock.Unlock()
 		setupLog.Info("Successfully took nmstate exclusive lock")
-	}
-	ctrlOptions := ctrl.Options{
-		Scheme: scheme,
-		Metrics: metricsserver.Options{
-			BindAddress: ":8089", // Explicitly enable metrics
-		},
-		HealthProbeBindAddress: ":8081",
-	}
-
-	if environment.IsHandler() {
 		cacheResourcesOnNodes(&ctrlOptions)
 	}
+
 	setupLog.Info("Creating manager")
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
 	if err != nil {
@@ -175,12 +174,7 @@ func mainHandler() int {
 		}
 	}
 
-	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up health check")
-		return generalExitStatus
-	}
-	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		setupLog.Error(err, "unable to set up ready check")
+	if err = setupHealthMetrics(mgr); err != nil {
 		return generalExitStatus
 	}
 
@@ -392,4 +386,16 @@ func dumpMetricFamiliesToStdout() int {
 	}
 	fmt.Printf("%s", string(metricFamiliesJSON))
 	return 0
+}
+
+func setupHealthMetrics(mgr manager.Manager) error {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up health check")
+		return err
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up ready check")
+		return err
+	}
+	return nil
 }
