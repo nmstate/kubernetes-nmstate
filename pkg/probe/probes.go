@@ -243,7 +243,17 @@ func runDNS(_ client.Client, timeout time.Duration) (bool, error) {
 			},
 		}
 		ctx, cancel := context.WithTimeout(context.TODO(), timeout)
-		_, err := r.LookupNS(ctx, "root-servers.net")
+
+		// NMstate CRD should have always PROBE_DNS_HOST defaulting to root-servers.net but if that
+		// for any reason is not the case, here we are safeguarding against missing env variable.
+		dnsTarget := environment.GetEnvVar("PROBE_DNS_HOST", "root-servers.net")
+		var err error
+		if dnsTarget == "root-servers.net" {
+			_, err = r.LookupNS(ctx, dnsTarget)
+		} else {
+			_, err = r.LookupHost(ctx, dnsTarget)
+		}
+
 		if err != nil {
 			cancel()
 			errs = append(errs, err)
