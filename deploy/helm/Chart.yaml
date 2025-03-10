@@ -1,0 +1,21 @@
+apiVersion: v2
+name: kubernetes-nmstate
+description: Declarative node network configuration driven through Kubernetes API.
+type: application
+version: 0.1.0
+appVersion: "1.16.0"
+home: https://github.com/nmstate/kubernetes-nmstate
+icon: https://nmstate.io/kubernetes-nmstate/assets/images/logo/fullcolor.png
+keywords:
+- nmstate
+- networking
+- NetworkManager
+maintainers:
+- email: ellorent@redhat.com
+  name: Enrique Llorente Pastora
+- email: phoracek@redhat.com
+  name: Petr Horacek
+kubeVersion: '>=1.21.0-0'
+sources:
+- https://github.com/nmstate/kubernetes-nmstate
+- https://github.com/nmstate/nmstate
