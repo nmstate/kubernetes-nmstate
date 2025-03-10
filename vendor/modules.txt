@@ -201,7 +201,6 @@ github.com/mxk/go-flowrate/flowrate
 github.com/nmstate/kubernetes-nmstate/api/names
 github.com/nmstate/kubernetes-nmstate/api/shared
 github.com/nmstate/kubernetes-nmstate/api/v1
-github.com/nmstate/kubernetes-nmstate/api/v1alpha1
 github.com/nmstate/kubernetes-nmstate/api/v1beta1
 # github.com/onsi/ginkgo/v2 v2.22.1
 ## explicit; go 1.22.0

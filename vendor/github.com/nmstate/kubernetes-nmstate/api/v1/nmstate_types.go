@@ -98,6 +98,12 @@ type NMStateStatus struct {
 type NMState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	// We are adding a default value for the Spec field because we want it to get automatically
+	// populated even if user does not specify it at all. By default, the k8s apiserver populates
+	// defaults only if you define "spec: {}" in your CR, otherwise it ignores the spec tree.
+	// Ref.: https://ahmet.im/blog/crd-generation-pitfalls/#defaulting-on-nested-structs
+
 	// +kubebuilder:default:={}
 	Spec   NMStateSpec   `json:"spec,omitempty"`
 	Status NMStateStatus `json:"status,omitempty"`

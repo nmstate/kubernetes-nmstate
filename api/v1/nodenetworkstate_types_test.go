@@ -1,7 +1,6 @@
 /*
 Copyright The Kubernetes NMState Authors.
 
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -37,7 +36,7 @@ interfaces:
     state: down`)
 
 		nnsManifest = `
-apiVersion: nmstate.io/v1alpha1
+apiVersion: nmstate.io/v1
 kind: NodeNetworkState
 metadata:
   name: node01
@@ -53,7 +52,7 @@ status:
 `
 		nnsStruct = NodeNetworkState{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "nmstate.io/v1alpha1",
+				APIVersion: "nmstate.io/v1",
 				Kind:       "NodeNetworkState",
 			},
 			ObjectMeta: metav1.ObjectMeta{

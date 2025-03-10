@@ -1,7 +1,6 @@
 /*
 Copyright The Kubernetes NMState Authors.
 
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -15,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,10 +22,10 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
-// +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkstates,shortName=nns,scope=Cluster
-// +kubebuilder:deprecatedversion
+// +kubebuilder:storageversion
+// +kubebuilder:object:root=true
 
 // NodeNetworkState is the Schema for the nodenetworkstates API
 type NodeNetworkState struct {

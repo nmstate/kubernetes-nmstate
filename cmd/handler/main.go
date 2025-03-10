@@ -52,7 +52,6 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1alpha1 "github.com/nmstate/kubernetes-nmstate/api/v1alpha1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
@@ -80,7 +79,6 @@ func init() {
 
 	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
-	utilruntime.Must(nmstatev1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	metrics.Registry.MustRegister(monitoring.AppliedFeatures)
