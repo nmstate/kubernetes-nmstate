@@ -87,6 +87,9 @@ spec:
       version: v1beta1
     - kind: NodeNetworkConfigurationEnactment
       name: nodenetworkconfigurationenactments.nmstate.io
+      version: v1
+    - kind: NodeNetworkConfigurationEnactment
+      name: nodenetworkconfigurationenactments.nmstate.io
       version: v1alpha1
     - kind: NodeNetworkConfigurationEnactment
       name: nodenetworkconfigurationenactments.nmstate.io
@@ -100,6 +103,9 @@ spec:
     - kind: NodeNetworkConfigurationPolicy
       name: nodenetworkconfigurationpolicies.nmstate.io
       version: v1beta1
+    - kind: NodeNetworkState
+      name: nodenetworkstates.nmstate.io
+      version: v1
     - kind: NodeNetworkState
       name: nodenetworkstates.nmstate.io
       version: v1alpha1
