@@ -53,6 +53,11 @@ type NMStateSpec struct {
 	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
 	// SelfSignConfiguration defines self signed certificate configuration
 	SelfSignConfiguration *SelfSignConfiguration `json:"selfSignConfiguration,omitempty"`
+	// ProbeConfiguration is an optional configuration of NMstate probes testing various functionalities.
+	// If ProbeConfiguration is specified, the handler will use the config defined here instead of its default values.
+	// +kubebuilder:default:={}
+	// +optional
+	ProbeConfiguration NMStateProbeConfiguration `json:"probeConfiguration,omitempty"`
 }
 
 type SelfSignConfiguration struct {
@@ -66,6 +71,17 @@ type SelfSignConfiguration struct {
 	// CertOverlapInterval defines the duration where expired service certificate
 	// can overlap with new one, in order to allow fluent service rotation transitioning
 	CertOverlapInterval string `json:"certOverlapInterval,omitempty"`
+}
+
+type NMStateProbeConfiguration struct {
+	// +kubebuilder:default={"host": "root-servers.net"}
+	DNS NMStateDNSProbeConfiguration `json:"dns,omitempty"`
+}
+
+type NMStateDNSProbeConfiguration struct {
+	// +kubebuilder:default:="root-servers.net"
+	// +required
+	Host string `json:"host,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState
@@ -82,8 +98,15 @@ type NMStateStatus struct {
 type NMState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NMStateSpec   `json:"spec,omitempty"`
-	Status            NMStateStatus `json:"status,omitempty"`
+
+	// We are adding a default value for the Spec field because we want it to get automatically
+	// populated even if user does not specify it at all. By default, the k8s apiserver populates
+	// defaults only if you define "spec: {}" in your CR, otherwise it ignores the spec tree.
+	// Ref.: https://ahmet.im/blog/crd-generation-pitfalls/#defaulting-on-nested-structs
+
+	// +kubebuilder:default:={}
+	Spec   NMStateSpec   `json:"spec,omitempty"`
+	Status NMStateStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -337,6 +337,40 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 	})
 
+	Context("when operator spec has custom DNS probe configured", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
+			)
+			// set DNS probe config field in operator Spec
+			nmstate.Spec.ProbeConfiguration = nmstatev1.NMStateProbeConfiguration{
+				DNS: nmstatev1.NMStateDNSProbeConfiguration{
+					Host: "google.com",
+				},
+			}
+
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			reconciler.Client = cl
+			reconciler.APIClient = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("should add DNS probe host to handler daemonset", func() {
+			ds := &appsv1.DaemonSet{}
+			err := cl.Get(context.TODO(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(envVariableStringPresent("PROBE_DNS_HOST", "google.com", ds.Spec.Template.Spec.Containers[0].Env)).To(BeTrue())
+		})
+	})
+
 	Context("Depending on cluster topology", func() {
 		var (
 			nodeSelector     map[string]string
@@ -610,4 +644,14 @@ func isKeyMatching(a, b corev1.Toleration) bool {
 func isEffectMatching(a, b corev1.Toleration) bool {
 	// An empty effect means match all effects.
 	return a.Effect == b.Effect || b.Effect == ""
+}
+
+// envVariableStringPresent checks if specified env variable KEY and VALUE are present in the provided list
+func envVariableStringPresent(key, value string, envList []corev1.EnvVar) bool {
+	for _, env := range envList {
+		if env.Name == key && env.Value == value {
+			return true
+		}
+	}
+	return false
 }
