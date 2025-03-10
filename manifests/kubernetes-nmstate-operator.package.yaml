@@ -1,4 +1,0 @@
-packageName: kubernetes-nmstate-operator
-channels:
-  - name: "stable"
-    currentCSV: kubernetes-nmstate-operator.v4.19.0
