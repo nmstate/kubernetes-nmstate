@@ -80,7 +80,7 @@ type NMStateProbeConfiguration struct {
 
 type NMStateDNSProbeConfiguration struct {
 	// +kubebuilder:default:="root-servers.net"
-	// +required
+	// +optional
 	Host string `json:"host,omitempty"`
 }
 
