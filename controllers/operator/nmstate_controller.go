@@ -381,7 +381,7 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
 			},
 		})
-		if err != nil && apierrors.IsNotFound(err) {
+		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed deleting obsolete cert-manager deployment at openshift: %w", err)
 		}
 
@@ -392,7 +392,7 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-webhook",
 			},
 		})
-		if err != nil && apierrors.IsNotFound(err) {
+		if err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf("failed deleting old webhook secret at openshift: %w", err)
 		}
 	}
