@@ -127,6 +127,10 @@ spec:
       jsonPath: .status.conditions[?(@.status=="True")].type
       name: Status
       type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
     deprecated: true
     name: v1beta1
     schema:
