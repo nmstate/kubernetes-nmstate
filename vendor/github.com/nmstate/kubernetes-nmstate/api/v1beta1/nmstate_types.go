@@ -25,6 +25,12 @@ import (
 
 // NMStateSpec defines the desired state of NMState
 type NMStateSpec struct {
+	// Affinity is an optional affinity selector that will be added to handler DaemonSet manifest.
+	// +optional
+	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// InfraAffinity is an optional affinity selector that will be added to webhook, metrics & console-plugin Deployment manifests.
+	// +optional
+	InfraAffinity *corev1.Affinity `json:"infraAffinity,omitempty"`
 	// NodeSelector is an optional selector that will be added to handler DaemonSet manifest
 	// for both workers and control-plane (https://github.com/nmstate/kubernetes-nmstate/blob/main/deploy/handler/operator.yaml).
 	// If NodeSelector is specified, the handler will run only on nodes that have each of the indicated key-value pairs
@@ -35,15 +41,47 @@ type NMStateSpec struct {
 	// If Tolerations is specified, the handler daemonset will be also scheduled on nodes with corresponding taints
 	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
-	// InfraNodeSelector is an optional selector that will be added to webhook & certmanager Deployment manifests
-	// If InfraNodeSelector is specified, the webhook and certmanager will run only on nodes that have each of the indicated
-	// key-value pairs as labels applied to the node.
+	// InfraNodeSelector is an optional selector that will be added to webhook, metrics & console-plugin Deployment manifests
+	// If InfraNodeSelector is specified, the webhook, metrics and the console plugin will run only on nodes that have each
+	// of the indicated key-value pairs as labels applied to the node.
 	// +optional
 	InfraNodeSelector map[string]string `json:"infraNodeSelector,omitempty"`
-	// InfraTolerations is an optional list of tolerations to be added to webhook & certmanager Deployment manifests
-	// If InfraTolerations is specified, the webhook and certmanager will be able to be scheduled on nodes with corresponding taints
+	// InfraTolerations is an optional list of tolerations to be added to webhook, metrics & console-plugin Deployment manifests
+	// If InfraTolerations is specified, the webhook, metrics and the console plugin will be able to be scheduled on nodes with
+	// corresponding taints
 	// +optional
 	InfraTolerations []corev1.Toleration `json:"infraTolerations,omitempty"`
+	// SelfSignConfiguration defines self signed certificate configuration
+	SelfSignConfiguration *SelfSignConfiguration `json:"selfSignConfiguration,omitempty"`
+	// ProbeConfiguration is an optional configuration of NMstate probes testing various functionalities.
+	// If ProbeConfiguration is specified, the handler will use the config defined here instead of its default values.
+	// +kubebuilder:default:={}
+	// +optional
+	ProbeConfiguration NMStateProbeConfiguration `json:"probeConfiguration,omitempty"`
+}
+
+type SelfSignConfiguration struct {
+	// CARotateInterval defines duration for CA expiration
+	CARotateInterval string `json:"caRotateInterval,omitempty"`
+	// CAOverlapInterval defines the duration where expired CA certificate
+	// can overlap with new one, in order to allow fluent CA rotation transitioning
+	CAOverlapInterval string `json:"caOverlapInterval,omitempty"`
+	// CertRotateInterval defines duration for of service certificate expiration
+	CertRotateInterval string `json:"certRotateInterval,omitempty"`
+	// CertOverlapInterval defines the duration where expired service certificate
+	// can overlap with new one, in order to allow fluent service rotation transitioning
+	CertOverlapInterval string `json:"certOverlapInterval,omitempty"`
+}
+
+type NMStateProbeConfiguration struct {
+	// +kubebuilder:default={"host": "root-servers.net"}
+	DNS NMStateDNSProbeConfiguration `json:"dns,omitempty"`
+}
+
+type NMStateDNSProbeConfiguration struct {
+	// +kubebuilder:default:="root-servers.net"
+	// +required
+	Host string `json:"host,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState
@@ -60,8 +98,15 @@ type NMStateStatus struct {
 type NMState struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	Spec              NMStateSpec   `json:"spec,omitempty"`
-	Status            NMStateStatus `json:"status,omitempty"`
+
+	// We are adding a default value for the Spec field because we want it to get automatically
+	// populated even if user does not specify it at all. By default, the k8s apiserver populates
+	// defaults only if you define "spec: {}" in your CR, otherwise it ignores the spec tree.
+	// Ref.: https://ahmet.im/blog/crd-generation-pitfalls/#defaulting-on-nested-structs
+
+	// +kubebuilder:default:={}
+	Spec   NMStateSpec   `json:"spec,omitempty"`
+	Status NMStateStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
