@@ -8,6 +8,14 @@
 # automation/check-patch.e2e-k8s.sh
 
 teardown() {
+    ./cluster/kubectl.sh get pod -n nmstate -o wide > $ARTIFACTS/kubernetes-nmstate.pod.list.txt || true
+    ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.logs || true
+    ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.previous.logs || true
+    ./cluster/kubectl.sh describe pods -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.describe.logs || true
+    ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.logs || true
+    ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.previous.logs || true
+    ./cluster/kubectl.sh describe pods -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.describe.logs || true
+    ./cluster/kubectl.sh get events > $ARTIFACTS/cluster-events.logs || true
     make cluster-down
     # Don't fail if there is no logs
     cp -r ${E2E_LOGS}/operator/* ${ARTIFACTS} || true
