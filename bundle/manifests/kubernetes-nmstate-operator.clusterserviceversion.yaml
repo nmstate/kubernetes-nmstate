@@ -245,6 +245,9 @@ spec:
                 imagePullPolicy: IfNotPresent
                 name: nmstate-operator
                 resources:
+                  limits:
+                    cpu: 500m
+                    memory: 128Mi
                   requests:
                     cpu: 60m
                     memory: 30Mi
