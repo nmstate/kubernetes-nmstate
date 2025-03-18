@@ -34,11 +34,12 @@ spec:
           ports:
             - containerPort: {{ .PluginPort }}
               protocol: TCP
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           resources:
             requests:
               cpu: 10m
               memory: 50Mi
+          terminationMessagePolicy: FallbackToLogsOnError
           volumeMounts:
             - name: plugin-serving-cert
               readOnly: true
