@@ -51,6 +51,9 @@ spec:
             requests:
               cpu: "30m"
               memory: "20Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
@@ -89,8 +92,11 @@ spec:
             protocol: TCP
           resources:
             requests:
-              cpu: 10m
-              memory: 20Mi
+              cpu: "10m"
+              memory: "20Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           terminationMessagePolicy: FallbackToLogsOnError
 ---
 apiVersion: apps/v1
@@ -142,6 +148,9 @@ spec:
             requests:
               cpu: "30m"
               memory: "20Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
@@ -232,6 +241,9 @@ spec:
             requests:
               cpu: "30m"
               memory: "30Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
@@ -328,6 +340,9 @@ spec:
             requests:
               cpu: "100m"
               memory: "100Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
