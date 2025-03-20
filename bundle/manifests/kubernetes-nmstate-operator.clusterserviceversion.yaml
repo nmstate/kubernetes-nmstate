@@ -243,7 +243,28 @@ spec:
                   value: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
                 image: quay.io/nmstate/kubernetes-nmstate-operator:latest
                 imagePullPolicy: IfNotPresent
+                livenessProbe:
+                  failureThreshold: 3
+                  httpGet:
+                    path: /healthz
+                    port: healthprobe
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  successThreshold: 1
+                  timeoutSeconds: 1
                 name: nmstate-operator
+                ports:
+                - containerPort: 8081
+                  name: healthprobe
+                readinessProbe:
+                  failureThreshold: 3
+                  httpGet:
+                    path: /readyz
+                    port: healthprobe
+                  initialDelaySeconds: 10
+                  periodSeconds: 10
+                  successThreshold: 1
+                  timeoutSeconds: 1
                 resources:
                   limits:
                     cpu: 500m
