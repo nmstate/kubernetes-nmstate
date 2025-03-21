@@ -201,7 +201,7 @@ spec:
                       - name: PLUGIN_IMAGE
                         value: quay.io/openshift/origin-nmstate-console-plugin:4.19
                       - name: HANDLER_IMAGE_PULL_POLICY
-                        value: Always
+                        value: IfNotPresent
                       - name: HANDLER_NAMESPACE
                         value: openshift-nmstate
                       - name: MONITORING_NAMESPACE
@@ -209,9 +209,12 @@ spec:
                       - name: KUBE_RBAC_PROXY_IMAGE
                         value: quay.io/openshift/origin-kube-rbac-proxy:4.19
                     image: quay.io/openshift/origin-kubernetes-nmstate-operator:4.19
-                    imagePullPolicy: Always
+                    imagePullPolicy: IfNotPresent
                     name: nmstate-operator
                     resources:
+                      limits:
+                        cpu: 500m
+                        memory: 128Mi
                       requests:
                         cpu: 60m
                         memory: 30Mi
