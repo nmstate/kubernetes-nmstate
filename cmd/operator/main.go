@@ -30,6 +30,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -88,11 +89,16 @@ func main() {
 		Metrics: metricsserver.Options{
 			BindAddress: "0", // disable metrics
 		},
+		HealthProbeBindAddress: ":8081",
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
+
+	if err = setupHealthProbes(mgr); err != nil {
 		os.Exit(1)
 	}
 
@@ -145,4 +151,16 @@ func setProfiler() {
 			}
 		}()
 	}
+}
+
+func setupHealthProbes(mgr manager.Manager) error {
+	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up healthz check")
+		return err
+	}
+	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		setupLog.Error(err, "unable to set up readyz check")
+		return err
+	}
+	return nil
 }

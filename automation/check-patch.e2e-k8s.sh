@@ -15,6 +15,9 @@ teardown() {
     ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.logs || true
     ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.previous.logs || true
     ./cluster/kubectl.sh describe pods -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.describe.logs || true
+    ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l component=kubernetes-nmstate-webhook > $ARTIFACTS/kubernetes-nmstate-webhook.pod.logs || true
+    ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l component=kubernetes-nmstate-webhook > $ARTIFACTS/kubernetes-nmstate-webhook.pod.previous.logs || true
+    ./cluster/kubectl.sh describe pods -n nmstate -l component=kubernetes-nmstate-webhook > $ARTIFACTS/kubernetes-nmstate-webhook.pod.describe.logs || true
     ./cluster/kubectl.sh get events > $ARTIFACTS/cluster-events.logs || true
     make cluster-down
     # Don't fail if there is no logs

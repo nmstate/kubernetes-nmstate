@@ -26,7 +26,7 @@ function wait_ready_operator() {
     sleep 5
 
     # Wait for deployment rollout
-    if ! $kubectl rollout status -w -n ${OPERATOR_NAMESPACE} deployment nmstate-operator; then
+    if ! $kubectl rollout status -w -n ${OPERATOR_NAMESPACE} deployment nmstate-operator --timeout=2m; then
         echo "Operator haven't turned ready within the given timeout"
         return 1
     fi
