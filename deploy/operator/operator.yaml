@@ -59,8 +59,11 @@ spec:
               - ALL
           resources:
             requests:
-              cpu: 60m
-              memory: 30Mi
+              cpu: "60m"
+              memory: "30Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -72,10 +75,8 @@ spec:
               value: "6060"
             - name: RUN_OPERATOR
               value: ""
-            - name: HANDLER_IMAGE
+            - name: RELATED_IMAGE_HANDLER_IMAGE
               value: {{ .HandlerImage }}
-            - name: PLUGIN_IMAGE
-              value: {{ .PluginImage }}
             - name: HANDLER_IMAGE_PULL_POLICY
               value: {{ .HandlerPullPolicy }}
             - name: HANDLER_NAMESPACE
