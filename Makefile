@@ -37,8 +37,8 @@ PLUGIN_IMAGE ?= $(IMAGE_REGISTRY)/$(PLUGIN_IMAGE_FULL_NAME)
 export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 export MONITORING_NAMESPACE ?= monitoring
-HANDLER_PULL_POLICY ?= Always
-OPERATOR_PULL_POLICY ?= Always
+HANDLER_PULL_POLICY ?= IfNotPresent
+OPERATOR_PULL_POLICY ?= IfNotPresent
 export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
 
 WHAT ?= ./pkg/... ./controllers/...

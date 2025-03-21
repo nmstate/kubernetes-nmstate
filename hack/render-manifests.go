@@ -48,7 +48,7 @@ func main() {
 
 	handlerNamespace := flag.String("handler-namespace", "nmstate", "Namespace for the NMState handler")
 	handlerImage := flag.String("handler-image", "", "Image for the NMState handler")
-	handlerPullPolicy := flag.String("handler-pull-policy", "Always", "Pull policy for the NMState handler image")
+	handlerPullPolicy := flag.String("handler-pull-policy", "IfNotPresent", "Pull policy for the NMState handler image")
 	handlerPrefix := flag.String("handler-prefix", "", "Name prefix for the NMState handler's resources")
 	operatorNamespace := flag.String("operator-namespace", "nmstate-operator", "Namespace for the NMState operator")
 	operatorImage := flag.String("operator-image", "", "Image for the NMState operator")
