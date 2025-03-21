@@ -424,6 +424,16 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 1
+          livenessProbe:
+            exec:
+              command:
+              - nmstatectl
+              - show
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            timeoutSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
       volumes:
         - name: dbus-socket
           hostPath:
