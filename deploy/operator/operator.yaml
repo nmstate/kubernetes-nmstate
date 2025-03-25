@@ -57,6 +57,27 @@ spec:
             capabilities:
               drop:
               - ALL
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8081
+              name: healthprobe
           resources:
             requests:
               cpu: "60m"
@@ -75,10 +96,8 @@ spec:
               value: "6060"
             - name: RUN_OPERATOR
               value: ""
-            - name: HANDLER_IMAGE
+            - name: RELATED_IMAGE_HANDLER_IMAGE
               value: {{ .HandlerImage }}
-            - name: PLUGIN_IMAGE
-              value: {{ .PluginImage }}
             - name: HANDLER_IMAGE_PULL_POLICY
               value: {{ .HandlerPullPolicy }}
             - name: HANDLER_NAMESPACE
