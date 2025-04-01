@@ -1,0 +1,8 @@
+# For more information on the syntax of the CODEOWNERS file, see:
+# https://docs.github.com/en/github/creating-cloning-and-archiving-repositories/about-code-owners
+
+# The K-NMstate maintainers team
+*   @qinqon @mkowalski
+
+# Default reviewers for documentation
+/docs/ @dfitzmau
