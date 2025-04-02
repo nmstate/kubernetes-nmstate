@@ -44,12 +44,12 @@ spec:
               memory: "128Mi"
           readinessProbe:
             tcpSocket:
-              port: { { .PluginPort } }
+              port: {{ .PluginPort }}
             initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             tcpSocket:
-              port: { { .PluginPort } }
+              port: {{ .PluginPort }}
             initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 1
