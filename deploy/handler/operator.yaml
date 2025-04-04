@@ -25,6 +25,8 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-metrics
       annotations:
         description: kubernetes-nmstate-metrics dump nmstate metrics
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -135,6 +137,8 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-webhook
       annotations:
         description: kubernetes-nmstate-webhook resets NNCP status
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -248,6 +252,8 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-cert-manager
       annotations:
         description: kubernetes-nmstate-webhook rotate webhook certs
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -340,6 +346,8 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-handler
       annotations:
         description: kubernetes-nmstate-handler configures and presents node networking, reconciling declerative NNCP and reports with NNS and NNCE
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # future nmstate/NM is in place.
