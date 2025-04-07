@@ -45,12 +45,12 @@ import (
 )
 
 type TestData struct {
-	Ns                                     string
-	Nmstate                                nmstatev1.NMState
-	WebhookKey, HandlerKey, CertManagerKey types.NamespacedName
-	MetricsKey                             *types.NamespacedName
-	ManifestsDir                           string
-	ManifestFiles                          []string
+	Ns                                                       string
+	Nmstate                                                  nmstatev1.NMState
+	WebhookKey, HandlerKey, CertManagerKey, ConsolePluginKey types.NamespacedName
+	MetricsKey                                               *types.NamespacedName
+	ManifestsDir                                             string
+	ManifestFiles                                            []string
 }
 
 func NewOperatorTestData(ns string, manifestsDir string, manifestFiles []string) TestData {
@@ -62,11 +62,12 @@ func NewOperatorTestData(ns string, manifestsDir string, manifestFiles []string)
 				Namespace: ns,
 			},
 		},
-		WebhookKey:     types.NamespacedName{Namespace: ns, Name: "nmstate-webhook"},
-		HandlerKey:     types.NamespacedName{Namespace: ns, Name: "nmstate-handler"},
-		CertManagerKey: types.NamespacedName{Namespace: ns, Name: "nmstate-cert-manager"},
-		ManifestsDir:   manifestsDir,
-		ManifestFiles:  manifestFiles,
+		WebhookKey:       types.NamespacedName{Namespace: ns, Name: "nmstate-webhook"},
+		HandlerKey:       types.NamespacedName{Namespace: ns, Name: "nmstate-handler"},
+		CertManagerKey:   types.NamespacedName{Namespace: ns, Name: "nmstate-cert-manager"},
+		ConsolePluginKey: types.NamespacedName{Namespace: ns, Name: "nmstate-console-plugin"},
+		ManifestsDir:     manifestsDir,
+		ManifestFiles:    manifestFiles,
 	}
 	// If there is a "servicemonitors" RBAC then nmstate-metrics deployment
 	// should be  there
@@ -123,6 +124,9 @@ func EventuallyOperandIsReady(testData TestData) {
 	if !IsOpenShift() {
 		By("Wait deployment cert-manager is ready")
 		deployment.GetEventually(testData.CertManagerKey).Should(deployment.BeReady(), "should start cert-manager deployment")
+	} else {
+		By("Wait deployment console-plugin is ready")
+		deployment.GetEventually(testData.ConsolePluginKey).Should(deployment.BeReady(), "should start console-plugin deployment")
 	}
 	if testData.MetricsKey != nil {
 		By("Wait deployment metrics is ready")
@@ -135,6 +139,8 @@ func EventuallyOperandIsNotFound(testData TestData) {
 	EventuallyIsNotFound(testData.WebhookKey, &appsv1.Deployment{}, "should delete webhook deployment")
 	if !IsOpenShift() {
 		EventuallyIsNotFound(testData.CertManagerKey, &appsv1.Deployment{}, "should delete cert-manager deployment")
+	} else {
+		EventuallyIsNotFound(testData.ConsolePluginKey, &appsv1.Deployment{}, "should delete console-plugin deployment")
 	}
 	if testData.MetricsKey != nil {
 		EventuallyIsNotFound(*testData.MetricsKey, &appsv1.Deployment{}, "should delete metrics deployment")
