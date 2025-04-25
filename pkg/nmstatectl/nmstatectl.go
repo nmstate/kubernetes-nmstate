@@ -82,7 +82,10 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 		[]string{"apply", "-v", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
 		string(desiredState.Raw),
 	)
-	return setOutput, err
+	if err != nil {
+		return "", NewNmstatectlApplyError(err)
+	}
+	return setOutput, nil
 }
 
 func Commit() (string, error) {

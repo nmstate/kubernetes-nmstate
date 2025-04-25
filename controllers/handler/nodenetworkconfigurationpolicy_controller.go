@@ -223,8 +223,11 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 		policyconditions.Update(r.Client, r.APIClient, request.NamespacedName)
 	}
 
-	nmstateOutput, err := nmstate.ApplyDesiredState(r.APIClient, enactmentInstance.Status.DesiredState)
-	if err != nil {
+	nmstateOutput := ""
+	if err := retry.OnError(retry.DefaultRetry, nmstatectl.IsNmstatectlApplyError, func() error {
+		nmstateOutput, err = nmstate.ApplyDesiredState(r.APIClient, enactmentInstance.Status.DesiredState)
+		return err
+	}); err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy on node %s at desired state apply: %q,\n %v",
 			nodeName, nmstateOutput, err)
 		enactmentConditions.NotifyFailedToConfigure(errmsg)
@@ -232,7 +235,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 		if r.Recorder != nil {
 			r.Recorder.Event(instance, corev1.EventTypeWarning, ReconcileFailed, errmsg.Error())
 		}
-		return ctrl.Result{}, nil
+
+		// Skip reconciliation on error by wrapping the error in a TerminalError.
+		return ctrl.Result{}, reconcile.TerminalError(errmsg)
 	}
 	log.Info("nmstate", "output", nmstateOutput)
 
