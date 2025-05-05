@@ -129,6 +129,8 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1.NMState{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.DaemonSet{}).
 		Complete(r)
 }
 
