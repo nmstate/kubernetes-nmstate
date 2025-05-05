@@ -1,0 +1,148 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-operator-egress-api-6443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate-operator
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+  policyTypes:
+    - Egress
+{{- if not .IsOpenShift }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cert-manager-egress-api-6443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-cert-manager
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+  policyTypes:
+    - Egress
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-ingress-8443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-metrics
+  ingress:
+  - ports:
+    - protocol: TCP
+      port: 8443
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-ingress-443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-metrics
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 443
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webhook-ingress-9443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-webhook
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 9443
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webhook-ingress-443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-webhook
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: 443
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-webhook-egress-api-6443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-webhook
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-egress-api-6443
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-metrics
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 6443
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress

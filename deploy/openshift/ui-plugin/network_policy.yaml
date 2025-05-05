@@ -1,0 +1,17 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-plugin-{{ .PluginName }}-ingress
+  namespace: {{ .PluginNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: {{ .PluginName }}
+      component: {{ .PluginName }}
+  ingress:
+    - ports:
+        - protocol: TCP
+          port: {{ .PluginPort }}
+  policyTypes:
+    - Ingress
