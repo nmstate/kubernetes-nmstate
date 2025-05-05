@@ -42,6 +42,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 )
 
@@ -371,6 +372,44 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 	})
 
+	Context("XXX CHOCOBOMB", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
+			)
+
+			// TODO(mko) If we decide to allow enable/disable via nmstate CR,
+			//           here will live the code that configures the flag
+
+			//// set DNS probe config field in operator Spec
+			//nmstate.Spec.ProbeConfiguration = nmstatev1.NMStateProbeConfiguration{
+			//	DNS: nmstatev1.NMStateDNSProbeConfiguration{
+			//		Host: "google.com",
+			//	},
+			//}
+
+			objs := []runtime.Object{&nmstate}
+			// Create a fake client to mock API calls.
+			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			reconciler.Client = cl
+			reconciler.APIClient = cl
+			request.Name = existingNMStateName
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{}))
+		})
+		It("should apply network policies", func() {
+			netpols := &networkingv1.NetworkPolicyList{}
+			err := cl.List(context.TODO(), netpols, client.InNamespace(handlerNamespace))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(netpols.Items)).To(BeNumerically(">", 1))
+		})
+	})
+
 	Context("Depending on cluster topology", func() {
 		var (
 			nodeSelector     map[string]string
@@ -556,6 +595,7 @@ func copyManifests(manifestsDir string) error {
 		"../../deploy/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml":   "kubernetes-nmstate/crds/",
 		"../../deploy/crds/nmstate.io_nodenetworkstates.yaml":                  "kubernetes-nmstate/crds/",
 		"../../deploy/handler/namespace.yaml":                                  "kubernetes-nmstate/namespace/",
+		"../../deploy/handler/network_policy.yaml":                             "kubernetes-nmstate/netpol/handler.yaml",
 		"../../deploy/handler/operator.yaml":                                   "kubernetes-nmstate/handler/handler.yaml",
 		"../../deploy/handler/service_account.yaml":                            "kubernetes-nmstate/rbac/",
 		"../../deploy/handler/role.yaml":                                       "kubernetes-nmstate/rbac/",
