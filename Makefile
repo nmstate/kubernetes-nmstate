@@ -34,9 +34,17 @@ KUBE_RBAC_PROXY_IMAGE ?= $(KUBE_RBAC_PROXY_IMAGE_REGISTRY)/$(KUBE_RBAC_PROXY_FUL
 export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 export MONITORING_NAMESPACE ?= monitoring
+export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
+
+# "Always" policy must be used only for development, never pushed to the production CSV
+INTERACTIVE:=$(shell [ -t 0 ] && echo 1)
+ifdef INTERACTIVE
+HANDLER_PULL_POLICY ?= Always
+OPERATOR_PULL_POLICY ?= Always
+else
 HANDLER_PULL_POLICY ?= IfNotPresent
 OPERATOR_PULL_POLICY ?= IfNotPresent
-export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
+endif
 
 WHAT ?= ./pkg/... ./controllers/...
 
