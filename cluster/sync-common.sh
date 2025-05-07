@@ -35,6 +35,12 @@ function isOpenshift {
     $kubectl get co openshift-apiserver
 }
 
+function digest {
+    local registry=${1}
+    local image=${2}
+    skopeo inspect --tls-verify=false docker://${registry}/nmstate/kubernetes-nmstate-${image}:latest |jq -r '.Digest'
+}
+
 function push() {
     if isExternal; then
         if [[ ! -v DEV_IMAGE_REGISTRY ]]; then
@@ -55,6 +61,9 @@ function push() {
     # Build new handler and operator image from local sources and push it to the kubevirtci cluster
     IMAGE_REGISTRY=${registry} make push
 
-    # Also generate the manifests pointing to the local registry
-    IMAGE_REGISTRY=registry:5000 make manifests
+    # Generate the manifests potinting to the sha256 digest of the pushed images and the local registry
+    export OPERATOR_IMAGE_FULL_NAME=nmstate/kubernetes-nmstate-operator@$(digest $registry operator)
+    export HANDLER_IMAGE_FULL_NAME=nmstate/kubernetes-nmstate-handler@$(digest $registry handler)
+    export IMAGE_REGISTRY=registry:5000
+    make manifests
 }
