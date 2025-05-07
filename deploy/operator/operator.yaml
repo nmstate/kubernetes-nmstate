@@ -4,6 +4,11 @@ kind: Deployment
 metadata:
   name: nmstate-operator
   namespace: {{ .OperatorNamespace }}
+{{- if .IsOpenShift }}
+  annotations:
+    target.workload.openshift.io/management: |
+      {"effect": "PreferredDuringScheduling"}
+{{- end }}
   labels:
     app: kubernetes-nmstate-operator
 spec:
@@ -13,6 +18,11 @@ spec:
       name: kubernetes-nmstate-operator
   template:
     metadata:
+{{- if .IsOpenShift }}
+      annotations:
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
+{{- end }}
       labels:
         app: kubernetes-nmstate-operator
         name: kubernetes-nmstate-operator
