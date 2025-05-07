@@ -1,7 +1,6 @@
 /*
 Copyright The Kubernetes NMState Authors.
 
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -44,7 +43,7 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:printcolumn:name="Status Age",type="date",JSONPath=".status.conditions[?(@.status==\"True\")].lastTransitionTime",description="Status Age"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
 // +kubebuilder:pruning:PreserveUnknownFields
-// +kubebuilder:storageversion
+// +kubebuilder:deprecatedversion
 
 // NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
 type NodeNetworkConfigurationEnactment struct {
