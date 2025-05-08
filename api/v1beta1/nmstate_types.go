@@ -86,13 +86,15 @@ type NMStateDNSProbeConfiguration struct {
 
 // NMStateStatus defines the observed state of NMState
 type NMStateStatus struct {
-	Conditions shared.ConditionList `json:"conditions,omitempty"`
+	Conditions shared.ConditionList `json:"conditions,omitempty" optional:"true"`
 }
 
+// +genclient
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nmstates,scope=Cluster
-// +kubebuilder:subresource=status
-// +kubebuilder:deprecatedversion
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
 
 // NMState is the Schema for the nmstates API
 type NMState struct {
