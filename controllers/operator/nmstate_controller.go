@@ -37,7 +37,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/openshift/cluster-network-operator/pkg/render"
@@ -46,6 +45,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/apply"
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
@@ -471,30 +471,17 @@ func (r *NMStateReconciler) renderAndApply(
 			if err != nil {
 				return errors.Wrap(err, "failed to set owner reference")
 			}
+			if obj.GetKind() == "Deployment" {
+				r.deployments = append(r.deployments, client.ObjectKeyFromObject(obj))
+			} else if obj.GetKind() == "DaemonSet" {
+				r.daemonSets = append(r.daemonSets, client.ObjectKeyFromObject(obj))
+			}
+
 		}
-		if err := r.apply(context.TODO(), obj); err != nil {
+
+		if err := apply.ApplyObject(context.TODO(), r.Client, obj); err != nil {
 			return fmt.Errorf("failed to apply object %v: %w", obj, err)
 		}
-	}
-	return nil
-}
-
-func (r *NMStateReconciler) apply(ctx context.Context, newObj *unstructured.Unstructured) error {
-	key := client.ObjectKeyFromObject(newObj)
-	oldObj := &unstructured.Unstructured{}
-	oldObj.SetGroupVersionKind(newObj.GroupVersionKind())
-	if err := r.Client.Get(ctx, key, oldObj); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		if err := r.Client.Create(ctx, newObj); err != nil {
-			return fmt.Errorf("failed creating %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
-		}
-		return nil
-	}
-	newObj.SetResourceVersion(oldObj.GetResourceVersion())
-	if err := r.Client.Patch(ctx, newObj, client.MergeFrom(oldObj)); err != nil {
-		return fmt.Errorf("failed patching %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
 	}
 	return nil
 }
