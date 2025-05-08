@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"sort"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -54,9 +55,12 @@ import (
 // NMStateReconciler reconciles a NMState object
 type NMStateReconciler struct {
 	client.Client
-	APIClient client.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
+	APIClient      client.Client
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	deployments    []client.ObjectKey
+	daemonSets     []client.ObjectKey
+	lastGeneration int64
 }
 
 // +kubebuilder:rbac:groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods,verbs="*"
@@ -77,6 +81,8 @@ type NMStateReconciler struct {
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
+
+	r.Log.Info("Starting Reconcile", "request", req.NamespacedName)
 
 	// Fetch the NMState instance
 	instanceList := &nmstatev1.NMStateList{}
@@ -114,12 +120,19 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
+	r.deployments = []client.ObjectKey{}
+	r.daemonSets = []client.ObjectKey{}
+
 	if err := r.applyManifests(instance, ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	if err := r.cleanupObsoleteResources(ctx); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileStatus(instance); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed reconciling status: %w", err)
 	}
 
 	r.Log.Info("Reconcile complete.")
@@ -442,6 +455,84 @@ func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string, 
 	} else {
 		return singleNodeClusterReplicaMinCount, singleNodeClusterReplicaCountDesired, nil
 	}
+}
+
+func (r *NMStateReconciler) reconcileStatus(instance *nmstatev1.NMState) error {
+	progressing := []string{}
+	for _, deploymentKey := range r.deployments {
+		deployment := &appsv1.Deployment{}
+		if err := r.Client.Get(context.TODO(), deploymentKey, deployment); err != nil {
+			return errors.Wrap(err, "failed to get deployment")
+		}
+		if deployment.Status.UnavailableReplicas > 0 {
+			progressing = append(progressing, fmt.Sprintf("Deployment %q is not available (awaiting %d nodes)", deployment.Name, deployment.Status.UnavailableReplicas))
+		} else if deployment.Status.AvailableReplicas == 0 {
+			progressing = append(progressing, fmt.Sprintf("Deployment %q is not yet scheduled on any nodes", deployment.Name))
+		} else if deployment.Status.ObservedGeneration < deployment.Generation {
+			progressing = append(progressing, fmt.Sprintf("Deployment %q update is being processed (generation %d, observed generation %d)", deployment.Name, deployment.Generation, deployment.Status.ObservedGeneration))
+		}
+
+	}
+	for _, daemonSetKey := range r.daemonSets {
+		daemonSet := &appsv1.DaemonSet{}
+		if err := r.Client.Get(context.TODO(), daemonSetKey, daemonSet); err != nil {
+			return errors.Wrap(err, "failed to get daemonset")
+		}
+		if daemonSet.Status.NumberUnavailable > 0 {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q is not available (awaiting %d nodes)", daemonSet.Name, daemonSet.Status.NumberUnavailable))
+		} else if daemonSet.Status.NumberAvailable == 0 && daemonSet.Status.DesiredNumberScheduled != 0 {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q is not yet scheduled on any nodes", daemonSet.Name))
+		} else if daemonSet.Status.UpdatedNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q update is rolling out (%d out of %d updated)", daemonSet.Name, daemonSet.Status.UpdatedNumberScheduled, daemonSet.Status.DesiredNumberScheduled))
+		} else if daemonSet.Generation > daemonSet.Status.ObservedGeneration {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q update is being processed (generation %d, observed generation %d)", daemonSet.Name, daemonSet.Generation, daemonSet.Status.ObservedGeneration))
+		}
+	}
+
+	if len(progressing) > 0 {
+		instance.Status.Conditions.Set(
+			"Progressing",
+			corev1.ConditionTrue,
+			"Deploying",
+			strings.Join(progressing, "\n"),
+		)
+		instance.Status.Conditions.Set(
+			"Available",
+			corev1.ConditionFalse,
+			"Deploying",
+			"Deploying is in process",
+		)
+	} else {
+		instance.Status.Conditions.Set(
+			"Progressing",
+			corev1.ConditionFalse,
+			"",
+			"",
+		)
+		if instance.GetGeneration() == r.lastGeneration {
+			instance.Status.Conditions.Set(
+				"Failure",
+				corev1.ConditionTrue,
+				"Deploying",
+				strings.Join(progressing, "\n"),
+			)
+			instance.Status.Conditions.Set(
+				"Available",
+				corev1.ConditionTrue,
+				"",
+				"",
+			)
+		}
+	}
+	r.lastGeneration = instance.GetGeneration()
+
+	r.Log.Info("DELETEME: Retrieving NMState instance for status update")
+	if err := r.Client.Get(context.TODO(), client.ObjectKey{Name: instance.Name}, &nmstatev1.NMState{}); err != nil {
+		return errors.Wrap(err, "failed to get NMState instance")
+	}
+
+	r.Log.Info("Updating status", "status", instance.Status.Conditions)
+	return r.Client.Status().Update(context.TODO(), instance)
 }
 
 func (r *NMStateReconciler) renderAndApply(
