@@ -11,6 +11,8 @@ ifeq ($(NMSTATE_PIN), future)
 HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git"
 endif
 
+HOST_OS=$(shell uname -s | tr "[:upper:]" "[:lower:]")
+
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
@@ -169,13 +171,13 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
 push-operator:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
 
 push: push-handler push-operator
 
@@ -242,7 +244,8 @@ bundle-build:
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:v1.24.0
+	# The tag master-amd64 is hard coded to amd64 here to allow for adding indices to an amd64 build from an arm64 machine.
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:master-amd64
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)
