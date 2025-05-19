@@ -157,10 +157,11 @@ gen-rbac:
 check-gen: check-manifests check-bundle
 
 check-manifests: generate
-	./hack/check-gen.sh generate
+	git diff --exit-code -s api || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
+	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
-	./hack/check-gen.sh bundle
+	git diff --exit-code -I'^    createdAt: ' -s bundle || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
 
 generate: gen-k8s gen-crds gen-rbac
 
