@@ -13,6 +13,9 @@ spec:
       name: kubernetes-nmstate-operator
   template:
     metadata:
+      annotations:
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
       labels:
         app: kubernetes-nmstate-operator
         name: kubernetes-nmstate-operator
