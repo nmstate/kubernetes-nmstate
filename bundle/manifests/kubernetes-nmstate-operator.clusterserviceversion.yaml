@@ -63,11 +63,11 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/nmstate/kubernetes-nmstate-operator:latest
-    createdAt: "2021-11-24 16:05:00"
+    createdAt: "2025-05-19T08:33:32Z"
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
     operatorframework.io/suggested-namespace: nmstate
-    operators.operatorframework.io/builder: operator-sdk-v1.21.0
+    operators.operatorframework.io/builder: operator-sdk-v1.37.0
     operators.operatorframework.io/internal-objects: '["nodenetworkconfigurationenactments.nmstate.io",
       "nodenetworkstates.nmstate.io"]'
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3

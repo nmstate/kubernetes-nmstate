@@ -11,6 +11,8 @@ ifeq ($(NMSTATE_PIN), future)
 HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git"
 endif
 
+HOST_OS=$(shell uname -s | tr "[:upper:]" "[:lower:]")
+
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
@@ -69,7 +71,7 @@ export SSH ?= ./cluster/ssh.sh
 export KUBECTL ?= ./cluster/kubectl.sh
 
 KUBECTL ?= ./cluster/kubectl.sh
-OPERATOR_SDK_VERSION ?= 1.21.0
+OPERATOR_SDK_VERSION ?= 1.37.0
 
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.1
@@ -155,10 +157,11 @@ gen-rbac:
 check-gen: check-manifests check-bundle
 
 check-manifests: generate
-	./hack/check-gen.sh generate
+	git diff --exit-code -s api || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
+	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
-	./hack/check-gen.sh bundle
+	git diff --exit-code -I'^    createdAt: ' -s bundle || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
 
 generate: gen-k8s gen-crds gen-rbac
 
@@ -169,13 +172,13 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
 push-operator:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
 
 push: push-handler push-operator
 
@@ -242,7 +245,7 @@ bundle-build:
 
 # Build the index
 index-build: bundle-build
-	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER)
+	$(OPM) index add --bundles $(BUNDLE_IMG) --tag $(INDEX_IMG) --build-tool $(IMAGE_BUILDER) --binary-image quay.io/operator-framework/opm:v${OPERATOR_SDK_VERSION}-amd64
 
 bundle-push: bundle-build
 	$(IMAGE_BUILDER) push $(BUNDLE_IMG)

@@ -54,6 +54,24 @@ make gen-k8s
 make handler
 ```
 
+### Building on an Apple Silicon Mac
+Building on Apple Silicon Macs is only supported with podman. To build amd64 with podman developers are required to set up a `podman machine`.
+This machine will need to be configured specifically to run amd64 containers. To achieve that, simply run the following commands to set up a machine:
+
+```shell
+# Initialize the machine with your preferred specs
+podman machine init --cpus=8 --disk-size=20 --memory 8192
+podman machine start
+
+# Once the machine is ready and started up ssh into it.
+podman machine ssh
+sudo -i
+
+# Install qemu-user-static (if not installed already)
+rpm-ostree install qemu-user-static
+systemctl reboot
+```
+
 ## Testing
 
 ```shell
