@@ -134,23 +134,19 @@ func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx context.Context) error {
 	if err := r.applyCRDs(instance); err != nil {
-		errors.Wrap(err, "failed applying CRDs")
-		return err
+		return errors.Wrap(err, "failed applying CRDs")
 	}
 
 	if err := r.applyNamespace(instance); err != nil {
-		errors.Wrap(err, "failed applying Namespace")
-		return err
+		return errors.Wrap(err, "failed applying Namespace")
 	}
 
 	if err := r.applyRBAC(instance); err != nil {
-		errors.Wrap(err, "failed applying RBAC")
-		return err
+		return errors.Wrap(err, "failed applying RBAC")
 	}
 
 	if err := r.applyHandler(instance); err != nil {
-		errors.Wrap(err, "failed applying Handler")
-		return err
+		return errors.Wrap(err, "failed applying Handler")
 	}
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
