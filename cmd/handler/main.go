@@ -268,6 +268,7 @@ func checkNmstateIsWorking() error {
 		setupLog.Error(err, "failed checking nmstatectl health")
 		return err
 	}
+	setupLog.Info("Nmstatectl available, 'show' finished successfully.")
 	return nil
 }
 
