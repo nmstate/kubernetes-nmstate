@@ -9,16 +9,16 @@
 
 teardown() {
     ./cluster/kubectl.sh get pod -n nmstate -o wide > $ARTIFACTS/kubernetes-nmstate.pod.list.txt || true
-    ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.logs || true
-    ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.previous.logs || true
-    ./cluster/kubectl.sh describe pods -n nmstate -l app=kubernetes-nmstate > $ARTIFACTS/kubernetes-nmstate.pod.describe.logs || true
-    ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.logs || true
-    ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.previous.logs || true
-    ./cluster/kubectl.sh describe pods -n nmstate -l app=kubernetes-nmstate-operator > $ARTIFACTS/kubernetes-nmstate-operator.pod.describe.logs || true
-    ./cluster/kubectl.sh logs --tail=1000 -n nmstate -l component=kubernetes-nmstate-webhook > $ARTIFACTS/kubernetes-nmstate-webhook.pod.logs || true
-    ./cluster/kubectl.sh logs -p --tail=1000 -n nmstate -l component=kubernetes-nmstate-webhook > $ARTIFACTS/kubernetes-nmstate-webhook.pod.previous.logs || true
-    ./cluster/kubectl.sh describe pods -n nmstate -l component=kubernetes-nmstate-webhook > $ARTIFACTS/kubernetes-nmstate-webhook.pod.describe.logs || true
     ./cluster/kubectl.sh get events > $ARTIFACTS/cluster-events.logs || true
+    for pod in $(./cluster/kubectl.sh get pod -n nmstate -o name); do
+        pod_name=$(echo $pod|sed "s#pod/##")
+        ./cluster/kubectl.sh -n nmstate logs --prefix=true $pod  > $ARTIFACTS/$pod_name.log || true
+        ./cluster/kubectl.sh -n nmstate logs -p --prefix=true $pod  > $ARTIFACTS/$pod_name.previous.log || true
+        ./cluster/kubectl.sh -n nmstate describe $pod  > $ARTIFACTS/$pod_name.describe.log || true
+    done
+    ./cluster/kubectl.sh get events -n nmstate > $ARTIFACTS/nmstate-events.logs || true
+    ./cluster/kubectl.sh get events > $ARTIFACTS/cluster-events.logs || true
+
     make cluster-down
     # Don't fail if there is no logs
     cp -r ${E2E_LOGS}/operator/* ${ARTIFACTS} || true
