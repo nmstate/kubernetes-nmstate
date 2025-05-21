@@ -35,15 +35,15 @@ import (
 
 const nmstateCommand = "nmstatectl"
 
-func nmstatectlWithInput(arguments []string, input string) (string, error) {
+func nmstatectlWithInputAndOutputs(arguments []string, input string, stdout, stderr io.Writer) error {
 	cmd := exec.Command(nmstateCommand, arguments...)
-	var stdout, stderr bytes.Buffer
-	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+
 	if input != "" {
 		stdin, err := cmd.StdinPipe()
 		if err != nil {
-			return "", fmt.Errorf("failed to create pipe for writing into %s: %v", nmstateCommand, err)
+			return fmt.Errorf("failed to create pipe for writing into %s: %v", nmstateCommand, err)
 		}
 		go func() {
 			defer stdin.Close()
@@ -54,20 +54,32 @@ func nmstatectlWithInput(arguments []string, input string) (string, error) {
 		}()
 	}
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf(
-			"failed to execute %s %s: '%v' '%s' '%s'",
+		return fmt.Errorf(
+			"failed to execute %s %s: %w",
 			nmstateCommand,
 			strings.Join(arguments, " "),
 			err,
-			stdout.String(),
-			stderr.String(),
 		)
+	}
+	return nil
+}
+
+func nmstatectlWithInput(arguments []string, input string) (string, error) {
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	err := nmstatectlWithInputAndOutputs(arguments, input, stdout, stderr)
+	if err != nil {
+		return "", fmt.Errorf("%s, %s: %w", stdout.String(), stderr.String(), err)
 	}
 	return stdout.String(), nil
 }
 
 func nmstatectl(arguments []string) (string, error) {
 	return nmstatectlWithInput(arguments, "")
+}
+
+func ShowWithArgumentsAndOutputs(arguments []string, stdout, stderr io.Writer) error {
+	return nmstatectlWithInputAndOutputs(append([]string{"show"}, arguments...), "", stdout, stderr)
 }
 
 func Show() (string, error) {
