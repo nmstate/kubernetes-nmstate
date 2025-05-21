@@ -57,6 +57,7 @@ import (
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
@@ -263,8 +264,8 @@ func createHealthyFile() error {
 
 func checkNmstateIsWorking() error {
 	setupLog.Info("Checking availability of nmstatectl")
-	_, err := nmstatectl.Show()
-	if err != nil {
+	logWriter := nmstatelog.NewWriter(setupLog, 0)
+	if err := nmstatectl.ShowWithArgumentsAndOutputs([]string{"-vvv"}, logWriter, logWriter); err != nil {
 		setupLog.Error(err, "failed checking nmstatectl health")
 		return err
 	}
