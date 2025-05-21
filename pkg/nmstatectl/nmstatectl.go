@@ -19,6 +19,7 @@ package nmstatectl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -35,8 +36,8 @@ import (
 
 const nmstateCommand = "nmstatectl"
 
-func nmstatectlWithInput(arguments []string, input string) (string, error) {
-	cmd := exec.Command(nmstateCommand, arguments...)
+func nmstatectlWithInput(ctx context.Context, arguments []string, input string) (string, error) {
+	cmd := exec.CommandContext(ctx, nmstateCommand, arguments...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	cmd.Stdout = &stdout
@@ -66,19 +67,22 @@ func nmstatectlWithInput(arguments []string, input string) (string, error) {
 	return stdout.String(), nil
 }
 
-func nmstatectl(arguments []string) (string, error) {
-	return nmstatectlWithInput(arguments, "")
+func nmstatectl(ctx context.Context, arguments []string) (string, error) {
+	return nmstatectlWithInput(ctx, arguments, "")
 }
 
 func Show() (string, error) {
-	return nmstatectl([]string{"show"})
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	return nmstatectl(ctx, []string{"show"})
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	var setDoneCh = make(chan struct{})
 	defer close(setDoneCh)
 
-	setOutput, err := nmstatectlWithInput(
+	setOutput, err := nmstatectlWithInput(context.TODO(),
 		[]string{"apply", "-v", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
 		string(desiredState.Raw),
 	)
@@ -86,11 +90,11 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 }
 
 func Commit() (string, error) {
-	return nmstatectl([]string{"commit"})
+	return nmstatectl(context.TODO(), []string{"commit"})
 }
 
 func Rollback() error {
-	_, err := nmstatectl([]string{"rollback"})
+	_, err := nmstatectl(context.TODO(), []string{"rollback"})
 	if err != nil {
 		return errors.Wrapf(err, "failed calling nmstatectl rollback")
 	}
@@ -126,7 +130,7 @@ func (s *Stats) Subtract(statsToSubstract *Stats) Stats {
 }
 
 func Statistic(desiredState nmstate.State) (*Stats, error) {
-	statsOutput, err := nmstatectlWithInput(
+	statsOutput, err := nmstatectlWithInput(context.TODO(),
 		[]string{"st", "-"},
 		string(desiredState.Raw),
 	)
@@ -180,7 +184,7 @@ func Policy(policy, currentState, capturedState []byte) (desiredState, generated
 	}
 
 	args = append(args, policyFile)
-	out, err := nmstatectl(args)
+	out, err := nmstatectl(context.TODO(), args)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed calling nmstatectl rollback")
 	}
