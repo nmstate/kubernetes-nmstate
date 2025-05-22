@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -25,14 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
 var _ = Describe("NodeNetworkEnactment", func() {
 	var (
-		nncp = nmstatev1.NodeNetworkConfigurationPolicy{
+		nncp = NodeNetworkConfigurationPolicy{
 			TypeMeta: metav1.TypeMeta{
-				APIVersion: "nmstate.io/v1beta1",
+				APIVersion: "nmstate.io/v1",
 				Kind:       "NodeNetworkConfigurationPolicy",
 			},
 			ObjectMeta: metav1.ObjectMeta{
