@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sort"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -244,25 +245,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	allPolicies := handler.TypedMapFunc[*corev1.Node, reconcile.Request](
-		func(context.Context, *corev1.Node) []reconcile.Request {
-			log := r.Log.WithName("allPolicies")
-			allPoliciesAsRequest := []reconcile.Request{}
-			policyList := nmstatev1.NodeNetworkConfigurationPolicyList{}
-			err := r.Client.List(context.TODO(), &policyList)
-			if err != nil {
-				log.Error(err, "failed listing all NodeNetworkConfigurationPolicies to re-reconcile them after node created or updated")
-				return []reconcile.Request{}
-			}
-			for policyIndex := range policyList.Items {
-				policy := policyList.Items[policyIndex]
-				allPoliciesAsRequest = append(allPoliciesAsRequest, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: policy.Name,
-					}})
-			}
-			return allPoliciesAsRequest
-		})
+	allPoliciesFunc := allPolicies(r.Client, r.Log)
 
 	// Reconcile NNCP if they are created/updated/deleted or
 	// Node is updated (for example labels are changed), node creation event
@@ -290,7 +273,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 		source.Kind(
 			mgr.GetCache(),
 			&corev1.Node{},
-			handler.TypedEnqueueRequestsFromMapFunc[*corev1.Node](allPolicies),
+			handler.TypedEnqueueRequestsFromMapFunc[*corev1.Node](allPoliciesFunc),
 			onLabelsUpdatedForThisNode,
 		),
 	)
@@ -533,4 +516,29 @@ func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(name string) (*nmstat
 		return nil, err
 	}
 	return nns, nil
+}
+
+func allPolicies(client client.Client, log logr.Logger) handler.TypedMapFunc[*corev1.Node, reconcile.Request] {
+	return handler.TypedMapFunc[*corev1.Node, reconcile.Request](
+		func(context.Context, *corev1.Node) []reconcile.Request {
+			logger := log.WithName("allPolicies")
+			allPoliciesAsRequest := []reconcile.Request{}
+			policyList := nmstatev1.NodeNetworkConfigurationPolicyList{}
+			err := client.List(context.TODO(), &policyList)
+			if err != nil {
+				logger.Error(err, "failed listing all NodeNetworkConfigurationPolicies to re-reconcile them after node created or updated")
+				return []reconcile.Request{}
+			}
+			sort.Slice(policyList.Items, func(i, j int) bool {
+				return policyList.Items[i].Name < policyList.Items[j].Name
+			})
+			for policyIndex := range policyList.Items {
+				policy := policyList.Items[policyIndex]
+				allPoliciesAsRequest = append(allPoliciesAsRequest, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name: policy.Name,
+					}})
+			}
+			return allPoliciesAsRequest
+		})
 }
