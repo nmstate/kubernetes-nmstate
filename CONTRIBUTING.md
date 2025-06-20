@@ -1,5 +1,6 @@
 # Design
 
+
 The system is implemented as an k8s operator using the
 [operator-sdk](https://github.com/operator-framework/operator-sdk) but is
 deployed as a DaemonSet instead of Deployment with
