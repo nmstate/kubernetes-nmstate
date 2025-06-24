@@ -73,6 +73,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="console.openshift.io",resources=consoleplugins,verbs="*"
 // +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
 // +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors,verbs=list;get;watch;update;create;patch
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs="*"
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
@@ -145,6 +146,10 @@ func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx cont
 		return errors.Wrap(err, "failed applying RBAC")
 	}
 
+	if err := r.applyNetworkPolicies(instance); err != nil {
+		return errors.Wrap(err, "failed applying network policies")
+	}
+
 	if err := r.applyHandler(instance); err != nil {
 		return errors.Wrap(err, "failed applying Handler")
 	}
@@ -175,6 +180,20 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	return r.renderAndApply(instance, data, "namespace", false)
+}
+
+func (r *NMStateReconciler) applyNetworkPolicies(instance *nmstatev1.NMState) error {
+	data := render.MakeRenderData()
+	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
+	data.Data["PluginNamespace"] = os.Getenv("HANDLER_NAMESPACE")
+
+	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
+	if err != nil {
+		return err
+	}
+	data.Data["IsOpenShift"] = isOpenShift
+
+	return r.renderAndApply(instance, data, "netpol", true)
 }
 
 func (r *NMStateReconciler) applyRBAC(instance *nmstatev1.NMState) error {
