@@ -18,7 +18,6 @@ package v1
 
 import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -105,13 +104,17 @@ type NMStateMetricsConfiguration struct {
 
 // NMStateStatus defines the observed state of NMState
 type NMStateStatus struct {
+	// +optional
 	Conditions shared.ConditionList `json:"conditions,omitempty"`
 }
 
+// +genclient:nonNamespaced
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nmstates,scope=Cluster
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
 // +kubebuilder:storageversion
-// +kubebuilder:subresource=status
 
 // NMState is the Schema for the nmstates API
 type NMState struct {
