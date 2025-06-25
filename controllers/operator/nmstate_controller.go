@@ -23,7 +23,9 @@ import (
 	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"slices"
 	"sort"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -55,9 +57,11 @@ import (
 // NMStateReconciler reconciles a NMState object
 type NMStateReconciler struct {
 	client.Client
-	APIClient client.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
+	APIClient   client.Client
+	Log         logr.Logger
+	Scheme      *runtime.Scheme
+	deployments []client.ObjectKey
+	daemonSets  []client.ObjectKey
 }
 
 // +kubebuilder:rbac:groups="",resources=services;endpoints;persistentvolumeclaims;events;configmaps;secrets;pods,verbs="*"
@@ -74,20 +78,14 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="console.openshift.io",resources=consoleplugins,verbs="*"
 // +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
 // +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors,verbs=list;get;watch;update;create;patch
-// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs="*"
+// +kubebuilder:rbac:groups="networking.k8s.io",resources=networkpolicies,verbs="*"
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = context.Background()
-	_ = r.Log.WithValues("nmstate", req.NamespacedName)
+	r.Log = r.Log.WithValues("request", req.NamespacedName)
 
-	// Fetch the NMState instance
-	instanceList := &nmstatev1.NMStateList{}
-	err := r.Client.List(context.TODO(), instanceList, &client.ListOptions{})
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed listing all NMState instances")
-	}
+	r.Log.Info("Starting Reconcile")
 	instance := &nmstatev1.NMState{}
-	err = r.Client.Get(context.TODO(), req.NamespacedName, instance)
+	err := r.Client.Get(context.TODO(), req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile req.
@@ -96,6 +94,14 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the req.
+		return ctrl.Result{}, err
+	}
+
+	// Fetch the NMState instance
+	instanceList := &nmstatev1.NMStateList{}
+	if err := r.Client.List(context.TODO(), instanceList, &client.ListOptions{}); err != nil {
+		err = errors.Wrap(err, "failed listing all NMState instances")
+		r.setDegradedCondition(instance, shared.NmstateInternalError, err.Error())
 		return ctrl.Result{}, err
 	}
 
@@ -116,12 +122,20 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
+	r.deployments = []client.ObjectKey{}
+	r.daemonSets = []client.ObjectKey{}
+
 	if err := r.applyManifests(instance, ctx); err != nil {
+		r.setDegradedCondition(instance, shared.NmstateInternalError, err.Error())
 		return ctrl.Result{}, err
 	}
 
 	if err := r.cleanupObsoleteResources(ctx); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if err := r.reconcileStatus(instance); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed reconciling status: %w", err)
 	}
 
 	r.Log.Info("Reconcile complete.")
@@ -131,6 +145,8 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1.NMState{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.DaemonSet{}).
 		Complete(r)
 }
 
@@ -476,6 +492,122 @@ func (r *NMStateReconciler) webhookReplicaCount(nodeSelector map[string]string, 
 	}
 }
 
+func (r *NMStateReconciler) reconcileStatus(instance *nmstatev1.NMState) error {
+	progressing := []string{}
+	for _, deploymentKey := range r.deployments {
+		deployment := &appsv1.Deployment{}
+		if err := r.Client.Get(context.TODO(), deploymentKey, deployment); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return errors.Wrap(err, "failed to get deployment")
+		}
+		if deployment.Status.UnavailableReplicas > 0 {
+			progressing = append(progressing, fmt.Sprintf(
+				"Deployment %q is not available (awaiting %d nodes)",
+				deployment.Name, deployment.Status.UnavailableReplicas))
+		} else if deployment.Status.AvailableReplicas == 0 && (deployment.Spec.Replicas == nil || *deployment.Spec.Replicas > 0) {
+			progressing = append(progressing, fmt.Sprintf(
+				"Deployment %q is not yet scheduled on any nodes", deployment.Name))
+		} else if deployment.Status.ObservedGeneration < deployment.Generation {
+			progressing = append(progressing, fmt.Sprintf(
+				"Deployment %q update is being processed (generation %d, observed generation %d)",
+				deployment.Name, deployment.Generation, deployment.Status.ObservedGeneration))
+		}
+	}
+	for _, daemonSetKey := range r.daemonSets {
+		daemonSet := &appsv1.DaemonSet{}
+		if err := r.Client.Get(context.TODO(), daemonSetKey, daemonSet); err != nil {
+			if apierrors.IsNotFound(err) {
+				continue
+			}
+			return errors.Wrap(err, "failed to get daemonset")
+		}
+		if daemonSet.Status.NumberUnavailable > 0 {
+			progressing = append(progressing, fmt.Sprintf(
+				"DaemonSet %q is not available (awaiting %d nodes)",
+				daemonSet.Name, daemonSet.Status.NumberUnavailable))
+		} else if daemonSet.Status.NumberAvailable == 0 && daemonSet.Status.DesiredNumberScheduled != 0 {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q is not yet scheduled on any nodes", daemonSet.Name))
+		} else if daemonSet.Status.UpdatedNumberScheduled < daemonSet.Status.DesiredNumberScheduled {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q update is rolling out (%d out of %d updated)",
+				daemonSet.Name, daemonSet.Status.UpdatedNumberScheduled, daemonSet.Status.DesiredNumberScheduled))
+		} else if daemonSet.Generation > daemonSet.Status.ObservedGeneration {
+			progressing = append(progressing, fmt.Sprintf("DaemonSet %q update is being processed (generation %d, observed generation %d)",
+				daemonSet.Name, daemonSet.Generation, daemonSet.Status.ObservedGeneration))
+		}
+	}
+
+	if len(progressing) > 0 {
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionProgressing,
+			corev1.ConditionTrue,
+			shared.NmstateDeploying,
+			strings.Join(progressing, "\n"),
+		)
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionAvailable,
+			corev1.ConditionFalse,
+			shared.NmstateDeploying,
+			"Deploying is in progress",
+		)
+		// Clear any previous degraded condition when progressing
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionDegraded,
+			corev1.ConditionFalse,
+			shared.NmstateDeploying,
+			"Deploying is in progress",
+		)
+	} else {
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionProgressing,
+			corev1.ConditionFalse,
+			shared.NmstateSuccessfullyDeployed,
+			"All components are available and ready",
+		)
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionAvailable,
+			corev1.ConditionTrue,
+			shared.NmstateSuccessfullyDeployed,
+			"All components are available and ready",
+		)
+		// Clear any previous degraded condition when available
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionDegraded,
+			corev1.ConditionFalse,
+			shared.NmstateSuccessfullyDeployed,
+			"All components are available and ready",
+		)
+	}
+
+	// Clear managed fields before applying server-side apply to status subresource
+	instance.SetManagedFields(nil)
+
+	return r.Client.Status().Update(context.TODO(), instance)
+}
+
+func (r *NMStateReconciler) setDegradedCondition(instance *nmstatev1.NMState, reason shared.ConditionReason, message string) error {
+	instance.Status.Conditions.Set(
+		shared.NmstateConditionDegraded,
+		corev1.ConditionTrue,
+		reason,
+		message,
+	)
+	instance.Status.Conditions.Set(
+		shared.NmstateConditionAvailable,
+		corev1.ConditionFalse,
+		reason,
+		message,
+	)
+	instance.Status.Conditions.Set(
+		shared.NmstateConditionProgressing,
+		corev1.ConditionFalse,
+		reason,
+		message,
+	)
+	return r.Client.Status().Update(ctx, instance)
+}
+
 func (r *NMStateReconciler) renderAndApply(
 	instance *nmstatev1.NMState,
 	data render.RenderData,
@@ -506,6 +638,11 @@ func (r *NMStateReconciler) renderAndApply(
 			err = controllerutil.SetControllerReference(instance, obj, r.Scheme)
 			if err != nil {
 				return errors.Wrap(err, "failed to set owner reference")
+			}
+			if obj.GetKind() == "Deployment" {
+				r.deployments = append(r.deployments, client.ObjectKeyFromObject(obj))
+			} else if obj.GetKind() == "DaemonSet" {
+				r.daemonSets = append(r.daemonSets, client.ObjectKeyFromObject(obj))
 			}
 		}
 		if err := r.apply(context.TODO(), obj); err != nil {
@@ -560,10 +697,5 @@ func setClusterReaderExist(c client.Client, data render.RenderData) error {
 }
 
 func stringInSlice(a string, list []string) bool {
-	for _, b := range list {
-		if b == a {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(list, a)
 }
