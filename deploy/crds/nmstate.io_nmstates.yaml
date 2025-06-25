@@ -14,7 +14,16 @@ spec:
     singular: nmstate
   scope: Cluster
   versions:
-  - name: v1
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.conditions[?(@.status=="True")].type
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
         description: NMState is the Schema for the nmstates API
@@ -2051,7 +2060,17 @@ spec:
         type: object
     served: true
     storage: true
-  - deprecated: true
+    subresources:
+      status: {}
+  - additionalPrinterColumns:
+    - description: Status
+      jsonPath: .status.conditions[?(@.status=="True")].type
+      name: Status
+      type: string
+    - description: Reason
+      jsonPath: .status.conditions[?(@.status=="True")].reason
+      name: Reason
+      type: string
     name: v1beta1
     schema:
       openAPIV3Schema:
@@ -4089,3 +4108,5 @@ spec:
         type: object
     served: true
     storage: false
+    subresources:
+      status: {}
