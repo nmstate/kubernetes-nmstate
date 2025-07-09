@@ -259,7 +259,7 @@ var _ = Describe("rollback", func() {
 			By("Check that global DNS is rolled back")
 			Eventually(func() []string {
 				return dnsResolverForNode(nodes[0], "dns-resolver.running.server")
-			}, 480*time.Second, ReadInterval).ShouldNot(ContainElement("192.168.100.3"), "should eventually lose wrong name server")
+			}, 600*time.Second, ReadInterval).ShouldNot(ContainElement("192.168.100.3"), "should eventually lose wrong name server")
 
 			By("Check that global DNS continue with rolled back state")
 			Consistently(func() []string {

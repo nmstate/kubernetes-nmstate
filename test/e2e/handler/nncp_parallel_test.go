@@ -32,8 +32,10 @@ func enactmentsInProgress(policy string) int {
 	progressingEnactments := 0
 	for _, node := range nodes {
 		enactment := policyconditions.EnactmentConditionsStatus(node, policy)
-		if cond := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing); cond != nil {
-			if cond.Status == corev1.ConditionTrue {
+		condProgressing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
+		condFailing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
+		if condProgressing != nil && condFailing != nil {
+			if condProgressing.Status == corev1.ConditionTrue || condFailing.Status == corev1.ConditionTrue {
 				progressingEnactments++
 			}
 		}

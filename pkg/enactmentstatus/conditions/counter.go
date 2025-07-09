@@ -18,9 +18,12 @@ limitations under the License.
 package conditions
 
 import (
+	"context"
 	"fmt"
 
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
@@ -124,4 +127,34 @@ func (c ConditionCount) String() string {
 
 func (c CountByConditionStatus) String() string {
 	return fmt.Sprintf("{true: %d, false: %d, unknown: %d}", c.true(), c.false(), c.unknown())
+}
+
+type LogicalConditionCountFilter map[nmstate.ConditionType]corev1.ConditionStatus
+
+func CountConditionsLogicalAnd(
+	cli client.Client,
+	policy *nmstatev1.NodeNetworkConfigurationPolicy,
+	filter LogicalConditionCountFilter) (int, error) {
+	conditionCount := 0
+	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
+
+	if err := cli.List(context.TODO(), &enactments, policyLabelFilter); err != nil {
+		return 0, fmt.Errorf("getting enactments failed")
+	}
+
+	for enactmentIndex := range enactments.Items {
+		enactment := enactments.Items[enactmentIndex]
+		increase := true
+		for conditionType := range filter {
+			condition := enactment.Status.Conditions.Find(conditionType)
+			if condition != nil && condition.Status != filter[conditionType] {
+				increase = false
+			}
+		}
+		if increase && enactment.Status.PolicyGeneration == policy.Generation {
+			conditionCount++
+		}
+	}
+	return conditionCount, nil
 }
