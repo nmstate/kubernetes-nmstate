@@ -76,6 +76,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		}
 		handlerPrefix       = "handler"
 		handlerNamespace    = "nmstate"
+		operatorNamespace   = "nmstate"
 		handlerKey          = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-handler"}
 		webhookKey          = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-webhook"}
 		handlerImage        = "quay.io/some_image"
@@ -105,6 +106,7 @@ var _ = Describe("NMState controller reconcile", func() {
 		reconciler.Scheme = s
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
+		os.Setenv("OPERATOR_NAMESPACE", operatorNamespace)
 		os.Setenv("RELATED_IMAGE_HANDLER_IMAGE", handlerImage)
 		os.Setenv("HANDLER_IMAGE_PULL_POLICY", imagePullPolicy)
 		os.Setenv("HANDLER_PREFIX", handlerPrefix)

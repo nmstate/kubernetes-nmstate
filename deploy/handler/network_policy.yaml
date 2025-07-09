@@ -3,7 +3,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: allow-operator-egress-api-6443
-  namespace: {{ .HandlerNamespace }}
+  namespace: {{ .OperatorNamespace }}
 spec:
   podSelector:
     matchLabels:
@@ -139,10 +139,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: default-deny
+  name: default-deny-labelled-operator
+  namespace: {{ .OperatorNamespace }}
+spec:
+  podSelector:
+  matchLabels:
+    app: kubernetes-nmstate-operator
+  policyTypes:
+    - Ingress
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-labelled-operand
   namespace: {{ .HandlerNamespace }}
 spec:
-  podSelector: {}
+  podSelector:
+  matchLabels:
+    app: kubernetes-nmstate
   policyTypes:
     - Ingress
     - Egress

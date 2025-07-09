@@ -185,6 +185,7 @@ func (r *NMStateReconciler) applyNamespace(instance *nmstatev1.NMState) error {
 func (r *NMStateReconciler) applyNetworkPolicies(instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
+	data.Data["OperatorNamespace"] = os.Getenv("OPERATOR_NAMESPACE")
 	data.Data["PluginNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
