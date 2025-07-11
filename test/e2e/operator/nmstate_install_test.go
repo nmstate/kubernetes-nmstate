@@ -25,6 +25,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gstruct"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +36,8 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
@@ -190,7 +193,252 @@ var _ = Describe("NMState operator", func() {
 			}, 10*time.Second, time.Second).Should(Succeed())
 		})
 	})
+
+	Context("when checking NMState CRD status", func() {
+		BeforeEach(func() {
+			By("Install NMState for the first time")
+			InstallNMState(defaultOperator.Nmstate)
+		})
+		AfterEach(func() {
+			UninstallNMStateAndWaitForDeletion(defaultOperator)
+		})
+
+		It("should report Available condition when all components are ready", func() {
+			By("Wait for operand to be ready")
+			EventuallyOperandIsReady(defaultOperator)
+
+			By("Check NMState status conditions")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 60*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionAvailable),
+				"Status": Equal(corev1.ConditionTrue),
+				"Reason": Equal(shared.NmstateSuccessfullyDeployed),
+			})), "should have Available condition set to True")
+
+			By("Check Progressing condition is False when ready")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 60*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionProgressing),
+				"Status": Equal(corev1.ConditionFalse),
+				"Reason": Equal(shared.NmstateSuccessfullyDeployed),
+			})), "should have Progressing condition set to False")
+
+			By("Check Degraded condition is False when ready")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 60*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionDegraded),
+				"Status": Equal(corev1.ConditionFalse),
+				"Reason": Equal(shared.NmstateSuccessfullyDeployed),
+			})), "should have Degraded condition set to False")
+		})
+
+		It("should report Progressing condition during deployment", func() {
+			By("Check Progressing condition appears during installation")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 120*time.Second, 1*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionProgressing),
+				"Status": Equal(corev1.ConditionTrue),
+				"Reason": Equal(shared.NmstateDeploying),
+			})), "should have Progressing condition set to True during deployment")
+
+			By("Check Available condition is False during deployment")
+			Consistently(func() shared.ConditionList {
+				conditions := getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+				progressingCondition := conditions.Find(shared.NmstateConditionProgressing)
+				if progressingCondition != nil && progressingCondition.Status == corev1.ConditionTrue {
+					return conditions
+				}
+				return shared.ConditionList{} // Return empty if not progressing
+			}, 10*time.Second, 1*time.Second).Should(SatisfyAny(
+				BeEmpty(), // Not progressing anymore
+				ContainElement(MatchFields(IgnoreExtras, Fields{
+					"Type":   Equal(shared.NmstateConditionAvailable),
+					"Status": Equal(corev1.ConditionFalse),
+					"Reason": Equal(shared.NmstateDeploying),
+				})),
+			), "should have Available condition set to False while progressing")
+
+			By("Wait for final ready state")
+			EventuallyOperandIsReady(defaultOperator)
+		})
+
+		It("should maintain consistent condition transitions", func() {
+			By("Wait for operand to be ready")
+			EventuallyOperandIsReady(defaultOperator)
+
+			By("Verify all three conditions are present and consistent")
+			Eventually(func() bool {
+				conditions := getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+
+				availableCondition := conditions.Find(shared.NmstateConditionAvailable)
+				progressingCondition := conditions.Find(shared.NmstateConditionProgressing)
+				degradedCondition := conditions.Find(shared.NmstateConditionDegraded)
+
+				// All conditions should be present
+				if availableCondition == nil || progressingCondition == nil || degradedCondition == nil {
+					return false
+				}
+
+				// In success state: Available=True, Progressing=False, Degraded=False
+				// All should have the same reason
+				if availableCondition.Status == corev1.ConditionTrue &&
+					progressingCondition.Status == corev1.ConditionFalse &&
+					degradedCondition.Status == corev1.ConditionFalse {
+
+					return availableCondition.Reason == shared.NmstateSuccessfullyDeployed &&
+						progressingCondition.Reason == shared.NmstateSuccessfullyDeployed &&
+						degradedCondition.Reason == shared.NmstateSuccessfullyDeployed
+				}
+
+				return false
+			}, 60*time.Second, 2*time.Second).Should(BeTrue(), "all conditions should be consistent in success state")
+		})
+
+		It("should have proper status subresource fields", func() {
+			By("Wait for operand to be ready")
+			EventuallyOperandIsReady(defaultOperator)
+
+			By("Check status subresource contains expected fields")
+			Eventually(func() bool {
+				status := getNMStateStatus(defaultOperator.Nmstate.Name)
+
+				// Should have conditions
+				if len(status.Conditions) == 0 {
+					return false
+				}
+
+				// Each condition should have required fields
+				for _, condition := range status.Conditions {
+					if condition.Type == "" || condition.Status == "" {
+						return false
+					}
+					if condition.LastTransitionTime.IsZero() {
+						return false
+					}
+					if condition.LastHeartbeatTime.IsZero() {
+						return false
+					}
+				}
+
+				return true
+			}, 60*time.Second, 2*time.Second).Should(BeTrue(), "status should contain properly formatted conditions")
+		})
+
+		It("should handle kubectl status commands correctly", func() {
+			By("Wait for operand to be ready")
+			EventuallyOperandIsReady(defaultOperator)
+
+			By("Check kubectl get nmstates shows status columns")
+			Eventually(func() error {
+				_, err := cmd.Kubectl("get", "nmstates", "--no-headers")
+				return err
+			}, 30*time.Second, 2*time.Second).Should(Succeed(), "should be able to get nmstates with status columns")
+
+			By("Check kubectl describe shows status conditions")
+			Eventually(func() string {
+				output, err := cmd.Kubectl("describe", "nmstate", defaultOperator.Nmstate.Name)
+				if err != nil {
+					return ""
+				}
+				return output
+			}, 30*time.Second, 2*time.Second).Should(ContainSubstring("Conditions:"), "should show conditions in describe output")
+		})
+
+		It("should report Degraded condition when deployment fails", func() {
+			By("Wait for operand to be ready first")
+			EventuallyOperandIsReady(defaultOperator)
+
+			By("Verify initial state is healthy")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 30*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionDegraded),
+				"Status": Equal(corev1.ConditionFalse),
+			})), "should initially have Degraded condition set to False")
+
+			By("Simulate deployment failure by using a non-existent image for the webhook")
+			webhookDeployment := &appsv1.Deployment{}
+			key := types.NamespacedName{Name: "nmstate-webhook", Namespace: testenv.OperatorNamespace}
+			err := testenv.Client.Get(context.TODO(), key, webhookDeployment)
+			Expect(err).ToNot(HaveOccurred())
+
+			originalImage := webhookDeployment.Spec.Template.Spec.Containers[0].Image
+			webhookDeployment.Spec.Template.Spec.Containers[0].Image = "non-existent-image:latest"
+
+			err = testenv.Client.Update(context.TODO(), webhookDeployment)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Wait for the Degraded condition to be set to True")
+			Eventually(func() bool {
+				conditions := getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+				degradedCondition := conditions.Find(shared.NmstateConditionDegraded)
+				return degradedCondition != nil && degradedCondition.Status == corev1.ConditionTrue
+			}, 120*time.Second, 2*time.Second).Should(BeTrue(), "should eventually have Degraded condition set to True")
+
+			By("Verify that Available condition is set to False when degraded")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 30*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionAvailable),
+				"Status": Equal(corev1.ConditionFalse),
+			})), "should have Available condition set to False when degraded")
+
+			By("Verify that Progressing condition is set to False when degraded")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 30*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionProgressing),
+				"Status": Equal(corev1.ConditionFalse),
+			})), "should have Progressing condition set to False when degraded")
+
+			By("Verify the degraded condition has appropriate reason and message")
+			Eventually(func() (string, error) {
+				conditions := getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+				degradedCondition := conditions.Find(shared.NmstateConditionDegraded)
+				if degradedCondition == nil {
+					return "", fmt.Errorf("degraded condition not found")
+				}
+				return string(degradedCondition.Reason), nil
+			}, 30*time.Second, 2*time.Second).Should(Equal(string(shared.NmstateInternalError)), "should have a matching reason")
+
+			By("Restore the original image and verify recovery")
+			err = testenv.Client.Get(context.TODO(), key, webhookDeployment)
+			Expect(err).ToNot(HaveOccurred())
+			webhookDeployment.Spec.Template.Spec.Containers[0].Image = originalImage
+			err = testenv.Client.Update(context.TODO(), webhookDeployment)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Wait for the system to recover from degraded state")
+			Eventually(func() bool {
+				conditions := getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+				degradedCondition := conditions.Find(shared.NmstateConditionDegraded)
+				return degradedCondition != nil && degradedCondition.Status == corev1.ConditionFalse
+			}, 180*time.Second, 2*time.Second).Should(BeTrue(), "should eventually recover from degraded state")
+
+			By("Verify system returns to healthy state")
+			Eventually(func() shared.ConditionList {
+				return getNMStateStatus(defaultOperator.Nmstate.Name).Conditions
+			}, 60*time.Second, 2*time.Second).Should(ContainElement(MatchFields(IgnoreExtras, Fields{
+				"Type":   Equal(shared.NmstateConditionAvailable),
+				"Status": Equal(corev1.ConditionTrue),
+			})), "should return to Available condition True after recovery")
+		})
+	})
 })
+
+func getNMStateStatus(name string) nmstatev1.NMStateStatus {
+	nmstateInstance := &nmstatev1.NMState{}
+	key := types.NamespacedName{Name: name}
+	err := testenv.Client.Get(context.TODO(), key, nmstateInstance)
+	if err != nil {
+		return nmstatev1.NMStateStatus{}
+	}
+	return nmstateInstance.Status
+}
 
 func drainNode(nodeName string) func() {
 	node := &corev1.Node{}
