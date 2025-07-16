@@ -20,4 +20,4 @@ ENTRYPOINT ["manager"]
 
 LABEL io.k8s.display-name="kubernetes-nmstate-operator" \
       io.k8s.description="Operator for Node network configuration through Kubernetes API" \
-      maintainer="Yossi Boaron <yboaron@redhat.com>"
+      org.opencontainers.image.authors="Enrique Llorente Pastora <ellorent@redhat.com>, Mateusz Kowalski <mko@redhat.com>"
