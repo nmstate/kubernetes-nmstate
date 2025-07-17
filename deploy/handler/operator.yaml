@@ -55,7 +55,7 @@ spec:
               memory: "20Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
@@ -111,7 +111,7 @@ spec:
               memory: "20Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           terminationMessagePolicy: FallbackToLogsOnError
 ---
 apiVersion: apps/v1
@@ -167,7 +167,7 @@ spec:
               memory: "20Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
@@ -275,7 +275,7 @@ spec:
               memory: "30Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
@@ -376,7 +376,7 @@ spec:
               memory: "100Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
