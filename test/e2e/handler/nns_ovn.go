@@ -48,7 +48,7 @@ var _ = Describe("[nns] NNS OVN bridge mappings", func() {
 
 		DeferCleanup(func() {
 			By("resetting the bridge mappings ...")
-			updateDesiredState(cleanBridgeMappings(networkName))
+			updateDesiredState(cleanBridgeMappings(networkName, bridgeName))
 
 			By("Check policy is at available state")
 			policyconditions.WaitForAvailableTestPolicy()

@@ -334,19 +334,37 @@ func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
 
 func bridgeMappings(networkName string, bridgeName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`
+interfaces:
+- name: %s-iface
+  type: ovs-interface
+  state: up
+  controller: %s
+- name: %s
+  type: ovs-bridge
+  state: up
+  bridge:
+    port:
+    - name: %s-iface
 ovn:
   bridge-mappings:
   - localnet: %s
     bridge: %s
     state: present
-`, networkName, bridgeName))
+`, bridgeName, bridgeName, bridgeName, bridgeName, networkName, bridgeName))
 }
 
-func cleanBridgeMappings(networkName string) nmstate.State {
+func cleanBridgeMappings(networkName string, bridgeName string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`
+interfaces:
+- name: %s-iface
+  type: ovs-interface
+  state: absent
+- name: %s
+  type: ovs-bridge
+  state: absent
 ovn:
   bridge-mappings:
   - localnet: %s
     state: absent
-`, networkName))
+`, bridgeName, bridgeName, networkName))
 }
