@@ -339,6 +339,8 @@ spec:
   maintainers:
   - email: ellorent@redhat.com
     name: Enrique Llorente Pastora
+  - email: mko@redhat.com
+    name: Mateusz Kowalski
   - email: phoracek@redhat.com
     name: Petr Horacek
   maturity: alpha

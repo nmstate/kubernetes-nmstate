@@ -1,15 +1,11 @@
 approvers:
   - phoracek
   - qinqon
-  - rhrazdil
   - cybertron
   - mkowalski
 reviewers:
   - phoracek
   - qinqon
-  - yboaron
-  - RamLavi
-  - rhrazdil
   - cybertron
   - emy
   - mkowalski
