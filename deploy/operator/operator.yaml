@@ -87,7 +87,7 @@ spec:
               memory: "30Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           env:
             - name: WATCH_NAMESPACE
               value: ""

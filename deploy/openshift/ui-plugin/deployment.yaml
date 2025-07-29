@@ -41,7 +41,7 @@ spec:
               memory: "50Mi"
             limits:
               cpu: "500m"
-              memory: "128Mi"
+              memory: "1Gi"
           readinessProbe:
             tcpSocket:
               port: {{ .PluginPort }}
