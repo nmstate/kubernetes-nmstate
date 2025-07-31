@@ -511,7 +511,7 @@ func (r *NMStateReconciler) apply(ctx context.Context, newObj *unstructured.Unst
 		return nil
 	}
 	newObj.SetResourceVersion(oldObj.GetResourceVersion())
-	if err := r.Client.Patch(ctx, newObj, client.MergeFrom(oldObj)); err != nil {
+	if err := r.Client.Patch(ctx, newObj, client.StrategicMergeFrom(oldObj)); err != nil {
 		return fmt.Errorf("failed patching %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
 	}
 	return nil
