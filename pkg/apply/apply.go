@@ -57,12 +57,22 @@ func ApplyObject(ctx context.Context, client k8sclient.Client, obj *uns.Unstruct
 		log.Printf("does not exist, creating %s", objDesc)
 		err := client.Create(ctx, obj)
 		if err != nil {
+			// Check if this is a CRD that doesn't exist - treat as non-fatal for optional resources like ServiceMonitor
+			if apimeta.IsNoMatchError(err) {
+				log.Printf("CRD does not exist for %s, skipping", objDesc)
+				return nil
+			}
 			return errors.Wrapf(err, "could not create %s", objDesc)
 		}
 		log.Printf("successfully created %s", objDesc)
 		return nil
 	}
 	if err != nil {
+		// Check if this is a CRD that doesn't exist - treat as non-fatal for optional resources like ServiceMonitor
+		if apimeta.IsNoMatchError(err) {
+			log.Printf("CRD does not exist for %s, skipping", objDesc)
+			return nil
+		}
 		return errors.Wrapf(err, "could not retrieve existing %s", objDesc)
 	}
 

@@ -530,6 +530,13 @@ func (r *NMStateReconciler) reconcileStatus(instance *nmstatev1.NMState) error {
 			shared.NmstateDeploying,
 			"Deploying is in process",
 		)
+		// Clear any previous degraded condition when progressing
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionDegraded,
+			corev1.ConditionFalse,
+			"",
+			"",
+		)
 	} else {
 		instance.Status.Conditions.Set(
 			shared.NmstateConditionProgressing,
@@ -537,14 +544,19 @@ func (r *NMStateReconciler) reconcileStatus(instance *nmstatev1.NMState) error {
 			"",
 			"",
 		)
-		if instance.GetGeneration() == r.lastGeneration {
-			instance.Status.Conditions.Set(
-				shared.NmstateConditionAvailable,
-				corev1.ConditionTrue,
-				"",
-				"",
-			)
-		}
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionAvailable,
+			corev1.ConditionTrue,
+			shared.NmstateSuccessfullyDeployed,
+			"All components are available and ready",
+		)
+		// Clear any previous degraded condition when available
+		instance.Status.Conditions.Set(
+			shared.NmstateConditionDegraded,
+			corev1.ConditionFalse,
+			"",
+			"",
+		)
 	}
 	r.lastGeneration = instance.GetGeneration()
 
@@ -599,6 +611,7 @@ func (r *NMStateReconciler) renderAndApply(
 			}
 		}
 		if err := apply.ApplyObject(context.TODO(), r.Client, obj); err != nil {
+			r.Log.Error(err, "Failed to apply object", "object", obj)
 			return fmt.Errorf("failed to apply object %v: %w", obj, err)
 		}
 	}
