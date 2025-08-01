@@ -331,7 +331,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	handlerReadinessProbeExtraArg := ""
 	if instance.Spec.LogLevel == shared.LogLevelDebug {
 		logLevelHandlerCommandArg = "debug"
-		handlerReadinessProbeExtraArg = "-vvv"
+		handlerReadinessProbeExtraArg = "-vv"
 	}
 
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
