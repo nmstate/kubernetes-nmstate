@@ -142,6 +142,153 @@ var _ = Describe("NMState operator", func() {
 			})
 		})
 	})
+	Context("when verbose level is configured", func() {
+		Context("and deployed with debug mode", func() {
+			BeforeEach(func() {
+				debugNMState := defaultOperator.Nmstate
+				debugNMState.Spec.Verbose = nmstatev1.VerboseLevelDebug
+				By("Install NMState with verbose=debug")
+				InstallNMState(debugNMState)
+			})
+			It("should deploy handler daemonset with verbose arguments", func() {
+				EventuallyOperandIsReady(defaultOperator)
+				
+				By("Check handler daemonset has verbose arguments")
+				Eventually(func() bool {
+					daemonSet := appsv1.DaemonSet{}
+					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
+					if err != nil {
+						return false
+					}
+					
+					// Check container args contain verbose flags
+					args := daemonSet.Spec.Template.Spec.Containers[0].Args
+					hasVFlag := false
+					hasVVVFlag := false
+					for i, arg := range args {
+						if arg == "-v" && i+1 < len(args) && args[i+1] == "-vvv" {
+							hasVFlag = true
+							hasVVVFlag = true
+							break
+						}
+					}
+					return hasVFlag && hasVVVFlag
+				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset should have verbose arguments")
+				
+				By("Check handler daemonset livenessProbe uses verbose flag")
+				Eventually(func() bool {
+					daemonSet := appsv1.DaemonSet{}
+					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
+					if err != nil {
+						return false
+					}
+					
+					// Check livenessProbe command contains verbose flag
+					probe := daemonSet.Spec.Template.Spec.Containers[0].LivenessProbe
+					if probe == nil || probe.Exec == nil {
+						return false
+					}
+					
+					for _, cmd := range probe.Exec.Command {
+						if cmd == "nmstatectl show -vvv 2>&1" {
+							return true
+						}
+					}
+					return false
+				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should use verbose flag")
+			})
+			AfterEach(func() {
+				UninstallNMStateAndWaitForDeletion(defaultOperator)
+			})
+		})
+		
+		Context("and deployed with production mode then updated to debug", func() {
+			BeforeEach(func() {
+				prodNMState := defaultOperator.Nmstate
+				prodNMState.Spec.Verbose = nmstatev1.VerboseLevelProduction
+				By("Install NMState with verbose=production")
+				InstallNMState(prodNMState)
+				EventuallyOperandIsReady(defaultOperator)
+			})
+			It("should update handler daemonset when verbose level changes", func() {
+				By("Verify initial production mode deployment")
+				Eventually(func() bool {
+					daemonSet := appsv1.DaemonSet{}
+					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
+					if err != nil {
+						return false
+					}
+					
+					// Check container args do NOT contain verbose flags
+					args := daemonSet.Spec.Template.Spec.Containers[0].Args
+					for i, arg := range args {
+						if arg == "-v" && i+1 < len(args) && args[i+1] == "-vvv" {
+							return false // Should not have verbose flags
+						}
+					}
+					return true
+				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler should not have verbose arguments in production mode")
+				
+				By("Update NMState CR to debug mode")
+				nmstateObj := defaultOperator.Nmstate
+				err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+					err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: nmstateObj.Name}, &nmstateObj)
+					if err != nil {
+						return err
+					}
+					nmstateObj.Spec.Verbose = nmstatev1.VerboseLevelDebug
+					return testenv.Client.Update(context.TODO(), &nmstateObj)
+				})
+				Expect(err).ToNot(HaveOccurred(), "should update NMState CR to debug mode")
+				
+				By("Verify handler daemonset gets updated with verbose arguments")
+				Eventually(func() bool {
+					daemonSet := appsv1.DaemonSet{}
+					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
+					if err != nil {
+						return false
+					}
+					
+					// Check container args contain verbose flags
+					args := daemonSet.Spec.Template.Spec.Containers[0].Args
+					hasVFlag := false
+					hasVVVFlag := false
+					for i, arg := range args {
+						if arg == "-v" && i+1 < len(args) && args[i+1] == "-vvv" {
+							hasVFlag = true
+							hasVVVFlag = true
+							break
+						}
+					}
+					return hasVFlag && hasVVVFlag
+				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset should be updated with verbose arguments")
+				
+				By("Verify livenessProbe is updated with verbose flag")
+				Eventually(func() bool {
+					daemonSet := appsv1.DaemonSet{}
+					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
+					if err != nil {
+						return false
+					}
+					
+					probe := daemonSet.Spec.Template.Spec.Containers[0].LivenessProbe
+					if probe == nil || probe.Exec == nil {
+						return false
+					}
+					
+					for _, cmd := range probe.Exec.Command {
+						if cmd == "nmstatectl show -vvv 2>&1" {
+							return true
+						}
+					}
+					return false
+				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should be updated with verbose flag")
+			})
+			AfterEach(func() {
+				UninstallNMStateAndWaitForDeletion(defaultOperator)
+			})
+		})
+	})
 	Context("when cluser-reader exists", func() {
 		const (
 			clusterReaderRoleName = "cluster-reader"
