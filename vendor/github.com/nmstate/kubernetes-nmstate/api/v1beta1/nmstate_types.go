@@ -58,6 +58,12 @@ type NMStateSpec struct {
 	// +kubebuilder:default:={}
 	// +optional
 	ProbeConfiguration NMStateProbeConfiguration `json:"probeConfiguration,omitempty"`
+	// LogLevel defines the log level for nmstate operations.
+	// Valid values are "info" (default, minimal output) and "debug" (verbose output for debugging).
+	// +kubebuilder:default:="info"
+	// +kubebuilder:validation:Enum=info;debug
+	// +optional
+	LogLevel shared.LogLevel `json:"logLevel,omitempty"`
 }
 
 type SelfSignConfiguration struct {
