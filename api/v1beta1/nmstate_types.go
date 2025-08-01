@@ -58,6 +58,12 @@ type NMStateSpec struct {
 	// +kubebuilder:default:={}
 	// +optional
 	ProbeConfiguration NMStateProbeConfiguration `json:"probeConfiguration,omitempty"`
+	// Verbose defines the verbosity level for nmstate operations.
+	// Valid values are "production" (default, minimal output) and "debug" (verbose output for debugging).
+	// +kubebuilder:default:="production"
+	// +kubebuilder:validation:Enum=production;debug
+	// +optional
+	Verbose shared.VerboseLevel `json:"verbose,omitempty"`
 }
 
 type SelfSignConfiguration struct {
