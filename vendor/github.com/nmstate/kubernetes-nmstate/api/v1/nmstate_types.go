@@ -23,6 +23,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// VerboseLevel defines the verbosity level for nmstate operations
+type VerboseLevel string
+
+const (
+	// VerboseLevelProduction indicates production verbosity level (default, minimal output)
+	VerboseLevelProduction VerboseLevel = "production"
+	// VerboseLevelDebug indicates debug verbosity level (verbose output for debugging)
+	VerboseLevelDebug VerboseLevel = "debug"
+)
+
 // NMStateSpec defines the desired state of NMState
 type NMStateSpec struct {
 	// Affinity is an optional affinity selector that will be added to handler DaemonSet manifest.
@@ -58,6 +68,12 @@ type NMStateSpec struct {
 	// +kubebuilder:default:={}
 	// +optional
 	ProbeConfiguration NMStateProbeConfiguration `json:"probeConfiguration,omitempty"`
+	// Verbose defines the verbosity level for nmstate operations.
+	// Valid values are "production" (default, minimal output) and "debug" (verbose output for debugging).
+	// +kubebuilder:default:="production"
+	// +kubebuilder:validation:Enum=production;debug
+	// +optional
+	Verbose VerboseLevel `json:"verbose,omitempty"`
 }
 
 type SelfSignConfiguration struct {

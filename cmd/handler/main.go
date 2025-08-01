@@ -112,6 +112,7 @@ func mainHandler() int {
 	if logType == "debug" {
 		// workaround until --v flag got removed
 		flag.CommandLine.Set("zap-devel", "true")
+		nmstatectl.SetDebugMode(true)
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opt)))

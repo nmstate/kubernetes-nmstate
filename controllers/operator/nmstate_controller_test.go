@@ -402,6 +402,110 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 	})
 
+	Context("when operator spec has verbose level configured", func() {
+		var (
+			request ctrl.Request
+		)
+
+		Context("when verbose level is set to debug", func() {
+			BeforeEach(func() {
+				s := scheme.Scheme
+				s.AddKnownTypes(nmstatev1.GroupVersion,
+					&nmstatev1.NMState{},
+				)
+				// set Verbose field to debug in operator Spec
+				nmstate.Spec.Verbose = nmstatev1.VerboseLevelDebug
+				objs := []runtime.Object{&nmstate}
+				// Create a fake client to mock API calls.
+				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+				request.Name = existingNMStateName
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+			It("should add verbose arguments to handler daemonset container args", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ds.Spec.Template.Spec.Containers[0].Args).To(ContainElements("-v", "-vvv"))
+			})
+			It("should use verbose flag in livenessProbe command", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				expectedCommand := "nmstatectl show -vvv 2>&1"
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+			})
+		})
+
+		Context("when verbose level is set to production (default)", func() {
+			BeforeEach(func() {
+				s := scheme.Scheme
+				s.AddKnownTypes(nmstatev1.GroupVersion,
+					&nmstatev1.NMState{},
+				)
+				// set Verbose field to production in operator Spec (or leave as default)
+				nmstate.Spec.Verbose = nmstatev1.VerboseLevelProduction
+				objs := []runtime.Object{&nmstate}
+				// Create a fake client to mock API calls.
+				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+				request.Name = existingNMStateName
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+			It("should not add verbose arguments to handler daemonset container args", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("-v", "-vvv"))
+			})
+			It("should not use verbose flag in livenessProbe command", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				expectedCommand := "nmstatectl show  2>&1"
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+			})
+		})
+
+		Context("when verbose level is unset (default)", func() {
+			BeforeEach(func() {
+				s := scheme.Scheme
+				s.AddKnownTypes(nmstatev1.GroupVersion,
+					&nmstatev1.NMState{},
+				)
+				// leave Verbose field unset (default behavior)
+				objs := []runtime.Object{&nmstate}
+				// Create a fake client to mock API calls.
+				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+				request.Name = existingNMStateName
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+			It("should not add verbose arguments to handler daemonset container args", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("-v", "-vvv"))
+			})
+			It("should not use verbose flag in livenessProbe command", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				expectedCommand := "nmstatectl show  2>&1"
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+			})
+		})
+	})
+
 	Context("Depending on cluster topology", func() {
 		var (
 			nodeSelector     map[string]string
