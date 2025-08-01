@@ -99,7 +99,7 @@ func mainHandler() int {
 	opt.BindFlags(flag.CommandLine)
 	var logType string
 	var dumpMetricFamilies bool
-	pflag.StringVar(&logType, "v", "production", "Log type (debug/production).")
+	pflag.StringVar(&logType, "v", "info", "Log type (debug/info).")
 	pflag.BoolVar(&dumpMetricFamilies, "dump-metric-families", false, "Dump the prometheus metric families and exit.")
 	pflag.CommandLine.MarkDeprecated("v", "please use the --zap-devel flag for debug logging instead")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
@@ -140,6 +140,7 @@ func initializeLogging(logType string, opt *zap.Options) int {
 	if logType == "debug" {
 		// workaround until --v flag got removed
 		flag.CommandLine.Set("zap-devel", "true")
+		nmstatectl.SetDebugMode(true)
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opt)))

@@ -72,7 +72,7 @@ func main() {
 	opt := zap.Options{}
 	opt.BindFlags(flag.CommandLine)
 	var logType string
-	pflag.StringVar(&logType, "v", "production", "Log type (debug/production).")
+	pflag.StringVar(&logType, "v", "info", "Log type (debug/info).")
 	pflag.CommandLine.MarkDeprecated("v", "please use the --zap-devel flag for debug logging instead")
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()

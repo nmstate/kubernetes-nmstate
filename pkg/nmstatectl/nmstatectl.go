@@ -33,10 +33,19 @@ import (
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
+var debugMode bool
+
 const nmstateCommand = "nmstatectl"
 
+// execCommand is a variable that can be overridden in tests to capture command execution
+var execCommand = exec.Command
+
+func SetDebugMode(debug bool) {
+	debugMode = debug
+}
+
 func nmstatectlWithInputAndOutputs(arguments []string, input string, stdout, stderr io.Writer) error {
-	cmd := exec.Command(nmstateCommand, arguments...)
+	cmd := execCommand(nmstateCommand, arguments...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 
@@ -90,10 +99,13 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	var setDoneCh = make(chan struct{})
 	defer close(setDoneCh)
 
-	setOutput, err := nmstatectlWithInput(
-		[]string{"apply", "-v", "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds()))},
-		string(desiredState.Raw),
-	)
+	args := []string{"apply"}
+	if debugMode {
+		args = append(args, "-vv")
+	}
+	args = append(args, "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds())))
+
+	setOutput, err := nmstatectlWithInput(args, string(desiredState.Raw))
 	return setOutput, err
 }
 
