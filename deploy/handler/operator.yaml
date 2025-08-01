@@ -365,6 +365,10 @@ spec:
         - name: nmstate-handler
           args:
           - --zap-time-encoding=iso8601
+{{- if .LogLevelHandlerCommandArg }}
+          - --v
+          - "{{ .LogLevelHandlerCommandArg }}"
+{{- end }}
           # Replace this with the built image name
           image: {{ .HandlerImage }}
           imagePullPolicy: {{ .HandlerPullPolicy }}
@@ -439,7 +443,7 @@ spec:
               command:
               - bash
               - -c
-              - "nmstatectl show -vvv 2>&1"
+              - "nmstatectl show {{ .HandlerReadinessProbeExtraArg }} 2>&1"
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10
