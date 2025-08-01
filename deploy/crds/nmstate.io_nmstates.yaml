@@ -2021,6 +2021,15 @@ spec:
                       type: string
                   type: object
                 type: array
+              verbose:
+                default: production
+                description: |-
+                  Verbose defines the verbosity level for nmstate operations.
+                  Valid values are "production" (default, minimal output) and "debug" (verbose output for debugging).
+                enum:
+                - production
+                - debug
+                type: string
             type: object
           status:
             description: NMStateStatus defines the observed state of NMState
