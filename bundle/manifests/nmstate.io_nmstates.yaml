@@ -1932,6 +1932,15 @@ spec:
                       type: string
                   type: object
                 type: array
+              logLevel:
+                default: info
+                description: |-
+                  LogLevel defines the log level for nmstate operations.
+                  Valid values are "info" (default, minimal output) and "debug" (verbose output for debugging).
+                enum:
+                - info
+                - debug
+                type: string
               metricsConfiguration:
                 default: {}
                 description: |-
@@ -3983,6 +3992,15 @@ spec:
                       type: string
                   type: object
                 type: array
+              logLevel:
+                default: info
+                description: |-
+                  LogLevel defines the log level for nmstate operations.
+                  Valid values are "info" (default, minimal output) and "debug" (verbose output for debugging).
+                enum:
+                - info
+                - debug
+                type: string
               metricsConfiguration:
                 description: |-
                   MetricsConfiguration is an optional configuration for metrics server.

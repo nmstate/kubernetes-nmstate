@@ -62,6 +62,12 @@ type NMStateSpec struct {
 	// If MetricsConfiguration is specified, the handler will use the config defined here instead of its default values.
 	// +optional
 	MetricsConfiguration *NMStateMetricsConfiguration `json:"metricsConfiguration,omitempty"`
+	// LogLevel defines the log level for nmstate operations.
+	// Valid values are "info" (default, minimal output) and "debug" (verbose output for debugging).
+	// +kubebuilder:default:="info"
+	// +kubebuilder:validation:Enum=info;debug
+	// +optional
+	LogLevel shared.LogLevel `json:"logLevel,omitempty"`
 }
 
 type SelfSignConfiguration struct {
