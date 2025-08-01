@@ -319,6 +319,11 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 
 	probeConfig := instance.Spec.ProbeConfiguration
 
+	verboseArg := ""
+	if instance.Spec.Verbose == nmstatev1.VerboseLevelDebug {
+		verboseArg = "-vvv"
+	}
+
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
@@ -335,6 +340,7 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["HandlerAffinity"] = handlerAffinity
 	data.Data["SelfSignConfiguration"] = selfSignConfiguration
 	data.Data["ProbeConfiguration"] = probeConfig
+	data.Data["VerboseArg"] = verboseArg
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
 	if err != nil {
