@@ -169,7 +169,7 @@ check-manifests: generate
 	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
-	git diff --exit-code -I'^    createdAt: ' -s bundle || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
+	git diff --exit-code -I'^    createdAt: ' -s || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
 
 generate: gen-k8s gen-crds gen-rbac
 
