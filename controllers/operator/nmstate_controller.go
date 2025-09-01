@@ -515,7 +515,11 @@ func (r *NMStateReconciler) apply(ctx context.Context, newObj *unstructured.Unst
 		if err := r.Client.Patch(ctx, newObj, client.MergeFrom(oldObj)); err != nil {
 			return fmt.Errorf("failed patching %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
 		}
-		r.Log.Info("failed strategic patch but succeeded fallback %q \"%s:%s", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName())
+		r.Log.Info("failed strategic patch but succeeded fallback",
+			"kind", newObj.GetKind(),
+			"namespace", newObj.GetNamespace(),
+			"name", newObj.GetName(),
+		)
 	}
 	return nil
 }
