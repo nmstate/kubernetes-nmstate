@@ -413,13 +413,21 @@ func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(enactmen
 
 func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(policyName string) error {
 	enactmentKey := nmstateapi.EnactmentKey(nodeName, policyName)
+	log := r.Log.WithName("deleteEnactmentForPolicy").WithValues(
+		"policy", policyName,
+		"enactment", enactmentKey.Name,
+	)
 	enactmentInstance := nmstatev1beta1.NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: enactmentKey.Name,
 		},
 	}
 	err := r.APIClient.Delete(context.TODO(), &enactmentInstance)
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("no enactment to delete")
+			return nil
+		}
 		return errors.Wrap(err, "failed deleting enactment")
 	}
 	return nil
