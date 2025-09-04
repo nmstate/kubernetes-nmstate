@@ -20,7 +20,7 @@
 #
 set -e
 
-LINTER_IMAGE_TAG=${LINTER_IMAGE_TAG:-"v0.0.3"}
+LINTER_IMAGE_TAG=${LINTER_IMAGE_TAG:-"v0.0.10"}
 
 # Get the metrics list
 metric_families=$(NODE_NAME=node01 go run cmd/handler/main.go --dump-metric-families)

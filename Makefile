@@ -48,7 +48,7 @@ endif
 
 WHAT ?= ./pkg/... ./controllers/...
 
-LINTER_IMAGE_TAG ?= v0.0.3
+LINTER_IMAGE_TAG ?= v0.0.10
 
 unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 

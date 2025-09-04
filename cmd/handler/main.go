@@ -109,24 +109,59 @@ func mainHandler() int {
 		return dumpMetricFamiliesToStdout()
 	}
 
+	if exitCode := initializeLogging(logType, &opt); exitCode != 0 {
+		return exitCode
+	}
+
+	handlerLock, err := setupHandlerLockIfNeeded()
+	if err != nil {
+		setupLog.Error(err, "Failed to setup handler lock")
+		return generalExitStatus
+	}
+	if handlerLock != nil {
+		defer handlerLock.Unlock()
+	}
+
+	mgr, err := createManager()
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		return generalExitStatus
+	}
+
+	if err := setupControllersByEnvironment(mgr); err != nil {
+		return generalExitStatus
+	}
+
+	return startManager(mgr)
+}
+
+// initializeLogging sets up logging configuration and handles early exit conditions
+func initializeLogging(logType string, opt *zap.Options) int {
 	if logType == "debug" {
 		// workaround until --v flag got removed
 		flag.CommandLine.Set("zap-devel", "true")
 	}
 
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opt)))
-	// Lock only for handler, we can run old and new version of
-	// webhook without problems, policy status will be updated
-	// by multiple instances.
-	if environment.IsHandler() {
-		handlerLock, err := lockHandler()
-		if err != nil {
-			setupLog.Error(err, "Failed to run lockHandler")
-			return generalExitStatus
-		}
-		defer handlerLock.Unlock()
-		setupLog.Info("Successfully took nmstate exclusive lock")
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opt)))
+	return 0
+}
+
+// setupHandlerLockIfNeeded sets up handler lock if running in handler mode
+func setupHandlerLockIfNeeded() (*flock.Flock, error) {
+	if !environment.IsHandler() {
+		return nil, nil
 	}
+
+	handlerLock, err := lockHandler()
+	if err != nil {
+		return nil, err
+	}
+	setupLog.Info("Successfully took nmstate exclusive lock")
+	return handlerLock, nil
+}
+
+// createManager creates and configures the controller manager
+func createManager() (manager.Manager, error) {
 	ctrlOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
@@ -137,50 +172,64 @@ func mainHandler() int {
 	if environment.IsHandler() {
 		cacheResourcesOnNodes(&ctrlOptions)
 	}
+
 	setupLog.Info("Creating manager")
-	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
+	return ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
+}
+
+// setupControllersByEnvironment configures controllers based on the current environment
+func setupControllersByEnvironment(mgr manager.Manager) error {
+	switch {
+	case environment.IsCertManager():
+		return setupCertManagerEnvironment(mgr)
+	case environment.IsWebhook():
+		return setupWebhookEnvironment(mgr)
+	case environment.IsMetricsManager():
+		return setupMetricsManager(mgr)
+	case environment.IsHandler():
+		return setupHandlerEnvironment(mgr)
+	default:
+		return nil
+	}
+}
+
+// setupCertManagerEnvironment configures the certificate manager
+func setupCertManagerEnvironment(mgr manager.Manager) error {
+	certManagerOpts, err := retrieveCertAndCAIntervals()
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		return generalExitStatus
+		return err
 	}
+	return setupCertManager(mgr, certManagerOpts)
+}
 
-	if environment.IsCertManager() {
-		var certManagerOpts certificate.Options
-		if certManagerOpts, err = retrieveCertAndCAIntervals(); err != nil {
-			return generalExitStatus
-		}
-		if err = setupCertManager(mgr, certManagerOpts); err != nil {
-			return generalExitStatus
-		}
-		// Runs only webhook controllers if it's specified
-	} else if environment.IsWebhook() {
-		if err = webhook.AddToManager(mgr); err != nil {
-			setupLog.Error(err, "Cannot initialize webhook")
-			return generalExitStatus
-		}
-	} else if environment.IsMetricsManager() {
-		if err = setupMetricsManager(mgr); err != nil {
-			return generalExitStatus
-		}
-	} else if environment.IsHandler() {
-		if err = setupHandlerControllers(mgr); err != nil {
-			return generalExitStatus
-		}
-		if err = checkNmstateIsWorking(); err != nil {
-			return generalExitStatus
-		}
-		if err = createHealthyFile(); err != nil {
-			return generalExitStatus
-		}
+// setupWebhookEnvironment configures the webhook
+func setupWebhookEnvironment(mgr manager.Manager) error {
+	if err := webhook.AddToManager(mgr); err != nil {
+		setupLog.Error(err, "Cannot initialize webhook")
+		return err
 	}
+	return nil
+}
 
+// setupHandlerEnvironment configures the handler controllers and performs health checks
+func setupHandlerEnvironment(mgr manager.Manager) error {
+	if err := setupHandlerControllers(mgr); err != nil {
+		return err
+	}
+	if err := checkNmstateIsWorking(); err != nil {
+		return err
+	}
+	return createHealthyFile()
+}
+
+// startManager starts the manager and handles profiler setup
+func startManager(mgr manager.Manager) int {
 	setProfiler()
 	setupLog.Info("starting manager")
-	if err = mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		return generalExitStatus
 	}
-
 	return 0
 }
 
