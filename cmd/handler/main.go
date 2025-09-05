@@ -162,10 +162,16 @@ func setupHandlerLockIfNeeded() (*flock.Flock, error) {
 
 // createManager creates and configures the controller manager
 func createManager() (manager.Manager, error) {
+	// Get metrics bind address from environment variable, with default fallback
+	metricsBindAddress := os.Getenv("METRICS_BIND_ADDRESS")
+	if metricsBindAddress == "" {
+		metricsBindAddress = ":8089"
+	}
+
 	ctrlOptions := ctrl.Options{
 		Scheme: scheme,
 		Metrics: metricsserver.Options{
-			BindAddress: ":8089", // Explicitly enable metrics
+			BindAddress: metricsBindAddress,
 		},
 	}
 

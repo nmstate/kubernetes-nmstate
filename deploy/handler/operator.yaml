@@ -415,6 +415,8 @@ spec:
               value: "/var/k8s_nmstate/handler_lock"
             - name: PROBE_DNS_HOST
               value: "{{ .ProbeConfiguration.DNS.Host }}"
+            - name: METRICS_BIND_ADDRESS
+              value: "{{ .MetricsConfiguration.BindAddress }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket

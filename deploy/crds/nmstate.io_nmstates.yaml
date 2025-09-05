@@ -1932,6 +1932,19 @@ spec:
                       type: string
                   type: object
                 type: array
+              metricsConfiguration:
+                default: {}
+                description: |-
+                  MetricsConfiguration is an optional configuration for metrics server.
+                  If MetricsConfiguration is specified, the handler will use the config defined here instead of its default values.
+                properties:
+                  bindAddress:
+                    default: :8089
+                    description: |-
+                      BindAddress is the TCP address that the controller should bind to
+                      for serving metrics. It can be set to "0" to disable the metrics serving.
+                    type: string
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -3970,6 +3983,18 @@ spec:
                       type: string
                   type: object
                 type: array
+              metricsConfiguration:
+                description: |-
+                  MetricsConfiguration is an optional configuration for metrics server.
+                  If MetricsConfiguration is specified, the handler will use the config defined here instead of its default values.
+                properties:
+                  bindAddress:
+                    default: :8089
+                    description: |-
+                      BindAddress is the TCP address that the controller should bind to
+                      for serving metrics. It can be set to "0" to disable the metrics serving.
+                    type: string
+                type: object
               nodeSelector:
                 additionalProperties:
                   type: string
