@@ -141,6 +141,52 @@ it:
 kubectl delete nncp eth666
 ```
 
+## Enabling debug logging
+
+For advanced troubleshooting, you can enable verbose debug logging by configuring the `LogLevel` field in the NMState custom resource. This will provide more detailed output from nmstatectl operations, which can be helpful when diagnosing complex networking issues.
+
+### Setting debug log level
+
+To enable debug logging, update the NMState CR with `logLevel: debug`:
+
+```yaml
+apiVersion: nmstate.io/v1
+kind: NMState
+metadata:
+  name: nmstate
+spec:
+  logLevel: debug  # Valid values: "info" (default) or "debug"
+```
+
+Apply the configuration:
+
+```shell
+kubectl patch nmstate nmstate --type='merge' -p='{"spec":{"logLevel":"debug"}}'
+```
+
+### Verifying debug mode
+
+You can verify that debug mode is active by checking the handler DaemonSet pods:
+
+```shell
+kubectl logs -n nmstate -l component=kubernetes-nmstate-handler --tail=50
+```
+
+When debug mode is enabled, you should see more verbose output including:
+- Detailed nmstatectl command execution logs
+- Verbose nmstate operations with `-vv` flag
+- Additional debugging information from network configuration operations
+
+### Reverting to info log level
+
+To reduce log verbosity, revert to info log level:
+
+```shell
+kubectl patch nmstate nmstate --type='merge' -p='{"spec":{"logLevel":"info"}}'
+```
+
+**Note:** Debug logging significantly increases log volume and should primarily be used for troubleshooting purposes. Consider reverting to info level after resolving issues to maintain optimal performance.
+
 ## Continue reading
 
 This was the last article from the introduction series. You can continue reading

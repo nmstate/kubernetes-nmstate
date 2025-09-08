@@ -45,6 +45,7 @@ import (
 	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
@@ -326,6 +327,13 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 		}
 	}
 
+	logLevelHandlerCommandArg := ""
+	handlerReadinessProbeExtraArg := ""
+	if instance.Spec.LogLevel == shared.LogLevelDebug {
+		logLevelHandlerCommandArg = "debug"
+		handlerReadinessProbeExtraArg = "-vv"
+	}
+
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
@@ -343,6 +351,8 @@ func (r *NMStateReconciler) applyHandler(instance *nmstatev1.NMState) error {
 	data.Data["SelfSignConfiguration"] = selfSignConfiguration
 	data.Data["ProbeConfiguration"] = probeConfig
 	data.Data["MetricsConfiguration"] = metricsConfig
+	data.Data["LogLevelHandlerCommandArg"] = logLevelHandlerCommandArg
+	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
 	if err != nil {

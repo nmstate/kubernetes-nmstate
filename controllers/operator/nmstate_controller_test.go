@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
@@ -68,12 +69,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				Operator: "Exists",
 			},
 		}
-		nmstate = nmstatev1.NMState{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: existingNMStateName,
-				UID:  "12345",
-			},
-		}
+
 		handlerPrefix       = "handler"
 		handlerNamespace    = "nmstate"
 		operatorNamespace   = "nmstate"
@@ -84,6 +80,13 @@ var _ = Describe("NMState controller reconcile", func() {
 		kubeRBACProxyImage  = "quay.io/some_kube_rbac_proxy_image"
 		imagePullPolicy     = "Always"
 		manifestsDir        = ""
+		newNMState          = func() *nmstatev1.NMState {
+			return &nmstatev1.NMState{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: existingNMStateName,
+				},
+			}
+		}
 	)
 	BeforeEach(func() {
 		var err error
@@ -97,7 +100,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			&nmstatev1.NMState{},
 			&nmstatev1.NMStateList{},
 		)
-		objs := []runtime.Object{&nmstate}
+		objs := []runtime.Object{newNMState()}
 		// Create a fake client to mock API calls.
 		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 		names.ManifestDir = manifestsDir
@@ -180,8 +183,9 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set NodeSelector field in operator Spec
+			nmstate := newNMState()
 			nmstate.Spec.NodeSelector = customHandlerNodeSelector
-			objs := []runtime.Object{&nmstate}
+			objs := []runtime.Object{nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
@@ -226,8 +230,9 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set Tolerations field in operator Spec
+			nmstate := newNMState()
 			nmstate.Spec.Tolerations = handlerTolerations
-			objs := []runtime.Object{&nmstate}
+			objs := []runtime.Object{nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
@@ -260,8 +265,9 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set InfraNodeSelector field in operator Spec
+			nmstate := newNMState()
 			nmstate.Spec.InfraNodeSelector = infraNodeSelector
-			objs := []runtime.Object{&nmstate}
+			objs := []runtime.Object{nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
@@ -307,8 +313,9 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set Tolerations field in operator Spec
+			nmstate := newNMState()
 			nmstate.Spec.InfraTolerations = infraTolerations
-			objs := []runtime.Object{&nmstate}
+			objs := []runtime.Object{nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
@@ -350,13 +357,14 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 			// set DNS probe config field in operator Spec
+			nmstate := newNMState()
 			nmstate.Spec.ProbeConfiguration = nmstatev1.NMStateProbeConfiguration{
 				DNS: nmstatev1.NMStateDNSProbeConfiguration{
 					Host: "google.com",
 				},
 			}
 
-			objs := []runtime.Object{&nmstate}
+			objs := []runtime.Object{nmstate}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
@@ -384,7 +392,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				&nmstatev1.NMState{},
 			)
 
-			objs := []runtime.Object{&nmstate}
+			objs := []runtime.Object{newNMState()}
 			// Create a fake client to mock API calls.
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 			reconciler.Client = cl
@@ -399,6 +407,113 @@ var _ = Describe("NMState controller reconcile", func() {
 			err := cl.List(context.TODO(), netpols, client.InNamespace(handlerNamespace))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(netpols.Items)).To(BeNumerically(">", 1))
+		})
+	})
+
+	Context("when operator spec has log level configured", func() {
+		var (
+			request ctrl.Request
+		)
+
+		Context("when log level is set to debug", func() {
+			BeforeEach(func() {
+				s := scheme.Scheme
+				s.AddKnownTypes(nmstatev1.GroupVersion,
+					&nmstatev1.NMState{},
+				)
+				// set LogLevel field to debug in operator Spec
+				nmstate := newNMState()
+				nmstate.Spec.LogLevel = shared.LogLevelDebug
+				objs := []runtime.Object{nmstate}
+				// Create a fake client to mock API calls.
+				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+				request.Name = existingNMStateName
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+			It("should add verbose arguments to handler daemonset container args", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ds.Spec.Template.Spec.Containers[0].Args).To(ContainElements("--v", "debug"))
+			})
+			It("should use verbose flag in livenessProbe command", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				expectedCommand := "nmstatectl show -vv 2>&1"
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+			})
+		})
+
+		Context("when log level is set to info (default)", func() {
+			BeforeEach(func() {
+				s := scheme.Scheme
+				s.AddKnownTypes(nmstatev1.GroupVersion,
+					&nmstatev1.NMState{},
+				)
+				// set LogLevel field to info in operator Spec (or leave as default)
+				nmstate := newNMState()
+				nmstate.Spec.LogLevel = shared.LogLevelInfo
+				objs := []runtime.Object{nmstate}
+				// Create a fake client to mock API calls.
+				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+				request.Name = existingNMStateName
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+			It("should not add verbose arguments to handler daemonset container args", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
+			})
+			It("should not use verbose flag in livenessProbe command", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				expectedCommand := "nmstatectl show  2>&1"
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+			})
+		})
+
+		Context("when log level is unset (default)", func() {
+			BeforeEach(func() {
+				s := scheme.Scheme
+				s.AddKnownTypes(nmstatev1.GroupVersion,
+					&nmstatev1.NMState{},
+				)
+				// leave LogLevel field unset (default behavior)
+				nmstate := newNMState()
+				objs := []runtime.Object{nmstate}
+				// Create a fake client to mock API calls.
+				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+				request.Name = existingNMStateName
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(ctrl.Result{}))
+			})
+			It("should not add verbose arguments to handler daemonset container args", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
+			})
+			It("should not use verbose flag in livenessProbe command", func() {
+				ds := &appsv1.DaemonSet{}
+				err := cl.Get(context.TODO(), handlerKey, ds)
+				Expect(err).ToNot(HaveOccurred())
+				expectedCommand := "nmstatectl show  2>&1"
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+			})
 		})
 	})
 
@@ -433,9 +548,10 @@ var _ = Describe("NMState controller reconcile", func() {
 			s.AddKnownTypes(nmstatev1.GroupVersion,
 				&nmstatev1.NMState{},
 			)
+			nmstate := newNMState()
 			nmstate.Spec.InfraNodeSelector = nodeSelector
 			nmstate.Spec.InfraTolerations = infraTolerations
-			objects = append(objects, &nmstate)
+			objects = append(objects, nmstate)
 
 			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()
 			reconciler.Client = cl
