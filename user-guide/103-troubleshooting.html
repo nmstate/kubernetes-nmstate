@@ -458,6 +458,50 @@ it:</p>
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl delete nncp eth666
 </code></pre></div></div>
 
+<h2 id="enabling-debug-logging">Enabling debug logging</h2>
+
+<p>For advanced troubleshooting, you can enable verbose debug logging by configuring the <code class="language-plaintext highlighter-rouge">LogLevel</code> field in the NMState custom resource. This will provide more detailed output from nmstatectl operations, which can be helpful when diagnosing complex networking issues.</p>
+
+<h3 id="setting-debug-log-level">Setting debug log level</h3>
+
+<p>To enable debug logging, update the NMState CR with <code class="language-plaintext highlighter-rouge">logLevel: debug</code>:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">apiVersion</span><span class="pi">:</span> <span class="s">nmstate.io/v1</span>
+<span class="na">kind</span><span class="pi">:</span> <span class="s">NMState</span>
+<span class="na">metadata</span><span class="pi">:</span>
+  <span class="na">name</span><span class="pi">:</span> <span class="s">nmstate</span>
+<span class="na">spec</span><span class="pi">:</span>
+  <span class="na">logLevel</span><span class="pi">:</span> <span class="s">debug</span>  <span class="c1"># Valid values: "info" (default) or "debug"</span>
+</code></pre></div></div>
+
+<p>Apply the configuration:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl patch nmstate nmstate <span class="nt">--type</span><span class="o">=</span><span class="s1">'merge'</span> <span class="nt">-p</span><span class="o">=</span><span class="s1">'{"spec":{"logLevel":"debug"}}'</span>
+</code></pre></div></div>
+
+<h3 id="verifying-debug-mode">Verifying debug mode</h3>
+
+<p>You can verify that debug mode is active by checking the handler DaemonSet pods:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl logs <span class="nt">-n</span> nmstate <span class="nt">-l</span> <span class="nv">component</span><span class="o">=</span>kubernetes-nmstate-handler <span class="nt">--tail</span><span class="o">=</span>50
+</code></pre></div></div>
+
+<p>When debug mode is enabled, you should see more verbose output including:</p>
+<ul>
+  <li>Detailed nmstatectl command execution logs</li>
+  <li>Verbose nmstate operations with <code class="language-plaintext highlighter-rouge">-vv</code> flag</li>
+  <li>Additional debugging information from network configuration operations</li>
+</ul>
+
+<h3 id="reverting-to-info-log-level">Reverting to info log level</h3>
+
+<p>To reduce log verbosity, revert to info log level:</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>kubectl patch nmstate nmstate <span class="nt">--type</span><span class="o">=</span><span class="s1">'merge'</span> <span class="nt">-p</span><span class="o">=</span><span class="s1">'{"spec":{"logLevel":"info"}}'</span>
+</code></pre></div></div>
+
+<p><strong>Note:</strong> Debug logging significantly increases log volume and should primarily be used for troubleshooting purposes. Consider reverting to info level after resolving issues to maintain optimal performance.</p>
+
 <h2 id="continue-reading">Continue reading</h2>
 
 <p>This was the last article from the introduction series. You can continue reading
