@@ -104,13 +104,17 @@ type NMStateMetricsConfiguration struct {
 
 // NMStateStatus defines the observed state of NMState
 type NMStateStatus struct {
+	// +optional
 	Conditions shared.ConditionList `json:"conditions,omitempty"`
 }
 
+// +genclient:nonNamespaced
 // +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nmstates,scope=Cluster
-// +kubebuilder:subresource=status
-// +kubebuilder:deprecatedversion
+// +kubebuilder:printcolumn:name="Status",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].type",description="Status"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
+// +kubebuilder:deprecatedversion:warning="nmstate/v1beta1 deprecated, use nmstate/v1 instead"
 
 // NMState is the Schema for the nmstates API
 type NMState struct {
