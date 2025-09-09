@@ -85,11 +85,15 @@ func ApplyObject(ctx context.Context, client k8sclient.Client, obj *uns.Unstruct
 	if err := MergeObjectForUpdate(existing, obj); err != nil {
 		return errors.Wrapf(err, "could not merge object %s with existing", objDesc)
 	}
-	if !equality.Semantic.DeepEqual(existing, obj) {
+	// ignore server-managed metadata fields when comparing
+	exCmp, objCmp := existing.DeepCopy(), obj.DeepCopy()
+	uns.RemoveNestedField(exCmp.Object, "metadata", "managedFields")
+	uns.RemoveNestedField(objCmp.Object, "metadata", "managedFields")
+	if !equality.Semantic.DeepEqual(exCmp.Object, objCmp.Object) {
 		if err := client.Update(ctx, obj); err != nil {
 			return errors.Wrapf(err, "could not update object %s", objDesc)
 		}
-		log.Print("update was successful")
+		log.Printf("updated %s", objDesc)
 	}
 
 	return nil
