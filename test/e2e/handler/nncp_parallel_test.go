@@ -35,7 +35,7 @@ func enactmentsFailingOrProgressing(policy string) int {
 		condProgressing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
 		condFailing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
 		if condProgressing != nil && condFailing != nil {
-			if condProgressing.Status == corev1.ConditionTrue && condFailing.Status == corev1.ConditionTrue {
+			if condProgressing.Status == corev1.ConditionTrue || condFailing.Status == corev1.ConditionTrue {
 				progressingEnactments++
 			}
 		}
