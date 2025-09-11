@@ -280,7 +280,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementNNCERetryCount(
 		enactment.Status.RetryCount)
 	if enactment.Status.RetryCount == nil {
 		enactment.Status.RetryCount = map[string]int{}
-		log.V(2).Info("initialized RetryCount on NNCE")
+		log.Info("initialized RetryCount on NNCE")
 	}
 	count := enactment.Status.RetryCount[generationKey]
 
@@ -512,7 +512,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNod
 	log := r.Log.WithName("shouldIncrementUnavailableNodeCount").WithValues(
 		"conditions", conditions)
 	shouldIncrement := conditions != nil && !enactmentstatus.IsRetrying(conditions)
-	log.V(2).Info("shouldIncrementUnavailableNodeCount", "shouldIncrement", shouldIncrement)
+	log.Info("shouldIncrementUnavailableNodeCount", "shouldIncrement", shouldIncrement)
 	return shouldIncrement
 }
 
