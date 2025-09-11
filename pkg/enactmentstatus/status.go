@@ -75,12 +75,3 @@ func IsRetrying(conditions *nmstate.ConditionList) bool {
 	}
 	return progressingCondition.Status == corev1.ConditionTrue && failingCondition.Status == corev1.ConditionTrue
 }
-
-func IsFailedOrAborted(conditions *nmstate.ConditionList) bool {
-	failingCondition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
-	abortedCondition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionAborted)
-	if failingCondition == nil || abortedCondition == nil {
-		return false
-	}
-	return failingCondition.Status == corev1.ConditionTrue && abortedCondition.Status == corev1.ConditionTrue
-}

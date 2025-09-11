@@ -140,16 +140,17 @@ func CountConditionsLogicalAnd(
 	policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
 
 	if err := cli.List(context.TODO(), &enactments, policyLabelFilter); err != nil {
-		return 0, fmt.Errorf("getting enactments failed")
+		return 0, fmt.Errorf("getting enactments failed: %w", err)
 	}
 
 	for enactmentIndex := range enactments.Items {
 		enactment := enactments.Items[enactmentIndex]
 		increase := true
-		for conditionType := range filter {
+		for conditionType, expected := range filter {
 			condition := enactment.Status.Conditions.Find(conditionType)
-			if condition != nil && condition.Status != filter[conditionType] {
+			if condition != nil && condition.Status != expected {
 				increase = false
+				break
 			}
 		}
 		if increase && enactment.Status.PolicyGeneration == policy.Generation {
