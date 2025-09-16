@@ -153,8 +153,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 		policyconditions.Reset(r.Client, request.NamespacedName)
 	}
 
-	generationKey := strconv.FormatInt(instance.Generation, 10)
-
 	// Policy conditions will be updated at the end so updating it
 	// does not impact at applying state, it will increase just
 	// reconcile time.
@@ -195,6 +193,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 		log.Error(err, "error getting enactment for policy")
 		return ctrl.Result{}, err
 	}
+
+	generationKey := strconv.FormatInt(enactmentInstance.Status.PolicyGeneration, 10)
 
 	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
 		err = r.incrementUnavailableNodeCount(instance, generationKey)

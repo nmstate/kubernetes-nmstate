@@ -73,7 +73,7 @@ func (ec *EnactmentConditions) NotifyFailedToConfigure(failedErr error) {
 }
 
 func (ec *EnactmentConditions) NotifyRetrying(failedErr error) {
-	ec.logger.Info("NotifyRetryAfterFailed")
+	ec.logger.Info("NotifyRetrying")
 	err := ec.updateEnactmentConditions(SetRetryAfterFailed, failedErr.Error())
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Retrying")

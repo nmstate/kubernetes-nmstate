@@ -28,6 +28,8 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
+const RollbackTimeout = 600 * time.Second
+
 // We cannot change routes at nmstate if the interface is with dhcp true
 // that's why we need to set it static with the same ip it has previously.
 func badDefaultGw(address, nic string, routingTable int) nmstate.State {
@@ -152,7 +154,7 @@ var _ = Describe("rollback", func() {
 			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return dhcpFlag(nodes[0], primaryNic)
-			}, 600*time.Second, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
+			}, RollbackTimeout, ReadInterval).Should(BeTrue(), "DHCP flag hasn't rollback to true")
 
 			Byf("Check that %s continue with rolled back state", primaryNic)
 			Consistently(func() bool {
@@ -259,7 +261,7 @@ var _ = Describe("rollback", func() {
 			By("Check that global DNS is rolled back")
 			Eventually(func() []string {
 				return dnsResolverForNode(nodes[0], "dns-resolver.running.server")
-			}, 600*time.Second, ReadInterval).ShouldNot(ContainElement("192.168.100.3"), "should eventually lose wrong name server")
+			}, RollbackTimeout, ReadInterval).ShouldNot(ContainElement("192.168.100.3"), "should eventually lose wrong name server")
 
 			By("Check that global DNS continue with rolled back state")
 			Consistently(func() []string {

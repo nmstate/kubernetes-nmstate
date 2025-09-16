@@ -148,7 +148,10 @@ func CountConditionsLogicalAnd(
 		increase := true
 		for conditionType, expected := range filter {
 			condition := enactment.Status.Conditions.Find(conditionType)
-			if condition != nil && condition.Status != expected {
+			if condition == nil {
+				return 0, fmt.Errorf("enactment condition %s not found", conditionType)
+			}
+			if condition.Status != expected {
 				increase = false
 				break
 			}
