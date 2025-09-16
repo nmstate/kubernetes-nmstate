@@ -255,7 +255,9 @@ func deletePolicy(name string) {
 	// Wait for enactments to be removed calculate timeout taking into account
 	// the number of nodes, looks like it affect the time it takes to
 	// delete enactments
-	enactmentsDeleteTimeout := time.Duration(60+20*len(nodes)) * time.Second
+	base := 2 * time.Minute     // 2 minute base time out
+	perNode := 20 * time.Second // plus 20 seconds per node
+	enactmentsDeleteTimeout := base + perNode*time.Duration(len(nodes))
 	for _, node := range nodes {
 		enactmentKey := nmstate.EnactmentKey(node, name)
 		Eventually(func() bool {
