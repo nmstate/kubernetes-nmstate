@@ -34,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -43,9 +44,52 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
+
+// applyCapableFakeClient wraps a fake client and handles Apply patches by converting them to Create/Update
+type applyCapableFakeClient struct {
+	client.Client
+}
+
+func (c *applyCapableFakeClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	// If this is a server-side apply patch, convert it to create/update
+	if patch.Type() == types.ApplyPatchType {
+		err := c.Client.Create(ctx, obj)
+		if err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				return c.Client.Update(ctx, obj)
+			}
+			return err
+		}
+		return nil
+	}
+	// For other patch types, use the underlying client
+	return c.Client.Patch(ctx, obj, patch, opts...)
+}
+
+func (c *applyCapableFakeClient) Status() client.SubResourceWriter {
+	return &applyCapableStatusWriter{c.Client.Status()}
+}
+
+// applyCapableStatusWriter wraps the status writer to handle Apply patches
+type applyCapableStatusWriter struct {
+	client.SubResourceWriter
+}
+
+func (s *applyCapableStatusWriter) Patch(
+	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption,
+) error {
+	// If this is a server-side apply patch, convert it to regular status update
+	if patch.Type() == types.ApplyPatchType {
+		return s.SubResourceWriter.Update(ctx, obj, &client.SubResourceUpdateOptions{})
+	}
+	// For other patch types, use the underlying status writer
+	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
+}
 
 var _ = Describe("NMState controller reconcile", func() {
 	var (
@@ -87,6 +131,38 @@ var _ = Describe("NMState controller reconcile", func() {
 				},
 			}
 		}
+		createTestCRDs = func() []runtime.Object {
+			// For tests, don't pre-create CRDs - let the reconciler create them
+			return []runtime.Object{}
+		}
+		setupFakeClient = func(nmstateObj *nmstatev1.NMState, extraObjs ...runtime.Object) client.Client {
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NMState{},
+				&nmstatev1.NMStateList{},
+			)
+			// Add v1beta1 types for server-side apply to work with CRDs
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+				&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
+				&nmstatev1beta1.NodeNetworkConfigurationPolicyList{},
+				&nmstatev1beta1.NodeNetworkState{},
+				&nmstatev1beta1.NodeNetworkStateList{},
+			)
+			// Add CRD types
+			s.AddKnownTypes(apiextv1.SchemeGroupVersion,
+				&apiextv1.CustomResourceDefinition{},
+				&apiextv1.CustomResourceDefinitionList{},
+			)
+
+			objs := []runtime.Object{nmstateObj}
+			objs = append(objs, createTestCRDs()...)
+			objs = append(objs, extraObjs...)
+
+			fakeClient := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).WithStatusSubresource(nmstateObj).Build()
+			return &applyCapableFakeClient{Client: fakeClient}
+		}
 	)
 	BeforeEach(func() {
 		var err error
@@ -95,18 +171,12 @@ var _ = Describe("NMState controller reconcile", func() {
 		err = copyManifests(manifestsDir)
 		Expect(err).ToNot(HaveOccurred())
 
-		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1.GroupVersion,
-			&nmstatev1.NMState{},
-			&nmstatev1.NMStateList{},
-		)
-		objs := []runtime.Object{newNMState()}
-		// Create a fake client to mock API calls.
-		cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+		nmstate := newNMState()
+		cl = setupFakeClient(nmstate)
 		names.ManifestDir = manifestsDir
 		reconciler.Client = cl
 		reconciler.APIClient = cl
-		reconciler.Scheme = s
+		reconciler.Scheme = scheme.Scheme
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("NMState")
 		os.Setenv("HANDLER_NAMESPACE", handlerNamespace)
 		os.Setenv("OPERATOR_NAMESPACE", operatorNamespace)
@@ -172,22 +242,32 @@ var _ = Describe("NMState controller reconcile", func() {
 			_, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).To(HaveOccurred())
 		})
+		It("should set degraded condition to True", func() {
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).To(HaveOccurred())
+
+			// Get the updated NMState instance
+			nmstateInstance := &nmstatev1.NMState{}
+			err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNMStateName}, nmstateInstance)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Verify degraded condition is set to True
+			degradedCondition := nmstateInstance.Status.Conditions.Find(shared.NmstateConditionDegraded)
+			Expect(degradedCondition).ToNot(BeNil(), "degraded condition should exist")
+			Expect(degradedCondition.Status).To(Equal(corev1.ConditionTrue), "degraded condition should be True")
+			Expect(degradedCondition.Reason).To(Equal(shared.NmstateInternalError), "degraded condition should have InternalError reason")
+			Expect(degradedCondition.Message).To(ContainSubstring("no manifests rendered"), "degraded condition should mention manifest error")
+		})
 	})
 	Context("when operator spec has a NodeSelector", func() {
 		var (
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
 			// set NodeSelector field in operator Spec
 			nmstate := newNMState()
 			nmstate.Spec.NodeSelector = customHandlerNodeSelector
-			objs := []runtime.Object{nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			cl = setupFakeClient(nmstate)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 			request.Name = existingNMStateName
@@ -225,16 +305,10 @@ var _ = Describe("NMState controller reconcile", func() {
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
 			// set Tolerations field in operator Spec
 			nmstate := newNMState()
 			nmstate.Spec.Tolerations = handlerTolerations
-			objs := []runtime.Object{nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			cl = setupFakeClient(nmstate)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 			request.Name = existingNMStateName
@@ -260,16 +334,10 @@ var _ = Describe("NMState controller reconcile", func() {
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
 			// set InfraNodeSelector field in operator Spec
 			nmstate := newNMState()
 			nmstate.Spec.InfraNodeSelector = infraNodeSelector
-			objs := []runtime.Object{nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			cl = setupFakeClient(nmstate)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 			request.Name = existingNMStateName
@@ -308,16 +376,10 @@ var _ = Describe("NMState controller reconcile", func() {
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
 			// set Tolerations field in operator Spec
 			nmstate := newNMState()
 			nmstate.Spec.InfraTolerations = infraTolerations
-			objs := []runtime.Object{nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			cl = setupFakeClient(nmstate)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 			request.Name = existingNMStateName
@@ -352,10 +414,6 @@ var _ = Describe("NMState controller reconcile", func() {
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
 			// set DNS probe config field in operator Spec
 			nmstate := newNMState()
 			nmstate.Spec.ProbeConfiguration = nmstatev1.NMStateProbeConfiguration{
@@ -364,9 +422,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				},
 			}
 
-			objs := []runtime.Object{nmstate}
-			// Create a fake client to mock API calls.
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			cl = setupFakeClient(nmstate)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 			request.Name = existingNMStateName
@@ -387,14 +443,8 @@ var _ = Describe("NMState controller reconcile", func() {
 			request ctrl.Request
 		)
 		BeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
-
-			objs := []runtime.Object{newNMState()}
-			// Create a fake client to mock API calls.
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+			nmstate := newNMState()
+			cl = setupFakeClient(nmstate)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 			request.Name = existingNMStateName
@@ -417,16 +467,10 @@ var _ = Describe("NMState controller reconcile", func() {
 
 		Context("when log level is set to debug", func() {
 			BeforeEach(func() {
-				s := scheme.Scheme
-				s.AddKnownTypes(nmstatev1.GroupVersion,
-					&nmstatev1.NMState{},
-				)
 				// set LogLevel field to debug in operator Spec
 				nmstate := newNMState()
 				nmstate.Spec.LogLevel = shared.LogLevelDebug
-				objs := []runtime.Object{nmstate}
-				// Create a fake client to mock API calls.
-				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				cl = setupFakeClient(nmstate)
 				reconciler.Client = cl
 				reconciler.APIClient = cl
 				request.Name = existingNMStateName
@@ -451,16 +495,10 @@ var _ = Describe("NMState controller reconcile", func() {
 
 		Context("when log level is set to info (default)", func() {
 			BeforeEach(func() {
-				s := scheme.Scheme
-				s.AddKnownTypes(nmstatev1.GroupVersion,
-					&nmstatev1.NMState{},
-				)
 				// set LogLevel field to info in operator Spec (or leave as default)
 				nmstate := newNMState()
 				nmstate.Spec.LogLevel = shared.LogLevelInfo
-				objs := []runtime.Object{nmstate}
-				// Create a fake client to mock API calls.
-				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				cl = setupFakeClient(nmstate)
 				reconciler.Client = cl
 				reconciler.APIClient = cl
 				request.Name = existingNMStateName
@@ -485,15 +523,9 @@ var _ = Describe("NMState controller reconcile", func() {
 
 		Context("when log level is unset (default)", func() {
 			BeforeEach(func() {
-				s := scheme.Scheme
-				s.AddKnownTypes(nmstatev1.GroupVersion,
-					&nmstatev1.NMState{},
-				)
 				// leave LogLevel field unset (default behavior)
 				nmstate := newNMState()
-				objs := []runtime.Object{nmstate}
-				// Create a fake client to mock API calls.
-				cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
+				cl = setupFakeClient(nmstate)
 				reconciler.Client = cl
 				reconciler.APIClient = cl
 				request.Name = existingNMStateName
@@ -544,16 +576,12 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 
 		JustBeforeEach(func() {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-			)
 			nmstate := newNMState()
 			nmstate.Spec.InfraNodeSelector = nodeSelector
 			nmstate.Spec.InfraTolerations = infraTolerations
-			objects = append(objects, nmstate)
 
-			cl = fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objects...).Build()
+			// Pass the node objects as extra objects to setupFakeClient
+			cl = setupFakeClient(nmstate, objects...)
 			reconciler.Client = cl
 			reconciler.APIClient = cl
 
