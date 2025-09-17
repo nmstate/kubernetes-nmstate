@@ -39,7 +39,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/openshift/cluster-network-operator/pkg/render"
@@ -52,6 +51,10 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
+)
+
+const (
+	nmstateOperatorFieldOwner = client.FieldOwner("nmstate-operator")
 )
 
 // NMStateReconciler reconciles a NMState object
@@ -583,7 +586,7 @@ func (r *NMStateReconciler) reconcileStatus(instance *nmstatev1.NMState) error {
 	// Clear managed fields before applying server-side apply to status subresource
 	instance.SetManagedFields(nil)
 
-	return r.Client.Status().Update(context.TODO(), instance)
+	return r.Client.Status().Patch(context.TODO(), instance, client.Apply, nmstateOperatorFieldOwner)
 }
 
 func (r *NMStateReconciler) setDegradedCondition(instance *nmstatev1.NMState, reason shared.ConditionReason, message string) error {
@@ -645,36 +648,11 @@ func (r *NMStateReconciler) renderAndApply(
 				r.daemonSets = append(r.daemonSets, client.ObjectKeyFromObject(obj))
 			}
 		}
-		if err := r.apply(context.TODO(), obj); err != nil {
-			return fmt.Errorf("failed to apply object %v: %w", obj, err)
+		// Use server-side apply
+		err := r.Patch(context.Background(), obj, client.Apply, nmstateOperatorFieldOwner)
+		if err != nil {
+			return errors.Wrap(err, "failed applying server-side apply on nmstate owned resource")
 		}
-	}
-	return nil
-}
-
-func (r *NMStateReconciler) apply(ctx context.Context, newObj *unstructured.Unstructured) error {
-	key := client.ObjectKeyFromObject(newObj)
-	oldObj := &unstructured.Unstructured{}
-	oldObj.SetGroupVersionKind(newObj.GroupVersionKind())
-	if err := r.Client.Get(ctx, key, oldObj); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return err
-		}
-		if err := r.Client.Create(ctx, newObj); err != nil {
-			return fmt.Errorf("failed creating %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
-		}
-		return nil
-	}
-	newObj.SetResourceVersion(oldObj.GetResourceVersion())
-	if err := r.Client.Patch(ctx, newObj, client.StrategicMergeFrom(oldObj)); err != nil {
-		if err := r.Client.Patch(ctx, newObj, client.MergeFrom(oldObj)); err != nil {
-			return fmt.Errorf("failed patching %q \"%s:%s: %w", newObj.GetKind(), newObj.GetNamespace(), newObj.GetName(), err)
-		}
-		r.Log.Info("failed strategic patch but succeeded fallback",
-			"kind", newObj.GetKind(),
-			"namespace", newObj.GetNamespace(),
-			"name", newObj.GetName(),
-		)
 	}
 	return nil
 }
