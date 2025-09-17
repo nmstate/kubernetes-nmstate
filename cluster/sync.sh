@@ -17,25 +17,12 @@ function patch_handler_nodeselector() {
     $kubectl patch -f $nmstate_cr_manifest --patch '{"spec": {"nodeSelector": { "node-role.kubernetes.io/worker": "" }}}' --type=merge
 }
 
-function wait_ready_handler() {
-    # Wait a little for resources to be created
-    sleep 5
-
-    # Check daemonset rollout
-    if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds nmstate-handler --timeout=2m; then
-        echo "Handler haven't turned ready within the given timeout"
-        return 1
-    fi
-
-    # Check deployment rollout
-    if ! $kubectl rollout status -w -n ${HANDLER_NAMESPACE} deployment nmstate-webhook --timeout=2m; then
-        echo "Webhook haven't turned ready within the given timeout"
-        return 1
-    fi
+function wait_ready_nmstate() {
+    $kubectl wait --for=condition=Available nmstate/nmstate --timeout=300s
 }
 
 deploy_operator
 wait_ready_operator
 deploy_handler
 patch_handler_nodeselector
-wait_ready_handler
+wait_ready_nmstate
