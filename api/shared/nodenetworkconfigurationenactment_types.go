@@ -43,6 +43,8 @@ type NodeNetworkConfigurationEnactmentStatus struct {
 	Conditions ConditionList `json:"conditions,omitempty"`
 
 	Features []string `json:"features,omitempty"`
+
+	RetryCount map[string]int `json:"retryCount,omitempty" optional:"true"`
 }
 
 type NodeNetworkConfigurationEnactmentCapturedState struct {
@@ -76,6 +78,7 @@ var NodeNetworkConfigurationEnactmentConditionTypes = [...]ConditionType{
 
 const (
 	NodeNetworkConfigurationEnactmentConditionFailedToConfigure          ConditionReason = "FailedToConfigure"
+	NodeNetworkConfigurationEnactmentConditionRetrying                   ConditionReason = "Retrying"
 	NodeNetworkConfigurationEnactmentConditionSuccessfullyConfigured     ConditionReason = "SuccessfullyConfigured"
 	NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached ConditionReason = "MaxUnavailableLimitReached"
 	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing   ConditionReason = "ConfigurationProgressing"
