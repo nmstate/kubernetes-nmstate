@@ -38,6 +38,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -651,6 +652,11 @@ func (r *NMStateReconciler) renderAndApply(
 		// Use server-side apply
 		err := r.Patch(context.Background(), obj, client.Apply, nmstateOperatorFieldOwner)
 		if err != nil {
+			// If the CRD doesn't exist (e.g., ServiceMonitor), log a warning and continue
+			if meta.IsNoMatchError(err) {
+				r.Log.Info("Skipping resource because CRD is not available", "kind", obj.GetKind(), "name", obj.GetName(), "error", err.Error())
+				continue
+			}
 			return errors.Wrap(err, "failed applying server-side apply on nmstate owned resource")
 		}
 	}
