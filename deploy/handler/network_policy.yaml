@@ -143,8 +143,8 @@ metadata:
   namespace: {{ .OperatorNamespace }}
 spec:
   podSelector:
-  matchLabels:
-    app: kubernetes-nmstate-operator
+    matchLabels:
+      app: kubernetes-nmstate-operator
   policyTypes:
     - Ingress
     - Egress
@@ -156,8 +156,8 @@ metadata:
   namespace: {{ .HandlerNamespace }}
 spec:
   podSelector:
-  matchLabels:
-    app: kubernetes-nmstate
+    matchLabels:
+      app: kubernetes-nmstate
   policyTypes:
     - Ingress
     - Egress
