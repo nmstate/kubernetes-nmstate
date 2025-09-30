@@ -8,7 +8,6 @@ spec:
   podSelector:
     matchLabels:
       app: {{ .PluginName }}
-      component: {{ .PluginName }}
   ingress:
     - ports:
         - protocol: TCP
