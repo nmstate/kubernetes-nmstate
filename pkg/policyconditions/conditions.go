@@ -111,8 +111,8 @@ func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
-		"",
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
+		message,
 	)
 }
 
