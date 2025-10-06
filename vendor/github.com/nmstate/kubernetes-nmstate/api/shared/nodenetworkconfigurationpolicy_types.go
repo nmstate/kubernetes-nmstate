@@ -62,12 +62,14 @@ const (
 	NodeNetworkConfigurationPolicyConditionAvailable   ConditionType = "Available"
 	NodeNetworkConfigurationPolicyConditionDegraded    ConditionType = "Degraded"
 	NodeNetworkConfigurationPolicyConditionProgressing ConditionType = "Progressing"
+	NodeNetworkConfigurationPolicyConditionIgnored     ConditionType = "Ignored"
 )
 
 var NodeNetworkConfigurationPolicyConditionTypes = [...]ConditionType{
 	NodeNetworkConfigurationPolicyConditionAvailable,
 	NodeNetworkConfigurationPolicyConditionDegraded,
 	NodeNetworkConfigurationPolicyConditionProgressing,
+	NodeNetworkConfigurationPolicyConditionIgnored,
 }
 
 const (

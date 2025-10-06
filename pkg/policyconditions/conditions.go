@@ -70,6 +70,12 @@ func SetPolicyProgressing(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
 		message,
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionIgnored,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
 }
 
 func SetPolicySuccess(conditions *nmstate.ConditionList, message string) {
@@ -92,6 +98,12 @@ func SetPolicySuccess(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
 		"",
 	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionIgnored,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionSuccessfullyConfigured,
+		"",
+	)
 }
 
 func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
@@ -100,17 +112,23 @@ func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 		nmstate.NodeNetworkConfigurationPolicyConditionDegraded,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
-		message,
+		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
-		message,
+		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
 		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionIgnored,
+		corev1.ConditionTrue,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
 		message,
 	)
@@ -134,6 +152,12 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 		nmstate.NodeNetworkConfigurationPolicyConditionProgressing,
 		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationProgressing,
+		"",
+	)
+	conditions.Set(
+		nmstate.NodeNetworkConfigurationPolicyConditionIgnored,
+		corev1.ConditionFalse,
+		nmstate.NodeNetworkConfigurationPolicyConditionFailedToConfigure,
 		"",
 	)
 }
