@@ -104,7 +104,7 @@ func SetPolicyNotMatching(conditions *nmstate.ConditionList, message string) {
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationPolicyConditionAvailable,
-		corev1.ConditionTrue,
+		corev1.ConditionFalse,
 		nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode,
 		message,
 	)
