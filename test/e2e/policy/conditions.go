@@ -207,7 +207,7 @@ func WaitForIgnoredPolicy(policy string) {
 func WaitForPolicy(policy string, matcher gomegatypes.GomegaMatcher) {
 	StatusForPolicyEventually(policy).
 		Should(
-			SatisfyAny(ContainPolicyAvailable(), ContainPolicyDegraded()),
+			SatisfyAny(ContainPolicyAvailable(), ContainPolicyDegraded(), ContainPolicyIgnored()),
 			func() string {
 				return fmt.Sprintf("should reach terminal status at NNCP '%s', \n current enactments statuses:\n%s",
 					policy, EnactmentsStatusToYaml())
