@@ -89,7 +89,7 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 		Entry("current policy not matching", ValidationWebhookCase{
 			policy:           testPolicy,
 			currentPolicy:    p(allNodes, policyconditions.SetPolicyNotMatching, ""),
-			validationFn:     validatePolicyNotInProgressHook,
+			validationFn:     validatePolicyNotMatchingHook,
 			validationResult: []metav1.StatusCause{},
 		}),
 		Entry("current policy failed to configure", ValidationWebhookCase{
