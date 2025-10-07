@@ -161,6 +161,15 @@ func ContainPolicyDegraded() gomegatypes.GomegaMatcher {
 	}))
 }
 
+func ContainPolicyIgnored() gomegatypes.GomegaMatcher {
+	return ContainElement(MatchFields(IgnoreExtras, Fields{
+		"Type":    Equal(shared.NodeNetworkConfigurationPolicyConditionIgnored),
+		"Status":  Equal(corev1.ConditionTrue),
+		"Reason":  Not(BeEmpty()),
+		"Message": Not(BeEmpty()),
+	}))
+}
+
 func WaitForPolicyTransitionUpdateWithTime(policy string, applyTime time.Time) {
 	// the k8s times at status are rounded to seconds
 	roundedApplyTime := metav1.NewTime(applyTime).Rfc3339Copy().Time
@@ -189,6 +198,10 @@ func WaitForAvailablePolicy(policy string) {
 
 func WaitForDegradedPolicy(policy string) {
 	WaitForPolicy(policy, ContainPolicyDegraded())
+}
+
+func WaitForIgnoredPolicy(policy string) {
+	WaitForPolicy(policy, ContainPolicyIgnored())
 }
 
 func WaitForPolicy(policy string, matcher gomegatypes.GomegaMatcher) {
