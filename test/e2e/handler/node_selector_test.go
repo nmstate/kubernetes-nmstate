@@ -89,7 +89,7 @@ var _ = Describe("NodeSelector", func() {
 				addLabelsToNode(nodes[0], testNodeSelector)
 				//TODO: Remove this when webhook retest policy status when node labels are changed
 				time.Sleep(3 * time.Second)
-				policy.WaitForIgnoredPolicy(bridge1)
+				policy.WaitForAvailablePolicy(bridge1)
 			})
 			AfterEach(func() {
 				By("Remove test label from node")
