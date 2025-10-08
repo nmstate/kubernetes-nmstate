@@ -88,7 +88,7 @@ var _ = Describe("NodeSelector", func() {
 				By("Add test label to node")
 				addLabelsToNode(nodes[0], testNodeSelector)
 				//TODO: Remove this when webhook retest policy status when node labels are changed
-				time.Sleep(3 * time.Second)
+				time.Sleep(10 * time.Second)
 				policy.WaitForAvailablePolicy(bridge1)
 			})
 			AfterEach(func() {
@@ -104,7 +104,7 @@ var _ = Describe("NodeSelector", func() {
 				BeforeEach(func() {
 					removeLabelsFromNode(nodes[0], testNodeSelector)
 					//TODO: Remove this when webhook retest policy status when node labels are changed
-					time.Sleep(3 * time.Second)
+					time.Sleep(10 * time.Second)
 					policy.WaitForIgnoredPolicy(bridge1)
 				})
 				It("should remove the not matching enactment", func() {
