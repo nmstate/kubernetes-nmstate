@@ -38,7 +38,7 @@ var _ = Describe("[user-guide] Introduction", func() {
 		kubectlAndCheck("delete", "nncp", "eth1", "eth2")
 
 		kubectlAndCheck("apply", "-f", "docs/user-guide/vlan100_node01_up.yaml")
-		kubectlAndCheck("wait", "nncp", "vlan100", "--for", "condition=Available", "--timeout", "4m")
+		kubectlAndCheck("wait", "nncp", "vlan100", "--for", "condition=Ignored", "--timeout", "4m")
 	}
 
 	// Policies are not deleted as a part of the tutorial, so we need additional function here

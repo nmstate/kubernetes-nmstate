@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	admissionv1 "k8s.io/api/admission/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,6 +62,35 @@ func validatePolicyNotInProgressHook(
 		currentPolicyAvailableCondition.Reason == shared.NodeNetworkConfigurationPolicyConditionConfigurationProgressing {
 		causes = append(causes, metav1.StatusCause{
 			Message: fmt.Sprintf("policy %s is still in progress", currentPolicy.Name),
+		})
+	}
+	return causes
+}
+
+func validatePolicyNotMatchingHook(
+	_ *nmstatev1.NodeNetworkConfigurationPolicy,
+	currentPolicy *nmstatev1.NodeNetworkConfigurationPolicy,
+) []metav1.StatusCause {
+	causes := []metav1.StatusCause{}
+	currentPolicyAvailableCondition := currentPolicy.Status.Conditions.Find(shared.NodeNetworkConfigurationPolicyConditionAvailable)
+	currentPolicyDegradedCondition := currentPolicy.Status.Conditions.Find(shared.NodeNetworkConfigurationPolicyConditionDegraded)
+	currentPolicyProgressingCondition := currentPolicy.Status.Conditions.Find(shared.NodeNetworkConfigurationPolicyConditionProgressing)
+	currentPolicyIgnoredCondition := currentPolicy.Status.Conditions.Find(shared.NodeNetworkConfigurationPolicyConditionIgnored)
+
+	if currentPolicyAvailableCondition == nil ||
+		currentPolicyDegradedCondition == nil ||
+		currentPolicyProgressingCondition == nil ||
+		currentPolicyIgnoredCondition == nil ||
+		currentPolicyAvailableCondition.Reason != shared.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode ||
+		currentPolicyDegradedCondition.Reason != shared.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode ||
+		currentPolicyProgressingCondition.Reason != shared.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode ||
+		currentPolicyIgnoredCondition.Reason != shared.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode ||
+		currentPolicyAvailableCondition.Status == corev1.ConditionTrue ||
+		currentPolicyDegradedCondition.Status == corev1.ConditionTrue ||
+		currentPolicyProgressingCondition.Status == corev1.ConditionTrue ||
+		currentPolicyIgnoredCondition.Status == corev1.ConditionFalse {
+		causes = append(causes, metav1.StatusCause{
+			Message: fmt.Sprintf("policy %s is not ignored", currentPolicy.Name),
 		})
 	}
 	return causes

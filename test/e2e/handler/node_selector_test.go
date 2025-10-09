@@ -49,7 +49,7 @@ var _ = Describe("NodeSelector", func() {
 			Byf("Set policy %s with not matching node selector", bridge1)
 			// use linuxBrUpNoPorts to not affect the nodes secondary interfaces state
 			setDesiredStateWithPolicyAndNodeSelectorEventually(bridge1, linuxBrUpNoPorts(bridge1), testNodeSelector)
-			policy.WaitForAvailablePolicy(bridge1)
+			policy.WaitForIgnoredPolicy(bridge1)
 		})
 
 		AfterEach(func() {
@@ -88,7 +88,7 @@ var _ = Describe("NodeSelector", func() {
 				By("Add test label to node")
 				addLabelsToNode(nodes[0], testNodeSelector)
 				//TODO: Remove this when webhook retest policy status when node labels are changed
-				time.Sleep(3 * time.Second)
+				time.Sleep(10 * time.Second)
 				policy.WaitForAvailablePolicy(bridge1)
 			})
 			AfterEach(func() {
@@ -104,8 +104,8 @@ var _ = Describe("NodeSelector", func() {
 				BeforeEach(func() {
 					removeLabelsFromNode(nodes[0], testNodeSelector)
 					//TODO: Remove this when webhook retest policy status when node labels are changed
-					time.Sleep(3 * time.Second)
-					policy.WaitForAvailablePolicy(bridge1)
+					time.Sleep(10 * time.Second)
+					policy.WaitForIgnoredPolicy(bridge1)
 				})
 				It("should remove the not matching enactment", func() {
 					Expect(numberOfEnactmentsForPolicy(bridge1)).To(Equal(0), "should remove the not matching enactment")
