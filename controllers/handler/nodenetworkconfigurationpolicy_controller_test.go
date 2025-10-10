@@ -21,7 +21,6 @@ import (
 	"context"
 	"strconv"
 
-	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +35,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
