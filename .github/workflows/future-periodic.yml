@@ -1,0 +1,116 @@
+name: Future nmstate periodic tests
+
+on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  e2e-future:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      NMSTATE_PIN: future
+      ARTIFACTS: /tmp/artifacts
+      E2E_LOGS: /tmp/e2e-logs
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: 'go.mod'
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y podman
+
+    - name: Setup test environment
+      run: |
+        mkdir -p $ARTIFACTS
+        mkdir -p $E2E_LOGS/handler
+
+    - name: Setup cluster
+      run: |
+        make cluster-down || true
+        make cluster-up
+
+    - name: Sync cluster
+      run: make cluster-sync
+      env:
+        NMSTATE_PIN: future
+
+    - name: Run e2e handler tests
+      run: |
+        make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="--no-color --output-dir=$ARTIFACTS --junit-report=junit.functest.xml" test-e2e-handler
+
+    - name: Collect logs on failure
+      if: failure()
+      run: |
+        ./cluster/kubectl.sh get pod -n nmstate -o wide > $ARTIFACTS/kubernetes-nmstate.pod.list.txt || true
+        for pod in $(./cluster/kubectl.sh get pod -n nmstate -o name); do
+          pod_name=$(echo $pod|sed "s#pod/##")
+          ./cluster/kubectl.sh -n nmstate logs --prefix=true $pod  > $ARTIFACTS/$pod_name.log || true
+          ./cluster/kubectl.sh -n nmstate logs -p --prefix=true $pod  > $ARTIFACTS/$pod_name.previous.log || true
+          ./cluster/kubectl.sh -n nmstate describe $pod  > $ARTIFACTS/$pod_name.describe.log || true
+        done
+        ./cluster/kubectl.sh get events -n nmstate > $ARTIFACTS/nmstate-events.logs || true
+        ./cluster/kubectl.sh get events > $ARTIFACTS/cluster-events.logs || true
+        cp -r ${E2E_LOGS}/handler/* ${ARTIFACTS} || true
+
+    - name: Upload test artifacts
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: future-test-artifacts
+        path: /tmp/artifacts/
+        retention-days: 7
+
+    - name: Cleanup
+      if: always()
+      run: make cluster-down || true
+
+    - name: Notify Slack on success
+      if: success()
+      uses: slackapi/slack-github-action@v1.27.0
+      with:
+        payload: |
+          {
+            "text": "✅ Future nmstate periodic tests PASSED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "✅ *Future nmstate periodic tests PASSED*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+    - name: Notify Slack on failure
+      if: failure()
+      uses: slackapi/slack-github-action@v1.27.0
+      with:
+        payload: |
+          {
+            "text": "❌ Future nmstate periodic tests FAILED",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "❌ *Future nmstate periodic tests FAILED*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run>\n\nPlease check the logs and artifacts for details."
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
