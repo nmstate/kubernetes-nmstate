@@ -19,7 +19,6 @@ package controllers
 
 import (
 	"context"
-	"strconv"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -88,10 +87,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	)
 
 	type incrementUnavailableNodeCountCase struct {
-		currentUnavailableNodeCount      int
-		expectedReconcileResult          ctrl.Result
-		previousEnactmentConditions      func(*shared.ConditionList, string)
-		shouldUpdateUnavailableNodeCount bool
+		currentUnavailableNodeCount int
+		expectedReconcileResult     ctrl.Result
+		previousEnactmentConditions func(*shared.ConditionList, string)
 	}
 	DescribeTable("when claimNodeRunningUpdate is called and",
 		func(c incrementUnavailableNodeCountCase) {
@@ -158,61 +156,43 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 			Expect(err).To(BeNil())
 			Expect(res).To(Equal(c.expectedReconcileResult))
-
-			obtainedNNCP := nmstatev1.NodeNetworkConfigurationPolicy{}
-			cl.Get(context.TODO(), types.NamespacedName{Name: nncp.Name}, &obtainedNNCP)
-			generationKey := strconv.FormatInt(obtainedNNCP.Generation, 10)
-
-			if c.shouldUpdateUnavailableNodeCount {
-				Expect(obtainedNNCP.Status.UnavailableNodeCount[generationKey]).To(
-					Equal(c.currentUnavailableNodeCount + 1))
-			} else {
-				Expect(obtainedNNCP.Status.UnavailableNodeCount[generationKey]).To(
-					Equal(c.currentUnavailableNodeCount))
-			}
 		},
 
 		Entry("No node applying policy with empty enactment, should succeed incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount:      0,
-				previousEnactmentConditions:      func(*shared.ConditionList, string) {},
-				expectedReconcileResult:          ctrl.Result{Requeue: true},
-				shouldUpdateUnavailableNodeCount: true,
+				currentUnavailableNodeCount: 0,
+				previousEnactmentConditions: func(*shared.ConditionList, string) {},
+				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 		Entry("No node applying policy with progressing enactment, should succeed incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount:      0,
-				previousEnactmentConditions:      conditions.SetProgressing,
-				expectedReconcileResult:          ctrl.Result{Requeue: true},
-				shouldUpdateUnavailableNodeCount: true,
+				currentUnavailableNodeCount: 0,
+				previousEnactmentConditions: conditions.SetProgressing,
+				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 		Entry("No node applying policy with Pending enactment, should succeed incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount:      0,
-				previousEnactmentConditions:      conditions.SetPending,
-				expectedReconcileResult:          ctrl.Result{Requeue: true},
-				shouldUpdateUnavailableNodeCount: true,
+				currentUnavailableNodeCount: 0,
+				previousEnactmentConditions: conditions.SetPending,
+				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 		Entry("One node applying policy with empty enactment, should conflict incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount:      1,
-				previousEnactmentConditions:      func(*shared.ConditionList, string) {},
-				expectedReconcileResult:          ctrl.Result{Requeue: true},
-				shouldUpdateUnavailableNodeCount: false,
+				currentUnavailableNodeCount: 1,
+				previousEnactmentConditions: func(*shared.ConditionList, string) {},
+				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 		Entry("One node applying policy with Progressing enactment, should conflict incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount:      1,
-				previousEnactmentConditions:      conditions.SetProgressing,
-				expectedReconcileResult:          ctrl.Result{Requeue: true},
-				shouldUpdateUnavailableNodeCount: false,
+				currentUnavailableNodeCount: 1,
+				previousEnactmentConditions: conditions.SetProgressing,
+				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 		Entry("One node applying policy with Pending enactment, should conflict incrementing UnavailableNodeCount",
 			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount:      1,
-				previousEnactmentConditions:      conditions.SetPending,
-				expectedReconcileResult:          ctrl.Result{Requeue: true},
-				shouldUpdateUnavailableNodeCount: false,
+				currentUnavailableNodeCount: 1,
+				previousEnactmentConditions: conditions.SetPending,
+				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 	)
 

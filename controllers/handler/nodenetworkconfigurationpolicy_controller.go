@@ -520,7 +520,6 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 		if policy.Status.UnavailableNodeCount[generationKey] >= maxUnavailable {
 			return node.MaxUnavailableLimitReachedError{}
 		}
-		policy.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now()}
 		policy.Status.UnavailableNodeCount[generationKey] += 1
 		return r.Client.Status().Update(context.TODO(), policy)
 	})
@@ -557,7 +556,6 @@ func tryDecrementingUnavailableNodeCount(
 		if instance.Status.UnavailableNodeCount[generationKey] <= 0 {
 			return fmt.Errorf("no unavailable nodes")
 		}
-		instance.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now()}
 		instance.Status.UnavailableNodeCount[generationKey] -= 1
 		return statusWriterClient.Status().Update(context.TODO(), instance)
 	})

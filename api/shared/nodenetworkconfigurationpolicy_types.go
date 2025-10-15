@@ -18,7 +18,6 @@ limitations under the License.
 package shared
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
@@ -53,9 +52,6 @@ type NodeNetworkConfigurationPolicyStatus struct {
 	// processing a NodeNetworkConfigurationPolicy
 	// +optional
 	UnavailableNodeCount map[string]int `json:"unavailableNodeCount,omitempty" optional:"true"`
-	// LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount update
-	// +optional
-	LastUnavailableNodeCountUpdate *metav1.Time `json:"lastUnavailableNodeCountUpdate,omitempty" optional:"true"`
 }
 
 const (

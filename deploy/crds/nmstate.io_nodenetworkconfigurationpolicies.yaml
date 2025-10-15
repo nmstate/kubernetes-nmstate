@@ -106,11 +106,6 @@ spec:
                   - type
                   type: object
                 type: array
-              lastUnavailableNodeCountUpdate:
-                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
-                  update
-                format: date-time
-                type: string
               unavailableNodeCount:
                 additionalProperties:
                   type: integer
@@ -215,11 +210,6 @@ spec:
                   - type
                   type: object
                 type: array
-              lastUnavailableNodeCountUpdate:
-                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
-                  update
-                format: date-time
-                type: string
               unavailableNodeCount:
                 additionalProperties:
                   type: integer
