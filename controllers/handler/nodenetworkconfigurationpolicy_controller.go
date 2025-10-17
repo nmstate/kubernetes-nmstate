@@ -272,15 +272,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementNNCERetryCount(
 	instance *nmstatev1.NodeNetworkConfigurationPolicy,
 	enactment *nmstatev1beta1.NodeNetworkConfigurationEnactment,
 	generationKey string) error {
-	log := r.Log.WithValues(
-		"incrementNNCERetryCount",
-		"enactmentName",
-		enactment.Name,
-		"initialRetryCount",
-		enactment.Status.RetryCount)
 	if enactment.Status.RetryCount == nil {
 		enactment.Status.RetryCount = map[string]int{}
-		log.Info("initialized RetryCount on NNCE")
 	}
 	count := enactment.Status.RetryCount[generationKey]
 
