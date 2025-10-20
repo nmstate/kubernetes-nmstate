@@ -85,8 +85,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="networking.k8s.io",resources=networkpolicies,verbs="*"
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log = r.Log.WithValues("request", req.NamespacedName)
-
+	_ = r.Log.WithValues("nmstate", req.NamespacedName)
 	r.Log.Info("Starting Reconcile")
 	instance := &nmstatev1.NMState{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
