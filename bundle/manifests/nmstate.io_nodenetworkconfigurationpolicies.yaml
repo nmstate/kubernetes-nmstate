@@ -106,12 +106,22 @@ spec:
                   - type
                   type: object
                 type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
               unavailableNodeCount:
-                additionalProperties:
-                  type: integer
                 description: |-
                   UnavailableNodeCount represents the total number of potentially unavailable nodes that are
                   processing a NodeNetworkConfigurationPolicy
+                type: integer
+              unavailableNodeCountMap:
+                additionalProperties:
+                  type: integer
+                description: |-
+                  UnavailableNodeCountMap represents the total number of potentially unavailable nodes that are
+                  processing a NodeNetworkConfigurationPolicy per Generation (Map Key)
                 type: object
             type: object
         type: object
@@ -210,12 +220,22 @@ spec:
                   - type
                   type: object
                 type: array
+              lastUnavailableNodeCountUpdate:
+                description: LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount
+                  update
+                format: date-time
+                type: string
               unavailableNodeCount:
-                additionalProperties:
-                  type: integer
                 description: |-
                   UnavailableNodeCount represents the total number of potentially unavailable nodes that are
                   processing a NodeNetworkConfigurationPolicy
+                type: integer
+              unavailableNodeCountMap:
+                additionalProperties:
+                  type: integer
+                description: |-
+                  UnavailableNodeCountMap represents the total number of potentially unavailable nodes that are
+                  processing a NodeNetworkConfigurationPolicy per Generation (Map Key)
                 type: object
             type: object
         type: object

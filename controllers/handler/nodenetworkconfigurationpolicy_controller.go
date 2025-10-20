@@ -507,13 +507,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 			)
 		}
 
-		if policy.Status.UnavailableNodeCount == nil {
-			policy.Status.UnavailableNodeCount = map[string]int{}
+		if policy.Status.UnavailableNodeCountMap == nil {
+			policy.Status.UnavailableNodeCountMap = map[string]int{}
 		}
-		if policy.Status.UnavailableNodeCount[generationKey] >= maxUnavailable {
+		if policy.Status.UnavailableNodeCountMap[generationKey] >= maxUnavailable {
 			return node.MaxUnavailableLimitReachedError{}
 		}
-		policy.Status.UnavailableNodeCount[generationKey] += 1
+		policy.Status.UnavailableNodeCountMap[generationKey] += 1
 		return r.Client.Status().Update(context.TODO(), policy)
 	})
 }
@@ -543,13 +543,13 @@ func tryDecrementingUnavailableNodeCount(
 		if err != nil {
 			return err
 		}
-		if instance.Status.UnavailableNodeCount == nil {
-			instance.Status.UnavailableNodeCount = map[string]int{}
+		if instance.Status.UnavailableNodeCountMap == nil {
+			instance.Status.UnavailableNodeCountMap = map[string]int{}
 		}
-		if instance.Status.UnavailableNodeCount[generationKey] <= 0 {
+		if instance.Status.UnavailableNodeCountMap[generationKey] <= 0 {
 			return fmt.Errorf("no unavailable nodes")
 		}
-		instance.Status.UnavailableNodeCount[generationKey] -= 1
+		instance.Status.UnavailableNodeCountMap[generationKey] -= 1
 		return statusWriterClient.Status().Update(context.TODO(), instance)
 	})
 	return err

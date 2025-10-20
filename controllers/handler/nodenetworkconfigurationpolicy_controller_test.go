@@ -122,7 +122,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 					Name: "test",
 				},
 				Status: shared.NodeNetworkConfigurationPolicyStatus{
-					UnavailableNodeCount: map[string]int{},
+					UnavailableNodeCountMap: map[string]int{},
 				},
 			}
 			nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
