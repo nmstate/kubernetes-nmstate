@@ -660,7 +660,7 @@ func (r *NMStateReconciler) renderAndApply(
 			}
 		}
 		// Use server-side apply
-		err := r.Patch(ctx, obj, client.Apply, nmstateOperatorFieldOwner)
+		err := r.Patch(ctx, obj, client.Apply, nmstateOperatorFieldOwner, client.ForceOwnership)
 		if err != nil {
 			// If the CRD doesn't exist (e.g., ServiceMonitor), log a warning and continue
 			if meta.IsNoMatchError(err) {
