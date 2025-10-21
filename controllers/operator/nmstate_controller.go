@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
 	"slices"
 	"sort"
 	"strings"
@@ -259,16 +258,6 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		Key:      "",
 		Operator: corev1.TolerationOpExists,
 	}
-	archNodeSelector := map[string]string{
-		"kubernetes.io/arch": goruntime.GOARCH,
-	}
-	archAndCRNodeSelector := instance.Spec.NodeSelector
-	if archAndCRNodeSelector == nil {
-		archAndCRNodeSelector = map[string]string{
-			"kubernetes.io/arch": goruntime.GOARCH,
-			"kubernetes.io/os":   "linux",
-		}
-	}
 	handlerTolerations := instance.Spec.Tolerations
 	if handlerTolerations == nil {
 		handlerTolerations = []corev1.Toleration{operatorExistsToleration}
@@ -278,11 +267,17 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		handlerAffinity = &corev1.Affinity{}
 	}
 
-	archAndCRInfraNodeSelector := instance.Spec.InfraNodeSelector
-	if archAndCRInfraNodeSelector == nil {
-		archAndCRInfraNodeSelector = archNodeSelector
-	} else {
-		archAndCRInfraNodeSelector["kubernetes.io/arch"] = goruntime.GOARCH
+	nodeSelector := instance.Spec.NodeSelector
+	if nodeSelector == nil {
+		nodeSelector = map[string]string{
+			corev1.LabelOSStable: "linux",
+		}
+	}
+	infraNodeSelector := instance.Spec.InfraNodeSelector
+	if infraNodeSelector == nil {
+		infraNodeSelector = map[string]string{
+			corev1.LabelOSStable: "linux",
+		}
 	}
 
 	infraTolerations := instance.Spec.InfraTolerations
@@ -322,7 +317,7 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		}
 	}
 
-	webhookReplicaCountMin, webhookReplicaCountDesired, err := r.webhookReplicaCount(ctx, archAndCRInfraNodeSelector, infraTolerations)
+	webhookReplicaCountMin, webhookReplicaCountDesired, err := r.webhookReplicaCount(ctx, infraNodeSelector, infraTolerations)
 	if err != nil {
 		return fmt.Errorf("could not get min replica count for webhook: %w", err)
 	}
@@ -359,12 +354,12 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
 	data.Data["MonitoringNamespace"] = os.Getenv("MONITORING_NAMESPACE")
 	data.Data["KubeRBACProxyImage"] = os.Getenv("KUBE_RBAC_PROXY_IMAGE")
-	data.Data["InfraNodeSelector"] = archAndCRInfraNodeSelector
+	data.Data["InfraNodeSelector"] = infraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = infraAffinity
 	data.Data["WebhookReplicas"] = webhookReplicaCountDesired
 	data.Data["WebhookMinReplicas"] = webhookReplicaCountMin
-	data.Data["HandlerNodeSelector"] = archAndCRNodeSelector
+	data.Data["HandlerNodeSelector"] = nodeSelector
 	data.Data["HandlerTolerations"] = handlerTolerations
 	data.Data["HandlerAffinity"] = handlerAffinity
 	data.Data["SelfSignConfiguration"] = selfSignConfiguration
