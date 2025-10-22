@@ -53,6 +53,10 @@ type NodeNetworkConfigurationPolicyStatus struct {
 	// processing a NodeNetworkConfigurationPolicy
 	// +optional
 	UnavailableNodeCount int `json:"unavailableNodeCount,omitempty" optional:"true"`
+	// UnavailableNodeCountMap represents the total number of potentially unavailable nodes that are
+	// processing a NodeNetworkConfigurationPolicy per Generation (Map Key)
+	// +optional
+	UnavailableNodeCountMap map[string]int `json:"unavailableNodeCountMap,omitempty" optional:"true"`
 	// LastUnavailableNodeCountUpdate is time of the last UnavailableNodeCount update
 	// +optional
 	LastUnavailableNodeCountUpdate *metav1.Time `json:"lastUnavailableNodeCountUpdate,omitempty" optional:"true"`

@@ -66,3 +66,11 @@ func IsProgressing(conditions *nmstate.ConditionList) bool {
 	}
 	return false
 }
+
+func IsRetrying(conditions *nmstate.ConditionList) bool {
+	failedCond := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
+	progressingCond := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
+	return failedCond != nil && progressingCond != nil &&
+		failedCond.Status == corev1.ConditionTrue &&
+		progressingCond.Status == corev1.ConditionTrue
+}

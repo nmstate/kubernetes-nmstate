@@ -28,17 +28,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func enactmentsInProgress(policy string) int {
-	progressingEnactments := 0
+func enactmentsFailingOrProgressing(policy string) int {
+	failingOrProgressingEnactments := 0
 	for _, node := range nodes {
 		enactment := policyconditions.EnactmentConditionsStatus(node, policy)
-		if cond := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing); cond != nil {
-			if cond.Status == corev1.ConditionTrue {
-				progressingEnactments++
-			}
+		condProgressing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
+		condFailing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionFailing)
+		if (condProgressing != nil && condProgressing.Status == corev1.ConditionTrue) ||
+			(condFailing != nil && condFailing.Status == corev1.ConditionTrue) {
+			failingOrProgressingEnactments++
 		}
 	}
-	return progressingEnactments
+	return failingOrProgressingEnactments
 }
 
 var _ = Describe("NNCP with maxUnavailable", func() {
@@ -59,13 +60,13 @@ var _ = Describe("NNCP with maxUnavailable", func() {
 		})
 		It("should be progressing on multiple nodes", func() {
 			Eventually(func() int {
-				return enactmentsInProgress(TestPolicy)
+				return enactmentsFailingOrProgressing(TestPolicy)
 			}, duration, interval).Should(BeNumerically("==", maxUnavailableNodes()))
 			policyconditions.WaitForAvailablePolicy(TestPolicy)
 		})
 		It("should never exceed maxUnavailable nodes", func() {
 			Consistently(func() int {
-				return enactmentsInProgress(TestPolicy)
+				return enactmentsFailingOrProgressing(TestPolicy)
 			}, duration, interval).Should(BeNumerically("<=", maxUnavailableNodes()))
 			policyconditions.WaitForAvailablePolicy(TestPolicy)
 		})
