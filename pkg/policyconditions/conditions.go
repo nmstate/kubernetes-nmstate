@@ -288,6 +288,7 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 			policyStatus.numberOfNmstateMatchingNodes,
 		)
 		informOfNotReadyNodes(policyStatus.numberOfNotReadyNmstateMatchingNodes)
+		policy.Status.UnavailableNodeCountMap = make(map[string]int)
 		SetPolicySuccess(&policy.Status.Conditions, message)
 	}
 }
