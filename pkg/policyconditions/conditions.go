@@ -272,7 +272,8 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 			policyStatus.numberOfNmstateMatchingNodes,
 		)
 		informOfAbortedEnactments(policyStatus.enactmentsCountByCondition.Aborted())
-		if policyStatus.enactmentsCountByCondition.Failed()+policyStatus.enactmentsCountByCondition.Aborted() >= policyStatus.numberOfNmstateMatchingNodes {
+		abortedOrFailed := policyStatus.enactmentsCountByCondition.Failed() + policyStatus.enactmentsCountByCondition.Aborted()
+		if abortedOrFailed >= policyStatus.numberOfNmstateMatchingNodes {
 			delete(policy.Status.UnavailableNodeCountMap, generationKey)
 		}
 		SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
