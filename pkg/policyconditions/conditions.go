@@ -20,8 +20,6 @@ package policyconditions
 import (
 	"context"
 	"fmt"
-	"strconv"
-
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
@@ -243,7 +241,6 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 
 func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policyStatus *policyConditionStatus) {
 	var message string
-	generationKey := strconv.FormatInt(policy.Generation, 10)
 	informOfNotReadyNodes := func(notReadyNodesCount int) {
 		if notReadyNodesCount > 0 {
 			message += fmt.Sprintf(
@@ -263,7 +260,6 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 
 	if policyStatus.numberOfNmstateMatchingNodes == 0 {
 		message = "Policy does not match any node"
-		delete(policy.Status.UnavailableNodeCountMap, generationKey)
 		SetPolicyNotMatching(&policy.Status.Conditions, message)
 	} else if policyStatus.enactmentsCountByCondition.Failed() > 0 || policyStatus.enactmentsCountByCondition.Aborted() > 0 {
 		message = fmt.Sprintf(
@@ -272,10 +268,6 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 			policyStatus.numberOfNmstateMatchingNodes,
 		)
 		informOfAbortedEnactments(policyStatus.enactmentsCountByCondition.Aborted())
-		abortedOrFailed := policyStatus.enactmentsCountByCondition.Failed() + policyStatus.enactmentsCountByCondition.Aborted()
-		if abortedOrFailed >= policyStatus.numberOfNmstateMatchingNodes {
-			delete(policy.Status.UnavailableNodeCountMap, generationKey)
-		}
 		SetPolicyFailedToConfigure(&policy.Status.Conditions, message)
 	} else if policyStatus.numberOfFinishedEnactments < policyStatus.numberOfReadyNmstateMatchingNodes {
 		message = fmt.Sprintf(
@@ -295,7 +287,7 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 			policyStatus.numberOfNmstateMatchingNodes,
 		)
 		informOfNotReadyNodes(policyStatus.numberOfNotReadyNmstateMatchingNodes)
-		delete(policy.Status.UnavailableNodeCountMap, generationKey)
+		policy.Status.UnavailableNodeCountMap = make(map[string]int)
 		SetPolicySuccess(&policy.Status.Conditions, message)
 	}
 }
