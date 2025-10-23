@@ -70,6 +70,8 @@ const (
 
 var (
 	nodeName                                        string
+	periodicReconcileInterval                       = 10 * time.Minute
+	startupReconcileDelay                           = 5 * time.Second
 	onCreateOrUpdateWithDifferentGenerationOrDelete = predicate.TypedFuncs[*nmstatev1.NodeNetworkConfigurationPolicy]{
 		CreateFunc: func(createEvent event.TypedCreateEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) bool {
 			return true
@@ -107,10 +109,12 @@ type NodeNetworkConfigurationPolicyReconciler struct {
 	client.Client
 	// APIClient controller-runtime client without cache, it will be used at
 	// places where whole cluster resources need to be retrieved but not cached.
-	APIClient client.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
-	Recorder  record.EventRecorder
+	APIClient    client.Client
+	Log          logr.Logger
+	Scheme       *runtime.Scheme
+	Recorder     record.EventRecorder
+	controller   controller.Controller
+	eventChannel chan event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy]
 }
 
 func init() {
@@ -291,8 +295,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	allPoliciesFunc := allPolicies(r.Client, r.Log)
 
 	// Reconcile NNCP if they are created/updated/deleted or
-	// Node is updated (for example labels are changed), node creation event
-	// is not needed since all NNCPs are going to be Reconcile at node startup.
+	// Node is updated (for example labels are changed).
+	// Additionally, perform startup reconciliation and periodic reconciliation
+	// to handle cases where events are lost (e.g., after ungraceful reboot).
 	c, err := controller.New(
 		"NodeNetworkConfigurationPolicy",
 		mgr,
@@ -303,6 +308,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	if err != nil {
 		return errors.Wrap(err, "failed to create NodeNetworkConfigurationPolicy controller")
 	}
+
+	// Store controller reference
+	r.controller = c
+
+	// Create event channel for triggering reconciliation
+	r.eventChannel = make(chan event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy], 100)
 
 	// Add watch for NNCP
 	err = c.Watch(
@@ -328,6 +339,27 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to add watch to enqueue NNCPs reconcile on node label change")
+	}
+
+	// Add watch for generic events (used for startup and periodic reconciliation)
+	err = c.Watch(
+		source.Channel(
+			r.eventChannel,
+			&handler.TypedEnqueueRequestForObject[*nmstatev1.NodeNetworkConfigurationPolicy]{},
+		),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to add watch for generic events")
+	}
+
+	// Add startup and periodic reconciliation runnable
+	// This ensures policies are reconciled even if events are missed
+	err = mgr.Add(&policyReconciliationTrigger{
+		reconciler: r,
+		log:        r.Log.WithName("policy-reconciliation-trigger"),
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to add policy reconciliation trigger")
 	}
 
 	return nil
@@ -630,4 +662,127 @@ func allPolicies(client client.Client, log logr.Logger) handler.TypedMapFunc[*co
 			}
 			return allPoliciesAsRequest
 		})
+}
+
+// policyReconciliationTrigger implements manager.Runnable to trigger
+// startup and periodic reconciliation of NNCPs. This ensures that
+// policies are evaluated even if events are lost (e.g., after ungraceful reboot).
+type policyReconciliationTrigger struct {
+	reconciler *NodeNetworkConfigurationPolicyReconciler
+	log        logr.Logger
+}
+
+// Start implements manager.Runnable
+func (prt *policyReconciliationTrigger) Start(ctx context.Context) error {
+	prt.log.Info("Starting policy reconciliation trigger")
+
+	// Trigger startup reconciliation after a delay to allow cache to sync
+	go prt.startupReconciliation(ctx)
+
+	// Trigger periodic reconciliation
+	go prt.periodicReconciliation(ctx)
+
+	// Wait for context cancellation
+	<-ctx.Done()
+	prt.log.Info("Stopping policy reconciliation trigger")
+	return nil
+}
+
+// startupReconciliation triggers reconciliation of all matching NNCPs on startup.
+// This ensures policies are evaluated even if the handler pod was restarted ungracefully.
+func (prt *policyReconciliationTrigger) startupReconciliation(ctx context.Context) {
+	delay := startupReconcileDelay
+	prt.log.Info("Waiting before startup reconciliation", "delay", delay)
+
+	select {
+	case <-time.After(delay):
+		// Continue with startup reconciliation
+	case <-ctx.Done():
+		prt.log.Info("Startup reconciliation cancelled")
+		return
+	}
+
+	prt.log.Info("Starting startup reconciliation of all NNCPs matching this node")
+	prt.enqueuePoliciesForNode(ctx, "startup")
+}
+
+// periodicReconciliation triggers reconciliation of all matching NNCPs periodically.
+// This provides additional resilience against missed events.
+func (prt *policyReconciliationTrigger) periodicReconciliation(ctx context.Context) {
+	interval := periodicReconcileInterval
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	prt.log.Info("Started periodic reconciliation", "interval", interval)
+
+	for {
+		select {
+		case <-ticker.C:
+			prt.log.V(1).Info("Triggering periodic reconciliation of NNCPs")
+			prt.enqueuePoliciesForNode(ctx, "periodic")
+		case <-ctx.Done():
+			prt.log.Info("Periodic reconciliation stopped")
+			return
+		}
+	}
+}
+
+// enqueuePoliciesForNode enqueues all NNCPs that match this node's selectors
+func (prt *policyReconciliationTrigger) enqueuePoliciesForNode(ctx context.Context, trigger string) {
+	log := prt.log.WithValues("trigger", trigger)
+
+	if prt.reconciler.eventChannel == nil {
+		log.Error(fmt.Errorf("event channel not initialized"), "cannot enqueue policies")
+		return
+	}
+
+	// List all NNCPs
+	policyList := nmstatev1.NodeNetworkConfigurationPolicyList{}
+	if err := prt.reconciler.Client.List(ctx, &policyList); err != nil {
+		log.Error(err, "failed to list NNCPs for reconciliation")
+		return
+	}
+
+	enqueuedCount := 0
+	skippedCount := 0
+
+	for i := range policyList.Items {
+		policy := &policyList.Items[i]
+
+		// Check if policy matches this node
+		policySelectors := selectors.NewFromPolicy(prt.reconciler.Client, policy)
+		unmatchingNodeLabels, err := policySelectors.UnmatchedNodeLabels(nodeName)
+		if err != nil {
+			log.Error(err, "failed checking node selectors for policy", "policy", policy.Name)
+			skippedCount++
+			continue
+		}
+
+		if len(unmatchingNodeLabels) > 0 {
+			log.V(2).Info("Skipping policy that doesn't match node", "policy", policy.Name)
+			skippedCount++
+			continue
+		}
+
+		// Enqueue the policy for reconciliation via generic event
+		log.V(1).Info("Enqueuing policy for reconciliation", "policy", policy.Name)
+
+		select {
+		case prt.reconciler.eventChannel <- event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy]{
+			Object: policy,
+		}:
+			enqueuedCount++
+		case <-ctx.Done():
+			log.Info("Context cancelled while enqueuing policies")
+			return
+		default:
+			log.Error(fmt.Errorf("event channel full"), "failed to enqueue policy", "policy", policy.Name)
+			skippedCount++
+		}
+	}
+
+	log.Info("Reconciliation trigger completed",
+		"enqueued", enqueuedCount,
+		"skipped", skippedCount,
+		"total", len(policyList.Items))
 }

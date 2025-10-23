@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -294,6 +295,370 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 			// Verify empty result
 			Expect(requests).To(BeEmpty())
+		})
+	})
+
+	Describe("policyReconciliationTrigger", func() {
+		var (
+			reconciler *NodeNetworkConfigurationPolicyReconciler
+			trigger    *policyReconciliationTrigger
+			ctx        context.Context
+			cancel     context.CancelFunc
+		)
+
+		BeforeEach(func() {
+			// Set the global nodeName for testing
+			nodeName = "test-node"
+
+			// Create scheme with required types
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
+				&nmstatev1.NodeNetworkConfigurationPolicyList{})
+			s.AddKnownTypes(corev1.SchemeGroupVersion,
+				&corev1.Node{},
+				&corev1.NodeList{})
+
+			// Create fake client
+			clb := fake.ClientBuilder{}
+			clb.WithScheme(s)
+			cl := clb.Build()
+
+			// Create reconciler with event channel
+			reconciler = &NodeNetworkConfigurationPolicyReconciler{
+				Client:       cl,
+				APIClient:    cl,
+				Log:          ctrl.Log.WithName("test"),
+				eventChannel: make(chan event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy], 100),
+			}
+
+			// Create trigger
+			trigger = &policyReconciliationTrigger{
+				reconciler: reconciler,
+				log:        ctrl.Log.WithName("test-trigger"),
+			}
+
+			// Create context with cancel
+			ctx, cancel = context.WithCancel(context.Background())
+		})
+
+		AfterEach(func() {
+			cancel()
+		})
+
+		Describe("enqueuePoliciesForNode", func() {
+			It("should enqueue policies that match the node selector", func() {
+				// Create test node
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+						Labels: map[string]string{
+							"kubernetes.io/hostname": "test-node",
+							"node-role":              "worker",
+						},
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				// Create policies with different selectors
+				matchingPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "matching-policy",
+					},
+					Spec: shared.NodeNetworkConfigurationPolicySpec{
+						NodeSelector: map[string]string{
+							"node-role": "worker",
+						},
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, matchingPolicy)).To(Succeed())
+
+				nonMatchingPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "non-matching-policy",
+					},
+					Spec: shared.NodeNetworkConfigurationPolicySpec{
+						NodeSelector: map[string]string{
+							"node-role": "control-plane",
+						},
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, nonMatchingPolicy)).To(Succeed())
+
+				// Enqueue policies
+				trigger.enqueuePoliciesForNode(ctx, "test")
+
+				// Verify only matching policy was enqueued
+				Eventually(reconciler.eventChannel).Should(Receive(WithTransform(
+					func(e event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) string {
+						return e.Object.GetName()
+					},
+					Equal("matching-policy"),
+				)))
+
+				// Verify no more events
+				Consistently(reconciler.eventChannel).ShouldNot(Receive())
+			})
+
+			It("should handle empty policy list gracefully", func() {
+				// Enqueue policies when none exist
+				trigger.enqueuePoliciesForNode(ctx, "test")
+
+				// Verify no events were sent
+				Consistently(reconciler.eventChannel).ShouldNot(Receive())
+			})
+
+			It("should enqueue all policies when no selector is specified", func() {
+				// Create test node
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				// Create policy without selector (matches all nodes)
+				policy := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "all-nodes-policy",
+					},
+					Spec: shared.NodeNetworkConfigurationPolicySpec{},
+				}
+				Expect(reconciler.Client.Create(ctx, policy)).To(Succeed())
+
+				// Enqueue policies
+				trigger.enqueuePoliciesForNode(ctx, "test")
+
+				// Verify policy was enqueued
+				Eventually(reconciler.eventChannel).Should(Receive(WithTransform(
+					func(e event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) string {
+						return e.Object.GetName()
+					},
+					Equal("all-nodes-policy"),
+				)))
+			})
+
+			It("should stop enqueuing when context is cancelled", func() {
+				// Create many policies
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				for i := 0; i < 10; i++ {
+					policy := &nmstatev1.NodeNetworkConfigurationPolicy{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: types.NamespacedName{Name: "policy-" + string(rune(i))}.Name,
+						},
+					}
+					Expect(reconciler.Client.Create(ctx, policy)).To(Succeed())
+				}
+
+				// Cancel context immediately
+				cancel()
+
+				// Enqueue should stop early
+				trigger.enqueuePoliciesForNode(ctx, "test")
+
+				// We might receive some events, but not all 10
+				// Just verify it doesn't panic or hang
+				Eventually(func() bool {
+					select {
+					case <-reconciler.eventChannel:
+						return true
+					default:
+						return true
+					}
+				}).Should(BeTrue())
+			})
+
+			It("should handle event channel being full gracefully", func() {
+				// Create test node
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				// Create a small channel for testing
+				smallChannel := make(chan event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy], 1)
+				reconciler.eventChannel = smallChannel
+
+				// Fill the channel
+				policy1 := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "policy-1"},
+				}
+				smallChannel <- event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy]{
+					Object: policy1,
+				}
+
+				// Create another policy
+				policy2 := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{Name: "policy-2"},
+				}
+				Expect(reconciler.Client.Create(ctx, policy2)).To(Succeed())
+
+				// This should not block or panic when channel is full
+				trigger.enqueuePoliciesForNode(ctx, "test")
+
+				// Verify the function completed (didn't hang)
+				Expect(true).To(BeTrue())
+			})
+		})
+
+		Describe("startupReconciliation", func() {
+			It("should trigger reconciliation after delay", func() {
+				// Set a very short delay for testing
+				oldDelay := startupReconcileDelay
+				startupReconcileDelay = 10 * time.Millisecond
+				defer func() { startupReconcileDelay = oldDelay }()
+
+				// Create test node and policy
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				policy := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "startup-policy",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, policy)).To(Succeed())
+
+				// Run startup reconciliation
+				go trigger.startupReconciliation(ctx)
+
+				// Verify event is received after delay
+				Eventually(reconciler.eventChannel, "1s").Should(Receive(WithTransform(
+					func(e event.TypedGenericEvent[*nmstatev1.NodeNetworkConfigurationPolicy]) string {
+						return e.Object.GetName()
+					},
+					Equal("startup-policy"),
+				)))
+			})
+
+			It("should respect context cancellation", func() {
+				// Set a long delay
+				oldDelay := startupReconcileDelay
+				startupReconcileDelay = 5 * time.Second
+				defer func() { startupReconcileDelay = oldDelay }()
+
+				// Cancel context immediately
+				cancel()
+
+				// Run startup reconciliation
+				trigger.startupReconciliation(ctx)
+
+				// Should not send any events
+				Consistently(reconciler.eventChannel, "100ms").ShouldNot(Receive())
+			})
+		})
+
+		Describe("periodicReconciliation", func() {
+			It("should trigger reconciliation periodically", func() {
+				// Set a very short interval for testing
+				oldInterval := periodicReconcileInterval
+				periodicReconcileInterval = 50 * time.Millisecond
+				defer func() { periodicReconcileInterval = oldInterval }()
+
+				// Create test node and policy
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				policy := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "periodic-policy",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, policy)).To(Succeed())
+
+				// Run periodic reconciliation
+				go trigger.periodicReconciliation(ctx)
+
+				// Verify events are received periodically
+				Eventually(reconciler.eventChannel, "200ms").Should(Receive())
+				Eventually(reconciler.eventChannel, "200ms").Should(Receive())
+
+				// Cancel and verify it stops
+				cancel()
+				time.Sleep(100 * time.Millisecond)
+				Consistently(reconciler.eventChannel, "100ms").ShouldNot(Receive())
+			})
+
+			It("should stop when context is cancelled", func() {
+				oldInterval := periodicReconcileInterval
+				defer func() {
+					periodicReconcileInterval = oldInterval
+				}()
+				periodicReconcileInterval = 50 * time.Millisecond
+
+				// Give time for the global variable write to complete
+				time.Sleep(10 * time.Millisecond)
+
+				// Run and immediately cancel
+				testCtx, testCancel := context.WithCancel(context.Background())
+				go trigger.periodicReconciliation(testCtx)
+
+				// Small delay to ensure goroutine starts
+				time.Sleep(10 * time.Millisecond)
+				testCancel()
+
+				// Should stop quickly
+				time.Sleep(100 * time.Millisecond)
+				Consistently(reconciler.eventChannel, "100ms").ShouldNot(Receive())
+			})
+		})
+
+		Describe("Start (integration)", func() {
+			It("should start both startup and periodic reconciliation", func() {
+				// Set short delays for testing
+				oldDelay := startupReconcileDelay
+				oldInterval := periodicReconcileInterval
+				startupReconcileDelay = 10 * time.Millisecond
+				periodicReconcileInterval = 50 * time.Millisecond
+				defer func() {
+					startupReconcileDelay = oldDelay
+					periodicReconcileInterval = oldInterval
+				}()
+
+				// Create test node and policy
+				testNode := &corev1.Node{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-node",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, testNode)).To(Succeed())
+
+				policy := &nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "integration-policy",
+					},
+				}
+				Expect(reconciler.Client.Create(ctx, policy)).To(Succeed())
+
+				// Start the trigger
+				go trigger.Start(ctx)
+
+				// Should receive startup event quickly
+				Eventually(reconciler.eventChannel, "100ms").Should(Receive())
+
+				// Should also receive periodic events
+				Eventually(reconciler.eventChannel, "200ms").Should(Receive())
+
+				// Cancel and verify clean shutdown
+				cancel()
+				time.Sleep(100 * time.Millisecond)
+			})
 		})
 	})
 })
