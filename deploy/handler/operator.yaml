@@ -421,6 +421,10 @@ spec:
               value: "{{ .ProbeConfiguration.DNS.Host }}"
             - name: METRICS_BIND_ADDRESS
               value: "{{ .MetricsConfiguration.BindAddress }}"
+            - name: PERIODIC_RECONCILIATION_INTERVAL
+              value: "{{ .PeriodicReconciliationInterval }}"
+            - name: PERIODIC_WEBHOOK_CHECK_TIMEOUT
+              value: "{{ .PeriodicWebhookCheckTimeout }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket

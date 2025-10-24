@@ -68,6 +68,13 @@ type NMStateSpec struct {
 	// +kubebuilder:validation:Enum=info;debug
 	// +optional
 	LogLevel shared.LogLevel `json:"logLevel,omitempty"`
+	// PeriodicReconciliationInterval defines the interval for periodic reconciliation of all NNCPs.
+	// The handler will reconcile all policies at this interval to ensure desired state is maintained.
+	// Set to "0" to disable periodic reconciliation.
+	// +kubebuilder:default:="30m"
+	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))|0$`
+	// +optional
+	PeriodicReconciliationInterval string `json:"periodicReconciliationInterval,omitempty"`
 }
 
 type SelfSignConfiguration struct {

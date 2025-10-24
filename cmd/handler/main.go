@@ -83,6 +83,13 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 
 	metrics.Registry.MustRegister(monitoring.AppliedFeatures)
+	metrics.Registry.MustRegister(monitoring.HandlerStartupReconciliationTotal)
+	metrics.Registry.MustRegister(monitoring.HandlerStartupPoliciesReconciled)
+	metrics.Registry.MustRegister(monitoring.HandlerStartupDuration)
+	metrics.Registry.MustRegister(monitoring.HandlerPeriodicReconciliationTotal)
+	metrics.Registry.MustRegister(monitoring.HandlerPeriodicPoliciesReconciled)
+	metrics.Registry.MustRegister(monitoring.HandlerPeriodicDuration)
+	metrics.Registry.MustRegister(monitoring.HandlerPeriodicInterval)
 }
 
 func main() {
@@ -279,13 +286,14 @@ func setupHandlerControllers(mgr manager.Manager) error {
 	}
 
 	setupLog.Info("Creating NodeNetworkConfigurationPolicy controller")
-	if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
+	nncpController := &controllers.NodeNetworkConfigurationPolicyReconciler{
 		Client:    mgr.GetClient(),
 		APIClient: apiClient,
 		Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
 		Scheme:    mgr.GetScheme(),
 		Recorder:  mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
-	}).SetupWithManager(mgr); err != nil {
+	}
+	if err = nncpController.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 		return err
 	}
@@ -297,6 +305,37 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationEnactment controller", "controller", "NMState")
+		return err
+	}
+
+	setupLog.Info("Creating NNCP startup reconciler")
+	startupReconciler := &controllers.StartupReconciler{
+		Client:     mgr.GetClient(),
+		Cache:      mgr.GetCache(),
+		Log:        ctrl.Log.WithName("controllers").WithName("StartupReconciler"),
+		Controller: nncpController,
+	}
+	if err = mgr.Add(startupReconciler); err != nil {
+		setupLog.Error(err, "unable to add startup reconciler to manager")
+		return err
+	}
+
+	// Get periodic reconciliation interval from environment
+	periodicInterval := environment.PeriodicReconciliationInterval()
+	setupLog.Info("Periodic reconciliation interval configured",
+		"interval", periodicInterval.String(),
+		"enabled", periodicInterval > 0)
+
+	setupLog.Info("Creating NNCP periodic reconciler")
+	periodicReconciler := &controllers.PeriodicReconciler{
+		Client:     mgr.GetClient(),
+		Cache:      mgr.GetCache(),
+		Log:        ctrl.Log.WithName("controllers").WithName("PeriodicReconciler"),
+		Controller: nncpController,
+		Interval:   periodicInterval,
+	}
+	if err = mgr.Add(periodicReconciler); err != nil {
+		setupLog.Error(err, "unable to add periodic reconciler to manager")
 		return err
 	}
 

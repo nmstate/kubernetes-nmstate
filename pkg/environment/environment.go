@@ -24,6 +24,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+const (
+	// DefaultPeriodicReconciliationInterval is the default interval for periodic reconciliation
+	DefaultPeriodicReconciliationInterval = 30 * time.Minute
+	// DefaultPeriodicWebhookCheckTimeout is the default timeout for webhook readiness checks during periodic reconciliation
+	DefaultPeriodicWebhookCheckTimeout = 30 * time.Second
+)
+
 // IsOperator returns true when RUN_OPERATOR env var is present
 func IsOperator() bool {
 	_, runOperator := os.LookupEnv("RUN_OPERATOR")
@@ -77,4 +84,32 @@ func GetEnvVar(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// PeriodicReconciliationInterval returns the periodic reconciliation interval from environment.
+// Returns 0 if periodic reconciliation is disabled (value is "0").
+// Returns DefaultPeriodicReconciliationInterval if not set or parse fails.
+func PeriodicReconciliationInterval() time.Duration {
+	interval := GetEnvVar("PERIODIC_RECONCILIATION_INTERVAL", DefaultPeriodicReconciliationInterval.String())
+	if interval == "0" {
+		return time.Duration(0) // disabled
+	}
+	duration, err := time.ParseDuration(interval)
+	if err != nil {
+		// Return default if parsing fails
+		return DefaultPeriodicReconciliationInterval
+	}
+	return duration
+}
+
+// PeriodicWebhookCheckTimeout returns the timeout for webhook readiness checks during periodic reconciliation.
+// Returns DefaultPeriodicWebhookCheckTimeout if not set or parse fails.
+func PeriodicWebhookCheckTimeout() time.Duration {
+	timeout := GetEnvVar("PERIODIC_WEBHOOK_CHECK_TIMEOUT", DefaultPeriodicWebhookCheckTimeout.String())
+	duration, err := time.ParseDuration(timeout)
+	if err != nil {
+		// Return default if parsing fails
+		return DefaultPeriodicWebhookCheckTimeout
+	}
+	return duration
 }

@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -111,6 +112,8 @@ type NodeNetworkConfigurationPolicyReconciler struct {
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
 	Recorder  record.EventRecorder
+	// StartupReconciliationComplete is set to true after the startup reconciliation finishes.
+	StartupReconciliationComplete atomic.Bool
 }
 
 func init() {
@@ -134,6 +137,12 @@ func init() {
 func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, request ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
 	log := r.Log.WithValues("nodenetworkconfigurationpolicy", request.NamespacedName)
+
+	// Add context to logs to distinguish startup/periodic reconciliation from normal reconciliation
+	if !r.StartupReconciliationComplete.Load() {
+		log = log.WithValues("reconciliationType", "startup")
+		log.Info("Processing NNCP during handler startup reconciliation")
+	}
 
 	// Fetch the NodeNetworkConfigurationPolicy instance
 	instance := &nmstatev1.NodeNetworkConfigurationPolicy{}
@@ -605,6 +614,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldAbortReconcile(
 	}
 
 	return failedConditionCount >= maxUnavailable, nil
+}
+
+// MarkStartupReconciliationComplete sets the flag indicating that startup reconciliation has completed.
+// This is called by the StartupReconciler after it finishes processing all policies.
+func (r *NodeNetworkConfigurationPolicyReconciler) MarkStartupReconciliationComplete() {
+	r.StartupReconciliationComplete.Store(true)
+	r.Log.Info("Handler startup reconciliation marked as complete, switching to normal reconciliation mode")
 }
 
 func allPolicies(client client.Client, log logr.Logger) handler.TypedMapFunc[*corev1.Node, reconcile.Request] {
