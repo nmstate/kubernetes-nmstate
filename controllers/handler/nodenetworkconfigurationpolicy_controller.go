@@ -262,7 +262,10 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(_ context.Context, 
 	log.Info("nmstate", "output", nmstateOutput)
 
 	enactmentConditions.NotifySuccess()
-	r.decrementUnavailableNodeCount(instance, generationKey)
+	if err := r.decrementUnavailableNodeCount(instance, generationKey); err != nil {
+		r.Log.Info("Failed to update NNCP status, will retry", "error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
 	r.forceNNSRefresh(nodeName)
 
 	return ctrl.Result{}, nil
@@ -520,16 +523,28 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
-	generationKey string) {
+	generationKey string) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	err := tryDecrementingUnavailableNodeCount(r.Client, r.Client, policyKey, generationKey)
 	if err != nil {
+		// If there are no unavailable nodes, this is not an error - the node was already processed
+		if err.Error() == "no unavailable nodes" {
+			r.Log.V(1).Info("No unavailable nodes to decrement, node already processed")
+			return nil
+		}
 		r.Log.Error(err, "error decrementing unavailableNodeCount with cached client, trying again with non-cached client.")
 		err = tryDecrementingUnavailableNodeCount(r.Client, r.APIClient, policyKey, generationKey)
 		if err != nil {
+			// Again, check if it's the "no unavailable nodes" case
+			if err.Error() == "no unavailable nodes" {
+				r.Log.V(1).Info("No unavailable nodes to decrement, node already processed")
+				return nil
+			}
 			r.Log.Error(err, "error decrementing unavailableNodeCount with non-cached client")
+			return err
 		}
 	}
+	return nil
 }
 
 func tryDecrementingUnavailableNodeCount(
