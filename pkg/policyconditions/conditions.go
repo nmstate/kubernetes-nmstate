@@ -20,6 +20,7 @@ package policyconditions
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -231,6 +232,10 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 		if err = apiWriter.Status().Update(context.TODO(), policy); err != nil {
 			if apierrors.IsConflict(err) {
 				logger.Info("conflict updating policy conditions, retrying")
+			} else if isWebhookError(err) {
+				logger.Error(err,
+					"failed to update policy conditions due to webhook error "+
+						"(this may be due to webhook certificate issues during startup)")
 			} else {
 				logger.Error(err, "failed to update policy conditions")
 			}
@@ -332,4 +337,30 @@ func Reset(cli client.Client, policyKey types.NamespacedName) error {
 		}
 		return nil
 	})
+}
+
+// isWebhookError checks if an error is related to webhook calls
+func isWebhookError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errStr := strings.ToLower(err.Error())
+	webhookErrorPatterns := []string{
+		"webhook",
+		"failed calling webhook",
+		"failed to call webhook",
+		"x509:",
+		"certificate",
+		"tls:",
+		"unknown authority",
+	}
+
+	for _, pattern := range webhookErrorPatterns {
+		if strings.Contains(errStr, pattern) {
+			return true
+		}
+	}
+
+	return false
 }
