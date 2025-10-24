@@ -348,6 +348,11 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		handlerReadinessProbeExtraArg = "-vv"
 	}
 
+	periodicReconciliationInterval := instance.Spec.PeriodicReconciliationInterval
+	if periodicReconciliationInterval == "" {
+		periodicReconciliationInterval = environment.DefaultPeriodicReconciliationInterval.String()
+	}
+
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
 	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
@@ -367,6 +372,8 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["MetricsConfiguration"] = metricsConfig
 	data.Data["LogLevelHandlerCommandArg"] = logLevelHandlerCommandArg
 	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
+	data.Data["PeriodicReconciliationInterval"] = periodicReconciliationInterval
+	data.Data["PeriodicWebhookCheckTimeout"] = environment.DefaultPeriodicWebhookCheckTimeout.String()
 
 	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
 	if err != nil {
