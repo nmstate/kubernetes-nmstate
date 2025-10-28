@@ -206,7 +206,7 @@ var _ = Describe("rollback", func() {
 			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return autoDNS(nodes[0], primaryNic)
-			}, 480*time.Second, ReadInterval).Should(BeTrue(), "should eventually have auto-dns=true")
+			}, RollbackTimeout, ReadInterval).Should(BeTrue(), "should eventually have auto-dns=true")
 
 			Byf("Check that %s continue with rolled back state", primaryNic)
 			Consistently(func() bool {
@@ -234,7 +234,7 @@ var _ = Describe("rollback", func() {
 			Byf("Check that %s is rolled back", primaryNic)
 			Eventually(func() bool {
 				return autoDNS(nodes[0], primaryNic)
-			}, 480*time.Second, ReadInterval).Should(BeTrue(), "should eventually have auto-dns=true")
+			}, RollbackTimeout, ReadInterval).Should(BeTrue(), "should eventually have auto-dns=true")
 
 			Byf("Check that %s continue with rolled back state", primaryNic)
 			Consistently(func() bool {

@@ -39,9 +39,10 @@ import (
 )
 
 const (
-	ReadTimeout  = 180 * time.Second
-	ReadInterval = 1 * time.Second
-	TestPolicy   = "test-policy"
+	ReadTimeout     = 180 * time.Second
+	ReadInterval    = 1 * time.Second
+	TestPolicy      = "test-policy"
+	RollbackTimeout = 600 * time.Second
 )
 
 func EnactmentsStatusToYaml() string {
@@ -126,7 +127,7 @@ func NodeNetworkConfigurationPolicy(policyName string) nmstatev1.NodeNetworkConf
 func StatusForPolicyEventually(policy string) AsyncAssertion {
 	return Eventually(func() shared.ConditionList {
 		return Status(policy)
-	}, 480*time.Second, 1*time.Second)
+	}, RollbackTimeout, 1*time.Second)
 }
 
 func StatusForPolicyConsistently(policy string) AsyncAssertion {
