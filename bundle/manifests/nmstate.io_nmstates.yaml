@@ -1972,6 +1972,14 @@ spec:
                   If NodeSelector is specified, the handler will run only on nodes that have each of the indicated key-value pairs
                   as labels applied to the node.
                 type: object
+              periodicReconciliationInterval:
+                default: 30m
+                description: |-
+                  PeriodicReconciliationInterval defines the interval for periodic reconciliation of all NNCPs.
+                  The handler will reconcile all policies at this interval to ensure desired state is maintained.
+                  Set to "0" to disable periodic reconciliation.
+                pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))|0$
+                type: string
               probeConfiguration:
                 default: {}
                 description: |-
@@ -4043,6 +4051,14 @@ spec:
                   If NodeSelector is specified, the handler will run only on nodes that have each of the indicated key-value pairs
                   as labels applied to the node.
                 type: object
+              periodicReconciliationInterval:
+                default: 30m
+                description: |-
+                  PeriodicReconciliationInterval defines the interval for periodic reconciliation of all NNCPs.
+                  The handler will reconcile all policies at this interval to ensure desired state is maintained.
+                  Set to "0" to disable periodic reconciliation.
+                pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))|0$
+                type: string
               probeConfiguration:
                 default: {}
                 description: |-
