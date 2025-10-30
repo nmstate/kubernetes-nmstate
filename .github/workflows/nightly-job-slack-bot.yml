@@ -1,0 +1,32 @@
+name: Future-Job slack bot
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: ./automation/nmstate-future-reporter
+
+jobs:
+  build-and-run-slack-bot:
+    name: Future-job slack bot
+    if: github.repository == 'nmstate/kubernetes-nmstate'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ./automation/nmstate-future-reporter/go.mod
+
+      - name: Build
+        run: go build -v .
+
+      - name: run
+        env:
+          NMSTATE_SLACK_WEBHOOK_URL: ${{ secrets.NMSTATE_SLACK_WEBHOOK_URL }}
+        run: |
+          ./nmstate-future-reporter
