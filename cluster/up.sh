@@ -13,6 +13,11 @@ fi
 
 echo 'Upgrading NetworkManager and enabling and starting up openvswitch'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
+    if [[ "$NM_VERSION" == "latest" ]]; then
+        echo "Installing NetworkManager from copr networkmanager/NetworkManager-main"
+        ./cluster/cli.sh ssh ${node} -- sudo dnf install -y dnf-plugins-core
+        ./cluster/cli.sh ssh ${node} -- sudo dnf copr enable -y networkmanager/NetworkManager-main
+    fi
     ./cluster/cli.sh ssh ${node} -- sudo dnf upgrade -y NetworkManager --allowerasing
     ./cluster/cli.sh ssh ${node} -- sudo systemctl daemon-reload
     ./cluster/cli.sh ssh ${node} -- sudo systemctl enable openvswitch

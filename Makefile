@@ -7,7 +7,7 @@ export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
-ifeq ($(NMSTATE_PIN), future)
+ifeq ($(NMSTATE_VERSION), latest)
 HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git"
 endif
 
@@ -196,6 +196,12 @@ test/unit/api:
 test/unit: test/unit/api
 	NODE_NAME=node01 $(GINKGO) --junit-report=junit-pkg-controller-unit-test.xml $(unit_test_args) $(WHAT)
 
+test-reporter:
+	cd automation/nmstate-latest-reporter && \
+		go run . --dry-run --fake=success && \
+		go run . --dry-run --fake=failure && \
+		go run . --dry-run --fake=stale
+
 test-e2e-handler:
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
 
@@ -277,6 +283,7 @@ olm-push: bundle-push index-push
 	test-e2e-handler \
 	test-e2e-operator \
 	test-e2e \
+	test-reporter\
 	cluster-up \
 	cluster-down \
 	cluster-sync-operator \
