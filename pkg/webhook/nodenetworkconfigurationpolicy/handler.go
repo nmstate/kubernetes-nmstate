@@ -79,7 +79,7 @@ func validatePolicyHandler(
 			return admission.Errored(http.StatusInternalServerError, errors.Wrapf(err, "failed decoding policy: %s", string(original)))
 		}
 		currentPolicy := nmstatev1.NodeNetworkConfigurationPolicy{}
-		err = cli.Get(context.TODO(), types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}, &currentPolicy)
+		err = cli.Get(ctx, types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}, &currentPolicy)
 		if err != nil && !apierrors.IsNotFound(err) {
 			errMsg := fmt.Sprintf("failed getting policy %s", string(original))
 			log.Error(err, errMsg)

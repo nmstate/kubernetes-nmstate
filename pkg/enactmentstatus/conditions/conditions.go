@@ -18,6 +18,7 @@ limitations under the License.
 package conditions
 
 import (
+	"context"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -47,66 +48,66 @@ func New(cli client.Client, enactmentKey types.NamespacedName) EnactmentConditio
 	return conditions
 }
 
-func (ec *EnactmentConditions) NotifyGenerateFailure(err error) {
+func (ec *EnactmentConditions) NotifyGenerateFailure(ctx context.Context, err error) {
 	ec.logger.Info("NotifyGenerateFailure")
 	message := fmt.Sprintf("failure generating desiredState and capturedStates: %v", err)
-	err = ec.updateEnactmentConditions(SetFailedToConfigure, message)
+	err = ec.updateEnactmentConditions(ctx, SetFailedToConfigure, message)
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state generate captures with failure")
 	}
 }
 
-func (ec *EnactmentConditions) NotifyProgressing() {
+func (ec *EnactmentConditions) NotifyProgressing(ctx context.Context) {
 	ec.logger.Info("NotifyProgressing")
-	err := ec.updateEnactmentConditions(SetProgressing, "Applying desired state")
+	err := ec.updateEnactmentConditions(ctx, SetProgressing, "Applying desired state")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Progressing")
 	}
 }
 
-func (ec *EnactmentConditions) NotifyFailedToConfigure(failedErr error) {
+func (ec *EnactmentConditions) NotifyFailedToConfigure(ctx context.Context, failedErr error) {
 	ec.logger.Info("NotifyFailedToConfigure")
-	err := ec.updateEnactmentConditions(SetFailedToConfigure, failedErr.Error())
+	err := ec.updateEnactmentConditions(ctx, SetFailedToConfigure, failedErr.Error())
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state FailingToConfigure")
 	}
 }
 
-func (ec *EnactmentConditions) NotifyRetrying(failedErr error) {
+func (ec *EnactmentConditions) NotifyRetrying(ctx context.Context, failedErr error) {
 	ec.logger.Info("NotifyRetrying")
-	err := ec.updateEnactmentConditions(SetRetryAfterFailed, failedErr.Error())
+	err := ec.updateEnactmentConditions(ctx, SetRetryAfterFailed, failedErr.Error())
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Retrying")
 	}
 }
 
-func (ec *EnactmentConditions) NotifyAborted(failedErr error) {
+func (ec *EnactmentConditions) NotifyAborted(ctx context.Context, failedErr error) {
 	ec.logger.Info("NotifyConfigurationAborted")
-	err := ec.updateEnactmentConditions(SetConfigurationAborted, failedErr.Error())
+	err := ec.updateEnactmentConditions(ctx, SetConfigurationAborted, failedErr.Error())
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state ConfigurationAborted")
 	}
 }
 
-func (ec *EnactmentConditions) NotifySuccess() {
+func (ec *EnactmentConditions) NotifySuccess(ctx context.Context) {
 	ec.logger.Info("NotifySuccess")
-	err := ec.updateEnactmentConditions(SetSuccess, "successfully reconciled")
+	err := ec.updateEnactmentConditions(ctx, SetSuccess, "successfully reconciled")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Success")
 	}
 }
 
-func (ec *EnactmentConditions) NotifyPending() {
+func (ec *EnactmentConditions) NotifyPending(ctx context.Context) {
 	ec.logger.Info("NotifyPending")
-	err := ec.updateEnactmentConditions(SetPending, "Waiting for progressing nodes to finish")
+	err := ec.updateEnactmentConditions(ctx, SetPending, "Waiting for progressing nodes to finish")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Pending")
 	}
 }
 
-func (ec *EnactmentConditions) Reset() {
+func (ec *EnactmentConditions) Reset(ctx context.Context) {
 	ec.logger.Info("Reset")
-	err := ec.updateEnactmentConditions(func(conditionList *nmstate.ConditionList, message string) {
+	err := ec.updateEnactmentConditions(ctx, func(conditionList *nmstate.ConditionList, message string) {
 		*conditionList = nil
 	}, "")
 	if err != nil {
@@ -115,10 +116,11 @@ func (ec *EnactmentConditions) Reset() {
 }
 
 func (ec *EnactmentConditions) updateEnactmentConditions(
+	ctx context.Context,
 	conditionsSetter func(*nmstate.ConditionList, string),
 	message string,
 ) error {
-	return enactmentstatus.Update(ec.client, ec.enactmentKey,
+	return enactmentstatus.Update(ctx, ec.client, ec.enactmentKey,
 		func(status *nmstate.NodeNetworkConfigurationEnactmentStatus) {
 			conditionsSetter(&status.Conditions, message)
 		})

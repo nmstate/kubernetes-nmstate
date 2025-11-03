@@ -55,7 +55,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 	log.Info("Reconcile")
 
 	enactmentInstance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-	err := r.Client.Get(context.TODO(), request.NamespacedName, enactmentInstance)
+	err := r.Client.Get(ctx, request.NamespacedName, enactmentInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// NNCE has being delete let's clean the old NNCEs map

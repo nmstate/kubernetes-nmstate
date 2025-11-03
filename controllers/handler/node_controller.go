@@ -45,6 +45,7 @@ import (
 
 // Added for test purposes
 type NmstateUpdater func(
+	ctx context.Context,
 	client client.Client,
 	node *corev1.Node,
 	observedState shared.State,
@@ -81,7 +82,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 	}
 
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, nnsInstance)
+	err = r.Client.Get(ctx, request.NamespacedName, nnsInstance)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "Failed to get nnstate")
@@ -98,7 +99,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 
 	// Fetch the Node instance
 	nodeInstance := &corev1.Node{}
-	err = r.Client.Get(context.TODO(), request.NamespacedName, nodeInstance)
+	err = r.Client.Get(ctx, request.NamespacedName, nodeInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -109,7 +110,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		// Error reading the object - requeue the request.
 		return ctrl.Result{}, err
 	}
-	err = r.nmstateUpdater(r.Client, nodeInstance, currentState, nnsInstance, r.getDependencyVersions())
+	err = r.nmstateUpdater(ctx, r.Client, nodeInstance, currentState, nnsInstance, r.getDependencyVersions())
 	if err != nil {
 		err = errors.Wrap(err, "error at node reconcile creating NodeNetworkState")
 		return ctrl.Result{}, err

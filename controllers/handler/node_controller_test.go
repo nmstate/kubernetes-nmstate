@@ -131,7 +131,7 @@ routes:
 			By("Set last state")
 			reconciler.lastState = filteredOutObservedState
 
-			reconciler.nmstateUpdater = func(client.Client, *corev1.Node,
+			reconciler.nmstateUpdater = func(context.Context, client.Client, *corev1.Node,
 				shared.State, *nmstatev1beta1.NodeNetworkState, *nmstate.DependencyVersions) error {
 				return fmt.Errorf("we are not suppose to catch this error")
 			}

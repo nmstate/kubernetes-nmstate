@@ -34,10 +34,10 @@ func unmatchingLabels(nodeSelector, labels map[string]string) map[string]string 
 	return unmatchingLabels
 }
 
-func (s *Selectors) UnmatchedNodeLabels(nodeName string) (map[string]string, error) {
+func (s *Selectors) UnmatchedNodeLabels(ctx context.Context, nodeName string) (map[string]string, error) {
 	logger := s.logger.WithValues("node", nodeName)
 	node := corev1.Node{}
-	err := s.client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+	err := s.client.Get(ctx, types.NamespacedName{Name: nodeName}, &node)
 	if err != nil {
 		logger.Info("Cannot find corev1.Node")
 		return map[string]string{}, err
