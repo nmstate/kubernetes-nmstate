@@ -213,7 +213,7 @@ var _ = Describe("Policy Conditions", func() {
 
 			client := fake.NewClientBuilder().WithScheme(s).WithStatusSubresource(updatedPolicy).WithRuntimeObjects(objs...).Build()
 			key := types.NamespacedName{Name: updatedPolicy.Name}
-			err := Update(client, client, key)
+			err := Update(context.TODO(), client, client, key)
 			Expect(err).ToNot(HaveOccurred())
 			err = client.Get(context.TODO(), key, updatedPolicy)
 			Expect(err).ToNot(HaveOccurred())

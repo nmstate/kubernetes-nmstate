@@ -43,16 +43,16 @@ func (f MaxUnavailableLimitReachedError) Error() string {
 	return "maximal number of nodes are already processing policy configuration"
 }
 
-func NodesRunningNmstate(cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
+func NodesRunningNmstate(ctx context.Context, cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
 	nodes := corev1.NodeList{}
-	err := cli.List(context.TODO(), &nodes, client.MatchingLabels(nodeSelector))
+	err := cli.List(ctx, &nodes, client.MatchingLabels(nodeSelector))
 	if err != nil {
 		return []corev1.Node{}, errors.Wrap(err, "getting nodes failed")
 	}
 
 	pods := corev1.PodList{}
 	byComponent := client.MatchingLabels{"component": "kubernetes-nmstate-handler"}
-	err = cli.List(context.TODO(), &pods, byComponent)
+	err = cli.List(ctx, &pods, byComponent)
 	if err != nil {
 		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
 	}
@@ -88,8 +88,8 @@ func isReady(node *corev1.Node) bool {
 	return false
 }
 
-func MaxUnavailableNodeCount(cli client.Reader, policy *nmstatev1.NodeNetworkConfigurationPolicy) (int, error) {
-	enactmentsTotal, _, err := enactment.CountByPolicy(cli, policy)
+func MaxUnavailableNodeCount(ctx context.Context, cli client.Reader, policy *nmstatev1.NodeNetworkConfigurationPolicy) (int, error) {
+	enactmentsTotal, _, err := enactment.CountByPolicy(ctx, cli, policy)
 	if err != nil {
 		return MinMaxunavailable, err
 	}

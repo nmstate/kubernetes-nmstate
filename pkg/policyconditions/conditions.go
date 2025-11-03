@@ -178,13 +178,13 @@ func IsUnknown(conditions *nmstate.ConditionList) bool {
 	return availableCondition.Status == corev1.ConditionUnknown
 }
 
-func Update(cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
+func Update(ctx context.Context, cli client.Client, apiReader client.Reader, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 
-	err := update(cli, apiReader, cli, policyKey)
+	err := update(ctx, cli, apiReader, cli, policyKey)
 	if err != nil {
 		logger.Error(err, "failed to update policy status using cached client. Retrying with non-cached.")
-		err = update(cli, apiReader, apiReader, policyKey)
+		err = update(ctx, cli, apiReader, apiReader, policyKey)
 		if err != nil {
 			logger.Error(err, "failed to update policy status using non-cached client.")
 		}
@@ -193,7 +193,13 @@ func Update(cli client.Client, apiReader client.Reader, policyKey types.Namespac
 }
 
 //nolint:gocritic
-func update(apiWriter client.Client, apiReader client.Reader, policyReader client.Reader, policyKey types.NamespacedName) error {
+func update(
+	ctx context.Context,
+	apiWriter client.Client,
+	apiReader client.Reader,
+	policyReader client.Reader,
+	policyKey types.NamespacedName,
+) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	// On conflict we need to re-retrieve enactments since the
 	// conflict can denote that the calculated policy conditions
@@ -201,20 +207,20 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 	// related to certificates until nmstate-webhook pod settles.
 	return retry.OnError(retry.DefaultRetry, allErrors, func() error {
 		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
-		if err := policyReader.Get(context.TODO(), policyKey, policy); err != nil {
+		if err := policyReader.Get(ctx, policyKey, policy); err != nil {
 			return errors.Wrap(err, "getting policy failed")
 		}
 
 		enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 		policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
-		if err := apiReader.List(context.TODO(), &enactments, policyLabelFilter); err != nil {
+		if err := apiReader.List(ctx, &enactments, policyLabelFilter); err != nil {
 			return errors.Wrap(err, "getting enactments failed")
 		}
 
 		// Count only nodes that runs nmstate handler and match the policy
 		// nodeSelector, could be that users don't want to run knmstate at control-plane for example
 		// so they don't want to change net config there.
-		nmstateMatchingNodes, err := node.NodesRunningNmstate(apiReader, policy.Spec.NodeSelector)
+		nmstateMatchingNodes, err := node.NodesRunningNmstate(ctx, apiReader, policy.Spec.NodeSelector)
 		if err != nil {
 			return errors.Wrap(err, "getting nodes running kubernets-nmstate pods failed")
 		}
@@ -228,7 +234,7 @@ func update(apiWriter client.Client, apiReader client.Reader, policyReader clien
 
 		setPolicyStatus(policy, &policyStatus)
 
-		if err = apiWriter.Status().Update(context.TODO(), policy); err != nil {
+		if err = apiWriter.Status().Update(ctx, policy); err != nil {
 			if apierrors.IsConflict(err) {
 				logger.Info("conflict updating policy conditions, retrying")
 			} else {
@@ -313,16 +319,16 @@ func calculatePolicyConditionStatus(
 			enactmentsCountByCondition.Aborted()}
 }
 
-func Reset(cli client.Client, policyKey types.NamespacedName) error {
+func Reset(ctx context.Context, cli client.Client, policyKey types.NamespacedName) error {
 	logger := log.WithValues("policy", policyKey.Name)
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
-		err := cli.Get(context.TODO(), policyKey, policy)
+		err := cli.Get(ctx, policyKey, policy)
 		if err != nil {
 			return errors.Wrap(err, "getting policy failed")
 		}
 		policy.Status.Conditions = nmstate.ConditionList{}
-		err = cli.Status().Update(context.TODO(), policy)
+		err = cli.Status().Update(ctx, policy)
 		if err != nil {
 			if apierrors.IsConflict(err) {
 				logger.Info("conflict resetting policy conditions, retrying")

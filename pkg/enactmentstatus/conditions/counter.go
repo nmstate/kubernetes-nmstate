@@ -132,6 +132,7 @@ func (c CountByConditionStatus) String() string {
 type LogicalConditionCountFilter map[nmstate.ConditionType]corev1.ConditionStatus
 
 func CountConditionsLogicalAnd(
+	ctx context.Context,
 	cli client.Client,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	filter LogicalConditionCountFilter) (int, error) {
@@ -139,7 +140,7 @@ func CountConditionsLogicalAnd(
 	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 	policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
 
-	if err := cli.List(context.TODO(), &enactments, policyLabelFilter); err != nil {
+	if err := cli.List(ctx, &enactments, policyLabelFilter); err != nil {
 		return 0, fmt.Errorf("getting enactments failed: %w", err)
 	}
 

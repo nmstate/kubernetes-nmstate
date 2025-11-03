@@ -337,7 +337,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				reconciler.Client = cl
 				reconciler.APIClient = cl
 
-				err := reconciler.decrementUnavailableNodeCount(nncp, "gen-1")
+				err := reconciler.decrementUnavailableNodeCount(context.TODO(), nncp, "gen-1")
 
 				Expect(err).To(BeNil())
 
@@ -361,7 +361,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				reconciler.Client = cl
 				reconciler.APIClient = cl
 
-				err := reconciler.decrementUnavailableNodeCount(nncp, "gen-1")
+				err := reconciler.decrementUnavailableNodeCount(context.TODO(), nncp, "gen-1")
 
 				Expect(err).ToNot(BeNil())
 				Expect(err.Error()).To(ContainSubstring("not found"))
@@ -390,7 +390,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				reconciler.Client = cl
 				reconciler.APIClient = cl
 
-				err := reconciler.decrementUnavailableNodeCount(nncpZeroCount, "gen-1")
+				err := reconciler.decrementUnavailableNodeCount(context.TODO(), nncpZeroCount, "gen-1")
 
 				// Should not return error - this is expected when node already processed
 				Expect(err).To(BeNil())
@@ -409,7 +409,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				reconciler.APIClient = cl
 
 				// Try to decrement a generation key that doesn't exist
-				err := reconciler.decrementUnavailableNodeCount(nncp, "non-existent-gen")
+				err := reconciler.decrementUnavailableNodeCount(context.TODO(), nncp, "non-existent-gen")
 
 				// Should not return error - this is expected when node already processed
 				Expect(err).To(BeNil())

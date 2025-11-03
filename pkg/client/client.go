@@ -56,7 +56,7 @@ type DependencyVersions struct {
 	HostNmstateVersion    string
 }
 
-func InitializeNodeNetworkState(cli client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
+func InitializeNodeNetworkState(ctx context.Context, cli client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
 	nodeNetworkState := nmstatev1beta1.NodeNetworkState{
@@ -68,7 +68,7 @@ func InitializeNodeNetworkState(cli client.Client, node *corev1.Node) (*nmstatev
 		},
 	}
 
-	err := cli.Create(context.TODO(), &nodeNetworkState)
+	err := cli.Create(ctx, &nodeNetworkState)
 	if err != nil {
 		return nil, fmt.Errorf("error creating NodeNetworkState: %v, %+v", err, nodeNetworkState)
 	}
@@ -77,6 +77,7 @@ func InitializeNodeNetworkState(cli client.Client, node *corev1.Node) (*nmstatev
 }
 
 func CreateOrUpdateNodeNetworkState(
+	ctx context.Context,
 	cli client.Client,
 	node *corev1.Node,
 	observedState shared.State,
@@ -85,15 +86,16 @@ func CreateOrUpdateNodeNetworkState(
 ) error {
 	if nns == nil {
 		var err error
-		nns, err = InitializeNodeNetworkState(cli, node)
+		nns, err = InitializeNodeNetworkState(ctx, cli, node)
 		if err != nil {
 			return err
 		}
 	}
-	return UpdateCurrentState(cli, nns, observedState, versions)
+	return UpdateCurrentState(ctx, cli, nns, observedState, versions)
 }
 
 func UpdateCurrentState(
+	ctx context.Context,
 	cli client.Client,
 	nodeNetworkState *nmstatev1beta1.NodeNetworkState,
 	observedState shared.State,
@@ -110,7 +112,7 @@ func UpdateCurrentState(
 	nodeNetworkState.Status.CurrentState = observedState
 	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
 
-	err := cli.Status().Update(context.Background(), nodeNetworkState)
+	err := cli.Status().Update(ctx, nodeNetworkState)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return errors.Wrap(err, "Request object not found, could have been deleted after reconcile request")
@@ -134,7 +136,7 @@ func ExecuteCommand(command string, arguments ...string) (string, error) {
 	return string(bytes.Trim(stdout.Bytes(), "\n")), nil
 }
 
-func rollback(cli client.Client, probes []probe.Probe, cause error) error {
+func rollback(ctx context.Context, cli client.Client, probes []probe.Probe, cause error) error {
 	message := fmt.Sprintf("rolling back desired state configuration: %s", cause)
 	err := nmstatectl.Rollback()
 	if err != nil {
@@ -142,21 +144,21 @@ func rollback(cli client.Client, probes []probe.Probe, cause error) error {
 	}
 
 	// wait for system to settle after rollback
-	probesErr := probe.Run(cli, probes)
+	probesErr := probe.Run(ctx, cli, probes)
 	if probesErr != nil {
 		return errors.Wrap(errors.Wrap(probesErr, "failed running probes after rollback"), message)
 	}
 	return errors.New(message)
 }
 
-func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, error) {
+func ApplyDesiredState(ctx context.Context, cli client.Client, desiredState shared.State) (string, error) {
 	if string(desiredState.Raw) == "" {
 		return "Ignoring empty desired state", nil
 	}
 
 	// Before apply we get the probes that are working fine, they should be
 	// working fine after apply
-	probes := probe.Select(cli)
+	probes := probe.Select(ctx, cli)
 
 	// Rollback before Apply to remove pending checkpoints (for example handler pod restarted
 	// before Commit)
@@ -167,9 +169,9 @@ func ApplyDesiredState(cli client.Client, desiredState shared.State) (string, er
 		return setOutput, err
 	}
 
-	err = probe.Run(cli, probes)
+	err = probe.Run(ctx, cli, probes)
 	if err != nil {
-		return "", rollback(cli, probes, errors.Wrap(err, "failed runnig probes after network changes"))
+		return "", rollback(ctx, cli, probes, errors.Wrap(err, "failed runnig probes after network changes"))
 	}
 
 	commitOutput, err := nmstatectl.Commit()

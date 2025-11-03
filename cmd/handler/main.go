@@ -419,7 +419,7 @@ func lockHandler() (*flock.Flock, error) {
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
 	handlerLock := flock.New(lockFilePath)
 	interval := 5 * time.Second
-	err := wait.PollUntilContextCancel(context.TODO(), interval, true, /*immediate*/
+	err := wait.PollUntilContextCancel(context.Background(), interval, true, /*immediate*/
 		func(context.Context) (done bool, err error) {
 			locked, err := handlerLock.TryLock()
 			if err != nil {

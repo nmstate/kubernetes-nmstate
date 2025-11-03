@@ -119,15 +119,15 @@ func checkAPIServerConnectivity(ctx context.Context) (bool, error) {
 }
 
 func nodeReadinessCondition(cli client.Client, _ time.Duration) wait.ConditionWithContextFunc {
-	return func(context.Context) (bool, error) {
-		return checkNodeReadiness(cli)
+	return func(ctx context.Context) (bool, error) {
+		return checkNodeReadiness(ctx, cli)
 	}
 }
 
-func checkNodeReadiness(cli client.Client) (bool, error) {
+func checkNodeReadiness(ctx context.Context, cli client.Client) (bool, error) {
 	nodeName := environment.NodeName()
 	node := corev1.Node{}
-	err := cli.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+	err := cli.Get(ctx, types.NamespacedName{Name: nodeName}, &node)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed retrieving pod's node %s", nodeName)
 	}
@@ -242,7 +242,7 @@ func runDNS(_ client.Client, timeout time.Duration) (bool, error) {
 				return d.DialContext(ctx, network, net.JoinHostPort(runningNameServer.String(), "53"))
 			},
 		}
-		ctx, cancel := context.WithTimeout(context.TODO(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
 
 		// NMstate CRD should have always PROBE_DNS_HOST defaulting to root-servers.net but if that
 		// for any reason is not the case, here we are safeguarding against missing env variable.
@@ -268,7 +268,7 @@ func runDNS(_ client.Client, timeout time.Duration) (bool, error) {
 
 // Select will return the external connectivity probes that are working (ping and dns) and
 // the internal connectivity probes
-func Select(cli client.Client) []Probe {
+func Select(ctx context.Context, cli client.Client) []Probe {
 	probes := []Probe{}
 	externalConnectivityProbes := []Probe{
 		{
@@ -284,7 +284,7 @@ func Select(cli client.Client) []Probe {
 	}
 
 	for _, p := range externalConnectivityProbes {
-		err := wait.PollUntilContextTimeout(context.TODO(), time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
+		err := wait.PollUntilContextTimeout(ctx, time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
 		if err == nil {
 			probes = append(probes, p)
 		} else {
@@ -309,7 +309,7 @@ func Select(cli client.Client) []Probe {
 
 // Run will run the externalConnectivityProbes and also some internal
 // kubernetes cluster connectivity and node readiness probes
-func Run(cli client.Client, probes []Probe) error {
+func Run(ctx context.Context, cli client.Client, probes []Probe) error {
 	currentState, err := nmstatectl.Show()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve currentState at runProbes")
@@ -317,7 +317,7 @@ func Run(cli client.Client, probes []Probe) error {
 
 	for _, p := range probes {
 		log.Info(fmt.Sprintf("Running '%s' probe", p.name))
-		err = wait.PollUntilContextTimeout(context.TODO(), time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
+		err = wait.PollUntilContextTimeout(ctx, time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
 		if err != nil {
 			return errors.Wrapf(
 				err,

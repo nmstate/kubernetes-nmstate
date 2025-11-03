@@ -18,6 +18,8 @@ limitations under the License.
 package selectors
 
 import (
+	"context"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -63,7 +65,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller selectors", func() {
 			fakeClient := fake.NewClientBuilder().WithRuntimeObjects(objs...).Build()
 			selectorsRequest := NewFromPolicy(fakeClient, &policy)
 
-			unmatchedNodeLabels, err := selectorsRequest.UnmatchedNodeLabels(expectedNode)
+			unmatchedNodeLabels, err := selectorsRequest.UnmatchedNodeLabels(context.TODO(), expectedNode)
 			Expect(err).To(c.MatchResult)
 			Expect(unmatchedNodeLabels).To(Equal(c.UnmatchedNodeLabels))
 
