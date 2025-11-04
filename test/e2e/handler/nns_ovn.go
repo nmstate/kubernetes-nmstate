@@ -19,7 +19,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -36,8 +35,10 @@ var _ = Describe("[nns] NNS OVN bridge mappings", func() {
 
 	BeforeEach(func() {
 		for _, node := range nodes {
-			Expect(nodeBridgeMappings(node)).NotTo(
-				ContainElement(state.PhysicalNetworks{Name: networkName, Bridge: bridgeName}))
+			Eventually(nodeBridgeMappings(node)).
+				WithTimeout(ReadTimeout).
+				WithPolling(ReadInterval).
+				ShouldNot(ContainElement(state.PhysicalNetworks{Name: networkName, Bridge: bridgeName}))
 		}
 
 		By("provisioning some bridge mappings ...")
@@ -55,24 +56,31 @@ var _ = Describe("[nns] NNS OVN bridge mappings", func() {
 		policyconditions.WaitForAvailableTestPolicy()
 
 		for _, node := range nodes {
-			Expect(nodeBridgeMappings(node)).NotTo(
-				ContainElement(state.PhysicalNetworks{Name: networkName, Bridge: bridgeName}))
+			Eventually(nodeBridgeMappings(node)).
+				WithTimeout(ReadTimeout).
+				WithPolling(ReadInterval).
+				ShouldNot(ContainElement(state.PhysicalNetworks{Name: networkName, Bridge: bridgeName}))
+
 		}
 	})
 
 	It("are listed", func() {
 		for _, node := range nodes {
-			Expect(nodeBridgeMappings(node)).To(
-				ContainElement(state.PhysicalNetworks{Name: networkName, Bridge: bridgeName}))
+			Eventually(nodeBridgeMappings(node)).
+				WithTimeout(ReadTimeout).
+				WithPolling(ReadInterval).
+				Should(ContainElement(state.PhysicalNetworks{Name: networkName, Bridge: bridgeName}))
 		}
 	})
 })
 
-func nodeBridgeMappings(nodeName string) ([]state.PhysicalNetworks, error) {
-	var physicalNetworks []state.PhysicalNetworks
-	mappingsData := ovnBridgeMappings(nodeName)
-	if err := json.Unmarshal([]byte(mappingsData), &physicalNetworks); err != nil {
-		return nil, fmt.Errorf("failed to unmarshall bridge mappings for node %q: %w", nodeName, err)
+func nodeBridgeMappings(nodeName string) func() ([]state.PhysicalNetworks, error) {
+	return func() ([]state.PhysicalNetworks, error) {
+		var physicalNetworks []state.PhysicalNetworks
+		mappingsData := ovnBridgeMappings(nodeName)
+		if err := json.Unmarshal([]byte(mappingsData), &physicalNetworks); err != nil {
+			return nil, err
+		}
+		return physicalNetworks, nil
 	}
-	return physicalNetworks, nil
 }
