@@ -8,6 +8,7 @@
 # automation/check-patch.e2e-k8s.sh
 
 teardown() {
+    ./cluster/kubectl.sh get nmstate -A -o yaml > $ARTIFACTS/nmstate.yaml || true
     ./cluster/kubectl.sh get pod -n nmstate -o wide > $ARTIFACTS/kubernetes-nmstate.pod.list.txt || true
     for pod in $(./cluster/kubectl.sh get pod -n nmstate -o name); do
         pod_name=$(echo $pod|sed "s#pod/##")
