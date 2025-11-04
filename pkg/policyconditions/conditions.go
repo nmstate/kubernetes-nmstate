@@ -162,6 +162,15 @@ func SetPolicyFailedToConfigure(conditions *nmstate.ConditionList, message strin
 	)
 }
 
+func SetPolicyStatusUnknown(conditions *nmstate.ConditionList) {
+	log.Info("SetPolicyStatusUnknown")
+	for _, conditionType := range nmstate.NodeNetworkConfigurationPolicyConditionTypes {
+		conditions.Set(
+			conditionType,
+			corev1.ConditionUnknown,
+			"", "")
+	}
+}
 func IsProgressing(conditions *nmstate.ConditionList) bool {
 	progressingCondition := conditions.Find(nmstate.NodeNetworkConfigurationPolicyConditionProgressing)
 	if progressingCondition == nil {
@@ -328,6 +337,7 @@ func Reset(ctx context.Context, cli client.Client, policyKey types.NamespacedNam
 			return errors.Wrap(err, "getting policy failed")
 		}
 		policy.Status.Conditions = nmstate.ConditionList{}
+		SetPolicyStatusUnknown(&policy.Status.Conditions)
 		err = cli.Status().Update(ctx, policy)
 		if err != nil {
 			if apierrors.IsConflict(err) {

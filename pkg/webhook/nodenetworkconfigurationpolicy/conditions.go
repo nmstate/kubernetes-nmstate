@@ -18,11 +18,11 @@ limitations under the License.
 package nodenetworkconfigurationpolicy
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
 )
 
 func deleteConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
@@ -30,14 +30,7 @@ func deleteConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 }
 
 func setConditionsUnknown(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
-	unknownConditions := shared.ConditionList{}
-	for _, conditionType := range shared.NodeNetworkConfigurationPolicyConditionTypes {
-		unknownConditions.Set(
-			conditionType,
-			corev1.ConditionUnknown,
-			"", "")
-	}
-	policy.Status.Conditions = unknownConditions
+	policyconditions.SetPolicyStatusUnknown(&policy.Status.Conditions)
 }
 
 func atEmptyConditions(policy *nmstatev1.NodeNetworkConfigurationPolicy) bool {
