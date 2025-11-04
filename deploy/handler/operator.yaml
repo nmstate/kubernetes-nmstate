@@ -508,6 +508,7 @@ webhooks:
   - name: nodenetworkconfigurationpolicies-mutate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
     sideEffects: None
+    failurePolicy: Ignore
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -521,6 +522,7 @@ webhooks:
   - name: nodenetworkconfigurationpolicies-status-mutate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
     sideEffects: None
+    failurePolicy: Ignore
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
@@ -534,6 +536,7 @@ webhooks:
   - name: nodenetworkconfigurationpolicies-timestamp-mutate.nmstate.io
     admissionReviewVersions: ["v1", "v1beta1"]
     sideEffects: None
+    failurePolicy: Ignore
     clientConfig:
       service:
         name: {{template "handlerPrefix" .}}nmstate-webhook
