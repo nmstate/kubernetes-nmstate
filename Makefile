@@ -117,6 +117,15 @@ check: lint vet whitespace-check gofmt-check promlint-check
 
 format: whitespace-format gofmt
 
+pre-push:
+	@echo "Running pre-push CI checks..."
+	IMAGE_REPO=nmstate HANDLER_PULL_POLICY=IfNotPresent OPERATOR_PULL_POLICY=IfNotPresent $(MAKE) check-gen || exit 1
+	$(MAKE) check || exit 1
+	$(MAKE) test/unit || exit 1
+	$(MAKE) test/unit/api || exit 1
+	@# Check if bundle file was modified with only timestamp changes and rollback if so
+	@echo "✅ All pre-push checks passed!"
+
 vet:
 	GOFLAGS=-mod=mod go vet ./...
 
@@ -169,7 +178,18 @@ check-manifests: generate
 	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
-	git diff --exit-code -I'^    createdAt: ' -s || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
+	@git diff --exit-code -s bundle ':(exclude)bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml'; \
+	if [ $$? -eq 0 ]; then \
+	  echo "No changes besides csv found."; \
+	  git diff --exit-code --ignore-matching-lines='^.*createdAt: "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"' bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml; \
+	  if [ $$? -eq 0 ]; then \
+		echo "No changes besides createdAt: found."; \
+		git checkout bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml; \
+	  else \
+		echo "Bundle file has changes beyond timestamp. Run 'make bundle' and commit the changes"; \
+		exit 1; \
+	  fi \
+	fi
 
 generate: gen-k8s gen-crds gen-rbac
 
@@ -267,6 +287,7 @@ olm-push: bundle-push index-push
 	all \
 	check \
 	format \
+	pre-push \
 	vet \
 	handler \
 	push-handler \
