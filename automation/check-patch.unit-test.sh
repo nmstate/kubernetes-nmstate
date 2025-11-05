@@ -12,6 +12,7 @@ main() {
     cd ${TMP_PROJECT_PATH}
     export ARCHS="amd64 arm64"
     make all
+    make test-reporter
     make UNIT_TEST_ARGS="--output-dir=$ARTIFACTS --no-color --compilers=2" test/unit
 }
 

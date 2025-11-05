@@ -1,4 +1,4 @@
-name: Future-Job slack bot
+name: Latest-Job slack bot
 
 on:
   schedule:
@@ -7,11 +7,11 @@ on:
 
 defaults:
   run:
-    working-directory: ./automation/nmstate-future-reporter
+    working-directory: ./automation/nmstate-latest-reporter
 
 jobs:
   build-and-run-slack-bot:
-    name: Future-job slack bot
+    name: Latest-job slack bot
     if: github.repository == 'nmstate/kubernetes-nmstate'
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +20,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: ./automation/nmstate-future-reporter/go.mod
+          go-version-file: ./automation/nmstate-latest-reporter/go.mod
 
       - name: Build
         run: go build -v .
@@ -29,4 +29,4 @@ jobs:
         env:
           NMSTATE_SLACK_WEBHOOK_URL: ${{ secrets.NMSTATE_SLACK_WEBHOOK_URL }}
         run: |
-          ./nmstate-future-reporter
+          ./nmstate-latest-reporter

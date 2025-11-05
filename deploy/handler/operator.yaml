@@ -350,7 +350,7 @@ spec:
           {"effect": "PreferredDuringScheduling"}
     spec:
       # Needed to force vlan filtering config with iproute commands until
-      # future nmstate/NM is in place.
+      # latest nmstate/NM is in place.
       # https://github.com/nmstate/nmstate/pull/440
       hostNetwork: true
       # Use Default to get node's DNS configuration [1]

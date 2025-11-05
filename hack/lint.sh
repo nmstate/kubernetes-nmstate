@@ -22,3 +22,7 @@ ${golangci_cmd} run --timeout 20m0s
 	cd api
 	${golangci_cmd} run --timeout 20m0s --config ../.golangci.yml
 )
+(
+	cd automation/nmstate-latest-reporter
+    ${golangci_cmd} run --timeout 20m0s --config ../../.golangci.yml --path-prefix=automation/nmstate-latest-reporter
+)

@@ -1,10 +1,10 @@
-# kubernetes-nmstate Future Periodic Job Reporter
+# kubernetes-nmstate Latest Periodic Job Reporter
 
-This is a Slack bot that reports the status of the `periodic-knmstate-e2e-handler-k8s-future` periodic job.
+This is a Slack bot that reports the status of the `periodic-knmstate-e2e-handler-k8s-latest` periodic job.
 
 ## Overview
 
-The reporter runs daily via GitHub Actions and posts a message to a configured Slack channel with the status of the latest periodic job run. It monitors the periodic job that runs the future version of nmstate against kubernetes-nmstate.
+The reporter runs daily via GitHub Actions and posts a message to a configured Slack channel with the status of the latest periodic job run. It monitors the periodic job that runs the latest version of nmstate against kubernetes-nmstate.
 
 ## Configuration
 
@@ -40,14 +40,14 @@ The workflow can be manually triggered using the GitHub Actions `workflow_dispat
 To run the reporter locally:
 
 ```bash
-cd automation/nmstate-future-reporter
+cd automation/nmstate-latest-reporter
 
 # Set required environment variable
 export NMSTATE_SLACK_WEBHOOK_URL="your-webhook-url"
 
 # Build and run
 go build -v .
-./nmstate-future-reporter
+./nmstate-latest-reporter
 ```
 
 ### Testing with Fake Reports
@@ -56,10 +56,10 @@ You can generate fake reports for testing without fetching real Prow data:
 
 ```bash
 # Generate a fake success report
-./nmstate-future-reporter -fake success
+./nmstate-latest-reporter -fake success
 
 # Generate a fake failure report
-./nmstate-future-reporter -fake failure
+./nmstate-latest-reporter -fake failure
 ```
 
 This is useful for:
@@ -70,7 +70,7 @@ This is useful for:
 ## Prow Job Details
 
 The reporter monitors the following periodic job:
-- **Job Name**: `periodic-knmstate-e2e-handler-k8s-future`
+- **Job Name**: `periodic-knmstate-e2e-handler-k8s-latest`
 - **Schedule**: Daily at 2:00 AM UTC
-- **Purpose**: Tests kubernetes-nmstate with the future version of nmstate
-- **Storage**: `gs://kubevirt-prow/logs/periodic-knmstate-e2e-handler-k8s-future`
+- **Purpose**: Tests kubernetes-nmstate with the latest version of nmstate
+- **Storage**: `gs://kubevirt-prow/logs/periodic-knmstate-e2e-handler-k8s-latest`

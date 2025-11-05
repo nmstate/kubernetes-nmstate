@@ -1,6 +1,7 @@
 # Temporary Build Files
 build/_output
 build/_test
+*nmstate-future-reporter
 
 # Cloned kubevirtci
 _kubevirtci
