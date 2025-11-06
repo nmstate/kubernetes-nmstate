@@ -88,10 +88,8 @@ func bondUpWithEth1AndEth2(bondName string) nmstate.State {
   type: bond
   state: up
   ipv4:
-    address:
-    - ip: 10.10.10.10
-      prefix-length: 24
     enabled: true
+    dhcp: true
   link-aggregation:
     mode: balance-rr
     options:
@@ -108,10 +106,8 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   type: bond
   state: up
   ipv4:
-    address:
-    - ip: 10.10.10.10
-      prefix-length: 24
     enabled: true
+    dhcp: true
   link-aggregation:
     mode: balance-rr
     options:
@@ -123,10 +119,8 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   type: vlan
   state: up
   ipv4:
-    address:
-    - ip: 10.102.10.10
-      prefix-length: 24
     enabled: true
+    dhcp: true
   vlan:
     base-iface: %s
     id: 102
