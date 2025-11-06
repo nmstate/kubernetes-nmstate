@@ -54,6 +54,12 @@ interfaces:
 			IfaceNames: []string{"eth1"},
 		},
 		{
+			Name:       "Per interface IPv4 forwarding",
+			FileName:   "per-interface-ipv4-forwarding.yaml",
+			PolicyName: "per-interface-ipv4-forwarding",
+			IfaceNames: []string{"eth1"},
+		},
+		{
 			Name:       "Linux bridge",
 			FileName:   "linux-bridge.yaml",
 			PolicyName: "linux-bridge",
