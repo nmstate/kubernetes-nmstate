@@ -428,6 +428,8 @@ spec:
               mountPath: /var/k8s_nmstate
             - name: ovs-socket
               mountPath: /run/openvswitch
+            - name: systemd-network
+              mountPath: /etc/systemd/network
           securityContext:
             privileged: true
           readinessProbe:
@@ -460,6 +462,10 @@ spec:
         - name: ovs-socket
           hostPath:
             path: /run/openvswitch
+        - name: systemd-network
+          hostPath:
+            path: /etc/systemd/network
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service
