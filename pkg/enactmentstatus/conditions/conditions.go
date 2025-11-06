@@ -105,16 +105,6 @@ func (ec *EnactmentConditions) NotifyPending(ctx context.Context) {
 	}
 }
 
-func (ec *EnactmentConditions) Reset(ctx context.Context) {
-	ec.logger.Info("Reset")
-	err := ec.updateEnactmentConditions(ctx, func(conditionList *nmstate.ConditionList, message string) {
-		*conditionList = nil
-	}, "")
-	if err != nil {
-		ec.logger.Error(err, "Error resetting conditions")
-	}
-}
-
 func (ec *EnactmentConditions) updateEnactmentConditions(
 	ctx context.Context,
 	conditionsSetter func(*nmstate.ConditionList, string),
