@@ -367,11 +367,17 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 		if err != nil {
 			return nil, errors.Wrapf(err, "error waitting for NodeNetworkConfigurationEnactment: %+v", enactmentInstance)
 		}
-	} else {
-		enactmentConditions := enactmentconditions.New(r.APIClient, enactmentKey)
-		enactmentConditions.Reset(ctx)
+		if err := enactmentstatus.Update(ctx, r.APIClient, enactmentKey, func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
+			*status = enactmentInstance.Status
+		}); err != nil {
+			return nil, errors.Wrapf(err, "error updating NodeNetworkConfigurationEnactment.Status on creation: %+v", enactmentInstance)
+		}
+		// Refresh nnce instance
+		err := r.APIClient.Get(ctx, enactmentKey, &enactmentInstance)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting created enactment after updating status: %+v", enactmentInstance)
+		}
 	}
-
 	return &enactmentInstance, nil
 }
 
