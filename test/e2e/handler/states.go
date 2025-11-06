@@ -244,18 +244,6 @@ func interfaceAbsent(iface string) nmstate.State {
 `, iface))
 }
 
-func ifaceIPDisabled(iface string) nmstate.State {
-	return nmstate.NewState(fmt.Sprintf(`interfaces:
-    - name: %s
-      type: ethernet
-      state: up
-      ipv4:
-        enabled: false
-      ipv6:
-        enabled: false
-`, iface))
-}
-
 func vlanUpWithStaticIP(iface, ipAddress string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
