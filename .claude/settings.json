@@ -1,0 +1,19 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "Before executing any git push command, you MUST first run the /ci-checks slash command to verify all CI checks pass. If any checks fail, do NOT proceed with the push and instead report the failures to the user."
+          },
+          {
+            "type": "prompt",
+            "prompt": "Before executing any git commit command, you MUST ensure the command includes the -s or --signoff flag for DCO (Developer Certificate of Origin) sign-off. If the commit command does not include -s or --signoff, you must add it. This is a project requirement per CLAUDE.md."
+          }
+        ]
+      }
+    ]
+  }
+}
