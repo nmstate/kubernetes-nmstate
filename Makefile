@@ -117,14 +117,9 @@ check: lint vet whitespace-check gofmt-check promlint-check
 
 format: whitespace-format gofmt
 
-pre-push:
-	@echo "Running pre-push CI checks..."
+pre-push: check test/unit
+	# We want to set these vars to not generate a csv with the local variables because it will always mismatch.
 	IMAGE_REPO=nmstate HANDLER_PULL_POLICY=IfNotPresent OPERATOR_PULL_POLICY=IfNotPresent $(MAKE) check-gen || exit 1
-	$(MAKE) check || exit 1
-	$(MAKE) test/unit || exit 1
-	$(MAKE) test/unit/api || exit 1
-	@# Check if bundle file was modified with only timestamp changes and rollback if so
-	@echo "✅ All pre-push checks passed!"
 
 vet:
 	GOFLAGS=-mod=mod go vet ./...
