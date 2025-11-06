@@ -109,7 +109,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
   state: up
   ipv4:
     address:
-    - ip: 10.10.10.10
+    - ip: 10.10.10.11
       prefix-length: 24
     enabled: true
   link-aggregation:
