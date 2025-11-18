@@ -237,6 +237,34 @@ func vrfAbsent(vrfID string) nmstate.State {
 `, vrfID))
 }
 
+// vrfRouteWithVrfName creates a VRF interface and a route using vrf-name instead of table-id.
+func vrfRouteWithVrfName(vrfID, vrfName, iface, ipAddress, destIPAddress, prefixLen, nextHopIPAddress string) nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+    - name: %s
+      type: vrf
+      state: up
+      vrf:
+        port: [%s]
+        route-table-id: %s
+    - name: %s
+      type: ethernet
+      state: up
+      ipv4:
+        address:
+        - ip: %s
+          prefix-length: %s
+        dhcp: false
+        enabled: true
+routes:
+    config:
+    - destination: %s
+      metric: 150
+      next-hop-address: %s
+      next-hop-interface: %s
+      vrf-name: %s
+`, vrfName, iface, vrfID, iface, ipAddress, prefixLen, destIPAddress, nextHopIPAddress, iface, vrfName))
+}
+
 func interfaceAbsent(iface string) nmstate.State {
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
     - name: %s
