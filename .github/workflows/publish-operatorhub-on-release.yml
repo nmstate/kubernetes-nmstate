@@ -9,6 +9,13 @@ on:
         description: 'Release tag to publish (e.g., v0.88.0)'
         required: true
         type: string
+      community_operators_midstream_repo_org:
+        description: 'Midstream repostiory for opening a PR'
+        required: true
+        type: choice
+        default: 'openshift-networking'
+        options:
+          - openshift-networking
 
 env:
   OPERATOR_NAME: kubernetes-nmstate-operator
@@ -107,7 +114,7 @@ jobs:
           git checkout -b "$BRANCH_NAME"
           git add operators/${{ env.OPERATOR_NAME }}/${{ steps.version.outputs.version }}
           git commit -m "operator ${{ env.OPERATOR_NAME }} (${{ steps.version.outputs.version }})"
-          git push origin "$BRANCH_NAME"
+          git push "https://github.com/${{ github.event.inputs.community_operators_midstream_repo_org }}/community-operators.git" "$BRANCH_NAME"
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Create Pull Request to community-operators
@@ -238,7 +245,7 @@ jobs:
           git checkout -b "$BRANCH_NAME"
           git add operators/${{ env.OPERATOR_NAME }}/${{ steps.version.outputs.version }}
           git commit -m "operator ${{ env.OPERATOR_NAME }} (${{ steps.version.outputs.version }})"
-          git push origin "$BRANCH_NAME"
+          git push "https://github.com/${{ github.event.inputs.community_operators_midstream_repo_org }}/community-operators.git" "$BRANCH_NAME"
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Create Pull Request to community-operators-prod
