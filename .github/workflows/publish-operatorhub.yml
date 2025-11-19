@@ -1,0 +1,188 @@
+name: Publish to OperatorHub
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Operator version to publish (e.g., 0.88.0)'
+        required: true
+        type: string
+      operator_hub_repo:
+        description: 'Target OperatorHub repository'
+        required: true
+        type: choice
+        default: 'community-operators'
+        options:
+          - community-operators
+          - community-operators-prod
+      create_pr:
+        description: 'Create PR to OperatorHub (disable for testing)'
+        required: true
+        type: boolean
+        default: true
+
+env:
+  OPERATOR_NAME: kubernetes-nmstate-operator
+  IMAGE_REGISTRY: quay.io
+  IMAGE_REPO: nmstate
+  HANDLER_IMAGE_NAME: kubernetes-nmstate-handler
+  OPERATOR_IMAGE_NAME: kubernetes-nmstate-operator
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kubernetes-nmstate
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Version must be in semver format (e.g., 0.88.0)"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Set image tags
+        run: |
+          echo "HANDLER_IMAGE_TAG=v${{ env.VERSION }}" >> $GITHUB_ENV
+          echo "OPERATOR_IMAGE_TAG=v${{ env.VERSION }}" >> $GITHUB_ENV
+
+      - name: Generate bundle
+        run: |
+          make bundle VERSION=${{ env.VERSION }} \
+            HANDLER_IMAGE_TAG=v${{ env.VERSION }} \
+            OPERATOR_IMAGE_TAG=v${{ env.VERSION }} \
+            HANDLER_PULL_POLICY=IfNotPresent \
+            OPERATOR_PULL_POLICY=IfNotPresent
+
+      - name: Validate bundle
+        run: |
+          make bundle VERSION=${{ env.VERSION }}
+          # Verify bundle was generated correctly
+          if [ ! -f "bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml" ]; then
+            echo "Error: CSV file not found"
+            exit 1
+          fi
+
+      - name: Display bundle info
+        run: |
+          echo "Bundle contents:"
+          ls -la bundle/
+          echo "CSV file:"
+          head -n 50 bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml
+
+      - name: Checkout OperatorHub repository
+        if: ${{ github.event.inputs.create_pr == 'true' }}
+        uses: actions/checkout@v4
+        with:
+          repository: k8s-operatorhub/${{ github.event.inputs.operator_hub_repo }}
+          path: operatorhub-repo
+          token: ${{ secrets.OPERATORHUB_TOKEN }}
+
+      - name: Configure git
+        if: ${{ github.event.inputs.create_pr == 'true' }}
+        run: |
+          git config --global user.name "kubernetes-nmstate-bot"
+          git config --global user.email "nmstate-bot@users.noreply.github.com"
+
+      - name: Create operator version directory
+        if: ${{ github.event.inputs.create_pr == 'true' }}
+        run: |
+          OPERATOR_DIR="operatorhub-repo/operators/${{ env.OPERATOR_NAME }}/${{ env.VERSION }}"
+          mkdir -p "$OPERATOR_DIR"
+
+          # Copy bundle manifests and metadata
+          cp -r bundle/manifests "$OPERATOR_DIR/"
+          cp -r bundle/metadata "$OPERATOR_DIR/"
+
+          # Copy bundle.Dockerfile if it exists
+          if [ -f "bundle.Dockerfile" ]; then
+            cp bundle.Dockerfile "$OPERATOR_DIR/"
+          fi
+
+          echo "OPERATOR_DIR=$OPERATOR_DIR" >> $GITHUB_ENV
+
+      - name: Create PR branch
+        if: ${{ github.event.inputs.create_pr == 'true' }}
+        working-directory: operatorhub-repo
+        run: |
+          BRANCH_NAME="kubernetes-nmstate-${{ env.VERSION }}"
+          git checkout -b "$BRANCH_NAME"
+          git add operators/${{ env.OPERATOR_NAME }}/${{ env.VERSION }}
+          git commit -m "operator ${{ env.OPERATOR_NAME }} (${{ env.VERSION }})"
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Push branch
+        if: ${{ github.event.inputs.create_pr == 'true' }}
+        working-directory: operatorhub-repo
+        run: |
+          git push origin "${{ env.BRANCH_NAME }}"
+
+      - name: Create Pull Request
+        if: ${{ github.event.inputs.create_pr == 'true' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.OPERATORHUB_TOKEN }}
+          script: |
+            const { data: pr } = await github.rest.pulls.create({
+              owner: 'k8s-operatorhub',
+              repo: '${{ github.event.inputs.operator_hub_repo }}',
+              title: 'operator ${{ env.OPERATOR_NAME }} (${{ env.VERSION }})',
+              head: '${{ env.BRANCH_NAME }}',
+              base: 'main',
+              body: `## kubernetes-nmstate-operator version ${{ env.VERSION }}
+
+            This PR adds version ${{ env.VERSION }} of the kubernetes-nmstate-operator to OperatorHub.
+
+            ### Changes
+            - Operator version: ${{ env.VERSION }}
+            - Handler image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.HANDLER_IMAGE_NAME }}:v${{ env.VERSION }}
+            - Operator image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.OPERATOR_IMAGE_NAME }}:v${{ env.VERSION }}
+
+            ### Checklist
+            - [x] Bundle manifests generated and validated
+            - [x] Image tags updated to v${{ env.VERSION }}
+            - [x] Pull policy set to IfNotPresent
+
+            This PR was automatically generated by the kubernetes-nmstate release process.
+
+            /kind operator
+            /area provider/kubernetes`
+            });
+
+            core.info(`Pull request created: ${pr.html_url}`);
+            core.setOutput('pr_url', pr.html_url);
+            core.setOutput('pr_number', pr.number);
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: operator-bundle-${{ env.VERSION }}
+          path: |
+            bundle/
+            bundle.Dockerfile
+          retention-days: 30
+
+      - name: Job summary
+        run: |
+          echo "## OperatorHub Publishing Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: ${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Repository**: ${{ github.event.inputs.operator_hub_repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Handler Image**: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.HANDLER_IMAGE_NAME }}:v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Operator Image**: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.OPERATOR_IMAGE_NAME }}:v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ github.event.inputs.create_pr }}" = "true" ]; then
+            echo "- **Status**: PR created to OperatorHub" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Status**: Bundle generated (PR creation disabled)" >> $GITHUB_STEP_SUMMARY
+          fi
