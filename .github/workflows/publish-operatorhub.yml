@@ -141,11 +141,11 @@ jobs:
           github-token: ${{ secrets.OPERATORHUB_TOKEN }}
           script: |
             const { data: pr } = await github.rest.pulls.create({
-              owner: 'k8s-operatorhub',
-              repo: '${{ github.event.inputs.operator_hub_repo }}',
+              owner: '${{ github.event.inputs.community_operators_midstream_repo_org}}',
+              repo: 'community-operators',
               title: 'operator ${{ env.OPERATOR_NAME }} (${{ env.VERSION }})',
               head: '${{ env.BRANCH_NAME }}',
-              base: 'main',
+              base: 'k8s-operatorhub/${{ github.event.inputs.operator_hub_repo }}:main',
               body: `## kubernetes-nmstate-operator version ${{ env.VERSION }}
 
             This PR adds version ${{ env.VERSION }} of the kubernetes-nmstate-operator to OperatorHub.
