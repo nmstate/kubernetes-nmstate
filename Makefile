@@ -250,7 +250,7 @@ vendor:
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
 	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 
 # Build the bundle image.
