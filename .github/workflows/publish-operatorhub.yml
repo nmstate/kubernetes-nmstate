@@ -132,7 +132,7 @@ jobs:
         if: ${{ github.event.inputs.create_pr == 'true' }}
         working-directory: operatorhub-repo
         run: |
-          git push "https://github.com/${{ github.event.inputs.community_operators_midstream_repo_org }}/community-operators.git" "${{ env.BRANCH_NAME }}"
+          git push --force "https://github.com/${{ github.event.inputs.community_operators_midstream_repo_org }}/community-operators.git" "${{ env.BRANCH_NAME }}"
 
       - name: Create Pull Request
         if: ${{ github.event.inputs.create_pr == 'true' }}
