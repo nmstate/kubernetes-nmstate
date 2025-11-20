@@ -118,8 +118,6 @@ check: lint vet whitespace-check gofmt-check promlint-check
 format: whitespace-format gofmt
 
 pre-push: check test/unit
-	# We want to set these vars to not generate a csv with the local variables because it will always mismatch.
-	IMAGE_REPO=nmstate HANDLER_PULL_POLICY=IfNotPresent OPERATOR_PULL_POLICY=IfNotPresent $(MAKE) check-gen || exit 1
 
 vet:
 	GOFLAGS=-mod=mod go vet ./...
@@ -173,18 +171,7 @@ check-manifests: generate
 	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
-	@git diff --exit-code -s bundle ':(exclude)bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml'; \
-	if [ $$? -eq 0 ]; then \
-	  echo "No changes besides csv found."; \
-	  git diff --exit-code --ignore-matching-lines='^.*createdAt: "[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z"' bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml; \
-	  if [ $$? -eq 0 ]; then \
-		echo "No changes besides createdAt: found."; \
-		git checkout bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml; \
-	  else \
-		echo "Bundle file has changes beyond timestamp. Run 'make bundle' and commit the changes"; \
-		exit 1; \
-	  fi \
-	fi
+	git diff --exit-code -I'^    createdAt: ' -s || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
 
 generate: gen-k8s gen-crds gen-rbac
 
