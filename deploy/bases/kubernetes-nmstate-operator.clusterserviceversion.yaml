@@ -6,7 +6,7 @@ metadata:
     categories: Networking
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
-    containerImage: quay.io/nmstate/kubernetes-nmstate-operator:latest
+    containerImage: $OPERATOR_IMAGE
     createdAt: "2021-11-24 16:05:00"
     support: nmstate.io
     repository: https://github.com/nmstate/kubernetes-nmstate
