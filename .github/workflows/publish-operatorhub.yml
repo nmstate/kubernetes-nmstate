@@ -1,15 +1,13 @@
 name: Publish to OperatorHub
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Operator version to publish (e.g., 0.88.0)'
-        required: false
-        type: string
       tag:
-        description: 'Existing release tag to publish (e.g., v0.88.0)'
-        required: false
+        description: 'Release tag to publish (e.g., v0.88.0)'
+        required: true
         type: string
       create_pr:
         description: 'Create PR to OperatorHub (disable for testing)'
@@ -31,18 +29,6 @@ jobs:
       contents: write
       pull-requests: write
     steps:
-      - name: Sanity check
-        if: ${{ github.event.inputs.tag == '' && github.event.inputs.version == '' }}
-        run: |
-          echo "You need to specify one parameter, version or a tag."
-          exit 1
-
-      - name: Sanity check
-        if: ${{ github.event.inputs.tag != '' && github.event.inputs.version != '' }}
-        run: |
-          echo "You must not specify both version and a tag, only one of them."
-          exit 1
-
       - name: Checkout kubernetes-nmstate
         uses: actions/checkout@v4
         with:
@@ -54,7 +40,6 @@ jobs:
           go-version-file: 'go.mod'
 
       - name: Extract version from tag
-        if: ${{ github.event.inputs.tag != '' }}
         id: version
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
@@ -72,16 +57,6 @@ jobs:
             exit 1
           fi
 
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Validate version format
-        if: ${{ github.event.inputs.version != '' }}
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Version must be in semver format (e.g., 0.88.0)"
-            exit 1
-          fi
           echo "VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Set image tags
@@ -119,7 +94,7 @@ jobs:
           head -n 50 bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml
 
       - name: Checkout OperatorHub repository
-        if: ${{ github.event.inputs.create_pr == 'true' }}
+        if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
         uses: actions/checkout@v4
         with:
           repository: k8s-operatorhub/community-operators
@@ -127,13 +102,13 @@ jobs:
           token: ${{ secrets.OPERATORHUB_TOKEN }}
 
       - name: Configure git
-        if: ${{ github.event.inputs.create_pr == 'true' }}
+        if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
         run: |
           git config --global user.name "kubernetes-nmstate-bot"
           git config --global user.email "nmstate-bot@users.noreply.github.com"
 
       - name: Create operator version directory
-        if: ${{ github.event.inputs.create_pr == 'true' }}
+        if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
         run: |
           OPERATOR_DIR="operatorhub-repo/operators/${{ env.OPERATOR_NAME }}/${{ env.VERSION }}"
           mkdir -p "$OPERATOR_DIR"
@@ -150,7 +125,7 @@ jobs:
           echo "OPERATOR_DIR=$OPERATOR_DIR" >> $GITHUB_ENV
 
       - name: Create and push PR branch
-        if: ${{ github.event.inputs.create_pr == 'true' }}
+        if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
         working-directory: operatorhub-repo
         run: |
           BRANCH_NAME="kubernetes-nmstate-${{ env.VERSION }}"
@@ -161,7 +136,7 @@ jobs:
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
 
       - name: Prepare PR body
-        if: ${{ github.event.inputs.create_pr == 'true' }}
+        if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
         run: |
           cat > /tmp/pr-body.md <<'EOF'
           ## kubernetes-nmstate-operator version ${{ env.VERSION }}
@@ -185,7 +160,7 @@ jobs:
           EOF
 
       - name: Create Pull Request
-        if: ${{ github.event.inputs.create_pr == 'true' }}
+        if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.OPERATORHUB_TOKEN }}
         run: |
@@ -217,7 +192,7 @@ jobs:
           echo "- **Handler Image**: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.HANDLER_IMAGE_NAME }}:v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Operator Image**: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.OPERATOR_IMAGE_NAME }}:v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ github.event.inputs.create_pr }}" = "true" ]; then
+          if [ "${{ github.event_name }}" = "release" ] || [ "${{ github.event.inputs.create_pr }}" = "true" ]; then
             echo "- **Status**: PR created to OperatorHub - ${{ env.PR_URL }}" >> $GITHUB_STEP_SUMMARY
           else
             echo "- **Status**: Bundle generated (PR creation disabled)" >> $GITHUB_STEP_SUMMARY
