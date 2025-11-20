@@ -249,7 +249,8 @@ vendor:
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
-	cp -r $(MANIFEST_BASES_DIR) $(MANIFESTS_DIR)/bases
+	mkdir -p $(MANIFESTS_DIR)/bases
+	cat $(MANIFEST_BASES_DIR)/kubernetes-nmstate-operator.clusterserviceversion.yaml | OPERATOR_IMAGE=$(OPERATOR_IMAGE) envsubst > $(MANIFESTS_DIR)/bases/kubernetes-nmstate-operator.clusterserviceversion.yaml
 	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 
