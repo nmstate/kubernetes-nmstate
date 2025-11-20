@@ -89,26 +89,46 @@ jobs:
           echo "HANDLER_IMAGE_TAG=v${{ env.VERSION }}" >> $GITHUB_ENV
           echo "OPERATOR_IMAGE_TAG=v${{ env.VERSION }}" >> $GITHUB_ENV
 
-      - name: Generate bundle
+      - name: Generate and validate bundle
         run: |
+          # "make bundle" target runs generation and validations together
           make bundle VERSION=${{ env.VERSION }} \
             HANDLER_IMAGE_TAG=v${{ env.VERSION }} \
             OPERATOR_IMAGE_TAG=v${{ env.VERSION }} \
             HANDLER_PULL_POLICY=IfNotPresent \
             OPERATOR_PULL_POLICY=IfNotPresent
 
-      - name: Validate bundle
+      - name: Validate versions in the bundle
         run: |
-          make bundle VERSION=${{ env.VERSION }}
+          CSV_FILE="bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml"
+
           # Verify bundle was generated correctly
-          if [ ! -f "bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml" ]; then
+          if [ ! -f "$CSV_FILE" ]; then
             echo "Error: CSV file not found"
             exit 1
           fi
 
-          # Check that images reference the correct version
-          if ! grep -q "${{ steps.version.outputs.tag }}" "bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml"; then
-            echo "Warning: CSV may not reference the correct image tag"
+          # Verify containerImage annotation has correct version
+          EXPECTED_CONTAINER_IMAGE="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.OPERATOR_IMAGE_NAME }}:v${{ env.VERSION }}"
+          ACTUAL_CONTAINER_IMAGE=$(grep "containerImage:" "$CSV_FILE" | awk '{print $2}')
+
+          if [ "$ACTUAL_CONTAINER_IMAGE" != "$EXPECTED_CONTAINER_IMAGE" ]; then
+            echo "Error: containerImage annotation mismatch"
+            echo "  Expected: $EXPECTED_CONTAINER_IMAGE"
+            echo "  Actual: $ACTUAL_CONTAINER_IMAGE"
+            exit 1
+          fi
+
+          # Verify operator deployment image has correct version
+          if ! grep -q "image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.OPERATOR_IMAGE_NAME }}:v${{ env.VERSION }}" "$CSV_FILE"; then
+            echo "Error: Operator deployment image does not reference v${{ env.VERSION }}"
+            exit 1
+          fi
+
+          # Verify handler image has correct version
+          if ! grep -q "image: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_REPO }}/${{ env.HANDLER_IMAGE_NAME }}:v${{ env.VERSION }}" "$CSV_FILE"; then
+            echo "Error: Handler image does not reference v${{ env.VERSION }}"
+            exit 1
           fi
 
       - name: Display bundle info
@@ -116,7 +136,7 @@ jobs:
           echo "Bundle contents:"
           ls -la bundle/
           echo "CSV file:"
-          head -n 50 bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml
+          cat bundle/manifests/${{ env.OPERATOR_NAME }}.clusterserviceversion.yaml
 
       - name: Checkout OperatorHub repository
         if: ${{ github.event.inputs.create_pr == 'true' }}
