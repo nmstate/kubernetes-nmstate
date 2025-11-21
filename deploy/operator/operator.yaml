@@ -88,6 +88,7 @@ spec:
             limits:
               cpu: "500m"
               memory: "1Gi"
+          terminationMessagePolicy: FallbackToLogsOnError
           env:
             - name: WATCH_NAMESPACE
               value: ""
