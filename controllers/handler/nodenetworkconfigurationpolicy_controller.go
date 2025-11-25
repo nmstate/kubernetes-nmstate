@@ -107,10 +107,13 @@ type NodeNetworkConfigurationPolicyReconciler struct {
 	client.Client
 	// APIClient controller-runtime client without cache, it will be used at
 	// places where whole cluster resources need to be retrieved but not cached.
-	APIClient client.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
-	Recorder  record.EventRecorder
+	APIClient      client.Client
+	Log            logr.Logger
+	Scheme         *runtime.Scheme
+	Recorder       record.EventRecorder
+	InitialBackoff time.Duration
+	MaximumBackoff time.Duration
+	MaxRetries     int
 }
 
 func init() {
@@ -238,7 +241,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 			return ctrl.Result{}, err
 		}
 
-		if enactmentInstance.Status.RetryCount[generationKey] >= RetriesUntilFail {
+		if enactmentInstance.Status.RetryCount[generationKey] >= r.MaxRetries {
 			enactmentConditions.NotifyFailedToConfigure(ctx, errmsg)
 			if r.Recorder != nil {
 				r.Recorder.Event(instance,
@@ -246,7 +249,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 					ReconcileFailed,
 					fmt.Errorf(
 						"reconciliation of enactment %q has failed after %d retries",
-						enactmentInstance.Name, RetriesUntilFail).Error())
+						enactmentInstance.Name, r.MaxRetries).Error())
 			}
 			return ctrl.Result{}, nil
 		}
@@ -255,7 +258,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 			fmt.Errorf("failed to reconcile NodeNetworkConfigurationPolicy on node %s. Retrying %d/%d",
 				nodeName,
 				enactmentInstance.Status.RetryCount[generationKey]+1,
-				RetriesUntilFail),
+				r.MaxRetries),
 		)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -303,7 +306,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 		mgr,
 		controller.Options{
 			Reconciler:  r,
-			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Second, time.Second*MaximumTimeBackoff),
+			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](r.InitialBackoff, r.MaximumBackoff),
 		})
 	if err != nil {
 		return errors.Wrap(err, "failed to create NodeNetworkConfigurationPolicy controller")

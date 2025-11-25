@@ -68,6 +68,11 @@ type NMStateSpec struct {
 	// +kubebuilder:validation:Enum=info;debug
 	// +optional
 	LogLevel shared.LogLevel `json:"logLevel,omitempty"`
+	// RetryConfiguration is an optional configuration for NNCP retry and backoff strategy.
+	// If RetryConfiguration is specified, the handler will use the config defined here instead of its default values.
+	// +kubebuilder:default:={}
+	// +optional
+	RetryConfiguration NMStateRetryConfiguration `json:"retryConfiguration,omitempty"`
 }
 
 type SelfSignConfiguration struct {
@@ -100,6 +105,26 @@ type NMStateMetricsConfiguration struct {
 	// +kubebuilder:default:=":8089"
 	// +optional
 	BindAddress string `json:"bindAddress,omitempty"`
+}
+
+type NMStateRetryConfiguration struct {
+	// InitialBackoff is the initial retry delay when applying network configuration fails.
+	// The backoff will increase exponentially up to MaximumBackoff.
+	// +kubebuilder:default:="1s"
+	// +optional
+	InitialBackoff metav1.Duration `json:"initialBackoff,omitempty"`
+	// MaximumBackoff is the maximum retry delay when applying network configuration fails.
+	// The exponential backoff will not exceed this value.
+	// +kubebuilder:default:="30s"
+	// +optional
+	MaximumBackoff metav1.Duration `json:"maximumBackoff,omitempty"`
+	// MaxRetries is the maximum number of retry attempts before marking the policy as failed.
+	// After this many retries, the NNCE will be marked as FailedToConfigure.
+	// +kubebuilder:default:=5
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
+	// +optional
+	MaxRetries int `json:"maxRetries,omitempty"`
 }
 
 // NMStateStatus defines the observed state of NMState
