@@ -251,9 +251,6 @@ github.com/openshift/cluster-network-operator/pkg/render
 # github.com/peterbourgon/diskv v2.0.1+incompatible
 ## explicit
 github.com/peterbourgon/diskv
-# github.com/phoracek/networkmanager-go v0.3.0
-## explicit; go 1.15
-github.com/phoracek/networkmanager-go/src
 # github.com/pkg/errors v0.9.1
 ## explicit
 github.com/pkg/errors
