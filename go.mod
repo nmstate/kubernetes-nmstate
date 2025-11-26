@@ -42,7 +42,6 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
-	github.com/godbus/dbus/v5 v5.0.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
@@ -107,6 +106,7 @@ require (
 )
 
 require (
+	github.com/godbus/dbus/v5 v5.0.4
 	github.com/gofrs/flock v0.8.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0-00010101000000-000000000000
@@ -114,7 +114,6 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/openshift/api v0.0.0-20241206130210-831aaaf072a9
 	github.com/openshift/cluster-network-operator v0.0.0-20250121144718-0dfccc148f81
-	github.com/phoracek/networkmanager-go v0.3.0
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.21.1
 	github.com/spf13/pflag v1.0.6-0.20210604193023-d5e0c0615ace

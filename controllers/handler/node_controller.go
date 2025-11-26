@@ -36,10 +36,10 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nm"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
-	networkmanager "github.com/phoracek/networkmanager-go/src"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -128,28 +128,14 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 		r.Log.Error(err, "failed retrieving handler nmstate version")
 	}
 
-	hostNmstateVersion := ""
-	nmClient, err := networkmanager.NewClientPrivate()
-
+	hostNetworkManagerVersion, err := nm.Version()
 	if err != nil {
-		r.Log.Error(err, "failed retrieving new client")
-
-		return &nmstate.DependencyVersions{
-			HandlerNmstateVersion: handlerNmstateVersion,
-			HostNmstateVersion:    hostNmstateVersion,
-		}
-	}
-
-	defer nmClient.Close()
-
-	hostNmstateVersion, err = nmClient.GetVersion()
-	if err != nil {
-		r.Log.Error(err, "error retrieving host nmstate version")
+		r.Log.Error(err, "error retrieving host Networkmanager version")
 	}
 
 	return &nmstate.DependencyVersions{
-		HandlerNmstateVersion: handlerNmstateVersion,
-		HostNmstateVersion:    hostNmstateVersion,
+		HandlerNmstateVersion:     handlerNmstateVersion,
+		HostNetworkManagerVersion: hostNetworkManagerVersion,
 	}
 }
 

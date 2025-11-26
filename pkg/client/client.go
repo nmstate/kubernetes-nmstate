@@ -38,9 +38,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
 
-var (
-	log = logf.Log.WithName("client")
-)
+var log = logf.Log.WithName("client")
 
 const (
 	defaultGwProbeTimeout = 120 * time.Second
@@ -52,8 +50,8 @@ const (
 )
 
 type DependencyVersions struct {
-	HandlerNmstateVersion string
-	HostNmstateVersion    string
+	HandlerNmstateVersion     string
+	HostNetworkManagerVersion string
 }
 
 func InitializeNodeNetworkState(ctx context.Context, cli client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
@@ -107,7 +105,7 @@ func UpdateCurrentState(
 	}
 
 	nodeNetworkState.Status.HandlerNmstateVersion = versions.HandlerNmstateVersion
-	nodeNetworkState.Status.HostNetworkManagerVersion = versions.HostNmstateVersion
+	nodeNetworkState.Status.HostNetworkManagerVersion = versions.HostNetworkManagerVersion
 
 	nodeNetworkState.Status.CurrentState = observedState
 	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
