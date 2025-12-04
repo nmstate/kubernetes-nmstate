@@ -11,13 +11,14 @@ RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=false go build -
 FROM quay.io/centos/centos:stream9
 
 ARG NMSTATE_SOURCE=distro
+ARG BACKEND=nmstate
 
 COPY --from=build /manager /usr/local/bin/manager
-COPY --from=build /build/install-nmstate.${NMSTATE_SOURCE}.sh install-nmstate.sh
+COPY --from=build /build/install-${BACKEND}.${NMSTATE_SOURCE}.sh install-${BACKEND}.sh
 
-RUN ./install-nmstate.sh && \
+RUN ./install-$BACKEND.sh && \
     dnf install -b -y iproute iputils && \
-    rm ./install-nmstate.sh && \
+    rm ./install-$BACKEND.sh && \
     dnf clean all
 
 ENTRYPOINT ["manager"]
