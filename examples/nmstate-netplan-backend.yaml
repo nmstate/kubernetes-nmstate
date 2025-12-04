@@ -1,0 +1,32 @@
+---
+# Example NMState CR using netplan backend
+apiVersion: nmstate.io/v1
+kind: NMState
+metadata:
+  name: nmstate
+spec:
+  # Select netplan as the backend (default is "nmstate")
+  backend: netplan
+
+  # Standard NMState configuration options still apply
+  nodeSelector:
+    kubernetes.io/os: linux
+
+  # Log level for debugging
+  logLevel: debug
+
+  # Optional: Tolerations for handler DaemonSet
+  tolerations:
+    - operator: Exists
+
+  # Optional: Affinity for handler DaemonSet
+  # affinity:
+  #   nodeAffinity:
+  #     preferredDuringSchedulingIgnoredDuringExecution:
+  #       - weight: 1
+  #         preference:
+  #           matchExpressions:
+  #             - key: node-role.kubernetes.io/worker
+  #               operator: In
+  #               values:
+  #                 - ""
