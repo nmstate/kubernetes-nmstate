@@ -35,9 +35,9 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nm"
-	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	corev1 "k8s.io/api/core/v1"
@@ -76,9 +76,12 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
-	if err != nil {
-		return ctrl.Result{}, err
+	currentState := shared.NewState(currentStateRaw)
+	if backend.Name() == backend.BackendNMState {
+		currentState, err = state.FilterOut(currentState)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
@@ -123,6 +126,9 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
+	if backend.Name() == backend.BackendNetplan {
+		return &nmstate.DependencyVersions{}
+	}
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
 		r.Log.Error(err, "failed retrieving handler nmstate version")
@@ -141,7 +147,8 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
-	r.nmstatectlShow = nmstatectl.Show
+	// Use backend-aware Show() instead of hardcoded nmstatectl
+	r.nmstatectlShow = backend.Show
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.
