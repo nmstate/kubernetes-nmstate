@@ -48,7 +48,6 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
@@ -63,6 +62,7 @@ type NMStateReconciler struct {
 	APIClient   client.Client
 	Log         logr.Logger
 	Scheme      *runtime.Scheme
+	IsOpenShift bool
 	deployments []client.ObjectKey
 	daemonSets  []client.ObjectKey
 }
@@ -173,18 +173,14 @@ func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx cont
 		return errors.Wrap(err, "failed applying Handler")
 	}
 
-	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
-
 	_, errUIPluginPathExists := os.Stat(filepath.Join(names.ManifestDir, "kubernetes-nmstate", "openshift", "ui-plugin"))
-	if err == nil && isOpenShift && errUIPluginPathExists == nil {
-		if err = r.applyOpenshiftUIPlugin(ctx, instance); err != nil {
+	if r.IsOpenShift && errUIPluginPathExists == nil {
+		if err := r.applyOpenshiftUIPlugin(ctx, instance); err != nil {
 			return errors.Wrap(err, "failed applying UI Plugin")
 		}
-		if err = r.patchOpenshiftConsolePlugin(ctx); err != nil {
+		if err := r.patchOpenshiftConsolePlugin(ctx); err != nil {
 			return errors.Wrap(err, "failed enabling the plugin in cluster's console")
 		}
-	} else if err != nil {
-		r.Log.Info("Warning: could not determine if running on OpenShift")
 	}
 	return nil
 }
@@ -198,6 +194,8 @@ func (r *NMStateReconciler) applyNamespace(ctx context.Context, instance *nmstat
 	data := render.MakeRenderData()
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+	data.Data["IsOpenShift"] = r.IsOpenShift
+
 	return r.renderAndApply(ctx, instance, data, "namespace", false)
 }
 
@@ -206,12 +204,7 @@ func (r *NMStateReconciler) applyNetworkPolicies(ctx context.Context, instance *
 	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
 	data.Data["OperatorNamespace"] = os.Getenv("OPERATOR_NAMESPACE")
 	data.Data["PluginNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-
-	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
-	if err != nil {
-		return err
-	}
-	data.Data["IsOpenShift"] = isOpenShift
+	data.Data["IsOpenShift"] = r.IsOpenShift
 
 	return r.renderAndApply(ctx, instance, data, "netpol", true)
 }
@@ -227,11 +220,7 @@ func (r *NMStateReconciler) applyRBAC(ctx context.Context, instance *nmstatev1.N
 		return errors.Wrap(err, "failed checking if cluster-reader ClusterRole exists")
 	}
 
-	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
-	if err != nil {
-		return err
-	}
-	data.Data["IsOpenShift"] = isOpenShift
+	data.Data["IsOpenShift"] = r.IsOpenShift
 
 	return r.renderAndApply(ctx, instance, data, "rbac", true)
 }
@@ -367,12 +356,7 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["MetricsConfiguration"] = metricsConfig
 	data.Data["LogLevelHandlerCommandArg"] = logLevelHandlerCommandArg
 	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
-
-	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
-	if err != nil {
-		return err
-	}
-	data.Data["IsOpenShift"] = isOpenShift
+	data.Data["IsOpenShift"] = r.IsOpenShift
 
 	return r.renderAndApply(ctx, instance, data, "handler", true)
 }
@@ -417,13 +401,9 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 }
 
 func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error {
-	isOpenShift, err := cluster.IsOpenShift(r.APIClient)
-	if err != nil {
-		return err
-	}
 	// We are no longer using cert-manager at openshift, let's remove it
-	if isOpenShift {
-		err = r.Client.Delete(ctx, &appsv1.Deployment{
+	if r.IsOpenShift {
+		err := r.Client.Delete(ctx, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: os.Getenv("HANDLER_NAMESPACE"),
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
