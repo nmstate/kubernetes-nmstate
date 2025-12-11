@@ -260,6 +260,62 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 	}
 }
 
+// Returns initialBackoff, maximumBackoff, maxRetries, and error with the following logic:
+// default values if unset, config if set, default values if error or validations failed.
+func getRetryConfiguration(
+	ctx context.Context, apiClient client.Client,
+) (initialBackoff, maximumBackoff time.Duration, maxRetries int, err error) {
+	const (
+		defaultInitialBackoff = 1 * time.Second
+		defaultMaximumBackoff = 30 * time.Second
+		defaultMaxRetries     = 5
+	)
+
+	nmstateList := &nmstatev1.NMStateList{}
+	err = apiClient.List(ctx, nmstateList)
+	if err != nil {
+		return defaultInitialBackoff, defaultMaximumBackoff, defaultMaxRetries, errors.Wrap(err, "failed to list NMState CRs")
+	}
+
+	// No NMState CR -> use defaults
+	if len(nmstateList.Items) == 0 {
+		return defaultInitialBackoff, defaultMaximumBackoff, defaultMaxRetries, nil
+	}
+
+	// Use the first NMState CR (there should only be one in a typical deployment)
+	nmstate := nmstateList.Items[0]
+	retryConfig := nmstate.Spec.RetryConfiguration
+
+	initialBackoff = defaultInitialBackoff
+	if retryConfig.InitialBackoff.Duration != 0 {
+		initialBackoff = retryConfig.InitialBackoff.Duration
+	}
+
+	maximumBackoff = defaultMaximumBackoff
+	if retryConfig.MaximumBackoff.Duration != 0 {
+		maximumBackoff = retryConfig.MaximumBackoff.Duration
+	}
+
+	maxRetries = defaultMaxRetries
+	if retryConfig.MaxRetries != 0 {
+		maxRetries = retryConfig.MaxRetries
+	}
+
+	if initialBackoff >= maximumBackoff {
+		setupLog.Info("Invalid retry configuration: initialBackoff must be less than maximumBackoff, using defaults",
+			"initialBackoff", initialBackoff, "maximumBackoff", maximumBackoff)
+		return defaultInitialBackoff, defaultMaximumBackoff, defaultMaxRetries, nil
+	}
+
+	if initialBackoff <= 0 || maximumBackoff <= 0 {
+		setupLog.Info("Invalid retry configuration: backoff durations must be positive, using defaults",
+			"initialBackoff", initialBackoff, "maximumBackoff", maximumBackoff)
+		return defaultInitialBackoff, defaultMaximumBackoff, defaultMaxRetries, nil
+	}
+
+	return initialBackoff, maximumBackoff, maxRetries, nil
+}
+
 func setupHandlerControllers(mgr manager.Manager) error {
 	setupLog.Info("Creating Node controller")
 	if err := (&controllers.NodeReconciler{
@@ -278,13 +334,27 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		return err
 	}
 
+	setupLog.Info("Retrieving retry configuration from NMState CR")
+	initialBackoff, maximumBackoff, maxRetries, err := getRetryConfiguration(context.Background(), apiClient)
+	if err != nil {
+		setupLog.Error(err, "failed to retrieve retry configuration, using defaults")
+		// Use default values if we can't retrieve the configuration
+		initialBackoff = 1 * time.Second
+		maximumBackoff = 30 * time.Second
+		maxRetries = 5
+	}
+	setupLog.Info("Using retry configuration", "initialBackoff", initialBackoff, "maximumBackoff", maximumBackoff, "maxRetries", maxRetries)
+
 	setupLog.Info("Creating NodeNetworkConfigurationPolicy controller")
 	if err = (&controllers.NodeNetworkConfigurationPolicyReconciler{
-		Client:    mgr.GetClient(),
-		APIClient: apiClient,
-		Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
-		Scheme:    mgr.GetScheme(),
-		Recorder:  mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
+		Client:         mgr.GetClient(),
+		APIClient:      apiClient,
+		Log:            ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
+		Scheme:         mgr.GetScheme(),
+		Recorder:       mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
+		InitialBackoff: initialBackoff,
+		MaximumBackoff: maximumBackoff,
+		MaxRetries:     maxRetries,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 		return err
