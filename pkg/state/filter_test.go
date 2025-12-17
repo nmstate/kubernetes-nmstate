@@ -326,3 +326,188 @@ dns-resolver:
 		})
 	})
 })
+
+var _ = Describe("CountRoutes", func() {
+	Context("when there are no routes", func() {
+		It("should return empty map", func() {
+			state := nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+`)
+			counts, err := CountRoutes(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(counts).To(BeEmpty())
+		})
+	})
+
+	Context("when there are only IPv4 dynamic routes", func() {
+		It("should count them correctly", func() {
+			state := nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+routes:
+  config: []
+  running:
+  - destination: 0.0.0.0/0
+    metric: 102
+    next-hop-address: 192.168.66.2
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: 192.168.66.0/24
+    metric: 100
+    next-hop-address: ""
+    next-hop-interface: eth1
+    table-id: 254
+`)
+			counts, err := CountRoutes(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(counts).To(HaveLen(1))
+			Expect(counts[RouteKey{IPStack: "ipv4", Type: "dynamic"}]).To(Equal(2))
+		})
+	})
+
+	Context("when there are only IPv6 dynamic routes", func() {
+		It("should count them correctly", func() {
+			state := nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+routes:
+  config: []
+  running:
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: ::/0
+    metric: 100
+    next-hop-address: fe80::1
+    next-hop-interface: eth1
+    table-id: 254
+`)
+			counts, err := CountRoutes(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(counts).To(HaveLen(1))
+			Expect(counts[RouteKey{IPStack: "ipv6", Type: "dynamic"}]).To(Equal(2))
+		})
+	})
+
+	Context("when there are mixed IPv4 and IPv6 routes", func() {
+		It("should count them by IP stack", func() {
+			state := nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+routes:
+  config: []
+  running:
+  - destination: 0.0.0.0/0
+    metric: 102
+    next-hop-address: 192.168.66.2
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: fd10:244::8c40/128
+    metric: 1024
+    next-hop-address: ""
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: ::/0
+    metric: 100
+    next-hop-address: fe80::1
+    next-hop-interface: eth1
+    table-id: 254
+`)
+			counts, err := CountRoutes(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(counts).To(HaveLen(2))
+			Expect(counts[RouteKey{IPStack: "ipv4", Type: "dynamic"}]).To(Equal(1))
+			Expect(counts[RouteKey{IPStack: "ipv6", Type: "dynamic"}]).To(Equal(2))
+		})
+	})
+
+	Context("when there are static and dynamic routes", func() {
+		It("should distinguish static routes correctly", func() {
+			state := nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+routes:
+  config:
+  - destination: 10.0.0.0/8
+    metric: 100
+    next-hop-address: 192.168.66.1
+    next-hop-interface: eth1
+    table-id: 254
+  running:
+  - destination: 0.0.0.0/0
+    metric: 102
+    next-hop-address: 192.168.66.2
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: 10.0.0.0/8
+    metric: 100
+    next-hop-address: 192.168.66.1
+    next-hop-interface: eth1
+    table-id: 254
+`)
+			counts, err := CountRoutes(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(counts).To(HaveLen(2))
+			Expect(counts[RouteKey{IPStack: "ipv4", Type: "static"}]).To(Equal(1))
+			Expect(counts[RouteKey{IPStack: "ipv4", Type: "dynamic"}]).To(Equal(1))
+		})
+	})
+
+	Context("when there are static and dynamic routes for both IPv4 and IPv6", func() {
+		It("should count all combinations correctly", func() {
+			state := nmstate.NewState(`interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+routes:
+  config:
+  - destination: 10.0.0.0/8
+    metric: 100
+    next-hop-address: 192.168.66.1
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: 2001:db8::/32
+    metric: 100
+    next-hop-address: fe80::1
+    next-hop-interface: eth1
+    table-id: 254
+  running:
+  - destination: 0.0.0.0/0
+    metric: 102
+    next-hop-address: 192.168.66.2
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: 10.0.0.0/8
+    metric: 100
+    next-hop-address: 192.168.66.1
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: ::/0
+    metric: 100
+    next-hop-address: fe80::1
+    next-hop-interface: eth1
+    table-id: 254
+  - destination: 2001:db8::/32
+    metric: 100
+    next-hop-address: fe80::1
+    next-hop-interface: eth1
+    table-id: 254
+`)
+			counts, err := CountRoutes(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(counts).To(HaveLen(4))
+			Expect(counts[RouteKey{IPStack: "ipv4", Type: "static"}]).To(Equal(1))
+			Expect(counts[RouteKey{IPStack: "ipv4", Type: "dynamic"}]).To(Equal(1))
+			Expect(counts[RouteKey{IPStack: "ipv6", Type: "static"}]).To(Equal(1))
+			Expect(counts[RouteKey{IPStack: "ipv6", Type: "dynamic"}]).To(Equal(1))
+		})
+	})
+})

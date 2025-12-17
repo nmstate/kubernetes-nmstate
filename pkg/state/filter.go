@@ -18,6 +18,8 @@ limitations under the License.
 package state
 
 import (
+	"strings"
+
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
@@ -36,6 +38,76 @@ func init() {
 
 func FilterOut(currentState shared.State) (shared.State, error) {
 	return filterOut(currentState)
+}
+
+// CountInterfacesByType parses the state and returns a map of interface type to count.
+func CountInterfacesByType(currentState shared.State) (map[string]int, error) {
+	var state rootState
+	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
+		return nil, err
+	}
+
+	counts := make(map[string]int)
+	for _, iface := range state.Interfaces {
+		if iface.Type != "" {
+			counts[iface.Type]++
+		}
+	}
+	return counts, nil
+}
+
+// RouteKey represents the grouping key for route metrics.
+type RouteKey struct {
+	IPStack string // "ipv4" or "ipv6"
+	Type    string // "static" or "dynamic"
+}
+
+// CountRoutes parses the state and returns a map of RouteKey to count.
+// Routes are categorized by:
+// - IP stack: determined by presence of ":" in destination (ipv6) or not (ipv4)
+// - Type: "static" if route exists in routes.config, "dynamic" if only in routes.running
+func CountRoutes(currentState shared.State) (map[RouteKey]int, error) {
+	var state rootState
+	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
+		return nil, err
+	}
+
+	counts := make(map[RouteKey]int)
+	if state.Routes == nil {
+		return counts, nil
+	}
+
+	// Build a set of static route destinations for quick lookup
+	staticRoutes := make(map[string]struct{})
+	for _, route := range state.Routes.Config {
+		staticRoutes[route.Destination] = struct{}{}
+	}
+
+	// Count running routes by IP stack and type
+	for _, route := range state.Routes.Running {
+		ipStack := getIPStack(route.Destination)
+		routeType := "dynamic"
+		if _, isStatic := staticRoutes[route.Destination]; isStatic {
+			routeType = "static"
+		}
+
+		key := RouteKey{
+			IPStack: ipStack,
+			Type:    routeType,
+		}
+		counts[key]++
+	}
+
+	return counts, nil
+}
+
+// getIPStack determines the IP stack from a destination CIDR.
+// Returns "ipv6" if the destination contains ":", otherwise "ipv4".
+func getIPStack(destination string) string {
+	if strings.Contains(destination, ":") {
+		return "ipv6"
+	}
+	return "ipv4"
 }
 
 func filterOutRoutes(routes []routeState, filteredInterfaces []interfaceState) []routeState {
