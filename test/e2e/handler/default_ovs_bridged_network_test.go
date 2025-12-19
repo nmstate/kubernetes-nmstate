@@ -200,6 +200,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 			}
 
 			BeforeEach(func() {
+				// Ensure ovsWrongIPPolicy doesn't exist before the test runs
+				// This prevents stale enactments from previous test runs causing cleanup failures
+				deletePolicy(ovsWrongIPPolicy)
+
 				node = nodes[0]
 
 				Byf("Check %s is the default route interface and has dynamic address", primaryNic)
