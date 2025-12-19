@@ -351,6 +351,29 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 		return nil, errors.Wrap(err, "failed getting enactment ")
 	}
 	if err != nil && apierrors.IsNotFound(err) {
+		// Re-fetch policy from API server and re-check selector before creating enactment
+		// to prevent race condition where cached policy data might be stale
+		freshPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		if err := r.APIClient.Get(ctx, types.NamespacedName{Name: policy.Name}, freshPolicy); err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("Policy no longer exists, skipping enactment creation")
+				return nil, errors.Wrapf(err, "enactment policy %v does not exist", policy.Name)
+			}
+			return nil, errors.Wrap(err, "failed re-fetching policy from API server")
+		}
+
+		// Re-check node selector with fresh policy data
+		policySelectors := selectors.NewFromPolicy(r.APIClient, freshPolicy)
+		unmatchingLabels, err := policySelectors.UnmatchedNodeLabels(ctx, nodeName)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed re-checking node selectors")
+		}
+		if len(unmatchingLabels) > 0 {
+			return nil, fmt.Errorf(
+				"node selector no longer matches after re-check, skipping enactment creation, non-matching labels: %v",
+				unmatchingLabels)
+		}
+
 		log.Info("creating enactment")
 		// Fetch the Node instance
 		nodeInstance := &corev1.Node{}
@@ -373,7 +396,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 			return nil, errors.Wrapf(err, "error updating NodeNetworkConfigurationEnactment.Status on creation: %+v", enactmentInstance)
 		}
 		// Refresh nnce instance
-		err := r.APIClient.Get(ctx, enactmentKey, &enactmentInstance)
+		err = r.APIClient.Get(ctx, enactmentKey, &enactmentInstance)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting created enactment after updating status: %+v", enactmentInstance)
 		}
