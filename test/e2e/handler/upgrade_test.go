@@ -36,6 +36,10 @@ import (
 var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
 	Context("when v1beta1 is populated", func() {
 		BeforeEach(func() {
+			// Ensure TestPolicy doesn't exist before creating v1beta1 policy
+			// This prevents "already exists" errors if a previous test's cleanup was incomplete
+			deletePolicy(TestPolicy)
+
 			maxUnavailableIntOrString := intstr.FromString(maxUnavailable)
 			policy := nmstatev1beta1.NodeNetworkConfigurationPolicy{
 				ObjectMeta: metav1.ObjectMeta{
