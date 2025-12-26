@@ -50,12 +50,25 @@ function push() {
         make IMAGE_REGISTRY=$DEV_IMAGE_REGISTRY manifests push
         return 0
     fi
-    # Fetch registry port that can be used to upload images to the local kubevirtci cluster
-    registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
-    if [[ "${KUBEVIRT_PROVIDER}" =~ ^(okd|ocp)-.*$ ]]; then \
-            registry=localhost:$(./cluster/cli.sh ports --container-name=cluster registry | tr -d '\r')
+
+    # KIND providers handle registry differently than k8s-* providers
+    if [[ "${KUBEVIRT_PROVIDER}" =~ ^kind-.*$ ]]; then
+        # For KIND, the registry port is determined by the provider config
+        # Default is 5000 for the default cluster name, 5001 for alternate names
+        if [[ "${CLUSTER_NAME:-kind-${KUBEVIRT_PROVIDER#kind-}}" == "kind-${KUBEVIRT_PROVIDER#kind-}" ]]; then
+            registry_port=5000
+        else
+            registry_port=5001
+        fi
+        registry=localhost:${registry_port}
     else
-        registry=localhost:$(./cluster/cli.sh ports registry | tr -d '\r')
+        # Fetch registry port that can be used to upload images to the local kubevirtci cluster
+        registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
+        if [[ "${KUBEVIRT_PROVIDER}" =~ ^(okd|ocp)-.*$ ]]; then \
+                registry=localhost:$(./cluster/cli.sh ports --container-name=cluster registry | tr -d '\r')
+        else
+            registry=localhost:$(./cluster/cli.sh ports registry | tr -d '\r')
+        fi
     fi
 
     # Build new handler and operator image from local sources and push it to the kubevirtci cluster
