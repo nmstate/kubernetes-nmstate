@@ -29,6 +29,7 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -51,6 +52,7 @@ import (
 const ReadTimeout = 180 * time.Second
 const ReadInterval = 1 * time.Second
 const TestPolicy = "test-policy"
+const EnactmentConsistencyTimeout = 30 * time.Second
 
 var (
 	bridgeCounter  = 0
@@ -141,6 +143,11 @@ func setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(
 	//       to start so we are sure that conditions are reset and we can
 	//       check them correctly
 	time.Sleep(1 * time.Second)
+
+	// Wait for enactment consistency to prevent race conditions where handlers
+	// on non-matching nodes might briefly create enactments before realizing
+	// the selector doesn't match their node.
+	waitForEnactmentConsistency(name, nodeSelector)
 }
 
 func setDesiredStateWithPolicyWithoutNodeSelector(name string, desiredState nmstate.State) {
@@ -155,6 +162,52 @@ func setDesiredStateWithPolicy(name string, desiredState nmstate.State) {
 func setDesiredStateWithPolicyAndCapture(name string, desiredState nmstate.State, capture map[string]string) {
 	runAtWorkers := map[string]string{"node-role.kubernetes.io/worker": ""}
 	setDesiredStateWithPolicyAndCaptureAndNodeSelectorEventually(name, desiredState, capture, runAtWorkers)
+}
+
+// nodeMatchesSelector checks if a node's labels match the given selector.
+// An empty selector matches all nodes.
+func nodeMatchesSelector(nodeName string, nodeSelector map[string]string) bool {
+	if len(nodeSelector) == 0 {
+		return true
+	}
+
+	node := corev1.Node{}
+	err := testenv.Client.Get(context.TODO(), types.NamespacedName{Name: nodeName}, &node)
+	if err != nil {
+		return false
+	}
+
+	for key, value := range nodeSelector {
+		if nodeValue, exists := node.Labels[key]; !exists || nodeValue != value {
+			return false
+		}
+	}
+	return true
+}
+
+// waitForEnactmentConsistency waits for enactments to be in a consistent state:
+// - Nodes matching the selector should have enactments (or be progressing)
+// - Nodes NOT matching the selector should NOT have enactments
+// This prevents race conditions where handlers on non-matching nodes might
+// temporarily create enactments before realizing the selector doesn't match.
+func waitForEnactmentConsistency(policyName string, nodeSelector map[string]string) {
+	By("Waiting for enactment consistency across all nodes")
+	for _, node := range nodes {
+		enactmentKey := nmstate.EnactmentKey(node, policyName)
+		if nodeMatchesSelector(node, nodeSelector) {
+			// For matching nodes, we expect an enactment to exist
+			// (it will be created by the handler)
+			continue
+		}
+		// For non-matching nodes, wait for enactment to NOT exist
+		// This handles the race where a handler might briefly create an enactment
+		// before realizing the selector doesn't match
+		Eventually(func() bool {
+			err := testenv.Client.Get(context.TODO(), enactmentKey, &nmstatev1beta1.NodeNetworkConfigurationEnactment{})
+			return apierrors.IsNotFound(err)
+		}, EnactmentConsistencyTimeout, ReadInterval).Should(BeTrue(),
+			fmt.Sprintf("Enactment %s should not exist for non-matching node %s", enactmentKey.Name, node))
+	}
 }
 
 func updateDesiredState(desiredState nmstate.State) {
