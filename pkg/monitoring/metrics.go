@@ -29,12 +29,35 @@ var (
 		Help: "Number of nmstate features applied labeled by its name",
 	}
 
+	NetworkInterfacesOpts = prometheus.GaugeOpts{
+		Name: "kubernetes_nmstate_network_interfaces",
+		Help: "Number of network interfaces labeled by its type",
+	}
+
+	NetworkRoutesOpts = prometheus.GaugeOpts{
+		Name: "kubernetes_nmstate_routes",
+		Help: "Number of network routes labeled by node, IP stack and type (static/dynamic)",
+	}
+
 	AppliedFeatures = prometheus.NewGaugeVec(
 		AppliedFeaturesOpts,
 		[]string{"name"},
 	)
+
+	NetworkInterfaces = prometheus.NewGaugeVec(
+		NetworkInterfacesOpts,
+		[]string{"type", "node"},
+	)
+
+	NetworkRoutes = prometheus.NewGaugeVec(
+		NetworkRoutesOpts,
+		[]string{"node", "ip_stack", "type"},
+	)
+
 	gaugeOpts = []prometheus.GaugeOpts{
 		AppliedFeaturesOpts,
+		NetworkInterfacesOpts,
+		NetworkRoutesOpts,
 	}
 )
 
