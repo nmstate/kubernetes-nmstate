@@ -1989,6 +1989,33 @@ spec:
                     - host
                     type: object
                 type: object
+              retryConfiguration:
+                default: {}
+                description: |-
+                  RetryConfiguration is an optional configuration for NNCP retry and backoff strategy.
+                  If RetryConfiguration is specified, the handler will use the config defined here instead of its default values.
+                properties:
+                  initialBackoff:
+                    default: 1s
+                    description: |-
+                      InitialBackoff is the initial retry delay when applying network configuration fails.
+                      The backoff will increase exponentially up to MaximumBackoff.
+                    type: string
+                  maxRetries:
+                    default: 5
+                    description: |-
+                      MaxRetries is the maximum number of retry attempts before marking the policy as failed.
+                      After this many retries, the NNCE will be marked as FailedToConfigure.
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  maximumBackoff:
+                    default: 30s
+                    description: |-
+                      MaximumBackoff is the maximum retry delay when applying network configuration fails.
+                      The exponential backoff will not exceed this value.
+                    type: string
+                type: object
               selfSignConfiguration:
                 description: SelfSignConfiguration defines self signed certificate
                   configuration
