@@ -325,4 +325,68 @@ dns-resolver:
 			Expect(returnedState).To(MatchYAML(state))
 		})
 	})
+
+	Context("when there are interfaces with preferred-life-time and valid-life-time in addresses", func() {
+		BeforeEach(func() {
+			state = nmstate.NewState(`
+interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+  ipv4:
+    address:
+    - ip: 192.168.1.1
+      prefix-length: 24
+      preferred-life-time: 3600
+      valid-life-time: 7200
+    dhcp: false
+    enabled: true
+  ipv6:
+    address:
+    - ip: 2001:db8::1
+      prefix-length: 64
+      preferred-life-time: 1800
+      valid-life-time: 3600
+    - ip: fe80::1
+      prefix-length: 64
+      preferred-life-time: forever
+      valid-life-time: forever
+    autoconf: false
+    dhcp: false
+    enabled: true
+routes:
+  config: []
+  running: []
+`)
+			filteredState = nmstate.NewState(`
+interfaces:
+- name: eth1
+  state: up
+  type: ethernet
+  ipv4:
+    address:
+    - ip: 192.168.1.1
+      prefix-length: 24
+    dhcp: false
+    enabled: true
+  ipv6:
+    address:
+    - ip: 2001:db8::1
+      prefix-length: 64
+    - ip: fe80::1
+      prefix-length: 64
+    autoconf: false
+    dhcp: false
+    enabled: true
+routes:
+  config: []
+  running: []
+`)
+		})
+		It("should remove preferred-life-time and valid-life-time from address entries", func() {
+			returnedState, err := filterOut(state)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
 })

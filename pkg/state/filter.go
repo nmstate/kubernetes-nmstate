@@ -59,6 +59,11 @@ func isInInterfaces(interfaceName string, interfaces []interfaceState) bool {
 }
 
 func filterOutDynamicAttributes(iface map[string]interface{}) {
+	filterOutBridgeDynamicAttributes(iface)
+	filterOutIPAddressLifetimeAttributes(iface)
+}
+
+func filterOutBridgeDynamicAttributes(iface map[string]interface{}) {
 	// The gc-timer and hello-time are deep into linux-bridge like this
 	//    - bridge:
 	//        options:
@@ -88,6 +93,39 @@ func filterOutDynamicAttributes(iface map[string]interface{}) {
 
 	delete(options, "gc-timer")
 	delete(options, "hello-timer")
+}
+
+func filterOutIPAddressLifetimeAttributes(iface map[string]interface{}) {
+	// The preferred-life-time and valid-life-time are in IPv4/IPv6 address entries like this:
+	//    - ipv4:
+	//        address:
+	//          - ip: 192.168.1.1
+	//            prefix-length: 24
+	//            preferred-life-time: 3600
+	//            valid-life-time: 7200
+	filterOutAddressLifetimes(iface, "ipv4")
+	filterOutAddressLifetimes(iface, "ipv6")
+}
+
+func filterOutAddressLifetimes(iface map[string]interface{}, ipVersion string) {
+	ip, ok := iface[ipVersion].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	addresses, ok := ip["address"].([]interface{})
+	if !ok {
+		return
+	}
+
+	for _, addrRaw := range addresses {
+		addr, ok := addrRaw.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		delete(addr, "preferred-life-time")
+		delete(addr, "valid-life-time")
+	}
 }
 
 func filterOutInterfaces(ifacesState []interfaceState) []interfaceState {
