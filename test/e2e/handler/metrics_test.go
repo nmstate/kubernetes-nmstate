@@ -207,19 +207,19 @@ routes:
 			})
 
 			AfterEach(func() {
-				updateDesiredStateAndWait(staticRouteAbsent(firstSecondaryNic))
+				updateDesiredStateAtNodeAndWait(nodes[0], staticRouteAbsent(firstSecondaryNic))
 				resetDesiredStateForNodes()
 			})
 
 			It("should increase and decrease static route count", func() {
 				By("Creating a static route")
-				updateDesiredStateAndWait(staticRouteState(firstSecondaryNic, "192.168.100.1", "192.168.200.0/24", "192.168.100.254"))
+				updateDesiredStateAtNodeAndWait(nodes[0], staticRouteState(firstSecondaryNic, "192.168.100.1", "192.168.200.0/24", "192.168.100.254"))
 
 				token, err := getPrometheusToken()
 				Expect(err).ToNot(HaveOccurred())
 
 				By("Waiting for static route count to increase")
-				expectedAfterCreate := initialStaticRouteCount + len(nodes)
+				expectedAfterCreate := initialStaticRouteCount + 1
 				Eventually(func() int {
 					metrics := getMetrics(token)
 					return sumRouteMetric(metrics, "ipv4", "static")
@@ -229,7 +229,7 @@ routes:
 					Should(Equal(expectedAfterCreate))
 
 				By("Deleting the static route")
-				updateDesiredStateAndWait(staticRouteAbsent(firstSecondaryNic))
+				updateDesiredStateAtNodeAndWait(nodes[0], staticRouteAbsent(firstSecondaryNic))
 
 				By("Verifying static route count decreased back to initial")
 				Eventually(func() int {
