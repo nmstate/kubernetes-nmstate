@@ -285,21 +285,9 @@ func getRetryConfiguration(
 	// Use the first NMState CR (there should only be one in a typical deployment)
 	nmstate := nmstateList.Items[0]
 	retryConfig := nmstate.Spec.RetryConfiguration
-
-	initialBackoff = defaultInitialBackoff
-	if retryConfig.InitialBackoff.Duration != 0 {
-		initialBackoff = retryConfig.InitialBackoff.Duration
-	}
-
-	maximumBackoff = defaultMaximumBackoff
-	if retryConfig.MaximumBackoff.Duration != 0 {
-		maximumBackoff = retryConfig.MaximumBackoff.Duration
-	}
-
-	maxRetries = defaultMaxRetries
-	if retryConfig.MaxRetries != 0 {
-		maxRetries = retryConfig.MaxRetries
-	}
+	initialBackoff = retryConfig.InitialBackoff.Duration
+	maximumBackoff = retryConfig.MaximumBackoff.Duration
+	maxRetries = retryConfig.MaxRetries
 
 	if initialBackoff >= maximumBackoff {
 		setupLog.Info("Invalid retry configuration: initialBackoff must be less than maximumBackoff, using defaults",
@@ -338,10 +326,6 @@ func setupHandlerControllers(mgr manager.Manager) error {
 	initialBackoff, maximumBackoff, maxRetries, err := getRetryConfiguration(context.Background(), apiClient)
 	if err != nil {
 		setupLog.Error(err, "failed to retrieve retry configuration, using defaults")
-		// Use default values if we can't retrieve the configuration
-		initialBackoff = 1 * time.Second
-		maximumBackoff = 30 * time.Second
-		maxRetries = 5
 	}
 	setupLog.Info("Using retry configuration", "initialBackoff", initialBackoff, "maximumBackoff", maximumBackoff, "maxRetries", maxRetries)
 
