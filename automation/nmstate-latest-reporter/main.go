@@ -96,16 +96,35 @@ type slackTextObject struct {
 	Text string `json:"text"`
 }
 
+// stringSlice implements flag.Value for collecting multiple flag values
+type stringSlice []string
+
+func (s *stringSlice) String() string {
+	return strings.Join(*s, ",")
+}
+
+func (s *stringSlice) Set(value string) error {
+	*s = append(*s, value)
+	return nil
+}
+
 var (
 	webhookURL string
 	fakeReport *string
 	dryRun     *bool
+	notifyOn   stringSlice
 )
 
 func init() {
 	fakeReport = flag.String("fake", "", "Generate a fake report (use 'success', 'failure', or 'stale')")
 	dryRun = flag.Bool("dry-run", false, "Print the message that would be sent without actually sending it")
+	flag.Var(&notifyOn, "notify-on", "Events to notify on (can be specified multiple times: success, failure, stale). Default: all events")
 	flag.Parse()
+
+	// Default to all events if none specified
+	if len(notifyOn) == 0 {
+		notifyOn = stringSlice{"success", "failure", "stale"}
+	}
 
 	// Skip env var validation in dry-run mode
 	if *dryRun {
@@ -121,10 +140,19 @@ func init() {
 }
 
 func main() {
-	message, err := generateMessage()
+	message, buildStatus, err := generateMessage()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to generate message: %v\n", err)
 		os.Exit(1)
+	}
+
+	// Determine event type
+	eventType := getEventType(buildStatus)
+
+	// Check if we should notify for this event type
+	if !shouldNotify(eventType) {
+		fmt.Printf("Skipping notification for event type '%s' (not in notify-on list: %v)\n", eventType, notifyOn)
+		return
 	}
 
 	err = sendMessageToSlackChannel(message)
@@ -136,7 +164,32 @@ func main() {
 	fmt.Println("Message sent successfully")
 }
 
-func generateMessage() (slackMessage, error) {
+func getEventType(buildStatus finished) string {
+	buildTime := buildStatus.getBuildTime()
+	now := time.Now().UTC()
+
+	// Check if the build is older than 24 hours
+	if now.Sub(buildTime) > 24*time.Hour {
+		return "stale"
+	}
+
+	if buildStatus.Passed {
+		return "success"
+	}
+
+	return "failure"
+}
+
+func shouldNotify(eventType string) bool {
+	for _, event := range notifyOn {
+		if event == eventType {
+			return true
+		}
+	}
+	return false
+}
+
+func generateMessage() (slackMessage, finished, error) {
 	var buildID string
 	var buildStatus finished
 	var jobURL string
@@ -146,7 +199,7 @@ func generateMessage() (slackMessage, error) {
 	if *fakeReport != "" {
 		_, buildStatus, jobURL, err = generateFakeData(*fakeReport)
 		if err != nil {
-			return slackMessage{}, fmt.Errorf("failed to generate fake data: %w", err)
+			return slackMessage{}, finished{}, fmt.Errorf("failed to generate fake data: %w", err)
 		}
 		vers = versions{
 			Nmstate:               "2.2.55-0.20251031.2666git045ed3c4.fake.el9",
@@ -157,27 +210,27 @@ func generateMessage() (slackMessage, error) {
 	} else {
 		buildID, err = getLatestBuild()
 		if err != nil {
-			return slackMessage{}, fmt.Errorf("failed to get latest build: %w", err)
+			return slackMessage{}, finished{}, fmt.Errorf("failed to get latest build: %w", err)
 		}
 
 		buildStatus, err = getBuildStatus(buildID)
 		if err != nil {
-			return slackMessage{}, fmt.Errorf("failed to get build status: %w", err)
+			return slackMessage{}, finished{}, fmt.Errorf("failed to get build status: %w", err)
 		}
 
 		jobURL, err = getJob(buildID)
 		if err != nil {
-			return slackMessage{}, fmt.Errorf("failed to get job URL: %w", err)
+			return slackMessage{}, finished{}, fmt.Errorf("failed to get job URL: %w", err)
 		}
 
 		vers, err = getVersions(buildID)
 		if err != nil {
-			return slackMessage{}, fmt.Errorf("failed to get versions: %w", err)
+			return slackMessage{}, finished{}, fmt.Errorf("failed to get versions: %w", err)
 		}
 	}
 
 	message := generateStatusMessage(buildStatus, jobURL, vers)
-	return message, nil
+	return message, buildStatus, nil
 }
 
 func generateFakeData(reportType string) (buildID string, status finished, url string, err error) {
