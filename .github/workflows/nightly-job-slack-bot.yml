@@ -29,4 +29,4 @@ jobs:
         env:
           NMSTATE_SLACK_WEBHOOK_URL: ${{ secrets.NMSTATE_SLACK_WEBHOOK_URL }}
         run: |
-          ./nmstate-latest-reporter
+          ./nmstate-latest-reporter --notify-on=failure --notify-on=stale
