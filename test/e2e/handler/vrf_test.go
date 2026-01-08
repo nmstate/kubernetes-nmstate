@@ -18,6 +18,7 @@ limitations under the License.
 package handler
 
 import (
+	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -54,6 +55,53 @@ var _ = Describe("NodeNetworkState", func() {
 		})
 
 		It("should have the VRF interface configured", func() {
+			vrfForNodeInterfaceEventually(node, vrfID).Should(Equal(vrfID))
+			ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
+			routeNextHopInterfaceWithTableID(node, destIPAddress, vrfID).Should(Equal(firstSecondaryNic))
+		})
+	})
+
+	Context("when VRF route configured using vrf-name", func() {
+		var (
+			vrfID            = "103"
+			vrfName          = "vrf103"
+			ipAddress        = "192.0.2.252"
+			destIPAddress    = "1.2.3.0/24"
+			prefixLen        = "24"
+			nextHopIPAddress = "192.0.2.2"
+		)
+
+		BeforeEach(func() {
+			updateDesiredStateAtNodeAndWait(
+				node,
+				vrfRouteWithVrfName(vrfID, vrfName, firstSecondaryNic, ipAddress, destIPAddress, prefixLen, nextHopIPAddress),
+			)
+		})
+
+		AfterEach(func() {
+			updateDesiredStateAtNodeAndWait(node, vrfAbsent(vrfID))
+			resetDesiredStateForNodes()
+		})
+
+		It("should have the VRF interface and route configured", func() {
+			vrfForNodeInterfaceEventually(node, vrfID).Should(Equal(vrfID))
+			ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
+			routeNextHopInterfaceWithTableID(node, destIPAddress, vrfID).Should(Equal(firstSecondaryNic))
+		})
+
+		It("should persist VRF route after node reboot", func() {
+			Byf("Verifying VRF interface and route before reboot")
+			vrfForNodeInterfaceEventually(node, vrfID).Should(Equal(vrfID))
+			ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
+			routeNextHopInterfaceWithTableID(node, destIPAddress, vrfID).Should(Equal(firstSecondaryNic))
+
+			restartNodeWithoutWaiting(node)
+
+			By("Wait for policy re-reconciled after node reboot")
+			policy.WaitForPolicyTransitionUpdate(TestPolicy)
+			policy.WaitForAvailablePolicy(TestPolicy)
+
+			Byf("Node %s was rebooted, verifying VRF route still exists", node)
 			vrfForNodeInterfaceEventually(node, vrfID).Should(Equal(vrfID))
 			ipAddressForNodeInterfaceEventually(node, firstSecondaryNic).Should(Equal(ipAddress))
 			routeNextHopInterfaceWithTableID(node, destIPAddress, vrfID).Should(Equal(firstSecondaryNic))
