@@ -55,9 +55,9 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
-	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
@@ -222,6 +222,12 @@ func setupWebhookEnvironment(mgr manager.Manager) error {
 
 // setupHandlerEnvironment configures the handler controllers and performs health checks
 func setupHandlerEnvironment(mgr manager.Manager) error {
+	// Initialize the backend based on environment variable
+	if err := backend.InitBackend(); err != nil {
+		setupLog.Error(err, "Failed to initialize backend")
+		return err
+	}
+
 	if err := setupHandlerControllers(mgr); err != nil {
 		return err
 	}
@@ -321,13 +327,13 @@ func createHealthyFile() error {
 }
 
 func checkNmstateIsWorking() error {
-	setupLog.Info("Checking availability of nmstatectl")
-	logWriter := nmstatelog.NewWriter(setupLog, 0)
-	if err := nmstatectl.ShowWithArgumentsAndOutputs([]string{"-vvv"}, logWriter, logWriter); err != nil {
-		setupLog.Error(err, "failed checking nmstatectl health")
+	setupLog.Info("Checking availability of network configuration backend")
+	if output, err := backend.GetBackend().Show(); err != nil {
+		err = fmt.Errorf("%s: %w", output, err)
+		setupLog.Error(err, "failed checking backend health")
 		return err
 	}
-	setupLog.Info("Nmstatectl available, 'show' finished successfully.")
+	setupLog.Info("Backend available, 'show' finished successfully.")
 	return nil
 }
 

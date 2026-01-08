@@ -68,6 +68,12 @@ type NMStateSpec struct {
 	// +kubebuilder:validation:Enum=info;debug
 	// +optional
 	LogLevel shared.LogLevel `json:"logLevel,omitempty"`
+	// Backend defines the network configuration backend to use.
+	// Valid values are "nmstate" (default, uses nmstatectl) and "netplan" (uses netplan).
+	// +kubebuilder:default:="nmstate"
+	// +kubebuilder:validation:Enum=nmstate;netplan
+	// +optional
+	Backend string `json:"backend,omitempty"`
 }
 
 type SelfSignConfiguration struct {
