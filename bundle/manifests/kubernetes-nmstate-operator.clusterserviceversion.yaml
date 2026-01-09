@@ -218,11 +218,6 @@ spec:
                       - key: node-role.kubernetes.io/control-plane
                         operator: Exists
                     weight: 10
-                  - preference:
-                      matchExpressions:
-                      - key: node-role.kubernetes.io/master
-                        operator: Exists
-                    weight: 1
               containers:
               - args:
                 - --zap-time-encoding=iso8601
