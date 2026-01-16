@@ -34,7 +34,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
-	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
 
@@ -136,7 +136,8 @@ func ExecuteCommand(command string, arguments ...string) (string, error) {
 
 func rollback(ctx context.Context, cli client.Client, probes []probe.Probe, cause error) error {
 	message := fmt.Sprintf("rolling back desired state configuration: %s", cause)
-	err := nmstatectl.Rollback()
+	b := backend.GetBackend()
+	err := b.Rollback()
 	if err != nil {
 		return errors.Wrap(err, message)
 	}
@@ -154,15 +155,17 @@ func ApplyDesiredState(ctx context.Context, cli client.Client, desiredState shar
 		return "Ignoring empty desired state", nil
 	}
 
+	b := backend.GetBackend()
+
 	// Before apply we get the probes that are working fine, they should be
 	// working fine after apply
 	probes := probe.Select(ctx, cli)
 
 	// Rollback before Apply to remove pending checkpoints (for example handler pod restarted
 	// before Commit)
-	nmstatectl.Rollback()
+	b.Rollback()
 
-	setOutput, err := nmstatectl.Set(desiredState, DesiredStateConfigurationTimeout)
+	setOutput, err := b.Set(desiredState, DesiredStateConfigurationTimeout)
 	if err != nil {
 		return setOutput, err
 	}
@@ -172,7 +175,7 @@ func ApplyDesiredState(ctx context.Context, cli client.Client, desiredState shar
 		return "", rollback(ctx, cli, probes, errors.Wrap(err, "failed runnig probes after network changes"))
 	}
 
-	commitOutput, err := nmstatectl.Commit()
+	commitOutput, err := b.Commit()
 	if err != nil {
 		// We cannot rollback if commit fails, just return the error
 		return commitOutput, err

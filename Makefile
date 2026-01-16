@@ -36,6 +36,9 @@ export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 export MONITORING_NAMESPACE ?= monitoring
 export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
 
+# Backend selection for network configuration (nmstate or netplan)
+export BACKEND ?= nmstate
+
 # "Always" policy must be used only for development, never pushed to the production CSV
 INTERACTIVE:=$(shell [ -t 0 ] && echo 1)
 ifdef INTERACTIVE
@@ -182,7 +185,7 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) --build-arg BACKEND=$(BACKEND) -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator

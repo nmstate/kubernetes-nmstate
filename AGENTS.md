@@ -183,6 +183,9 @@ Cluster configuration via environment variables:
 - `KUBECONFIG`: Path to kubeconfig (auto-detected via ./cluster/kubeconfig.sh)
 - `NMSTATE_VERSION`: When set to `latest`, uses nmstate-git from copr during `make cluster-up`
 - `NM_VERSION`: When set to `latest`, installs NetworkManager from copr networkmanager/NetworkManager-main repository during `make cluster-up`
+- `NETWORK_RENDERER`: Network renderer to use (default: `NetworkManager`, options: `NetworkManager`, `networkd`)
+  - `NetworkManager`: Uses NetworkManager for all network interfaces
+  - `networkd`: Uses systemd-networkd for eth1/eth2, NetworkManager for eth0 (cluster connectivity)
 
 Network interface names vary by provider:
 - k8s providers: eth0, eth1, eth2

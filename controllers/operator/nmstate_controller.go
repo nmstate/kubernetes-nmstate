@@ -358,6 +358,13 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
 	data.Data["IsOpenShift"] = r.IsOpenShift
 
+	// Backend configuration (PoC: netplan support)
+	backend := instance.Spec.Backend
+	if backend == "" {
+		backend = "nmstate" // default
+	}
+	data.Data["Backend"] = backend
+
 	return r.renderAndApply(ctx, instance, data, "handler", true)
 }
 

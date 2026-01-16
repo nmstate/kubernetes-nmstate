@@ -353,6 +353,10 @@ spec:
       # latest nmstate/NM is in place.
       # https://github.com/nmstate/nmstate/pull/440
       hostNetwork: true
+{{- if eq .Backend "netplan" }}
+      # Netplan backend needs access to host's systemd for 'netplan status'
+      hostPID: true
+{{- end }}
       # Use Default to get node's DNS configuration [1]
       # [1] https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/#pod-s-dns-policy
       dnsPolicy: Default
@@ -421,6 +425,8 @@ spec:
               value: "{{ .ProbeConfiguration.DNS.Host }}"
             - name: METRICS_BIND_ADDRESS
               value: "{{ .MetricsConfiguration.BindAddress }}"
+            - name: NMSTATE_BACKEND
+              value: "{{ .Backend }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
@@ -430,6 +436,10 @@ spec:
               mountPath: /run/openvswitch
             - name: systemd-network
               mountPath: /etc/systemd/network
+{{- if eq .Backend "netplan" }}
+            - name: systemd-runtime
+              mountPath: /run/systemd
+{{- end }}
           securityContext:
             privileged: true
           readinessProbe:
@@ -445,7 +455,11 @@ spec:
               command:
               - bash
               - -c
+{{- if eq .Backend "netplan" }}
+              - "nsenter -t 1 -m netplan status 2>&1"
+{{- else }}
               - "nmstatectl show {{ .HandlerReadinessProbeExtraArg }} 2>&1"
+{{- end }}
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10
@@ -466,6 +480,12 @@ spec:
           hostPath:
             path: /etc/systemd/network
             type: DirectoryOrCreate
+{{- if eq .Backend "netplan" }}
+        - name: systemd-runtime
+          hostPath:
+            path: /run/systemd
+            type: Directory
+{{- end }}
 ---
 apiVersion: v1
 kind: Service

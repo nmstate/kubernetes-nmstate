@@ -970,6 +970,15 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              backend:
+                default: nmstate
+                description: |-
+                  Backend defines the network configuration backend to use.
+                  Valid values are "nmstate" (default, uses nmstatectl) and "netplan" (uses netplan).
+                enum:
+                - nmstate
+                - netplan
+                type: string
               infraAffinity:
                 description: InfraAffinity is an optional affinity selector that will
                   be added to webhook, metrics & console-plugin Deployment manifests.

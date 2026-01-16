@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
@@ -34,6 +35,18 @@ func GenerateState(
 		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
 			nmstateapi.State{}, nil
 	}
+
+	// Check if we're using netplan backend
+	currentBackend := backend.GetBackend()
+	if currentBackend.Name() == backend.BackendNetplan {
+		// Netplan doesn't use the policy validation/capture mechanism
+		// It uses Try() for atomic apply with auto-rollback
+		// Just pass through the desired state without validation
+		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+			policySpec.DesiredState, nil
+	}
+
+	// Use nmstatectl policy validation for nmstate backend
 	nmstatePolicy := struct {
 		Capture      map[string]string `json:"capture,omitempty"`
 		DesiredState nmstateapi.State  `json:"desiredState,omitempty"`
