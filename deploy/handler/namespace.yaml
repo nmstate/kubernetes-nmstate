@@ -2,6 +2,10 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: {{ .HandlerNamespace }}
+{{- if .IsOpenShift }}
+  annotations:
+    openshift.io/node-selector: ""
+{{- end }}
   labels:
     name: {{ .HandlerNamespace }}
     pod-security.kubernetes.io/enforce: privileged
@@ -9,5 +13,4 @@ metadata:
     pod-security.kubernetes.io/warn: privileged
 {{- if .IsOpenShift }}
     openshift.io/cluster-monitoring: "true"
-    openshift.io/node-selector: ""
 {{- end }}
