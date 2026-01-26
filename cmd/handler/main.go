@@ -280,7 +280,7 @@ func cleanStaleUnavailableCounts(mgr manager.Manager) error {
 			policyName := enactment.Labels[nmstateapi.EnactmentPolicyLabel]
 			generationKey := strconv.FormatInt(enactment.Status.PolicyGeneration, 10)
 
-			setupLog.Info("detected stale progressing enactment, decrementing count",
+			setupLog.Info("detected stale progressing enactment, cleaning up",
 				"enactment", enactment.Name,
 				"policy", policyName,
 				"generation", generationKey)
@@ -288,6 +288,12 @@ func cleanStaleUnavailableCounts(mgr manager.Manager) error {
 			// Decrement counter for this policy and generation
 			if err := decrementStaleUnavailableCount(ctx, apiClient, policyName, generationKey); err != nil {
 				setupLog.Error(err, "Failed to decrement stale count", "policy", policyName)
+				// no return to continue with other enactments
+			}
+
+			// Reset retry count for this enactment and generation
+			if err := resetStaleRetryCount(ctx, apiClient, enactment.Name, generationKey); err != nil {
+				setupLog.Error(err, "Failed to reset stale retry count", "enactment", enactment.Name)
 				// no return to continue with other enactments
 			}
 		}
@@ -320,6 +326,27 @@ func decrementStaleUnavailableCount(ctx context.Context, cli client.Client, poli
 		}
 
 		return nil
+	})
+}
+
+// resetStaleRetryCount resets the RetryCount for a specific enactment and generation
+// during startup clean to prevent stale retry counts from previous interrupted reconciles.
+func resetStaleRetryCount(ctx context.Context, cli client.Client, enactmentName, generationKey string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		enactment := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		if err := cli.Get(ctx, types.NamespacedName{Name: enactmentName}, enactment); err != nil {
+			return err
+		}
+
+		if enactment.Status.RetryCount == nil || enactment.Status.RetryCount[generationKey] == 0 {
+			return nil
+		}
+
+		enactment.Status.RetryCount[generationKey] = 0
+		setupLog.Info("Reset stale retry count",
+			"enactment", enactmentName,
+			"generation", generationKey)
+		return cli.Status().Update(ctx, enactment)
 	})
 }
 
