@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	// +kubebuilder:scaffold:imports
@@ -171,11 +172,29 @@ func createManager() (manager.Manager, error) {
 		metricsBindAddress = ":8089"
 	}
 
+	metricsOptions := metricsserver.Options{
+		BindAddress: metricsBindAddress,
+	}
+
+	// Enable secure metrics with authn/authz for metrics manager
+	if environment.IsMetricsManager() {
+		secureMetrics := os.Getenv("METRICS_SECURE") == "true"
+		if secureMetrics {
+			metricsOptions.BindAddress = ":8443"
+			metricsOptions.SecureServing = true
+			metricsOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
+
+			// TLS certs - use OpenShift service-ca or self-signed
+			certDir := os.Getenv("METRICS_CERT_DIR")
+			if certDir != "" {
+				metricsOptions.CertDir = certDir
+			}
+		}
+	}
+
 	ctrlOptions := ctrl.Options{
-		Scheme: scheme,
-		Metrics: metricsserver.Options{
-			BindAddress: metricsBindAddress,
-		},
+		Scheme:  scheme,
+		Metrics: metricsOptions,
 	}
 
 	if environment.IsHandler() {
