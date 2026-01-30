@@ -23,15 +23,18 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,6 +58,7 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
 	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
@@ -220,8 +224,17 @@ func setupWebhookEnvironment(mgr manager.Manager) error {
 	return nil
 }
 
-// setupHandlerEnvironment configures the handler controllers and performs health checks
+// setupHandlerEnvironment cleans up unavailableNodeCounts after unexpected restart,
+// configures the handler controllers and performs health checks
 func setupHandlerEnvironment(mgr manager.Manager) error {
+	// Clean stale unavailable counts from node before starting controllers
+	// Prevents deadlock after unexpected cluster reboot where nodes were
+	// processing NNCP and left stale counts in etcd.
+	if err := cleanStaleUnavailableCounts(mgr); err != nil {
+		setupLog.Error(err, "Failed to cleanup stale unavailable counts, continuing anyway")
+		// Don't error this is best-effort (NNCP needs manual restart)
+	}
+
 	if err := setupHandlerControllers(mgr); err != nil {
 		return err
 	}
@@ -240,6 +253,101 @@ func startManager(mgr manager.Manager) int {
 		return generalExitStatus
 	}
 	return 0
+}
+
+// cleanStaleUnavailableCounts cleans up stale unavailable node counts that have been
+// left in NNCP status after unexpected cluster reboots.
+func cleanStaleUnavailableCounts(mgr manager.Manager) error {
+	ctx := context.Background()
+	nodeName := environment.NodeName()
+	setupLog.Info("Cleaning up stale unavailable counts for node", "node", nodeName)
+
+	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		return err
+	}
+
+	enactmentList := &nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	nodeLabel := client.MatchingLabels{nmstateapi.EnactmentNodeLabel: nodeName}
+	if err := apiClient.List(ctx, enactmentList, nodeLabel); err != nil {
+		return err
+	}
+
+	// For each enactment that was "Progressing" (interrupted by reboot)
+	for i := range enactmentList.Items {
+		enactment := &enactmentList.Items[i]
+		if enactmentstatus.IsProgressing(&enactment.Status.Conditions) {
+			policyName := enactment.Labels[nmstateapi.EnactmentPolicyLabel]
+			generationKey := strconv.FormatInt(enactment.Status.PolicyGeneration, 10)
+
+			setupLog.Info("detected stale progressing enactment, cleaning up",
+				"enactment", enactment.Name,
+				"policy", policyName,
+				"generation", generationKey)
+
+			// Decrement counter for this policy and generation
+			if err := decrementStaleUnavailableCount(ctx, apiClient, policyName, generationKey); err != nil {
+				setupLog.Error(err, "Failed to decrement stale count", "policy", policyName)
+				// no return to continue with other enactments
+			}
+
+			// Reset retry count for this enactment and generation
+			if err := resetStaleRetryCount(ctx, apiClient, enactment.Name, generationKey); err != nil {
+				setupLog.Error(err, "Failed to reset stale retry count", "enactment", enactment.Name)
+				// no return to continue with other enactments
+			}
+		}
+	}
+
+	setupLog.Info("Finished cleaning up stale unavailable counts", "node", nodeName)
+	return nil
+}
+
+// decrementStaleUnavailableCount decrements the UnavailableNodeCountMap of a specific
+// policy and generation for startup cleanup.
+func decrementStaleUnavailableCount(ctx context.Context, cli client.Client, policyName, generationKey string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		if err := cli.Get(ctx, types.NamespacedName{Name: policyName}, policy); err != nil {
+			return err
+		}
+
+		if policy.Status.UnavailableNodeCountMap == nil {
+			return nil // Nothing to clean up
+		}
+
+		if policy.Status.UnavailableNodeCountMap[generationKey] > 0 {
+			policy.Status.UnavailableNodeCountMap[generationKey]--
+			setupLog.Info("Decremented stale unavailable count",
+				"policy", policyName,
+				"generation", generationKey,
+				"newCount", policy.Status.UnavailableNodeCountMap[generationKey])
+			return cli.Status().Update(ctx, policy)
+		}
+
+		return nil
+	})
+}
+
+// resetStaleRetryCount resets the RetryCount for a specific enactment and generation
+// during startup clean to prevent stale retry counts from previous interrupted reconciles.
+func resetStaleRetryCount(ctx context.Context, cli client.Client, enactmentName, generationKey string) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		enactment := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		if err := cli.Get(ctx, types.NamespacedName{Name: enactmentName}, enactment); err != nil {
+			return err
+		}
+
+		if enactment.Status.RetryCount == nil || enactment.Status.RetryCount[generationKey] == 0 {
+			return nil
+		}
+
+		enactment.Status.RetryCount[generationKey] = 0
+		setupLog.Info("Reset stale retry count",
+			"enactment", enactmentName,
+			"generation", generationKey)
+		return cli.Status().Update(ctx, enactment)
+	})
 }
 
 // Handler runs as a daemonset and we want that each handler pod will cache/reconcile only resources that belong the node it runs on.
