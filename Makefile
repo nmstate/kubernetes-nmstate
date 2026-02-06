@@ -24,13 +24,6 @@ OPERATOR_IMAGE_TAG ?= latest
 OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME):$(OPERATOR_IMAGE_TAG)
 OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_FULL_NAME)
 
-KUBE_RBAC_PROXY_NAME ?= origin-kube-rbac-proxy
-KUBE_RBAC_PROXY_TAG ?= 4.10.0
-KUBE_RBAC_PROXY_IMAGE_REGISTRY ?= quay.io
-KUBE_RBAC_PROXY_IMAGE_REPO ?= openshift
-KUBE_RBAC_PROXY_FULL_NAME ?= $(KUBE_RBAC_PROXY_IMAGE_REPO)/$(KUBE_RBAC_PROXY_NAME):$(KUBE_RBAC_PROXY_TAG)
-KUBE_RBAC_PROXY_IMAGE ?= $(KUBE_RBAC_PROXY_IMAGE_REGISTRY)/$(KUBE_RBAC_PROXY_FULL_NAME)
-
 export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 export MONITORING_NAMESPACE ?= monitoring
@@ -177,7 +170,7 @@ check-bundle: bundle
 generate: gen-k8s gen-crds gen-rbac
 
 manifests:
-	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -kube-rbac-proxy-image=$(KUBE_RBAC_PROXY_IMAGE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
 handler: SKIP_PUSH=true
 handler: push-handler
