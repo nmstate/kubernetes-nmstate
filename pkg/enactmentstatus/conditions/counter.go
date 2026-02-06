@@ -96,10 +96,10 @@ func (c ConditionCount) NotProgressing() int {
 	return c.progressing().false()
 }
 func (c ConditionCount) Pending() int {
-	return c.progressing().true()
+	return c.pending().true()
 }
 func (c ConditionCount) NotPending() int {
-	return c.progressing().false()
+	return c.pending().false()
 }
 func (c ConditionCount) Available() int {
 	return c.available().true()
