@@ -336,13 +336,12 @@ func restartNodeWithoutWaiting(node string) {
 func waitForNodeToStart(node string) {
 	Byf("Waiting till node %s is rebooted", node)
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
-	Eventually(func() string {
+	Eventually(func(g Gomega) string {
 		output, err := runner.RunAtNode(node, "uptime", "-p")
-		if err != nil {
-			return "not yet"
-		}
+		// Using g.Expect makes Eventually retry on errors directly
+		g.Expect(err).NotTo(HaveOccurred())
 		return output
-	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
+	}, 300*time.Second, 5*time.Second).Should(ContainSubstring("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
 }
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {
