@@ -296,6 +296,18 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 			&policy.Status.Conditions,
 			message,
 		)
+	} else if policyStatus.enactmentsCountByCondition.Pending() > 0 {
+		message = fmt.Sprintf(
+			"Policy is progressing %d/%d nodes finished, %d pending",
+			policyStatus.numberOfFinishedEnactments,
+			policyStatus.numberOfReadyNmstateMatchingNodes,
+			policyStatus.enactmentsCountByCondition.Pending(),
+		)
+		informOfNotReadyNodes(policyStatus.numberOfNotReadyNmstateMatchingNodes)
+		SetPolicyProgressing(
+			&policy.Status.Conditions,
+			message,
+		)
 	} else {
 		message = fmt.Sprintf(
 			"%d/%d nodes successfully configured",
