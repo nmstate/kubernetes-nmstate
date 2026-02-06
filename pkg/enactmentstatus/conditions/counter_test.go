@@ -294,4 +294,32 @@ var _ = Describe("Enactment condition counter", func() {
 			},
 		}),
 	)
+
+	Describe("helper methods", func() {
+		It("should return pending count from pending condition, not progressing", func() {
+			// Two pending enactments: pending=2, progressing=0
+			count := Count(enactments(
+				enactment(1, SetPending),
+				enactment(1, SetPending),
+			), 1)
+
+			Expect(count.Pending()).To(Equal(2))
+			Expect(count.NotPending()).To(Equal(0))
+			Expect(count.Progressing()).To(Equal(0))
+			Expect(count.NotProgressing()).To(Equal(2))
+		})
+
+		It("should return correct counts for mixed pending and progressing", func() {
+			// One pending, one progressing: pending=1, progressing=1
+			count := Count(enactments(
+				enactment(1, SetPending),
+				enactment(1, SetProgressing),
+			), 1)
+
+			Expect(count.Pending()).To(Equal(1))
+			Expect(count.NotPending()).To(Equal(1))
+			Expect(count.Progressing()).To(Equal(1))
+			Expect(count.NotProgressing()).To(Equal(1))
+		})
+	})
 })
