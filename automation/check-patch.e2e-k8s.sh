@@ -18,6 +18,21 @@ teardown() {
     done
     ./cluster/kubectl.sh get events -n nmstate > $ARTIFACTS/nmstate-events.logs || true
     ./cluster/kubectl.sh get events > $ARTIFACTS/cluster-events.logs || true
+
+    # Collect kube-apiserver logs from kube-system namespace
+    for pod in $(./cluster/kubectl.sh get pod -n kube-system -l component=kube-apiserver -o name 2>/dev/null); do
+        pod_name=$(echo $pod|sed "s#pod/##")
+        ./cluster/kubectl.sh -n kube-system logs $pod > $ARTIFACTS/$pod_name.log || true
+        ./cluster/kubectl.sh -n kube-system logs -p $pod > $ARTIFACTS/$pod_name.previous.log || true
+    done
+
+    # Collect kubelet and journalctl logs from each node
+    for node_num in $(seq 1 $KUBEVIRT_NUM_NODES); do
+        node=$(printf "node%02d" $node_num)
+        ./cluster/ssh.sh $node -- journalctl -u kubelet --no-pager > $ARTIFACTS/${node}-kubelet.log 2>/dev/null || true
+        ./cluster/ssh.sh $node -- journalctl --no-pager > $ARTIFACTS/${node}-journalctl.log 2>/dev/null || true
+    done
+
     make cluster-down
     # Don't fail if there is no logs
     cp -r ${E2E_LOGS}/handler/* ${ARTIFACTS} || true
