@@ -26,6 +26,7 @@ import (
 
 	"k8s.io/client-go/util/retry"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nncpwebhook "github.com/nmstate/kubernetes-nmstate/pkg/webhook/nodenetworkconfigurationpolicy"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
@@ -92,13 +93,8 @@ var _ = Describe("Validation Admission Webhook", func() {
 			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				return setDesiredStateWithPolicyAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), map[string]string{})
 			})
-			Expect(err).
-				To(
-					MatchError(
-						"admission webhook \"nodenetworkconfigurationpolicies-update-validate.nmstate.io\" denied the request: " +
-							"failed to admit NodeNetworkConfigurationPolicy test-policy: message: policy test-policy is still in progress. ",
-					),
-				)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("is still in progress"))
 		})
 	})
 	Context("When a policy with too long name is created", func() {
@@ -106,16 +102,10 @@ var _ = Describe("Validation Admission Webhook", func() {
 		It("Should deny creating policy with name longer than 63 characters", func() {
 			policy := nmstatev1.NodeNetworkConfigurationPolicy{}
 			policy.Name = tooLongName
+			policy.Spec.DesiredState = nmstate.NewState("{}")
 			err := testenv.Client.Create(context.TODO(), &policy)
-			Expect(err).
-				To(
-					MatchError(
-						"admission webhook \"nodenetworkconfigurationpolicies-create-validate.nmstate.io\" denied the request: " +
-							"failed to admit NodeNetworkConfigurationPolicy this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com:" +
-							" message: invalid policy name: \"this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com\": " +
-							"must be no more than 63 bytes. ",
-					),
-				)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("must be no more than 63 characters"))
 		})
 	})
 	Context("When a policy capture field is updated", func() {
@@ -127,14 +117,8 @@ var _ = Describe("Validation Admission Webhook", func() {
 			By("Add capture field to the NNCP")
 			capture := map[string]string{"default-gw": `routes.running.destination=="0.0.0.0/0"`}
 			err := setDesiredStateWithPolicyAndCaptureAndNodeSelector(TestPolicy, linuxBrUpNoPorts(bridge1), capture, map[string]string{})
-			Expect(err).
-				To(
-					MatchError(
-						"admission webhook \"nodenetworkconfigurationpolicies-update-validate.nmstate.io\" denied the request: " +
-							"failed to admit NodeNetworkConfigurationPolicy test-policy: message: invalid policy operation: " +
-							"capture field cannot be modified. ",
-					),
-				)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("capture field cannot be modified"))
 		})
 		AfterEach(func() {
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))

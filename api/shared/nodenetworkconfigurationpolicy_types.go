@@ -28,6 +28,9 @@ type NodeNetworkConfigurationPolicySpec struct {
 	// Selector which must match a node's labels for the policy to be scheduled on that node.
 	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 	// +optional
+	// +kubebuilder:validation:MaxProperties=256
+	//nolint:lll
+	// +kubebuilder:validation:XValidation:rule="self.all(k, !format.qualifiedName().validate(k).hasValue())",message="nodeSelector keys must be valid qualified names"
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// Capture contains expressions with an associated name than can be referenced
