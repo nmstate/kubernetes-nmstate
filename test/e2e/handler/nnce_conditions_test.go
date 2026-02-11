@@ -78,6 +78,12 @@ var _ = Describe("EnactmentCondition", func() {
 		})
 
 		AfterEach(func() {
+			// Delete the policy first to clear FailedToConfigure enactments left
+			// by the intentionally invalid configuration. Without this, updating
+			// the policy to remove the bridge inherits the failed enactment state,
+			// which can leave the policy stuck in Degraded and cause a flaky timeout.
+			By("Delete the policy to clear stale failed enactments")
+			deletePolicy(TestPolicy)
 			By("Remove the bridge")
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
 			By("Reset desired state at all nodes")
