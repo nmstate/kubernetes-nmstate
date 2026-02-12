@@ -22,5 +22,8 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     ./cluster/cli.sh ssh ${node} -- sudo systemctl daemon-reload
     ./cluster/cli.sh ssh ${node} -- sudo systemctl enable openvswitch
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart openvswitch
+    # Newer kubevirtci has dhclient installed so we should enforce not using it to
+    # keep using the NM internal DHCP client as we always have
+    ./cluster/cli.sh ssh ${node} -- sudo rm -f /etc/NetworkManager/conf.d/002-dhclient.conf
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart NetworkManager
 done
