@@ -137,7 +137,7 @@ routes:
 					}).
 						WithPolling(time.Second).
 						WithTimeout(2 * time.Second).
-						Should(HaveKeyWithValue(monitoring.AppliedFeaturesOpts.Name+`{name="dhcpv4-custom-hostname"}`, "0"))
+						ShouldNot(HaveKey(monitoring.AppliedFeaturesOpts.Name + `{name="dhcpv4-custom-hostname"}`))
 				})
 			})
 		})

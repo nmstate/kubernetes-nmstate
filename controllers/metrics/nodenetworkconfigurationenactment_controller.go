@@ -20,12 +20,12 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"reflect"
+	"slices"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
+	"github.com/prometheus/client_golang/prometheus"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,15 +34,14 @@ import (
 
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
-	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
 // NodeNetworkConfigurationEnactment reconciles a NodeNetworkConfigurationEnactment object
 type NodeNetworkConfigurationEnactmentReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	oldNNCEs map[string]*nmstatev1beta1.NodeNetworkConfigurationEnactment
+	Log         logr.Logger
+	Scheme      *runtime.Scheme
+	oldFeatures map[string]struct{}
 }
 
 // Reconcile reads that state of the cluster for a NodeNetworkConfigurationEnactment object and calculate
@@ -54,35 +53,15 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 	log := r.Log.WithValues("metrics.nodenetworkconfigurationenactment", request.NamespacedName)
 	log.Info("Reconcile")
 
-	enactmentInstance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-	err := r.Client.Get(ctx, request.NamespacedName, enactmentInstance)
-	if err != nil {
-		if apierrors.IsNotFound(err) {
-			// NNCE has being delete let's clean the old NNCEs map
-			delete(r.oldNNCEs, request.Name)
-
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
-			// Return and don't requeue
-			return ctrl.Result{}, nil
-		}
-		log.Error(err, "Error retrieving enactment")
-		// Error reading the object - requeue the request.
-		return ctrl.Result{}, err
-	}
-
 	if err := r.reportStatistics(ctx); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed reporting statistics: %w", err)
 	}
-
-	// After reporting metrics store this NNCE as old to calculate gaugue
-	r.oldNNCEs[enactmentInstance.Name] = enactmentInstance
 
 	return ctrl.Result{}, nil
 }
 
 func (r *NodeNetworkConfigurationEnactmentReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	r.oldNNCEs = map[string]*nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+	r.oldFeatures = map[string]struct{}{}
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create for current node.
 	onCreationOrUpdateForThisEnactment := predicate.Funcs{
@@ -102,7 +81,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) SetupWithManager(mgr ctrl.
 				return false
 			}
 
-			return !reflect.DeepEqual(oldNNCE.Status.Features, newNNCE.Status.Features)
+			return !slices.Equal(oldNNCE.Status.Features, newNNCE.Status.Features)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -126,28 +105,27 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) reportStatistics(ctx conte
 		return err
 	}
 
-	// Calculate old and new cluster wide features
-	oldFeatures := []string{}
-	newFeatures := []string{}
+	// Collect all unique feature names across all NNCEs
+	newFeatures := make(map[string]struct{})
 	for i := range nnceList.Items {
-		newFeatures = append(newFeatures, nnceList.Items[i].Status.Features...)
-		oldNNCE, ok := r.oldNNCEs[nnceList.Items[i].Name]
-		if ok {
-			oldFeatures = append(oldFeatures, oldNNCE.Status.Features...)
+		for _, f := range nnceList.Items[i].Status.Features {
+			newFeatures[f] = struct{}{}
 		}
 	}
 
-	oldStats := nmstatectl.NewStats(oldFeatures)
-	newStats := nmstatectl.NewStats(newFeatures)
-
-	statsToInc := newStats.Subtract(oldStats)
-	for f := range statsToInc.Features {
-		monitoring.AppliedFeatures.WithLabelValues(f).Inc()
+	// Set gauge to 1 for every currently applied feature
+	for f := range newFeatures {
+		monitoring.AppliedFeatures.WithLabelValues(f).Set(1)
 	}
 
-	statsToDel := oldStats.Subtract(newStats)
-	for f := range statsToDel.Features {
-		monitoring.AppliedFeatures.WithLabelValues(f).Dec()
+	// Delete metrics for features that are no longer applied
+	for f := range r.oldFeatures {
+		if _, exists := newFeatures[f]; !exists {
+			monitoring.AppliedFeatures.Delete(prometheus.Labels{"name": f})
+		}
 	}
+
+	r.oldFeatures = newFeatures
+
 	return nil
 }
