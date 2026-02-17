@@ -195,6 +195,32 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	generationKey := strconv.FormatInt(enactmentInstance.Status.PolicyGeneration, 10)
 
+	// Verify the policy still exists via uncached client before applying.
+	// The cached client may return stale data if the informer watch was
+	// broken during a previous network-disrupting apply cycle.
+	freshPolicy := &nmstatev1.NodeNetworkConfigurationPolicy{}
+	if err := r.APIClient.Get(ctx, request.NamespacedName, freshPolicy); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("Policy no longer exists (verified via API server), removing enactment")
+			err = r.deleteEnactmentForPolicy(ctx, request.NamespacedName.Name)
+			return ctrl.Result{}, err
+		}
+		log.Error(err, "Failed to verify policy existence via API server")
+		return ctrl.Result{}, err
+	}
+
+	// Skip apply if retries are already exhausted for this generation.
+	// This prevents unnecessary network disruption when a spurious reconcile
+	// (e.g., from informer re-list after reconnection) re-triggers processing
+	// of an already-failed policy.
+	if enactmentInstance.Status.RetryCount[generationKey] >= RetriesUntilFail {
+		log.Info("Retry count already exhausted, skipping apply",
+			"retryCount", enactmentInstance.Status.RetryCount[generationKey],
+			"maxRetries", RetriesUntilFail,
+			"generation", generationKey)
+		return ctrl.Result{}, nil
+	}
+
 	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
 		err = r.incrementUnavailableNodeCount(ctx, instance, generationKey)
 		if err != nil {
