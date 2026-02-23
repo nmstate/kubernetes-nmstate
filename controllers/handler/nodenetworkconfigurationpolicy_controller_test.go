@@ -416,4 +416,117 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			})
 		})
 	})
+
+	Describe("fillInEnactmentStatus", func() {
+		var (
+			reconciler *NodeNetworkConfigurationPolicyReconciler
+			s          *runtime.Scheme
+		)
+
+		BeforeEach(func() {
+			nmstatectlShowFn = func() (string, error) { return "", nil }
+			reconciler = &NodeNetworkConfigurationPolicyReconciler{}
+			s = scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NodeNetworkState{},
+				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			)
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
+			)
+			reconciler.Log = ctrl.Log.WithName("test")
+		})
+
+		Context("when policy generation changes", func() {
+			It("should reset enactment conditions", func() {
+				nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test",
+						Generation: 2,
+					},
+				}
+				nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
+						Labels: map[string]string{
+							shared.EnactmentPolicyLabel: nncp.Name,
+						},
+					},
+					Status: shared.NodeNetworkConfigurationEnactmentStatus{
+						PolicyGeneration: 1,
+					},
+				}
+				// Set stale Failing conditions from previous generation
+				conditions.SetFailedToConfigure(&nnce.Status.Conditions, "previous generation failure")
+
+				clb := fake.ClientBuilder{}
+				clb.WithScheme(s)
+				clb.WithRuntimeObjects(&nncp, &nnce)
+				clb.WithStatusSubresource(&nnce)
+				cl := clb.Build()
+
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+
+				enactmentConditions := conditions.New(cl, shared.EnactmentKey(nodeName, nncp.Name))
+
+				err := reconciler.fillInEnactmentStatus(context.TODO(), &nncp, &nnce, enactmentConditions)
+				Expect(err).ToNot(HaveOccurred())
+
+				updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+				err = cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(updatedNNCE.Status.PolicyGeneration).To(Equal(int64(2)))
+				Expect(updatedNNCE.Status.Conditions).To(BeEmpty(),
+					"conditions should be reset when generation changes")
+			})
+		})
+
+		Context("when policy generation stays the same", func() {
+			It("should preserve enactment conditions", func() {
+				nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test",
+						Generation: 1,
+					},
+				}
+				nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
+						Labels: map[string]string{
+							shared.EnactmentPolicyLabel: nncp.Name,
+						},
+					},
+					Status: shared.NodeNetworkConfigurationEnactmentStatus{
+						PolicyGeneration: 1,
+					},
+				}
+				conditions.SetProgressing(&nnce.Status.Conditions, "Applying desired state")
+
+				clb := fake.ClientBuilder{}
+				clb.WithScheme(s)
+				clb.WithRuntimeObjects(&nncp, &nnce)
+				clb.WithStatusSubresource(&nnce)
+				cl := clb.Build()
+
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+
+				enactmentConditions := conditions.New(cl, shared.EnactmentKey(nodeName, nncp.Name))
+
+				err := reconciler.fillInEnactmentStatus(context.TODO(), &nncp, &nnce, enactmentConditions)
+				Expect(err).ToNot(HaveOccurred())
+
+				updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+				err = cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(updatedNNCE.Status.PolicyGeneration).To(Equal(int64(1)))
+				Expect(updatedNNCE.Status.Conditions).ToNot(BeEmpty(),
+					"conditions should be preserved when generation stays the same")
+			})
+		})
+	})
 })
