@@ -453,7 +453,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 			r.APIClient,
 			nmstateapi.EnactmentKey(nodeName, policy.Name),
 			func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
-				status.PolicyGeneration = policy.Generation
+				resetPolicyGeneration(status, policy.Generation)
 			},
 		)
 		if err2 != nil {
@@ -483,12 +483,23 @@ func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 		r.APIClient,
 		nmstateapi.EnactmentKey(nodeName, policy.Name),
 		func(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus) {
+			resetPolicyGeneration(status, policy.Generation)
 			status.DesiredState = desiredStateWithDefaults
 			status.CapturedStates = capturedStates
-			status.PolicyGeneration = policy.Generation
 			status.Features = features
 		},
 	)
+}
+
+// resetPolicyGeneration updates the enactment's PolicyGeneration and clears
+// stale conditions when the generation changes. This prevents
+// policyconditions.Update on other handlers from misattributing
+// previous-generation failure conditions to the new generation.
+func resetPolicyGeneration(status *nmstateapi.NodeNetworkConfigurationEnactmentStatus, generation int64) {
+	if status.PolicyGeneration != generation {
+		status.Conditions = nmstateapi.ConditionList{}
+	}
+	status.PolicyGeneration = generation
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) enactmentForPolicy(
