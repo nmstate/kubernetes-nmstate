@@ -36,6 +36,10 @@ func ovsBridgeWithTheDefaultInterface(ovsBridgeName, defaultInterfaceMac string)
   ipv4:
     enabled: true
     dhcp: true
+  ipv6:
+    autoconf: true
+    dhcp: true
+    enabled: true
   mac-address: %s
 - name: %s
   type: ovs-bridge
@@ -57,6 +61,10 @@ func ovsBridgeWithTheDefaultInterfaceAbsent(ovsBridgeName, ovsBridgeInternalPort
   ipv4:
     enabled: true
     dhcp: true
+  ipv6:
+    autoconf: true
+    dhcp: true
+    enabled: true
 - name: %s
   type: ovs-interface
   state: absent

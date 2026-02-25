@@ -25,11 +25,10 @@ import (
 // nolint: funlen
 func TestDefaultGatewayParsing(t *testing.T) {
 	tests := []struct {
-		desc          string
-		status        string
-		expectedGw    string
-		expectedIface string
-		shouldErr     bool
+		desc           string
+		status         string
+		expectedRoutes []Route
+		shouldErr      bool
 	}{
 		{
 			desc: "one single gateway",
@@ -45,8 +44,9 @@ func TestDefaultGatewayParsing(t *testing.T) {
     metric: 48
     table-id: 254
 `,
-			expectedGw:    "10.46.55.254",
-			expectedIface: "eth1",
+			expectedRoutes: []Route{
+				{nextHop: net.ParseIP("10.46.55.254"), iface: "eth1"},
+			},
 		}, {
 			desc: "two gateways, one on custom routing table",
 			status: `routes:
@@ -65,8 +65,9 @@ func TestDefaultGatewayParsing(t *testing.T) {
     metric: 48
     table-id: 254
 `,
-			expectedGw:    "10.46.55.254",
-			expectedIface: "eth1",
+			expectedRoutes: []Route{
+				{nextHop: net.ParseIP("10.46.55.254"), iface: "eth1"},
+			},
 		}, {
 			desc: "no next-hop-address",
 			status: `routes:
@@ -86,8 +87,9 @@ func TestDefaultGatewayParsing(t *testing.T) {
     next-hop-address: fe80::dead:beef:fe51:782d
     table-id: 254
 `,
-			expectedGw:    "fe80::dead:beef:fe51:782d",
-			expectedIface: "eth0",
+			expectedRoutes: []Route{
+				{nextHop: net.ParseIP("fe80::dead:beef:fe51:782d"), iface: "eth0"},
+			},
 		}, {
 			desc: "two IPv6 gateways, one on custom routing table",
 			status: `routes:
@@ -101,8 +103,9 @@ func TestDefaultGatewayParsing(t *testing.T) {
     next-hop-address: fe80::baad:cafe:fe51:782d
     table-id: 56
 `,
-			expectedGw:    "fe80::dead:beef:fe51:782d",
-			expectedIface: "eth0",
+			expectedRoutes: []Route{
+				{nextHop: net.ParseIP("fe80::dead:beef:fe51:782d"), iface: "eth0"},
+			},
 		}, {
 			desc: "dual-stack with single gateway per IP stack",
 			status: `routes:
@@ -116,8 +119,10 @@ func TestDefaultGatewayParsing(t *testing.T) {
     next-hop-address: fe80::dead:beef:fe51:782d
     table-id: 254
 `,
-			expectedGw:    "10.46.55.254",
-			expectedIface: "eth0",
+			expectedRoutes: []Route{
+				{nextHop: net.ParseIP("10.46.55.254"), iface: "eth0"},
+				{nextHop: net.ParseIP("fe80::dead:beef:fe51:782d"), iface: "eth0"},
+			},
 		}, {
 			desc: "dual-stack with missing IPv4 default gateway",
 			status: `routes:
@@ -131,8 +136,9 @@ func TestDefaultGatewayParsing(t *testing.T) {
     next-hop-address: fe80::dead:beef:fe51:782d
     table-id: 254
 `,
-			expectedGw:    "fe80::dead:beef:fe51:782d",
-			expectedIface: "eth1",
+			expectedRoutes: []Route{
+				{nextHop: net.ParseIP("fe80::dead:beef:fe51:782d"), iface: "eth1"},
+			},
 		},
 	}
 
@@ -142,21 +148,25 @@ func TestDefaultGatewayParsing(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse test status, %v", err)
 			}
-			defaultGw, err := defaultGw(gJSON)
+			gws, err := defaultGws(gJSON)
 			if err != nil && !test.shouldErr {
 				t.Fatalf("unexpected error %v", err)
 			}
 			if test.shouldErr && err == nil {
 				t.Fatalf("expecting error, did not fail")
 			}
-
-			expectedRoute := Route{
-				nextHop: net.ParseIP(test.expectedGw),
-				iface:   test.expectedIface,
+			if test.shouldErr {
+				return
 			}
 
-			if !expectedRoute.nextHop.Equal(defaultGw.nextHop) || expectedRoute.iface != defaultGw.iface {
-				t.Fatalf("expecting %+v, got %+v", expectedRoute, defaultGw)
+			if len(gws) != len(test.expectedRoutes) {
+				t.Fatalf("expecting %d gateways, got %d: %+v", len(test.expectedRoutes), len(gws), gws)
+			}
+
+			for i, expected := range test.expectedRoutes {
+				if !expected.nextHop.Equal(gws[i].nextHop) || expected.iface != gws[i].iface {
+					t.Fatalf("gateway %d: expecting %+v, got %+v", i, expected, gws[i])
+				}
 			}
 		})
 	}
