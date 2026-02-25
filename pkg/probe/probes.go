@@ -141,19 +141,36 @@ func checkNodeReadiness(ctx context.Context, cli client.Client) (bool, error) {
 }
 
 func defaultGw(currentState gjson.Result) (Route, error) {
-	var found Route
+	var ipv4Gw, ipv6Gw Route
 	currentState.Get("routes.running").ForEach(
 		func(_, v gjson.Result) bool {
-			// we want to pick the next hop related to the "main" table because we may have multiple tables
-			if (v.Get("destination").String() == "0.0.0.0/0" || v.Get("destination").String() == "::/0") &&
-				v.Get("table-id").Int() == mainRoutingTableID {
-				found.nextHop = net.ParseIP(v.Get("next-hop-address").String())
-				found.iface = v.Get("next-hop-interface").String()
-				return false
+			if v.Get("table-id").Int() != mainRoutingTableID {
+				return true
+			}
+			dest := v.Get("destination").String()
+			switch dest {
+			case "0.0.0.0/0":
+				if ipv4Gw.nextHop == nil {
+					ipv4Gw.nextHop = net.ParseIP(v.Get("next-hop-address").String())
+					ipv4Gw.iface = v.Get("next-hop-interface").String()
+				}
+			case "::/0":
+				if ipv6Gw.nextHop == nil {
+					ipv6Gw.nextHop = net.ParseIP(v.Get("next-hop-address").String())
+					ipv6Gw.iface = v.Get("next-hop-interface").String()
+				}
 			}
 			return true
 		},
 	)
+
+	// Prefer IPv4 default route over IPv6 (e.g. avoid IPv6 link-local ping issues)
+	var found Route
+	if ipv4Gw.nextHop != nil {
+		found = ipv4Gw
+	} else if ipv6Gw.nextHop != nil {
+		found = ipv6Gw
+	}
 
 	if found.nextHop == nil {
 		msg := "default gw missing"
