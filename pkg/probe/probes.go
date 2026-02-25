@@ -140,22 +140,23 @@ func checkNodeReadiness(ctx context.Context, cli client.Client) (bool, error) {
 	return false, nil
 }
 
-func defaultGw(currentState gjson.Result) (Route, error) {
-	var found Route
+func defaultGws(currentState gjson.Result) ([]Route, error) {
+	var found []Route
 	currentState.Get("routes.running").ForEach(
 		func(_, v gjson.Result) bool {
-			// we want to pick the next hop related to the "main" table because we may have multiple tables
+			// we want to pick the next hops related to the "main" table because we may have multiple tables
 			if (v.Get("destination").String() == "0.0.0.0/0" || v.Get("destination").String() == "::/0") &&
 				v.Get("table-id").Int() == mainRoutingTableID {
-				found.nextHop = net.ParseIP(v.Get("next-hop-address").String())
-				found.iface = v.Get("next-hop-interface").String()
-				return false
+				found = append(found, Route{
+					nextHop: net.ParseIP(v.Get("next-hop-address").String()),
+					iface:   v.Get("next-hop-interface").String(),
+				})
 			}
 			return true
 		},
 	)
 
-	if found.nextHop == nil {
+	if len(found) == 0 {
 		msg := "default gw missing"
 		defaultGwLog := log.WithValues("path", "routes.running.next-hop-address", "table-id", mainRoutingTableID)
 		defaultGwLogDebug := defaultGwLog.V(1)
@@ -164,35 +165,71 @@ func defaultGw(currentState gjson.Result) (Route, error) {
 		} else {
 			defaultGwLog.Info(msg)
 		}
-		return Route{}, errors.New(msg)
+		return nil, errors.New(msg)
 	}
 	return found, nil
 }
 
-func pingCondition(cli client.Client, timeout time.Duration) wait.ConditionWithContextFunc {
-	return func(context.Context) (bool, error) {
-		return runPing(cli)
+func pingConditionForGateway(gwIP net.IP) func(client.Client, time.Duration) wait.ConditionWithContextFunc {
+	return func(_ client.Client, _ time.Duration) wait.ConditionWithContextFunc {
+		return func(context.Context) (bool, error) {
+			// Re-discover the current route for this gateway IP so that the interface
+			// is up to date (e.g. after NNCP moves eth0 under a bridge or bond).
+			gjsonCurrentState, err := currentStateAsGJson()
+			if err != nil {
+				log.Error(err, "failed retrieving current state for ping probe")
+				return false, nil
+			}
+			gws, err := defaultGws(gjsonCurrentState)
+			if err != nil {
+				log.Error(err, "failed to retrieve default gateways for ping probe")
+				return false, nil
+			}
+			for _, gw := range gws {
+				if gw.nextHop.Equal(gwIP) {
+					pingOutput, err := ping(gw)
+					if err != nil {
+						log.Error(err, fmt.Sprintf("error pinging gateway %s via %s -> output: '%s'", gw.nextHop, gw.iface, pingOutput))
+						return false, nil
+					}
+					return true, nil
+				}
+			}
+			log.Info(fmt.Sprintf("gateway %s no longer in routing table", gwIP))
+			return false, nil
+		}
 	}
 }
 
-func runPing(_ client.Client) (bool, error) {
+func selectPingProbes(ctx context.Context, cli client.Client) []Probe {
+	var probes []Probe
+
 	gjsonCurrentState, err := currentStateAsGJson()
 	if err != nil {
-		return false, errors.Wrap(err, "failed retrieving current state to retrieve default gw")
+		log.Error(err, "failed retrieving current state for ping probe gateway discovery")
+		return probes
 	}
 
-	defaultGw, err := defaultGw(gjsonCurrentState)
+	gws, err := defaultGws(gjsonCurrentState)
 	if err != nil {
-		log.Error(err, "failed to retrieve default gw")
-		return false, nil
+		log.Info(fmt.Sprintf("WARNING: no default gateways found for ping probes: %v", err))
+		return probes
 	}
 
-	pingOutput, err := ping(defaultGw)
-	if err != nil {
-		log.Error(err, fmt.Sprintf("error pinging default gateway -> output: '%s'", pingOutput))
-		return false, nil
+	for _, gw := range gws {
+		p := Probe{
+			name:      fmt.Sprintf("ping-%s", gw.nextHop),
+			timeout:   defaultGwProbeTimeout,
+			condition: pingConditionForGateway(gw.nextHop),
+		}
+		err := wait.PollUntilContextTimeout(ctx, time.Second, p.timeout, true, p.condition(cli, p.timeout))
+		if err == nil {
+			probes = append(probes, p)
+		} else {
+			log.Info(fmt.Sprintf("WARNING not selecting %s probe", p.name))
+		}
 	}
-	return true, nil
+	return probes
 }
 
 func ping(target Route) (string, error) {
@@ -269,27 +306,18 @@ func runDNS(_ client.Client, timeout time.Duration) (bool, error) {
 // Select will return the external connectivity probes that are working (ping and dns) and
 // the internal connectivity probes
 func Select(ctx context.Context, cli client.Client) []Probe {
-	probes := []Probe{}
-	externalConnectivityProbes := []Probe{
-		{
-			name:      "ping",
-			timeout:   defaultGwProbeTimeout,
-			condition: pingCondition,
-		},
-		{
-			name:      "dns",
-			timeout:   defaultDNSProbeTimeout,
-			condition: dnsCondition,
-		},
-	}
+	probes := selectPingProbes(ctx, cli)
 
-	for _, p := range externalConnectivityProbes {
-		err := wait.PollUntilContextTimeout(ctx, time.Second, p.timeout, true /*immediate*/, p.condition(cli, p.timeout))
-		if err == nil {
-			probes = append(probes, p)
-		} else {
-			log.Info(fmt.Sprintf("WARNING not selecting %s probe", p.name))
-		}
+	dnsProbe := Probe{
+		name:      "dns",
+		timeout:   defaultDNSProbeTimeout,
+		condition: dnsCondition,
+	}
+	err := wait.PollUntilContextTimeout(ctx, time.Second, dnsProbe.timeout, true /*immediate*/, dnsProbe.condition(cli, dnsProbe.timeout))
+	if err == nil {
+		probes = append(probes, dnsProbe)
+	} else {
+		log.Info(fmt.Sprintf("WARNING not selecting %s probe", dnsProbe.name))
 	}
 
 	probes = append(probes,
