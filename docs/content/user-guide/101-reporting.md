@@ -1,6 +1,7 @@
 ---
 title: "Reporting"
-tag: "user-guide"
+weight: 10
+type: docs
 ---
 
 The operator periodically reports state of node network interfaces to the API
@@ -172,4 +173,4 @@ clutter the output with all Pod connections.
 ## Continue reading
 
 The following tutorial will guide you through the configuration of node
-networking: [Configuration]({{ "user-guide/102-configuration.html" | relative_url }} )
+networking: [Configuration]({{< relref "/user-guide/102-configuration" >}})

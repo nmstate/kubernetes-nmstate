@@ -1,6 +1,7 @@
 ---
 title: "Deployment on Arbitrary Cluster"
-tag: "deployment"
+weight: 20
+type: docs
 ---
 
 In this guide, we will cover the installation of NetworkManager
@@ -10,7 +11,7 @@ and kubernetes-nmstate on your arbitrary cluster.
 
 This guide requires you to have your own Kubernetes/OpenShift cluster. If you
 don't have one and just want to try kubernetes-nmstate out, please refer to
-the [deployment on local cluster]({{ "deployment/local-cluster.html" | relative_url }}) guide.
+the [deployment on local cluster]({{< relref "/deployment/local-cluster" >}}) guide.
 
 In order to get kubernetes-nmstate running, NetworkManager
 must be installed on the node.
@@ -49,5 +50,5 @@ release](https://github.com/nmstate/kubernetes-nmstate/releases) and follow the
 the Installation guide attached to it.
 
 You can stop here and play with the cluster on your own or continue with one of
-the [user guides]({{ "user-guide.html" | relative_url }}) that will guide you through
+the [user guides]({{< relref "/user-guide" >}}) that will guide you through
 requesting node network states and configuring the nodes.

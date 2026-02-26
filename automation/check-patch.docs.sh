@@ -2,17 +2,18 @@
 
 IMAGE_BUILDER=${IMAGE_BUILDER:-$(./hack/detect_cri.sh)}
 
-# Change url to point to google storage
 url="https://storage.googleapis.com"
-baseurl="kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate/${PULL_NUMBER}/pull-kubernetes-nmstate-docs/${BUILD_ID}/artifacts/gh-pages/"
-sed -i "s#^url:.*#url: \"$url\"#" docs/_config.yaml
-sed -i "s#^baseurl:.*#baseurl: \"$baseurl\"#" docs/_config.yaml
+baseurl="/${PULL_NUMBER}/pull-kubernetes-nmstate-docs/${BUILD_ID}/artifacts/gh-pages/"
+preview_baseurl="${url}/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate${baseurl}"
 
-
-${IMAGE_BUILDER} run -v $(pwd)/docs:/docs/ docker.io/library/ruby:3.1 make -C docs install check
+# Build docs, check links, then rebuild with preview base URL
+${IMAGE_BUILDER} run -v $(pwd)/docs:/docs/ -w /docs \
+    -e GOBIN=/usr/local/bin \
+    docker.io/hugomods/hugo:exts \
+    sh -c "npm install && command -v htmltest || go install github.com/wjdp/htmltest@latest && hugo --baseURL / --destination build/ && htmltest && hugo --baseURL '${preview_baseurl}' --destination build/"
 
 # Copy the docs to the artifacts
 mkdir -p $ARTIFACTS/gh-pages
-rsync -rt --links docs/build/$baseurl $ARTIFACTS/gh-pages
+rsync -rt --links docs/build/* $ARTIFACTS/gh-pages
 
-echo "kubernetes-nmstate preview URL: ${url}/${baseurl}index.html"
+echo "kubernetes-nmstate preview URL: ${preview_baseurl}index.html"
