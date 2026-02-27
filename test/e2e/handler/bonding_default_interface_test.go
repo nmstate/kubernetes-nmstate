@@ -37,6 +37,10 @@ func boundUpWithPrimaryAndSecondary(bondName string) nmstate.State {
     ipv4:
       dhcp: true
       enabled: true
+    ipv6:
+      autoconf: true
+      dhcp: true
+      enabled: true
     link-aggregation:
       mode: active-backup
       options:
@@ -57,6 +61,10 @@ func bondAbsentWithPrimaryUp(bondName string) nmstate.State {
     state: up
     type: ethernet
     ipv4:
+      dhcp: true
+      enabled: true
+    ipv6:
+      autoconf: true
       dhcp: true
       enabled: true
 `, bondName, primaryNic))

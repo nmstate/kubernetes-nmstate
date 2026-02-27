@@ -64,6 +64,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
     ipv4:
       dhcp: true
       enabled: true
+    ipv6:
+      autoconf: true
+      dhcp: true
+      enabled: true
     bridge:
       options:
         stp:
@@ -92,6 +96,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nm
     ipv4:
       enabled: true
       dhcp: true
+    ipv6:
+      autoconf: true
+      dhcp: true
+      enabled: true
   - name: brext
     type: linux-bridge
     state: absent
