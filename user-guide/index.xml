@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>User Guide on The Kubernetes NMState project</title>
+    <link>https://nmstate.github.io/kubernetes-nmstate/user-guide/</link>
+    <description>Recent content in User Guide on The Kubernetes NMState project</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <atom:link href="https://nmstate.github.io/kubernetes-nmstate/user-guide/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Reporting</title>
+      <link>https://nmstate.github.io/kubernetes-nmstate/user-guide/101-reporting/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nmstate.github.io/kubernetes-nmstate/user-guide/101-reporting/</guid>
+      <description>&lt;p&gt;The operator periodically reports state of node network interfaces to the API&#xA;server. These reports are available through &lt;code&gt;NodeNetworkState&lt;/code&gt; objects that are&#xA;created per each node.&lt;/p&gt;&#xA;&lt;h2 id=&#34;list-all-handled-nodes&#34;&gt;List all handled nodes&lt;/h2&gt;&#xA;&lt;p&gt;List &lt;code&gt;NodeNetworkStates&lt;/code&gt; from all nodes:&lt;/p&gt;&#xA;&lt;div class=&#34;highlight&#34;&gt;&lt;pre tabindex=&#34;0&#34; style=&#34;color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;&#34;&gt;&lt;code class=&#34;language-shell&#34; data-lang=&#34;shell&#34;&gt;&lt;span style=&#34;display:flex;&#34;&gt;&lt;span&gt;kubectl get nodenetworkstates&#xA;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;pre tabindex=&#34;0&#34;&gt;&lt;code&gt;NAME     AGE&#xA;node01   22s&#xA;node02   22s&#xA;&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;You can also use short name &lt;code&gt;nns&lt;/code&gt; to reach the same effect:&lt;/p&gt;&#xA;&lt;blockquote&gt;&#xA;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; there is a bug in kubectl where &lt;code&gt;get&lt;/code&gt; on short names fails first time it is used.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Configuration</title>
+      <link>https://nmstate.github.io/kubernetes-nmstate/user-guide/102-configuration/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nmstate.github.io/kubernetes-nmstate/user-guide/102-configuration/</guid>
+      <description>&lt;p&gt;The operator allows users to configure various network interface types, DNS and&#xA;routing on cluster nodes. The configuration is driven by two main object types,&#xA;&lt;code&gt;NodeNetworkConfigurationPolicy&lt;/code&gt; (Policy) and&#xA;&lt;code&gt;NodeNetworkConfigurationEnactment&lt;/code&gt; (Enactment).&lt;/p&gt;&#xA;&lt;p&gt;A Policy describes what is the desired network configuration on cluster nodes.&#xA;It is created by users and applies cluster-wide.&#xA;An Enactment, on the other hand, is a read-only object that carries execution&#xA;state of a Policy per each Node.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title>Troubleshooting</title>
+      <link>https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting/</guid>
+      <description>&lt;p&gt;Node network configuration is a risky business. A lot can go wrong and when it&#xA;does, it can render the whole node unreachable and non-operational. This guide&#xA;will show you how to obtain information about failed configuration and how does&#xA;the operator protect the user from breaking the cluster networking.&lt;/p&gt;&#xA;&lt;h2 id=&#34;invalid-configuration&#34;&gt;Invalid configuration&lt;/h2&gt;&#xA;&lt;p&gt;If any of the following cases render the configuration faulty, the setup will be&#xA;automatically rolled back and Enactment will report the failure. In addition,&#xA;an event for the NodeNetworkConfigurationPolicy will be created.&lt;/p&gt;</description>
+    </item>
+  </channel>
+</rss>

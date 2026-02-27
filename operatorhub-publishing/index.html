@@ -1,10 +1,8 @@
 <!doctype html>
 <html itemscope itemtype="http://schema.org/WebPage" lang="en" class="no-js">
   <head>
-	<meta name="generator" content="Hugo 0.154.5">
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link rel="alternate" type="application/rss&#43;xml" href="https://nmstate.github.io/kubernetes-nmstate/index.xml">
 <meta name="robots" content="index, follow">
 
 
@@ -19,29 +17,33 @@
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-144x144.png" sizes="144x144">
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-192x192.png" sizes="192x192">
 
-<title>The Kubernetes NMState project</title>
-<meta name="description" content="Introduction [keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.
-How it works We use nmstate to perform state driven network configuration on cluster nodes and to report back their current state. Both the configuration and reporting is controlled via Kubernetes objects.
-apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: br1-eth0 spec: desiredState: interfaces: - name: br1 type: linux-bridge state: up ipv4: dhcp: true enabled: true bridge: port: - name: eth0 The only external dependency is NetworkManager running on nodes. See more details in Compatibility documentation.">
-<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/">
+<title>Publishing to OperatorHub | The Kubernetes NMState project</title>
+<meta name="description" content="This document describes how to publish kubernetes-nmstate to OperatorHub using GitHub Actions.
+Overview The kubernetes-nmstate operator can be published to two OperatorHub repositories:
+community-operators - For upstream Kubernetes clusters (https://operatorhub.io) community-operators-prod - For OpenShift/OKD clusters (Red Hat Certified) We provide two GitHub Actions workflows for publishing:
+Manual Publishing: publish-operatorhub.yml - Triggered manually for testing or specific versions Automatic Publishing: publish-operatorhub-on-release.yml - Triggered automatically when a release is published Prerequisites Required Secrets The workflows require a GitHub secret named OPERATORHUB_TOKEN with permissions to:">
+<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/operatorhub-publishing/">
   <meta property="og:site_name" content="The Kubernetes NMState project">
-  <meta property="og:title" content="The Kubernetes NMState project">
-  <meta property="og:description" content="Introduction [keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.
-How it works We use nmstate to perform state driven network configuration on cluster nodes and to report back their current state. Both the configuration and reporting is controlled via Kubernetes objects.
-apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: br1-eth0 spec: desiredState: interfaces: - name: br1 type: linux-bridge state: up ipv4: dhcp: true enabled: true bridge: port: - name: eth0 The only external dependency is NetworkManager running on nodes. See more details in Compatibility documentation.">
+  <meta property="og:title" content="Publishing to OperatorHub">
+  <meta property="og:description" content="This document describes how to publish kubernetes-nmstate to OperatorHub using GitHub Actions.
+Overview The kubernetes-nmstate operator can be published to two OperatorHub repositories:
+community-operators - For upstream Kubernetes clusters (https://operatorhub.io) community-operators-prod - For OpenShift/OKD clusters (Red Hat Certified) We provide two GitHub Actions workflows for publishing:
+Manual Publishing: publish-operatorhub.yml - Triggered manually for testing or specific versions Automatic Publishing: publish-operatorhub-on-release.yml - Triggered automatically when a release is published Prerequisites Required Secrets The workflows require a GitHub secret named OPERATORHUB_TOKEN with permissions to:">
   <meta property="og:locale" content="en">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="article">
 
-  <meta itemprop="name" content="The Kubernetes NMState project">
-  <meta itemprop="description" content="Introduction [keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.
-How it works We use nmstate to perform state driven network configuration on cluster nodes and to report back their current state. Both the configuration and reporting is controlled via Kubernetes objects.
-apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: br1-eth0 spec: desiredState: interfaces: - name: br1 type: linux-bridge state: up ipv4: dhcp: true enabled: true bridge: port: - name: eth0 The only external dependency is NetworkManager running on nodes. See more details in Compatibility documentation.">
-  <meta itemprop="wordCount" content="245">
+  <meta itemprop="name" content="Publishing to OperatorHub">
+  <meta itemprop="description" content="This document describes how to publish kubernetes-nmstate to OperatorHub using GitHub Actions.
+Overview The kubernetes-nmstate operator can be published to two OperatorHub repositories:
+community-operators - For upstream Kubernetes clusters (https://operatorhub.io) community-operators-prod - For OpenShift/OKD clusters (Red Hat Certified) We provide two GitHub Actions workflows for publishing:
+Manual Publishing: publish-operatorhub.yml - Triggered manually for testing or specific versions Automatic Publishing: publish-operatorhub-on-release.yml - Triggered automatically when a release is published Prerequisites Required Secrets The workflows require a GitHub secret named OPERATORHUB_TOKEN with permissions to:">
+  <meta itemprop="wordCount" content="769">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="The Kubernetes NMState project">
-  <meta name="twitter:description" content="Introduction [keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.
-How it works We use nmstate to perform state driven network configuration on cluster nodes and to report back their current state. Both the configuration and reporting is controlled via Kubernetes objects.
-apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: br1-eth0 spec: desiredState: interfaces: - name: br1 type: linux-bridge state: up ipv4: dhcp: true enabled: true bridge: port: - name: eth0 The only external dependency is NetworkManager running on nodes. See more details in Compatibility documentation.">
+  <meta name="twitter:title" content="Publishing to OperatorHub">
+  <meta name="twitter:description" content="This document describes how to publish kubernetes-nmstate to OperatorHub using GitHub Actions.
+Overview The kubernetes-nmstate operator can be published to two OperatorHub repositories:
+community-operators - For upstream Kubernetes clusters (https://operatorhub.io) community-operators-prod - For OpenShift/OKD clusters (Red Hat Certified) We provide two GitHub Actions workflows for publishing:
+Manual Publishing: publish-operatorhub.yml - Triggered manually for testing or specific versions Automatic Publishing: publish-operatorhub-on-release.yml - Triggered automatically when a release is published Prerequisites Required Secrets The workflows require a GitHub secret named OPERATORHUB_TOKEN with permissions to:">
 <link rel="preload" href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" as="style" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
 <link href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" rel="stylesheet" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
 <script
@@ -50,7 +52,7 @@ apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: b
   crossorigin="anonymous"></script>
 
   </head>
-  <body class="td-home">
+  <body class="td-page">
     <header>
       <nav class="td-navbar js-navbar-scroll" data-bs-theme="dark">
 <div class="container-fluid flex-column flex-md-row">
@@ -81,7 +83,7 @@ apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: b
   <nav class="td-sidebar-nav collapse" id="td-section-nav">
     <ul class="td-sidebar-nav__section pe-md-3 ul-0">
       <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-kubernetes-nmstate-li">
-  <a href="/kubernetes-nmstate/" title="The Kubernetes NMState project" class="align-left ps-0 active td-sidebar-link td-sidebar-link__section tree-root" id="m-kubernetes-nmstate"><span class="td-sidebar-nav-active-item">kubernetes-nmstate</span></a>
+  <a href="/kubernetes-nmstate/" title="The Kubernetes NMState project" class="align-left ps-0 td-sidebar-link td-sidebar-link__section tree-root" id="m-kubernetes-nmstate"><span class="">kubernetes-nmstate</span></a>
   <ul class="ul-1">
     <li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-kubernetes-nmstatedeployment-li">
   <a href="/kubernetes-nmstate/deployment/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstatedeployment"><span class="">Deployment</span></a>
@@ -105,8 +107,8 @@ apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: b
   </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstateexamples-li">
   <a href="/kubernetes-nmstate/examples/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstateexamples"><span class="">Examples</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstateoperatorhub-publishing-li">
-  <a href="/kubernetes-nmstate/operatorhub-publishing/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstateoperatorhub-publishing"><span class="">Publishing to OperatorHub</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child active-path" id="m-kubernetes-nmstateoperatorhub-publishing-li">
+  <a href="/kubernetes-nmstate/operatorhub-publishing/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstateoperatorhub-publishing"><span class="td-sidebar-nav-active-item">Publishing to OperatorHub</span></a>
 </li>
   </ul>
 </li>
@@ -117,14 +119,58 @@ apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: b
           </aside>
           <aside class="d-none d-xl-block col-xl-2 td-sidebar-toc d-print-none">
             <div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
-<a href="https://github.com/nmstate/kubernetes-nmstate/tree/main/content/_index.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/edit/main/content/_index.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
+<a href="https://github.com/nmstate/kubernetes-nmstate/tree/main/content/operatorhub-publishing.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/edit/main/content/operatorhub-publishing.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
   <a href="https://github.com/nmstate/kubernetes-nmstate/new/main/content?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/issues/new?title=The%20Kubernetes%20NMState%20project" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/issues/new?title=Publishing%20to%20OperatorHub" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
   
 </div>
 
-            
+            <div class="td-toc">
+        <nav id="TableOfContents">
+  <ul>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#prerequisites">Prerequisites</a>
+      <ul>
+        <li><a href="#required-secrets">Required Secrets</a></li>
+        <li><a href="#required-images">Required Images</a></li>
+      </ul>
+    </li>
+    <li><a href="#automatic-publishing-recommended">Automatic Publishing (Recommended)</a>
+      <ul>
+        <li><a href="#process">Process</a></li>
+        <li><a href="#workflow-behavior">Workflow Behavior</a></li>
+        <li><a href="#manual-trigger">Manual Trigger</a></li>
+      </ul>
+    </li>
+    <li><a href="#manual-publishing">Manual Publishing</a>
+      <ul>
+        <li><a href="#usage">Usage</a></li>
+        <li><a href="#using-github-cli">Using GitHub CLI</a></li>
+      </ul>
+    </li>
+    <li><a href="#workflow-details">Workflow Details</a>
+      <ul>
+        <li><a href="#what-the-workflows-do">What the workflows do</a></li>
+        <li><a href="#bundle-structure">Bundle Structure</a></li>
+        <li><a href="#image-references">Image References</a></li>
+      </ul>
+    </li>
+    <li><a href="#post-publishing">Post-Publishing</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a>
+      <ul>
+        <li><a href="#bundle-generation-fails">Bundle generation fails</a></li>
+        <li><a href="#images-not-found">Images not found</a></li>
+        <li><a href="#pr-creation-fails">PR creation fails</a></li>
+        <li><a href="#version-format-errors">Version format errors</a></li>
+      </ul>
+    </li>
+    <li><a href="#testing-locally">Testing Locally</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+      </div>
+    
             
 
           </aside>
@@ -135,74 +181,237 @@ apiVersion: nmstate.io/v1 kind: NodeNetworkConfigurationPolicy metadata: name: b
             <nav aria-label="breadcrumb" class="td-breadcrumbs td-breadcrumbs__single">
   <ol class="breadcrumb">
   <li class="breadcrumb-item active" aria-current="page">
-    kubernetes-nmstate</li>
+    Publishing to OperatorHub</li>
   </ol>
 </nav>
             
 <div class="td-content">
-	<h1>The Kubernetes NMState project</h1>
-  
+	<h1>Publishing to OperatorHub</h1>
+	
 	<header class="article-meta">
 		
 </header>
-	<h1 id="introduction">Introduction</h1>
-<p>[keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.</p>
-<h1 id="how-it-works">How it works</h1>
-<p>We use <a href="https://nmstate.io/">nmstate</a> to perform state driven network
-configuration on cluster nodes and to report back their current state.
-Both the configuration and reporting is controlled via Kubernetes objects.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">nmstate.io/v1</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">NodeNetworkConfigurationPolicy</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
-</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">br1-eth0</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
-</span></span><span style="display:flex;"><span>  <span style="color:#f92672">desiredState</span>:
-</span></span><span style="display:flex;"><span>    <span style="color:#f92672">interfaces</span>:
-</span></span><span style="display:flex;"><span>    - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">br1</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#f92672">type</span>: <span style="color:#ae81ff">linux-bridge</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#f92672">state</span>: <span style="color:#ae81ff">up</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#f92672">ipv4</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#f92672">dhcp</span>: <span style="color:#66d9ef">true</span>
-</span></span><span style="display:flex;"><span>        <span style="color:#f92672">enabled</span>: <span style="color:#66d9ef">true</span>
-</span></span><span style="display:flex;"><span>      <span style="color:#f92672">bridge</span>:
-</span></span><span style="display:flex;"><span>        <span style="color:#f92672">port</span>:
-</span></span><span style="display:flex;"><span>        - <span style="color:#f92672">name</span>: <span style="color:#ae81ff">eth0</span>
-</span></span></code></pre></div><p>The only external dependency is NetworkManager running on nodes. See more
-details in
-<a href="https://github.com/nmstate/kubernetes-nmstate/blob/main/CONTRIBUTING.md">Compatibility documentation</a>.</p>
-<p>Some <a href="/kubernetes-nmstate/examples/">examples</a> can be used as reference on how to configure various
-configuration options</p>
-<h1 id="the-why">The &ldquo;Why&rdquo;</h1>
-<p>With hybrid clouds, node-networking setup is becoming even more challenging.
-Different payloads have different networking requirements, and not everything
-can be satisfied as overlays on top of the main interface of the node (e.g.
-SR-IOV, L2, other L2).
-The <a href="https://github.com/containernetworking/cni">Container Network Interface</a>
-(CNI) standard enables different
-solutions for connecting networks on the node with pods. Some of them are
-<a href="https://github.com/containernetworking/plugins">part of the standard</a>, and there are
-others that extend support for <a href="https://github.com/kubevirt/ovs-cni">Open vSwitch bridges</a>,
-<a href="https://github.com/hustcat/sriov-cni">SR-IOV</a>, and more&hellip;</p>
-<p>However, in all of these cases, the node must have the networks setup before the
-pod is scheduled. Setting up the networks in a dynamic and heterogenous cluster,
-with dynamic networking requirements, is a challenge by itself - and this is
-what this project is addressing.</p>
-<h1 id="development-and-contributing">Development and Contributing</h1>
-<p>Contributions are welcome! Find details about the project&rsquo;s design and
-development workflow in the <a href="https://github.com/nmstate/kubernetes-nmstate/blob/main/CONTRIBUTING.md">developer guide</a>.</p>
+	<p>This document describes how to publish kubernetes-nmstate to OperatorHub using GitHub Actions.</p>
+<h2 id="overview">Overview</h2>
+<p>The kubernetes-nmstate operator can be published to two OperatorHub repositories:</p>
+<ol>
+<li><strong>community-operators</strong> - For upstream Kubernetes clusters (<a href="https://operatorhub.io">https://operatorhub.io</a>)</li>
+<li><strong>community-operators-prod</strong> - For OpenShift/OKD clusters (Red Hat Certified)</li>
+</ol>
+<p>We provide two GitHub Actions workflows for publishing:</p>
+<ul>
+<li><strong>Manual Publishing</strong>: <code>publish-operatorhub.yml</code> - Triggered manually for testing or specific versions</li>
+<li><strong>Automatic Publishing</strong>: <code>publish-operatorhub-on-release.yml</code> - Triggered automatically when a release is published</li>
+</ul>
+<h2 id="prerequisites">Prerequisites</h2>
+<h3 id="required-secrets">Required Secrets</h3>
+<p>The workflows require a GitHub secret named <code>OPERATORHUB_TOKEN</code> with permissions to:</p>
+<ol>
+<li>Fork and create PRs in the k8s-operatorhub/community-operators repository</li>
+<li>Fork and create PRs in the redhat-openshift-ecosystem/community-operators-prod repository</li>
+</ol>
+<p>To set up the token:</p>
+<ol>
+<li>Create a GitHub Personal Access Token (PAT) with <code>repo</code> and <code>workflow</code> scopes</li>
+<li>Add it to your repository secrets as <code>OPERATORHUB_TOKEN</code>:
+<ul>
+<li>Go to Settings &gt; Secrets and variables &gt; Actions</li>
+<li>Click &ldquo;New repository secret&rdquo;</li>
+<li>Name: <code>OPERATORHUB_TOKEN</code></li>
+<li>Value: Your PAT</li>
+</ul>
+</li>
+</ol>
+<h3 id="required-images">Required Images</h3>
+<p>Before publishing, ensure that the operator and handler images are built and pushed to the registry:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Build and push handler image</span>
+</span></span><span style="display:flex;"><span>IMAGE_REGISTRY<span style="color:#f92672">=</span>quay.io IMAGE_REPO<span style="color:#f92672">=</span>nmstate HANDLER_IMAGE_TAG<span style="color:#f92672">=</span>v0.88.0 make push-handler
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Build and push operator image</span>
+</span></span><span style="display:flex;"><span>IMAGE_REGISTRY<span style="color:#f92672">=</span>quay.io IMAGE_REPO<span style="color:#f92672">=</span>nmstate OPERATOR_IMAGE_TAG<span style="color:#f92672">=</span>v0.88.0 make push-operator
+</span></span></code></pre></div><p>Images should be publicly accessible at:</p>
+<ul>
+<li><code>quay.io/nmstate/kubernetes-nmstate-handler:v&lt;VERSION&gt;</code></li>
+<li><code>quay.io/nmstate/kubernetes-nmstate-operator:v&lt;VERSION&gt;</code></li>
+</ul>
+<h2 id="automatic-publishing-recommended">Automatic Publishing (Recommended)</h2>
+<p>The automatic workflow triggers when a GitHub release is published.</p>
+<h3 id="process">Process</h3>
+<ol>
+<li>
+<p><strong>Create and publish a release</strong> on GitHub:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Tag the release</span>
+</span></span><span style="display:flex;"><span>git tag v0.88.0
+</span></span><span style="display:flex;"><span>git push origin v0.88.0
+</span></span></code></pre></div></li>
+<li>
+<p><strong>Publish the release</strong> through the GitHub UI or using the <code>gh</code> CLI:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gh release create v0.88.0 --title <span style="color:#e6db74">&#34;v0.88.0&#34;</span> --notes <span style="color:#e6db74">&#34;Release notes here&#34;</span>
+</span></span></code></pre></div></li>
+<li>
+<p><strong>The workflow automatically</strong>:</p>
+<ul>
+<li>Extracts the version from the release tag</li>
+<li>Generates the OLM bundle</li>
+<li>Creates a PR to <code>community-operators</code> (for all releases)</li>
+<li>Creates a PR to <code>community-operators-prod</code> (for stable releases only, not pre-releases)</li>
+</ul>
+</li>
+</ol>
+<h3 id="workflow-behavior">Workflow Behavior</h3>
+<ul>
+<li><strong>All releases</strong>: Published to <code>community-operators</code> (operatorhub.io)</li>
+<li><strong>Stable releases only</strong>: Published to <code>community-operators-prod</code> (OpenShift)
+<ul>
+<li>Pre-releases (e.g., <code>v0.88.0-rc1</code>) are NOT published to production</li>
+</ul>
+</li>
+</ul>
+<h3 id="manual-trigger">Manual Trigger</h3>
+<p>You can also manually trigger the automatic workflow:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>gh workflow run publish-operatorhub-on-release.yml -f tag<span style="color:#f92672">=</span>v0.88.0
+</span></span></code></pre></div><h2 id="manual-publishing">Manual Publishing</h2>
+<p>Use the manual workflow for testing or when you need fine-grained control.</p>
+<h3 id="usage">Usage</h3>
+<ol>
+<li><strong>Navigate to Actions</strong> tab in GitHub</li>
+<li><strong>Select</strong> &ldquo;Publish to OperatorHub&rdquo; workflow</li>
+<li><strong>Click</strong> &ldquo;Run workflow&rdquo;</li>
+<li><strong>Fill in the parameters</strong>:
+<ul>
+<li><code>version</code>: Operator version (e.g., <code>0.88.0</code> - without the &lsquo;v&rsquo; prefix)</li>
+<li><code>operator_hub_repo</code>: Choose the target repository
+<ul>
+<li><code>community-operators</code> - For operatorhub.io</li>
+<li><code>community-operators-prod</code> - For OpenShift</li>
+</ul>
+</li>
+<li><code>create_pr</code>: Enable/disable PR creation (disable for testing)</li>
+</ul>
+</li>
+</ol>
+<h3 id="using-github-cli">Using GitHub CLI</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Publish to community-operators</span>
+</span></span><span style="display:flex;"><span>gh workflow run publish-operatorhub.yml <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f version<span style="color:#f92672">=</span>0.88.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f operator_hub_repo<span style="color:#f92672">=</span>community-operators <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f create_pr<span style="color:#f92672">=</span>true
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Publish to community-operators-prod (OpenShift)</span>
+</span></span><span style="display:flex;"><span>gh workflow run publish-operatorhub.yml <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f version<span style="color:#f92672">=</span>0.88.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f operator_hub_repo<span style="color:#f92672">=</span>community-operators-prod <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f create_pr<span style="color:#f92672">=</span>true
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Test bundle generation without creating a PR</span>
+</span></span><span style="display:flex;"><span>gh workflow run publish-operatorhub.yml <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f version<span style="color:#f92672">=</span>0.88.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f operator_hub_repo<span style="color:#f92672">=</span>community-operators <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  -f create_pr<span style="color:#f92672">=</span>false
+</span></span></code></pre></div><h2 id="workflow-details">Workflow Details</h2>
+<h3 id="what-the-workflows-do">What the workflows do</h3>
+<ol>
+<li><strong>Checkout</strong> the kubernetes-nmstate repository at the specified tag/version</li>
+<li><strong>Generate</strong> the OLM bundle using <code>make bundle</code></li>
+<li><strong>Validate</strong> the bundle structure and contents</li>
+<li><strong>Checkout</strong> the target OperatorHub repository</li>
+<li><strong>Create</strong> a new directory for the operator version</li>
+<li><strong>Copy</strong> bundle manifests, metadata, and Dockerfile</li>
+<li><strong>Commit</strong> and push the changes to a new branch</li>
+<li><strong>Create</strong> a Pull Request to the OperatorHub repository</li>
+</ol>
+<h3 id="bundle-structure">Bundle Structure</h3>
+<p>The generated bundle follows the Operator Framework format:</p>
+<pre tabindex="0"><code>operators/kubernetes-nmstate-operator/&lt;version&gt;/
+├── manifests/
+│   ├── kubernetes-nmstate-operator.clusterserviceversion.yaml
+│   ├── nmstate.io_nmstates.yaml
+│   ├── nmstate.io_nodenetworkconfigurationenactments.yaml
+│   ├── nmstate.io_nodenetworkconfigurationpolicies.yaml
+│   └── nmstate.io_nodenetworkstates.yaml
+├── metadata/
+│   └── annotations.yaml
+└── bundle.Dockerfile
+</code></pre><h3 id="image-references">Image References</h3>
+<p>The workflows ensure that:</p>
+<ul>
+<li>Handler image: <code>quay.io/nmstate/kubernetes-nmstate-handler:v&lt;VERSION&gt;</code></li>
+<li>Operator image: <code>quay.io/nmstate/kubernetes-nmstate-operator:v&lt;VERSION&gt;</code></li>
+<li>Pull policy: <code>IfNotPresent</code> (production setting)</li>
+</ul>
+<h2 id="post-publishing">Post-Publishing</h2>
+<p>After the workflow creates a PR:</p>
+<ol>
+<li><strong>Monitor</strong> the PR for CI checks in the OperatorHub repository</li>
+<li><strong>Address</strong> any issues flagged by OperatorHub CI</li>
+<li><strong>Wait</strong> for review and approval from OperatorHub maintainers</li>
+<li><strong>Merge</strong> will be handled by OperatorHub maintainers</li>
+</ol>
+<p>Common CI checks include:</p>
+<ul>
+<li>Bundle validation</li>
+<li>Image accessibility checks</li>
+<li>Operator scorecard tests</li>
+<li>OpenShift compatibility (for community-operators-prod)</li>
+</ul>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="bundle-generation-fails">Bundle generation fails</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Locally test bundle generation</span>
+</span></span><span style="display:flex;"><span>make bundle VERSION<span style="color:#f92672">=</span>0.88.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  HANDLER_IMAGE_TAG<span style="color:#f92672">=</span>v0.88.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  OPERATOR_IMAGE_TAG<span style="color:#f92672">=</span>v0.88.0 <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  HANDLER_PULL_POLICY<span style="color:#f92672">=</span>IfNotPresent <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  OPERATOR_PULL_POLICY<span style="color:#f92672">=</span>IfNotPresent
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Validate the bundle</span>
+</span></span><span style="display:flex;"><span>make bundle VERSION<span style="color:#f92672">=</span>0.88.0
+</span></span></code></pre></div><h3 id="images-not-found">Images not found</h3>
+<p>Ensure images are built and pushed:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Check if images exist</span>
+</span></span><span style="display:flex;"><span>podman pull quay.io/nmstate/kubernetes-nmstate-handler:v0.88.0
+</span></span><span style="display:flex;"><span>podman pull quay.io/nmstate/kubernetes-nmstate-operator:v0.88.0
+</span></span></code></pre></div><h3 id="pr-creation-fails">PR creation fails</h3>
+<ul>
+<li>Verify <code>OPERATORHUB_TOKEN</code> has correct permissions</li>
+<li>Check if a PR for this version already exists</li>
+<li>Ensure the bot user has access to fork repositories</li>
+</ul>
+<h3 id="version-format-errors">Version format errors</h3>
+<p>The workflows expect semantic versioning:</p>
+<ul>
+<li>Correct: <code>0.88.0</code>, <code>1.0.0</code>, <code>0.88.1</code></li>
+<li>Incorrect: <code>v0.88.0</code>, <code>0.88</code>, <code>latest</code></li>
+</ul>
+<p>For release tags, use the <code>v</code> prefix (e.g., <code>v0.88.0</code>), but for the workflow <code>version</code> input, omit it.</p>
+<h2 id="testing-locally">Testing Locally</h2>
+<p>To test bundle generation locally before running the workflow:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Set variables</span>
+</span></span><span style="display:flex;"><span>export VERSION<span style="color:#f92672">=</span>0.88.0
+</span></span><span style="display:flex;"><span>export HANDLER_IMAGE_TAG<span style="color:#f92672">=</span>v0.88.0
+</span></span><span style="display:flex;"><span>export OPERATOR_IMAGE_TAG<span style="color:#f92672">=</span>v0.88.0
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Generate bundle</span>
+</span></span><span style="display:flex;"><span>make bundle VERSION<span style="color:#f92672">=</span>$VERSION <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  HANDLER_IMAGE_TAG<span style="color:#f92672">=</span>$HANDLER_IMAGE_TAG <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  OPERATOR_IMAGE_TAG<span style="color:#f92672">=</span>$OPERATOR_IMAGE_TAG <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  HANDLER_PULL_POLICY<span style="color:#f92672">=</span>IfNotPresent <span style="color:#ae81ff">\
+</span></span></span><span style="display:flex;"><span>  OPERATOR_PULL_POLICY<span style="color:#f92672">=</span>IfNotPresent
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Inspect generated files</span>
+</span></span><span style="display:flex;"><span>ls -la bundle/
+</span></span><span style="display:flex;"><span>cat bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
+</span></span></code></pre></div><h2 id="references">References</h2>
+<ul>
+<li><a href="https://operatorhub.io">OperatorHub.io</a></li>
+<li><a href="https://sdk.operatorframework.io/">Operator Framework Documentation</a></li>
+<li><a href="https://github.com/k8s-operatorhub/community-operators">community-operators Repository</a></li>
+<li><a href="https://github.com/redhat-openshift-ecosystem/community-operators-prod">community-operators-prod Repository</a></li>
+<li><a href="https://olm.operatorframework.io/">Operator Lifecycle Manager (OLM)</a></li>
+</ul>
 
-  <div class="section-index">
-    
-    
-    <hr class="panel-line">
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/operatorhub-publishing/">Publishing to OperatorHub</a>
-                </h5>
-                <p></p>
-            </div>
-        </div>
+	
 </div>
+
 
           </main>
         </div>

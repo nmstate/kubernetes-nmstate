@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Examples on The Kubernetes NMState project</title>
+    <link>https://nmstate.github.io/kubernetes-nmstate/examples/</link>
+    <description>Recent content in Examples on The Kubernetes NMState project</description>
+    <generator>Hugo</generator>
+    <language>en</language>
+    <atom:link href="https://nmstate.github.io/kubernetes-nmstate/examples/index.xml" rel="self" type="application/rss+xml" />
+  </channel>
+</rss>
