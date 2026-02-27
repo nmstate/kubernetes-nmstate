@@ -1,7 +1,4 @@
-default: install
-
-build_dir=build
-dest_dir=$(build_dir)/$(shell sed -En "s/^baseurl: \"(.*)\"/\1/gp" _config.yaml)
+default: serve
 
 .PHONY: help
 help:
@@ -9,23 +6,23 @@ help:
 
 .PHONY: install
 install:
-	bundle config set --local path vendor/bundle
-	bundle install
+	npm install
 
-.PHONY: upgrade
-upgrade:
-	bundle update
+# Move legacy Ruby vendor/ aside if present, as it conflicts with Go modules.
+.PHONY: serve
+serve: install
+	@if [ -d vendor ]; then mv vendor vendor.bak; fi
+	hugo server --source .; ret=$$?; \
+	if [ -d vendor.bak ]; then mv vendor.bak vendor; fi; \
+	exit $$ret
 
 .PHONY: build
-build:
-	rm -rf $(dest_dir)
-	bundle exec jekyll build --trace --source . --destination $(dest_dir)
+build: install
+	@if [ -d vendor ]; then mv vendor vendor.bak; fi
+	hugo --source . --destination build/; ret=$$?; \
+	if [ -d vendor.bak ]; then mv vendor.bak vendor; fi; \
+	exit $$ret
 
 .PHONY: check
 check: build
-	bundle exec htmlproofer --disable-external --empty-alt-ignore --only-4xx --log-level :debug $(build_dir)
-
-.PHONY: serve
-serve:
-	rm -rf $(dest_dir)
-	bundle exec jekyll serve --source . --destination $(dest_dir) --livereload --trace
+	htmltest

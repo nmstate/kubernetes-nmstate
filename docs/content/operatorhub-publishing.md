@@ -1,4 +1,8 @@
-# Publishing to OperatorHub
+---
+title: "Publishing to OperatorHub"
+weight: 40
+type: docs
+---
 
 This document describes how to publish kubernetes-nmstate to OperatorHub using GitHub Actions.
 
@@ -211,8 +215,8 @@ podman pull quay.io/nmstate/kubernetes-nmstate-operator:v0.88.0
 ### Version format errors
 
 The workflows expect semantic versioning:
-- ✅ Correct: `0.88.0`, `1.0.0`, `0.88.1`
-- ❌ Incorrect: `v0.88.0`, `0.88`, `latest`
+- Correct: `0.88.0`, `1.0.0`, `0.88.1`
+- Incorrect: `v0.88.0`, `0.88`, `latest`
 
 For release tags, use the `v` prefix (e.g., `v0.88.0`), but for the workflow `version` input, omit it.
 

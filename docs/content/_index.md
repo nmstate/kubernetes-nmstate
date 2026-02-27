@@ -1,4 +1,7 @@
 ---
+title: "The Kubernetes NMState project"
+linkTitle: "kubernetes-nmstate"
+type: docs
 ---
 
 # Introduction
@@ -32,9 +35,9 @@ spec:
 
 The only external dependency is NetworkManager running on nodes. See more
 details in
-[Compatibility documentation]({{ site.github.repository_url }}/blob/main/CONTRIBUTING.md).
+[Compatibility documentation](https://github.com/nmstate/kubernetes-nmstate/blob/main/CONTRIBUTING.md).
 
-Some [examples](examples.html) can be used as reference on how to configure various
+Some [examples]({{< relref "/examples" >}}) can be used as reference on how to configure various
 configuration options
 
 # The "Why"
@@ -58,4 +61,4 @@ what this project is addressing.
 # Development and Contributing
 
 Contributions are welcome! Find details about the project's design and
-development workflow in the [developer guide]({{ site.github.repository_url }}/blob/main/CONTRIBUTING.md).
+development workflow in the [developer guide](https://github.com/nmstate/kubernetes-nmstate/blob/main/CONTRIBUTING.md).

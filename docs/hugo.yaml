@@ -1,0 +1,39 @@
+baseURL: https://nmstate.github.io/kubernetes-nmstate/
+title: The Kubernetes NMState project
+description: A declarative API for Kubernetes node network management
+
+module:
+  hugoVersion:
+    extended: true
+    min: "0.110.0"
+  imports:
+    - path: github.com/google/docsy
+    - path: github.com/google/docsy/dependencies
+  mounts:
+    - source: content
+      target: content
+    - source: static
+      target: static
+    - source: examples
+      target: static/examples
+    - source: user-guide
+      target: static/user-guide
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
+params:
+  github_repo: https://github.com/nmstate/kubernetes-nmstate
+  github_branch: main
+  ui:
+    sidebar_menu_compact: true
+    navbar_logo: true
+
+menu:
+  main:
+    - name: GitHub
+      weight: 50
+      url: https://github.com/nmstate/kubernetes-nmstate
+      pre: <i class='fab fa-github'></i>

@@ -1,6 +1,7 @@
 ---
 title: "Troubleshooting"
-tag: "user-guide"
+weight: 30
+type: docs
 ---
 
 Node network configuration is a risky business. A lot can go wrong and when it
@@ -23,10 +24,10 @@ interface and observe the results:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example]({{ "user-guide/eth666_up.yaml" | relative_url }})
+[Download example]({{< absref "/user-guide/eth666_up.yaml" >}})
 
 ```yaml
-{% include_absolute 'user-guide/eth666_up.yaml' %}
+{{< include "user-guide/eth666_up.yaml" >}}
 ```
 
 ```shell
@@ -191,4 +192,4 @@ kubectl patch nmstate nmstate --type='merge' -p='{"spec":{"logLevel":"info"}}'
 
 This was the last article from the introduction series. You can continue reading
 specific recipes on how to configure various interface types. You will find them
-in the [Deployment]({{ "deployment.html" | relative_url }}) or [Examples]({{ "examples.html" | relative_url }}) pages.
+in the [Deployment]({{< relref "/deployment" >}}) or [Examples]({{< relref "/examples" >}}) pages.

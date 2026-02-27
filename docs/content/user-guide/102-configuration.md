@@ -1,6 +1,7 @@
 ---
 title: "Configuration"
-tag: "user-guide"
+weight: 20
+type: docs
 ---
 
 The operator allows users to configure various network interface types, DNS and
@@ -36,10 +37,10 @@ First of all, let's apply the manifest:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example]({{ "user-guide/bond0-eth1-eth2_up.yaml" | relative_url }})
+[Download example]({{< absref "/user-guide/bond0-eth1-eth2_up.yaml" >}})
 
 ```yaml
-{% include_absolute 'user-guide/bond0-eth1-eth2_up.yaml' %}
+{{< include "user-guide/bond0-eth1-eth2_up.yaml" >}}
 ```
 
 ```shell
@@ -262,10 +263,10 @@ interface to `state: absent`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example]({{ "user-guide/bond0-eth1-eth2_absent.yaml" | relative_url }})
+[Download example]({{< absref "/user-guide/bond0-eth1-eth2_absent.yaml" >}})
 
 ```yaml
-{% include_absolute 'user-guide/bond0-eth1-eth2_absent.yaml' %}
+{{< include "user-guide/bond0-eth1-eth2_absent.yaml" >}}
 ```
 
 ```shell
@@ -334,10 +335,10 @@ In order to configure IP on previously attached NICs, apply a new Policy:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example]({{ "/user-guide/eth1-eth2_up.yaml" | relative_url }})
+[Download example]({{< absref "/user-guide/eth1-eth2_up.yaml" >}})
 
 ```yaml
-{% include_absolute 'user-guide/eth1-eth2_up.yaml' %}
+{{< include "user-guide/eth1-eth2_up.yaml" >}}
 ```
 
 ```shell
@@ -410,10 +411,10 @@ all the key-value pairs in the `nodeSelector`:
 
 <!-- When updating following example, don't forget to update respective attached file -->
 
-[Download example]({{ "user-guide/vlan100_node01_up.yaml" | relative_url }})
+[Download example]({{< absref "/user-guide/vlan100_node01_up.yaml" >}})
 
 ```yaml
-{% include_absolute 'user-guide/vlan100_node01_up.yaml %}
+{{< include "user-guide/vlan100_node01_up.yaml" >}}
 ```
 
 ```shell
@@ -459,7 +460,7 @@ can be applying a policy at a time.
 The following policy specifies that up to 3 nodes may be progressing concurrently:
 
 ```yaml
-{% include_absolute 'user-guide/linux-bridge_maxunavailable.yaml %}
+{{< include "user-guide/linux-bridge_maxunavailable.yaml" >}}
 ```
 
 ```shell
@@ -496,4 +497,4 @@ See Scheduling chapter of the [Kubernetes documentation](https://kubernetes.io/d
 
 The following tutorial will guide you through troubleshooting of a failed
 configuration:
-[Troubleshooting]({{ "user-guide/103-troubleshooting.html" | relative_url }})
+[Troubleshooting]({{< relref "/user-guide/103-troubleshooting" >}})
