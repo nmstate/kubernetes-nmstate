@@ -93,6 +93,11 @@ func (r *KubernetesNMStateReporter) dumpStateAfterEach(testName string, testStar
 		func() { r.logPods(testName, testStartTime) },
 		func() { r.logDeviceStatus(testName) },
 		func() { r.logNetworkManager(testName, testStartTime) },
+		func() { r.logJournalctl(testName, testStartTime) },
+		func() { r.logDmesg(testName) },
+		func() { r.logKubeletLogs(testName, testStartTime) },
+		func() { r.logClusterEvents(testName) },
+		func() { r.logControlPlane(testName, testStartTime) },
 	)
 }
 
@@ -141,6 +146,26 @@ func (r *KubernetesNMStateReporter) logPods(testName string, sinceTime time.Time
 	// Let's print the pods logs to the GinkgoWriter so
 	// we see the failure directly at prow junit output without opening files
 	r.OpenTestLogFile("pods", testName, podLogsWriter(r.namespace, sinceTime))
+}
+
+func (r *KubernetesNMStateReporter) logJournalctl(testName string, sinceTime time.Time) {
+	r.OpenTestLogFile("journalctl", testName, journalctlWriter(r.nodes, sinceTime))
+}
+
+func (r *KubernetesNMStateReporter) logDmesg(testName string) {
+	r.OpenTestLogFile("dmesg", testName, dmesgWriter(r.nodes))
+}
+
+func (r *KubernetesNMStateReporter) logKubeletLogs(testName string, sinceTime time.Time) {
+	r.OpenTestLogFile("kubelet", testName, kubeletLogsWriter(r.nodes, sinceTime))
+}
+
+func (r *KubernetesNMStateReporter) logClusterEvents(testName string) {
+	r.OpenTestLogFile("events", testName, clusterEventsWriter(r.namespace))
+}
+
+func (r *KubernetesNMStateReporter) logControlPlane(testName string, sinceTime time.Time) {
+	r.OpenTestLogFile("controlPlane", testName, controlPlaneLogsWriter(sinceTime))
 }
 
 func (r *KubernetesNMStateReporter) OpenTestLogFile(logType, testName string, cb func(f io.Writer), extraWriters ...io.Writer) {
