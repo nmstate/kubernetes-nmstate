@@ -14,6 +14,8 @@ jobs:
     name: Latest-job slack bot
     if: github.repository == 'nmstate/kubernetes-nmstate'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
 
