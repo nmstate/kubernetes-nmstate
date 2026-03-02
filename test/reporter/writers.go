@@ -130,6 +130,164 @@ func podLogsWriter(namespace string, sinceTime time.Time) func(io.Writer) {
 	}
 }
 
+func writeJournalctl(writer io.Writer, nodes []string, sinceTime time.Time) {
+	for _, node := range nodes {
+		output, err := runner.RunQuietAtNode(node, "sudo", "journalctl", "--no-pager",
+			"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Since(sinceTime).Seconds())))
+		if err != nil {
+			writeMessage(writer, banner("failed collecting journalctl at %s: %v"), node, err)
+		} else {
+			writeMessage(writer, banner("Journalctl on node %s"), node)
+			writeMessage(writer, "\n%s", output)
+			writeMessage(writer, banner("Done journalctl on node %s"), node)
+		}
+	}
+}
+
+func journalctlWriter(nodes []string, sinceTime time.Time) func(io.Writer) {
+	return func(w io.Writer) {
+		writeJournalctl(w, nodes, sinceTime)
+	}
+}
+
+func writeDmesg(writer io.Writer, nodes []string) {
+	for _, node := range nodes {
+		output, err := runner.RunQuietAtNode(node, "sudo", "dmesg")
+		if err != nil {
+			writeMessage(writer, banner("failed collecting dmesg at %s: %v"), node, err)
+		} else {
+			writeMessage(writer, banner("dmesg on node %s"), node)
+			writeMessage(writer, "\n%s", output)
+			writeMessage(writer, banner("Done dmesg on node %s"), node)
+		}
+	}
+}
+
+func dmesgWriter(nodes []string) func(io.Writer) {
+	return func(w io.Writer) {
+		writeDmesg(w, nodes)
+	}
+}
+
+func writeKubeletLogs(writer io.Writer, nodes []string, sinceTime time.Time) {
+	for _, node := range nodes {
+		output, err := runner.RunQuietAtNode(node, "sudo", "journalctl", "-u", "kubelet", "--no-pager",
+			"--since", fmt.Sprintf("'%ds ago'", 10+int(time.Since(sinceTime).Seconds())))
+		if err != nil {
+			writeMessage(writer, banner("failed collecting kubelet logs at %s: %v"), node, err)
+		} else {
+			writeMessage(writer, banner("Kubelet logs on node %s"), node)
+			writeMessage(writer, "\n%s", output)
+			writeMessage(writer, banner("Done kubelet logs on node %s"), node)
+		}
+	}
+}
+
+func kubeletLogsWriter(nodes []string, sinceTime time.Time) func(io.Writer) {
+	return func(w io.Writer) {
+		writeKubeletLogs(w, nodes, sinceTime)
+	}
+}
+
+func writeNamespaceEvents(writer io.Writer, namespace string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	eventsList := &corev1.EventList{}
+	err := testenv.Client.List(ctx, eventsList, &dynclient.ListOptions{
+		Namespace: namespace,
+	})
+	if err != nil {
+		writeMessage(writer, banner("failed listing events in namespace %s: %v"), namespace, err)
+		return
+	}
+	writeMessage(writer, banner("Events in namespace %s"), namespace)
+	for i := range eventsList.Items {
+		event := &eventsList.Items[i]
+		writeMessage(writer, "%s\t%s\t%s/%s\t%s\t%s\n",
+			event.LastTimestamp.Format(time.RFC3339),
+			event.Type, event.InvolvedObject.Kind, event.InvolvedObject.Name,
+			event.Reason, event.Message)
+	}
+	writeMessage(writer, banner("Done events in namespace %s"), namespace)
+}
+
+func writeClusterEvents(writer io.Writer, namespace string) {
+	writeNamespaceEvents(writer, namespace)
+	writeNamespaceEvents(writer, "default")
+}
+
+func clusterEventsWriter(namespace string) func(io.Writer) {
+	return func(w io.Writer) {
+		writeClusterEvents(w, namespace)
+	}
+}
+
+func writeControlPlaneLogs(writer io.Writer, sinceTime time.Time) {
+	components := []struct {
+		label string
+		name  string
+	}{
+		{label: "component=kube-apiserver", name: "kube-apiserver"},
+		{label: "component=etcd", name: "etcd"},
+	}
+
+	podsClientset := testenv.KubeClient.CoreV1().Pods("kube-system")
+
+	for _, comp := range components {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		podList := &corev1.PodList{}
+		err := testenv.Client.List(ctx, podList, &dynclient.ListOptions{
+			Namespace: "kube-system",
+		}, dynclient.MatchingLabels(parseLabel(comp.label)))
+		if err != nil {
+			cancel()
+			writeMessage(writer, banner("failed listing %s pods: %v"), comp.name, err)
+			continue
+		}
+
+		for podIndex := range podList.Items {
+			pod := &podList.Items[podIndex]
+			for containerIndex := range pod.Spec.Containers {
+				containerName := pod.Spec.Containers[containerIndex].Name
+				podLogOpts := corev1.PodLogOptions{
+					SinceTime: &metav1.Time{Time: sinceTime},
+					Container: containerName,
+				}
+				req := podsClientset.GetLogs(pod.Name, &podLogOpts)
+				podLogs, err := req.Stream(ctx)
+				if err != nil {
+					writeMessage(writer, banner("failed getting %s logs from pod %s: %v"), comp.name, pod.Name, err)
+					continue
+				}
+				rawLogs, err := io.ReadAll(podLogs)
+				podLogs.Close()
+				if err != nil {
+					writeMessage(writer, banner("failed reading %s logs from pod %s: %v"), comp.name, pod.Name, err)
+					continue
+				}
+				writeMessage(writer, banner("%s logs from pod %s"), comp.name, pod.Name)
+				writeString(writer, string(rawLogs))
+				writeMessage(writer, banner("Done %s logs from pod %s"), comp.name, pod.Name)
+			}
+		}
+		cancel()
+	}
+}
+
+func parseLabel(label string) map[string]string {
+	parts := strings.SplitN(label, "=", 2)
+	if len(parts) == 2 && parts[0] != "" {
+		return map[string]string{parts[0]: parts[1]}
+	}
+	return map[string]string{}
+}
+
+func controlPlaneLogsWriter(sinceTime time.Time) func(io.Writer) {
+	return func(w io.Writer) {
+		writeControlPlaneLogs(w, sinceTime)
+	}
+}
+
 func banner(message string) string {
 	// Not use Sprintf so we don't have to escape expansions
 	return "\n" + separator + " " + message + " " + separator + "\n"
