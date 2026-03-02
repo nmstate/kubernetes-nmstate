@@ -23,6 +23,8 @@ on:
         - release-0.47
 jobs:
   release:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
     - name: Check out code from ${{ github.event.inputs.baseBranch }}
