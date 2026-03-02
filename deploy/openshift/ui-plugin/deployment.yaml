@@ -28,6 +28,7 @@ spec:
       {{- if .InfraAffinity }}
       affinity: {{ toYaml .InfraAffinity | nindent 8 }}
       {{- end }}
+      serviceAccountName: {{ .PluginName }}
       containers:
         - name: {{ .PluginName }}
           image: {{ .PluginImage }}
