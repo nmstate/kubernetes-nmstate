@@ -202,7 +202,7 @@ func ping(target Route) (string, error) {
 	//
 	// It is safe to ignore gosec error about concatenated strings as the Route struct
 	// is not directly taking any user input.
-	cmd := exec.Command("ping", "-I", target.iface, "-c", "1", target.nextHop.String()) // #nosec G204
+	cmd := exec.CommandContext(context.TODO(), "ping", "-I", target.iface, "-c", "1", target.nextHop.String()) // #nosec G204
 	var outputBuffer bytes.Buffer
 	cmd.Stdout = &outputBuffer
 	cmd.Stderr = &outputBuffer

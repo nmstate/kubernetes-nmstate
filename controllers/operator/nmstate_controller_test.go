@@ -57,10 +57,10 @@ type applyCapableFakeClient struct {
 func (c *applyCapableFakeClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	// If this is a server-side apply patch, convert it to create/update
 	if patch.Type() == types.ApplyPatchType {
-		err := c.Client.Create(ctx, obj)
+		err := c.Create(ctx, obj)
 		if err != nil {
 			if apierrors.IsAlreadyExists(err) {
-				return c.Client.Update(ctx, obj)
+				return c.Update(ctx, obj)
 			}
 			return err
 		}
@@ -84,7 +84,7 @@ func (s *applyCapableStatusWriter) Patch(
 ) error {
 	// If this is a server-side apply patch, convert it to regular status update
 	if patch.Type() == types.ApplyPatchType {
-		return s.SubResourceWriter.Update(ctx, obj, &client.SubResourceUpdateOptions{})
+		return s.Update(ctx, obj, &client.SubResourceUpdateOptions{})
 	}
 	// For other patch types, use the underlying status writer
 	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
@@ -784,6 +784,8 @@ func isSuperset(ss, t corev1.Toleration) bool {
 		return t.Operator == corev1.TolerationOpEqual && t.Value == ss.Value
 	case corev1.TolerationOpExists:
 		return true
+	case corev1.TolerationOpLt, corev1.TolerationOpGt:
+		return false
 	default:
 		return false
 	}

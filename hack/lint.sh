@@ -9,7 +9,7 @@ case $(uname -m) in
 esac
 
 path_combined="$(uname -s | tr '[:upper:]' '[:lower:]')-${architecture}"
-golangci_lint_version=1.64.7
+golangci_lint_version=2.11.3
 golangci_lint_url="https://github.com/golangci/golangci-lint/releases/download/v${golangci_lint_version}/golangci-lint-${golangci_lint_version}-${path_combined}.tar.gz"
 golangci_cmd="/tmp/golangci-lint-${golangci_lint_version}-${path_combined}/golangci-lint"
 if [ ! -f "${golangci_cmd}" ]; then

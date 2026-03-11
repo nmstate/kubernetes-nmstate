@@ -87,7 +87,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
 	r.Log.Info("Starting Reconcile")
 	instance := &nmstatev1.NMState{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile req.
@@ -101,7 +101,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Fetch the NMState instance
 	instanceList := &nmstatev1.NMStateList{}
-	if err := r.Client.List(ctx, instanceList, &client.ListOptions{}); err != nil {
+	if err := r.List(ctx, instanceList, &client.ListOptions{}); err != nil {
 		err = errors.Wrap(err, "failed listing all NMState instances")
 		r.setDegradedCondition(ctx, instance, shared.NmstateInternalError, err.Error())
 		return ctrl.Result{}, err
@@ -116,7 +116,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		if instanceList.Items[0].Name != req.Name {
 			r.Log.Info("Ignoring NMState.nmstate.io because one already exists and does not match existing name")
-			err = r.Client.Delete(ctx, instance, &client.DeleteOptions{})
+			err = r.Delete(ctx, instance, &client.DeleteOptions{})
 			if err != nil {
 				r.Log.Error(err, "failed to remove NMState.nmstate.io instance")
 			}
@@ -382,7 +382,7 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 	pluginName := environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
 	consoleKey := client.ObjectKey{Name: "cluster"}
 	consoleObj := &openshiftoperatorv1.Console{}
-	if err := r.Client.Get(ctx, consoleKey, consoleObj); err != nil {
+	if err := r.Get(ctx, consoleKey, consoleObj); err != nil {
 		r.Log.Error(err, "Could not get consoles.operator.openshift.io resource")
 		return err
 	}
@@ -390,7 +390,7 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 	if !stringInSlice(pluginName, consoleObj.Spec.Plugins) {
 		r.Log.Info("Enabling kubevirt plugin in Console")
 		consoleObj.Spec.Plugins = append(consoleObj.Spec.Plugins, pluginName)
-		err := r.Client.Update(ctx, consoleObj)
+		err := r.Update(ctx, consoleObj)
 		if err != nil {
 			r.Log.Error(err, fmt.Sprintf("Could not update resource - APIVersion: %s, Kind: %s, Name: %s",
 				consoleObj.APIVersion, consoleObj.Kind, consoleObj.Name))
@@ -403,7 +403,7 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error {
 	// We are no longer using cert-manager at openshift, let's remove it
 	if r.IsOpenShift {
-		err := r.Client.Delete(ctx, &appsv1.Deployment{
+		err := r.Delete(ctx, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: os.Getenv("HANDLER_NAMESPACE"),
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
@@ -414,7 +414,7 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 		}
 
 		// Remove the non openshift secret
-		err = r.Client.Delete(ctx, &corev1.Secret{
+		err = r.Delete(ctx, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: os.Getenv("HANDLER_NAMESPACE"),
 				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-webhook",
@@ -478,7 +478,7 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 	progressing := []string{}
 	for _, deploymentKey := range r.deployments {
 		deployment := &appsv1.Deployment{}
-		if err := r.Client.Get(ctx, deploymentKey, deployment); err != nil {
+		if err := r.Get(ctx, deploymentKey, deployment); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -499,7 +499,7 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 	}
 	for _, daemonSetKey := range r.daemonSets {
 		daemonSet := &appsv1.DaemonSet{}
-		if err := r.Client.Get(ctx, daemonSetKey, daemonSet); err != nil {
+		if err := r.Get(ctx, daemonSetKey, daemonSet); err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
@@ -565,6 +565,7 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 	// Clear managed fields before applying server-side apply to status subresource
 	instance.SetManagedFields(nil)
 
+	//nolint:staticcheck // TODO: migrate to SubResource("status").Apply()
 	return r.Client.Status().Patch(ctx, instance, client.Apply, nmstateOperatorFieldOwner)
 }
 
@@ -634,6 +635,7 @@ func (r *NMStateReconciler) renderAndApply(
 			}
 		}
 		// Use server-side apply
+		//nolint:staticcheck // TODO: migrate to client.Client.Apply()
 		err := r.Patch(ctx, obj, client.Apply, nmstateOperatorFieldOwner, client.ForceOwnership)
 		if err != nil {
 			// If the CRD doesn't exist (e.g., ServiceMonitor), log a warning and continue

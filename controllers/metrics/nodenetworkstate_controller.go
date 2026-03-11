@@ -56,7 +56,7 @@ func (r *NodeNetworkStateReconciler) Reconcile(ctx context.Context, request ctrl
 	nodeName := request.Name
 
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
-	err := r.Client.Get(ctx, request.NamespacedName, nnsInstance)
+	err := r.Get(ctx, request.NamespacedName, nnsInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// NNS has been deleted, clean up metrics for this node

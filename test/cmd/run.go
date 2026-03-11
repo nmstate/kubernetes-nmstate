@@ -19,6 +19,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -27,7 +28,7 @@ import (
 )
 
 func Run(command string, quiet bool, arguments ...string) (string, error) {
-	cmd := exec.Command(command, arguments...)
+	cmd := exec.CommandContext(context.TODO(), command, arguments...)
 	if !quiet {
 		GinkgoWriter.Write([]byte(command + " " + strings.Join(arguments, " ") + "\n"))
 	}

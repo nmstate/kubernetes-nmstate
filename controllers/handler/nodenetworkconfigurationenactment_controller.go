@@ -54,7 +54,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 
 	// Fetch the NodeNetworkConfigurationEnactment instance
 	enactmentInstance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-	err := r.Client.Get(ctx, request.NamespacedName, enactmentInstance)
+	err := r.Get(ctx, request.NamespacedName, enactmentInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -69,11 +69,11 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 
 	policyName := enactmentInstance.Labels[shared.EnactmentPolicyLabel]
 	policyInstance := &nmstatev1.NodeNetworkConfigurationPolicy{}
-	err = r.Client.Get(ctx, types.NamespacedName{Name: policyName}, policyInstance)
+	err = r.Get(ctx, types.NamespacedName{Name: policyName}, policyInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Policy is not found, removing the enactment")
-			err = r.Client.Delete(ctx, enactmentInstance)
+			err = r.Delete(ctx, enactmentInstance)
 			return ctrl.Result{}, err
 		}
 		log.Error(err, "Error retrieving policy")

@@ -1,3 +1,3 @@
 module github.com/nmstate/kubernetes-nmstate/automation/nmstate-latest-reporter
 
-go 1.23
+go 1.25

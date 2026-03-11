@@ -1,108 +1,112 @@
-linters-settings:
-  dupl:
-    threshold: 100
-  funlen:
-    lines: 100
-    statements: 50
-  gci:
-    prefix: github.com/nmstate/nmpolicy
-  goconst:
-    min-len: 2
-    min-occurrences: 3
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - experimental
-      - opinionated
-      - performance
-      - style
-    disabled-checks:
-      - dupImport # https://github.com/go-critic/go-critic/issues/845
-      - ifElseChain
-      - octalLiteral
-      - whyNoLint
-      - wrapperFunc
-    settings:
-      rangeValCopy:
-        sizeThreshold: 128
-      hugeParam:
-        sizeThreshold: 128
-  gocyclo:
-    min-complexity: 19
-  goheader:
-    template-path: hack/header.tpl
-  goimports:
-    prefix: github.com/nmstate/nmpolicy
-  mnd:
-    # don't include the "operation" and "assign"
-    checks:
-      - argument
-      - case
-      - condition
-      - return
-  govet:
-    shadow: true
-  lll:
-    line-length: 140
-  maligned:
-    suggest-new: true
-  misspell:
-    locale: US
-  nolintlint:
-    allow-leading-space: true # don't require machine-readable nolint directives (i.e. with no leading space)
-    allow-unused: false # report any unused nolint directives
-    require-explanation: false # don't require an explanation for nolint directives
-    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
-  stylecheck:
-    dot-import-whitelist: ["github.com/onsi/gomega", "github.com/onsi/ginkgo/v2", "github.com/onsi/gomega/gstruct"]
-
-issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: test/
-      linters:
-        - mnd
-        - dupl
-        - gocritic
-    - path: _test.go
-      linters:
-        - unparam
-        - mnd
-        - dupl
-        - gocritic
-
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
-    #- depguard
+    - copyloopvar
     - dogsled
     - dupl
-      #- errcheck
-    - copyloopvar
     - exhaustive
     - funlen
-      #- gochecknoinits
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
     - goheader
-    - goimports
-    - mnd
     - goprintffuncname
     - gosec
-    - gosimple
     - govet
     - ineffassign
     - lll
     - misspell
+    - mnd
     - nakedret
     - noctx
     - rowserrcheck
     - staticcheck
-    - stylecheck
-    - typecheck
     - unconvert
     - unparam
     - unused
     - whitespace
+  settings:
+    dupl:
+      threshold: 100
+    funlen:
+      lines: 100
+      statements: 50
+    goconst:
+      min-len: 2
+      min-occurrences: 3
+    gocritic:
+      disabled-checks:
+        - dupImport
+        - ifElseChain
+        - importShadow
+        - octalLiteral
+        - whyNoLint
+        - wrapperFunc
+      enabled-tags:
+        - diagnostic
+        - experimental
+        - opinionated
+        - performance
+        - style
+      settings:
+        hugeParam:
+          sizeThreshold: 128
+        rangeValCopy:
+          sizeThreshold: 128
+    gocyclo:
+      min-complexity: 19
+    goheader:
+      template-path: hack/header.tpl
+    lll:
+      line-length: 140
+    misspell:
+      locale: US
+    mnd:
+      checks:
+        - argument
+        - case
+        - condition
+        - return
+    nolintlint:
+      require-explanation: false
+      require-specific: false
+      allow-unused: false
+    staticcheck:
+      dot-import-whitelist:
+        - github.com/onsi/gomega
+        - github.com/onsi/ginkgo/v2
+        - github.com/onsi/gomega/gstruct
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - dupl
+          - gocritic
+          - mnd
+        path: test/
+      - linters:
+          - dupl
+          - gocritic
+          - mnd
+          - unparam
+        path: _test.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -54,7 +54,7 @@ type NetworkList struct {
 
 // NetworkSpec is the top-level network configuration object.
 // +kubebuilder:validation:XValidation:rule="!has(self.defaultNetwork) || !has(self.defaultNetwork.ovnKubernetesConfig) || !has(self.defaultNetwork.ovnKubernetesConfig.gatewayConfig) || !has(self.defaultNetwork.ovnKubernetesConfig.gatewayConfig.ipForwarding) || self.defaultNetwork.ovnKubernetesConfig.gatewayConfig.ipForwarding == oldSelf.defaultNetwork.ovnKubernetesConfig.gatewayConfig.ipForwarding || self.defaultNetwork.ovnKubernetesConfig.gatewayConfig.ipForwarding == 'Restricted' || self.defaultNetwork.ovnKubernetesConfig.gatewayConfig.ipForwarding == 'Global'",message="invalid value for IPForwarding, valid values are 'Restricted' or 'Global'"
-// +openshift:validation:FeatureGateAwareXValidation:featureGate=RouteAdvertisements,rule="(has(self.additionalRoutingCapabilities) && ('FRR' in self.additionalRoutingCapabilities.providers)) || !has(self.defaultNetwork) || !has(self.defaultNetwork.ovnKubernetesConfig) || !has(self.defaultNetwork.ovnKubernetesConfig.routeAdvertisements) || self.defaultNetwork.ovnKubernetesConfig.routeAdvertisements != 'Enabled'",message="Route advertisements cannot be Enabled if 'FRR' routing capability provider is not available"
+// +kubebuilder:validation:XValidation:rule="(has(self.additionalRoutingCapabilities) && ('FRR' in self.additionalRoutingCapabilities.providers)) || !has(self.defaultNetwork) || !has(self.defaultNetwork.ovnKubernetesConfig) || !has(self.defaultNetwork.ovnKubernetesConfig.routeAdvertisements) || self.defaultNetwork.ovnKubernetesConfig.routeAdvertisements != 'Enabled'",message="Route advertisements cannot be Enabled if 'FRR' routing capability provider is not available"
 type NetworkSpec struct {
 	OperatorSpec `json:",inline"`
 
@@ -79,9 +79,10 @@ type NetworkSpec struct {
 	// +listMapKey=name
 	AdditionalNetworks []AdditionalNetworkDefinition `json:"additionalNetworks,omitempty"`
 
-	// disableMultiNetwork specifies whether or not multiple pod network
-	// support should be disabled. If unset, this property defaults to
-	// 'false' and multiple network support is enabled.
+	// disableMultiNetwork defaults to 'false' and this setting enables the pod multi-networking capability.
+	// disableMultiNetwork when set to 'true' at cluster install time does not install the components, typically the Multus CNI and the network-attachment-definition CRD,
+	// that enable the pod multi-networking capability. Setting the parameter to 'true' might be useful when you need install third-party CNI plugins,
+	// but these plugins are not supported by Red Hat. Changing the parameter value as a postinstallation cluster task has no effect.
 	DisableMultiNetwork *bool `json:"disableMultiNetwork,omitempty"`
 
 	// useMultiNetworkPolicy enables a controller which allows for
@@ -135,7 +136,6 @@ type NetworkSpec struct {
 	// capabilities acquired through the enablement of these components but may
 	// require specific configuration on their side to do so; refer to their
 	// respective documentation and configuration options.
-	// +openshift:enable:FeatureGate=AdditionalRoutingCapabilities
 	// +optional
 	AdditionalRoutingCapabilities *AdditionalRoutingCapabilities `json:"additionalRoutingCapabilities,omitempty"`
 }
@@ -156,7 +156,7 @@ const (
 )
 
 // NetworkMigration represents the cluster network migration configuration.
-// +openshift:validation:FeatureGateAwareXValidation:featureGate=NetworkLiveMigration,rule="!has(self.mtu) || !has(self.networkType) || self.networkType == \"\" || has(self.mode) && self.mode == 'Live'",message="networkType migration in mode other than 'Live' may not be configured at the same time as mtu migration"
+// +kubebuilder:validation:XValidation:rule="!has(self.mtu) || !has(self.networkType) || self.networkType == \"\" || has(self.mode) && self.mode == 'Live'",message="networkType migration in mode other than 'Live' may not be configured at the same time as mtu migration"
 type NetworkMigration struct {
 	// mtu contains the MTU migration configuration. Set this to allow changing
 	// the MTU values for the default network. If unset, the operation of
@@ -430,17 +430,15 @@ type OVNKubernetesConfig struct {
 	// v4InternalSubnet is a v4 subnet used internally by ovn-kubernetes in case the
 	// default one is being already used by something else. It must not overlap with
 	// any other subnet being used by OpenShift or by the node network. The size of the
-	// subnet must be larger than the number of nodes. The value cannot be changed
-	// after installation.
+	// subnet must be larger than the number of nodes.
 	// Default is 100.64.0.0/16
 	// +optional
 	V4InternalSubnet string `json:"v4InternalSubnet,omitempty"`
 	// v6InternalSubnet is a v6 subnet used internally by ovn-kubernetes in case the
 	// default one is being already used by something else. It must not overlap with
 	// any other subnet being used by OpenShift or by the node network. The size of the
-	// subnet must be larger than the number of nodes. The value cannot be changed
-	// after installation.
-	// Default is fd98::/48
+	// subnet must be larger than the number of nodes.
+	// Default is fd98::/64
 	// +optional
 	V6InternalSubnet string `json:"v6InternalSubnet,omitempty"`
 	// egressIPConfig holds the configuration for EgressIP options.
@@ -466,7 +464,6 @@ type OVNKubernetesConfig struct {
 	// means the user has no opinion and the platform is left to choose
 	// reasonable defaults. These defaults are subject to change over time. The
 	// current default is "Disabled".
-	// +openshift:enable:FeatureGate=RouteAdvertisements
 	// +optional
 	RouteAdvertisements RouteAdvertisementsEnablement `json:"routeAdvertisements,omitempty"`
 }
@@ -477,11 +474,10 @@ type IPv4OVNKubernetesConfig struct {
 	// architecture that connects the cluster routers on each node together to enable
 	// east west traffic. The subnet chosen should not overlap with other networks
 	// specified for OVN-Kubernetes as well as other networks used on the host.
-	// The value cannot be changed after installation.
 	// When ommitted, this means no opinion and the platform is left to choose a reasonable
 	// default which is subject to change over time.
 	// The current default subnet is 100.88.0.0/16
-	// The subnet must be large enough to accomadate one IP per node in your cluster
+	// The subnet must be large enough to accommodate one IP per node in your cluster
 	// The value must be in proper IPV4 CIDR format
 	// +kubebuilder:validation:MaxLength=18
 	// +kubebuilder:validation:XValidation:rule="isCIDR(self) && cidr(self).ip().family() == 4",message="Subnet must be in valid IPV4 CIDR format"
@@ -492,10 +488,9 @@ type IPv4OVNKubernetesConfig struct {
 	// internalJoinSubnet is a v4 subnet used internally by ovn-kubernetes in case the
 	// default one is being already used by something else. It must not overlap with
 	// any other subnet being used by OpenShift or by the node network. The size of the
-	// subnet must be larger than the number of nodes. The value cannot be changed
-	// after installation.
+	// subnet must be larger than the number of nodes.
 	// The current default value is 100.64.0.0/16
-	// The subnet must be large enough to accomadate one IP per node in your cluster
+	// The subnet must be large enough to accommodate one IP per node in your cluster
 	// The value must be in proper IPV4 CIDR format
 	// +kubebuilder:validation:MaxLength=18
 	// +kubebuilder:validation:XValidation:rule="isCIDR(self) && cidr(self).ip().family() == 4",message="Subnet must be in valid IPV4 CIDR format"
@@ -511,10 +506,9 @@ type IPv6OVNKubernetesConfig struct {
 	// architecture that connects the cluster routers on each node together to enable
 	// east west traffic. The subnet chosen should not overlap with other networks
 	// specified for OVN-Kubernetes as well as other networks used on the host.
-	// The value cannot be changed after installation.
 	// When ommitted, this means no opinion and the platform is left to choose a reasonable
 	// default which is subject to change over time.
-	// The subnet must be large enough to accomadate one IP per node in your cluster
+	// The subnet must be large enough to accommodate one IP per node in your cluster
 	// The current default subnet is fd97::/64
 	// The value must be in proper IPV6 CIDR format
 	// Note that IPV6 dual addresses are not permitted
@@ -526,10 +520,9 @@ type IPv6OVNKubernetesConfig struct {
 	// internalJoinSubnet is a v6 subnet used internally by ovn-kubernetes in case the
 	// default one is being already used by something else. It must not overlap with
 	// any other subnet being used by OpenShift or by the node network. The size of the
-	// subnet must be larger than the number of nodes. The value cannot be changed
-	// after installation.
-	// The subnet must be large enough to accomadate one IP per node in your cluster
-	// The current default value is fd98::/48
+	// subnet must be larger than the number of nodes.
+	// The subnet must be large enough to accommodate one IP per node in your cluster
+	// The current default value is fd98::/64
 	// The value must be in proper IPV6 CIDR format
 	// Note that IPV6 dual addresses are not permitted
 	// +kubebuilder:validation:MaxLength=48
@@ -550,6 +543,8 @@ type HybridOverlayConfig struct {
 }
 
 // +kubebuilder:validation:XValidation:rule="self == oldSelf || has(self.mode)",message="ipsecConfig.mode is required"
+// +kubebuilder:validation:XValidation:rule="has(self.mode) && self.mode == 'Full' ?  true : !has(self.full)",message="full is forbidden when mode is not Full"
+// +union
 type IPsecConfig struct {
 	// mode defines the behaviour of the ipsec configuration within the platform.
 	// Valid values are `Disabled`, `External` and `Full`.
@@ -561,7 +556,40 @@ type IPsecConfig struct {
 	// this is left to the user to configure.
 	// +kubebuilder:validation:Enum=Disabled;External;Full
 	// +optional
+	// +unionDiscriminator
 	Mode IPsecMode `json:"mode,omitempty"`
+
+	// full defines configuration parameters for the IPsec `Full` mode.
+	// This is permitted only when mode is configured with `Full`,
+	// and forbidden otherwise.
+	// +unionMember,optional
+	// +optional
+	Full *IPsecFullModeConfig `json:"full,omitempty"`
+}
+
+type Encapsulation string
+
+const (
+	// EncapsulationAlways always enable UDP encapsulation regardless of whether NAT is detected.
+	EncapsulationAlways = "Always"
+	// EncapsulationAuto enable UDP encapsulation based on the detection of NAT.
+	EncapsulationAuto = "Auto"
+)
+
+// IPsecFullModeConfig defines configuration parameters for the IPsec `Full` mode.
+// +kubebuilder:validation:MinProperties:=1
+type IPsecFullModeConfig struct {
+	// encapsulation option to configure libreswan on how inter-pod traffic across nodes
+	// are encapsulated to handle NAT traversal. When configured it uses UDP port 4500
+	// for the encapsulation.
+	// Valid values are Always, Auto and omitted.
+	// Always means enable UDP encapsulation regardless of whether NAT is detected.
+	// Auto means enable UDP encapsulation based on the detection of NAT.
+	// When omitted, this means no opinion and the platform is left to choose a reasonable
+	// default, which is subject to change over time. The current default is Auto.
+	// +kubebuilder:validation:Enum:=Always;Auto
+	// +optional
+	Encapsulation Encapsulation `json:"encapsulation,omitempty"`
 }
 
 type IPForwardingMode string
@@ -610,7 +638,7 @@ type IPv4GatewayConfig struct {
 	// OVN-Kubernetes as well as other networks used on the host. Additionally the subnet must
 	// be large enough to accommodate 6 IPs (maximum prefix length /29).
 	// When omitted, this means no opinion and the platform is left to choose a reasonable default which is subject to change over time.
-	// The current default subnet is 169.254.169.0/29
+	// The current default subnet is 169.254.0.0/17
 	// The value must be in proper IPV4 CIDR format
 	// +kubebuilder:validation:MaxLength=18
 	// +kubebuilder:validation:XValidation:rule="isCIDR(self) && cidr(self).ip().family() == 4",message="Subnet must be in valid IPV4 CIDR format"
@@ -629,7 +657,7 @@ type IPv6GatewayConfig struct {
 	// OVN-Kubernetes as well as other networks used on the host. Additionally the subnet must
 	// be large enough to accommodate 6 IPs (maximum prefix length /125).
 	// When omitted, this means no opinion and the platform is left to choose a reasonable default which is subject to change over time.
-	// The current default subnet is fd69::/125
+	// The current default subnet is fd69::/112
 	// Note that IPV6 dual addresses are not permitted
 	// +kubebuilder:validation:XValidation:rule="isCIDR(self) && cidr(self).ip().family() == 6",message="Subnet must be in valid IPV6 CIDR format"
 	// +kubebuilder:validation:XValidation:rule="isCIDR(self) && cidr(self).prefixLength() <= 125",message="subnet must be in the range /0 to /125 inclusive"

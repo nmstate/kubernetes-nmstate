@@ -1,6 +1,6 @@
 module github.com/nmstate/kubernetes-nmstate/docs
 
-go 1.22
+go 1.25
 
 require github.com/google/docsy v0.11.0
 
