@@ -76,18 +76,8 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
-        - args:
-          - --logtostderr
-          - --secure-listen-address=:8443
-          - --upstream=http://127.0.0.1:8089
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-          image: {{ .KubeRBACProxyImage }}
-          imagePullPolicy: IfNotPresent
-          name: kube-rbac-proxy
+            - name: METRICS_BIND_ADDRESS
+              value: ":8443"
           ports:
           - containerPort: 8443
             name: metrics
@@ -105,14 +95,14 @@ spec:
             timeoutSeconds: 1
             successThreshold: 1
             failureThreshold: 3
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "20Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
-          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+          - name: metrics-tls
+            readOnly: true
+            mountPath: /tmp/k8s-metrics-server/serving-certs
+      volumes:
+        - name: metrics-tls
+          secret:
+            secretName: {{template "handlerPrefix" .}}nmstate-metrics-tls
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -489,6 +479,8 @@ kind: Service
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-monitor
   namespace: {{ .HandlerNamespace }}
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}nmstate-metrics-tls
   labels:
     prometheus.nmstate.io: "true"
 spec:
@@ -636,7 +628,8 @@ spec:
     port: metrics
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
-      insecureSkipVerify: true
+      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
+      serverName: {{template "handlerPrefix" .}}nmstate-monitor.{{ .HandlerNamespace }}.svc
     metricRelabelings:
       - action: labeldrop
         regex: instance

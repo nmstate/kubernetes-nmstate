@@ -18,16 +18,20 @@ limitations under the License.
 package webhook
 
 import (
+	"crypto/tls"
+
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
-// AddToManagerFuncs is a list of functions to add all Controllers to the Manager
-var AddToManagerFuncs []func(m manager.Manager) error
+// AddToManagerFuncs is a list of functions to add all Controllers to the Manager.
+// Each function receives the manager and a TLS config function applied to all
+// TLS-enabled servers.
+var AddToManagerFuncs []func(m manager.Manager, tlsOpts func(*tls.Config)) error
 
 // AddToManager adds all Controllers to the Manager
-func AddToManager(m manager.Manager) error {
+func AddToManager(m manager.Manager, tlsOpts func(*tls.Config)) error {
 	for _, f := range AddToManagerFuncs {
-		if err := f(m); err != nil {
+		if err := f(m, tlsOpts); err != nil {
 			return err
 		}
 	}
