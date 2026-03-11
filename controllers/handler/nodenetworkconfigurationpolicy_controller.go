@@ -136,11 +136,11 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	// Fetch the NodeNetworkConfigurationPolicy instance
 	instance := &nmstatev1.NodeNetworkConfigurationPolicy{}
-	err := r.Client.Get(ctx, request.NamespacedName, instance)
+	err := r.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Policy is not found, removing previous enactment if any")
-			err = r.deleteEnactmentForPolicy(ctx, request.NamespacedName.Name)
+			err = r.deleteEnactmentForPolicy(ctx, request.Name)
 			return ctrl.Result{}, err
 		}
 		log.Error(err, "Error retrieving policy")
@@ -166,7 +166,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	if len(unmatchingNodeLabels) > 0 {
 		log.Info("Policy node selectors does not match node, removing previous enactment if any")
-		err = r.deleteEnactmentForPolicy(ctx, request.NamespacedName.Name)
+		err = r.deleteEnactmentForPolicy(ctx, request.Name)
 		return ctrl.Result{}, err
 	}
 
@@ -202,7 +202,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	if err := r.APIClient.Get(ctx, request.NamespacedName, freshPolicy); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("Policy no longer exists (verified via API server), removing enactment")
-			err = r.deleteEnactmentForPolicy(ctx, request.NamespacedName.Name)
+			err = r.deleteEnactmentForPolicy(ctx, request.Name)
 			return ctrl.Result{}, err
 		}
 		log.Error(err, "Failed to verify policy existence via API server")
@@ -573,7 +573,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	generationKey string) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
 	return retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
-		err := r.Client.Get(ctx, policyKey, policy)
+		err := r.Get(ctx, policyKey, policy)
 		if err != nil {
 			return err
 		}
@@ -650,7 +650,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(ctx context.C
 	}
 	nns.Labels[forceRefreshLabel] = fmt.Sprintf("%d", time.Now().UnixNano())
 
-	err = r.Client.Update(ctx, nns)
+	err = r.Update(ctx, nns)
 	if err != nil {
 		log.WithValues("error", err).Info("WARNING: failed forcing NNS refresh, it will be refreshed after regular period")
 	}
@@ -658,7 +658,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(ctx context.C
 
 func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(ctx context.Context, name string) (*nmstatev1beta1.NodeNetworkState, error) {
 	nns := &nmstatev1beta1.NodeNetworkState{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: name}, nns)
+	err := r.Get(ctx, types.NamespacedName{Name: name}, nns)
 	if err != nil {
 		return nil, err
 	}

@@ -32,7 +32,7 @@ import (
 
 func expectTimestampAnnotationAtPolicy(policy nmstatev1.NodeNetworkConfigurationPolicy, testStartTime time.Time) {
 	ExpectWithOffset(1, policy.ObjectMeta.Annotations).To(HaveKey(TimestampLabelKey))
-	annotation := policy.ObjectMeta.Annotations[TimestampLabelKey]
+	annotation := policy.Annotations[TimestampLabelKey]
 	mutationTimestamp, err := strconv.ParseInt(annotation, 10, 64)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred(), "mutation timestamp should have int64 value")
 	ExpectWithOffset(1, mutationTimestamp).

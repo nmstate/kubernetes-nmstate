@@ -39,6 +39,7 @@ linters:
       disabled-checks:
         - dupImport
         - ifElseChain
+        - importShadow
         - octalLiteral
         - whyNoLint
         - wrapperFunc

@@ -118,7 +118,7 @@ func writePodsLogs(writer io.Writer, namespace string, sinceTime time.Time) {
 				io.WriteString(GinkgoWriter, fmt.Sprintf("error reading kubernetes-nmstate logs: %v\n", err))
 				continue
 			}
-			formattedLogs := strings.Replace(string(rawLogs), "\\n", "\n", -1)
+			formattedLogs := strings.ReplaceAll(string(rawLogs), "\\n", "\n")
 			io.WriteString(writer, formattedLogs)
 		}
 	}

@@ -55,12 +55,12 @@ type DependencyVersions struct {
 }
 
 func InitializeNodeNetworkState(ctx context.Context, cli client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
-	ownerRefList := []metav1.OwnerReference{{Name: node.ObjectMeta.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
+	ownerRefList := []metav1.OwnerReference{{Name: node.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
 	nodeNetworkState := nmstatev1beta1.NodeNetworkState{
 		// Create NodeNetworkState for this node
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            node.ObjectMeta.Name,
+			Name:            node.Name,
 			OwnerReferences: ownerRefList,
 			Labels:          names.IncludeRelationshipLabels(nil),
 		},
@@ -123,7 +123,7 @@ func UpdateCurrentState(
 }
 
 func ExecuteCommand(command string, arguments ...string) (string, error) {
-	cmd := exec.Command(command, arguments...)
+	cmd := exec.CommandContext(context.TODO(), command, arguments...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

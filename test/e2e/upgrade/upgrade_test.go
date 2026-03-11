@@ -146,7 +146,7 @@ var _ = Describe("Upgrade", func() {
 							if availableCondition.Status != corev1.ConditionTrue {
 								return fmt.Errorf("policy %s is not Available", nncp.Name)
 							}
-							if !availableCondition.LastHeartbeatTime.Time.After(policiesLastHeartbeatTimestamps[nncp.Name]) {
+							if !availableCondition.LastHeartbeatTime.After(policiesLastHeartbeatTimestamps[nncp.Name]) {
 								return fmt.Errorf("policy  %s hasn't re-reconciled yet", nncp.Name)
 							}
 						}

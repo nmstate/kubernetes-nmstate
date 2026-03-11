@@ -43,5 +43,5 @@ func (s *Selectors) UnmatchedNodeLabels(ctx context.Context, nodeName string) (m
 		return map[string]string{}, err
 	}
 
-	return unmatchingLabels(s.policy.Spec.NodeSelector, node.ObjectMeta.Labels), nil
+	return unmatchingLabels(s.policy.Spec.NodeSelector, node.Labels), nil
 }

@@ -82,7 +82,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 	}
 
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
-	err = r.Client.Get(ctx, request.NamespacedName, nnsInstance)
+	err = r.Get(ctx, request.NamespacedName, nnsInstance)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, errors.Wrap(err, "Failed to get nnstate")
@@ -99,7 +99,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 
 	// Fetch the Node instance
 	nodeInstance := &corev1.Node{}
-	err = r.Client.Get(ctx, request.NamespacedName, nodeInstance)
+	err = r.Get(ctx, request.NamespacedName, nodeInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.

@@ -119,7 +119,7 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 			validationResult: []metav1.StatusCause{{
 				Type: metav1.CauseTypeFieldValueInvalid,
 				Message: "invalid label value: \"this-is-longer-than-sixty-three-characters-hostname-bar-bar-bar.foo.com\": at key: " +
-					"\"kubernetes.io/hostname\": must be no more than 63 characters",
+					"\"kubernetes.io/hostname\": must be no more than 63 bytes",
 				Field: "spec.nodeSelector",
 			}},
 		}),
@@ -147,7 +147,7 @@ var _ = Describe("NNCP Conditions Validation Admission Webhook", func() {
 			validationResult: []metav1.StatusCause{{
 				Type: metav1.CauseTypeFieldValueInvalid,
 				Message: "invalid policy name: \"this-is-longer-than-sixty-three-characters-hostname-bar-bar-bar.foo.com\": " +
-					"must be no more than 63 characters",
+					"must be no more than 63 bytes",
 				Field: "name",
 			}},
 		}),

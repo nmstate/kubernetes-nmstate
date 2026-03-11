@@ -32,10 +32,10 @@ const (
 
 func setTimestampAnnotation(policy *nmstatev1.NodeNetworkConfigurationPolicy) {
 	value := strconv.FormatInt(time.Now().UnixNano(), 10)
-	if policy.ObjectMeta.Annotations == nil {
-		policy.ObjectMeta.Annotations = map[string]string{}
+	if policy.Annotations == nil {
+		policy.Annotations = map[string]string{}
 	}
-	policy.ObjectMeta.Annotations[TimestampLabelKey] = value
+	policy.Annotations[TimestampLabelKey] = value
 }
 
 func setTimestampAnnotationHook() *webhook.Admission {

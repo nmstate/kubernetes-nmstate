@@ -18,6 +18,7 @@ limitations under the License.
 package nmstatectl
 
 import (
+	"context"
 	"os/exec"
 	"reflect"
 	"testing"
@@ -62,7 +63,7 @@ func TestSetCommandAndDebugMode(t *testing.T) {
 			execCommand = func(name string, args ...string) *exec.Cmd {
 				capturedCmd = name
 				capturedArgs = args
-				cmd := exec.Command("echo", "mocked output")
+				cmd := exec.CommandContext(context.TODO(), "echo", "mocked output")
 				return cmd
 			}
 

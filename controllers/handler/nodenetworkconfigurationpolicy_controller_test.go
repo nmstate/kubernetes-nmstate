@@ -265,7 +265,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			Expect(requests).To(WithTransform(func(reqs []ctrl.Request) []string {
 				names := make([]string, len(reqs))
 				for i, req := range reqs {
-					names[i] = req.NamespacedName.Name
+					names[i] = req.Name
 				}
 				return names
 			}, Equal(expectedOrder)))

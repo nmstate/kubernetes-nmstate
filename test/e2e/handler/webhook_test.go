@@ -63,10 +63,10 @@ var _ = Describe("Mutating Admission Webhook", func() {
 				newPolicy := nodeNetworkConfigurationPolicy(TestPolicy)
 				Expect(newPolicy.ObjectMeta.Annotations).To(HaveKey(nncpwebhook.TimestampLabelKey))
 
-				oldAnnotation := oldPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
+				oldAnnotation := oldPolicy.Annotations[nncpwebhook.TimestampLabelKey]
 				oldConditionsMutation, err := strconv.ParseInt(oldAnnotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
-				newAnnotation := newPolicy.ObjectMeta.Annotations[nncpwebhook.TimestampLabelKey]
+				newAnnotation := newPolicy.Annotations[nncpwebhook.TimestampLabelKey]
 				newConditionsMutation, err := strconv.ParseInt(newAnnotation, 10, 64)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -113,7 +113,7 @@ var _ = Describe("Validation Admission Webhook", func() {
 						"admission webhook \"nodenetworkconfigurationpolicies-create-validate.nmstate.io\" denied the request: " +
 							"failed to admit NodeNetworkConfigurationPolicy this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com:" +
 							" message: invalid policy name: \"this-is-longer-than-sixty-three-characters-hostnames-bar-bar.com\": " +
-							"must be no more than 63 characters. ",
+							"must be no more than 63 bytes. ",
 					),
 				)
 		})
