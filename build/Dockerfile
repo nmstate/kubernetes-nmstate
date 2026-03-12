@@ -1,5 +1,5 @@
 FROM registry.access.redhat.com/ubi9/ubi AS build
-ARG GO_VERSION=1.25
+ARG GO_VERSION=1.25.0
 
 COPY . .
 
