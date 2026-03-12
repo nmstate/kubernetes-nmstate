@@ -202,13 +202,10 @@ func setupHandlerLockIfNeeded() (*flock.Flock, error) {
 // composeTLSOpts returns TLS options for all TLS-enabled servers.
 // Always disables HTTP/2 (CVE-2023-39325), and adds the platform profile opts if present.
 func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
-	if tlsOpts == nil {
-		return func(c *tls.Config) {
-			c.NextProtos = []string{"http/1.1"}
-		}
-	}
 	return func(c *tls.Config) {
-		tlsOpts(c)
+		if tlsOpts != nil {
+			tlsOpts(c)
+		}
 		c.NextProtos = []string{"http/1.1"}
 	}
 }
