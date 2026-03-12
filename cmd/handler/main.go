@@ -145,7 +145,7 @@ func mainHandler() int {
 	// Compose the TLS opts applied to all TLS-enabled servers.
 	tlsOpts := composeTLSOpts(platformTLSOpts)
 
-	mgr, err := createManager(tlsOpts, platformTLSOpts != nil)
+	mgr, err := createManager(tlsOpts, platformTLSOpts != nil /*isOpenShift*/)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return generalExitStatus
@@ -240,8 +240,11 @@ func setupTLSProfileWatcher(mgr manager.Manager, cancel context.CancelFunc) erro
 }
 
 // createManager creates and configures the controller manager.
-// When secureMetrics is true, the metrics server uses TLS with authentication.
-func createManager(tlsOpts func(*tls.Config), secureMetrics bool) (manager.Manager, error) {
+// The metrics server always uses TLS (SecureServing). On non-OpenShift clusters
+// controller-runtime auto-generates a self-signed certificate.
+// When isOpenShift is true, authentication and authorization are enforced on the
+// metrics endpoint via TokenReview/SubjectAccessReview.
+func createManager(tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
 	// Get metrics bind address from environment variable, with default fallback
 	metricsBindAddress := os.Getenv("METRICS_BIND_ADDRESS")
 	if metricsBindAddress == "" {
@@ -249,12 +252,12 @@ func createManager(tlsOpts func(*tls.Config), secureMetrics bool) (manager.Manag
 	}
 
 	metricsOpts := metricsserver.Options{
-		BindAddress: metricsBindAddress,
+		BindAddress:   metricsBindAddress,
+		SecureServing: true,
+		TLSOpts:       []func(*tls.Config){tlsOpts},
 	}
 
-	if secureMetrics {
-		metricsOpts.SecureServing = true
-		metricsOpts.TLSOpts = []func(*tls.Config){tlsOpts}
+	if isOpenShift {
 		metricsOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 

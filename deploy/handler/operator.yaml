@@ -95,6 +95,7 @@ spec:
             timeoutSeconds: 1
             successThreshold: 1
             failureThreshold: 3
+{{- if .IsOpenShift }}
           volumeMounts:
           - name: metrics-tls
             readOnly: true
@@ -102,7 +103,8 @@ spec:
       volumes:
         - name: metrics-tls
           secret:
-            secretName: {{template "handlerPrefix" .}}nmstate-metrics-tls
+            secretName: {{template "handlerPrefix" .}}openshift-nmstate-metrics
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -479,8 +481,10 @@ kind: Service
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-monitor
   namespace: {{ .HandlerNamespace }}
+{{- if .IsOpenShift }}
   annotations:
-    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}nmstate-metrics-tls
+    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}openshift-nmstate-metrics
+{{- end }}
   labels:
     prometheus.nmstate.io: "true"
 spec:
@@ -628,8 +632,12 @@ spec:
     port: metrics
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
+{{- if .IsOpenShift }}
       caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
       serverName: {{template "handlerPrefix" .}}nmstate-monitor.{{ .HandlerNamespace }}.svc
+{{- else }}
+      insecureSkipVerify: true
+{{- end }}
     metricRelabelings:
       - action: labeldrop
         regex: instance
