@@ -216,7 +216,14 @@ func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
 // setupTLSProfileWatcher watches for platform TLS profile changes and
 // triggers a graceful shutdown so the process restarts with the new config.
 func setupTLSProfileWatcher(mgr manager.Manager, cancel context.CancelFunc) error {
-	tlsProfileSpec, err := tlspkg.FetchAPIServerTLSProfile(context.Background(), mgr.GetClient())
+	// Use a non-cached client for the initial fetch because the manager's
+	// cache is not started yet at this point.
+	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		return fmt.Errorf("failed creating client for TLS profile watcher: %w", err)
+	}
+
+	tlsProfileSpec, err := tlspkg.FetchAPIServerTLSProfile(context.Background(), apiClient)
 	if err != nil {
 		return fmt.Errorf("unable to get initial TLS profile for watcher: %w", err)
 	}
