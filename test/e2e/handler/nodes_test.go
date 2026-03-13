@@ -26,7 +26,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
-var _ = Describe("Nodes", func() {
+var _ = Describe("Nodes", Label("Nodes"), func() {
 	Context("when are up", func() {
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {

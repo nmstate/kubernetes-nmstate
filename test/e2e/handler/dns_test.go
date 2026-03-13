@@ -178,7 +178,7 @@ func emptyGlobalDNSConfig() nmstate.State {
 `)
 }
 
-var _ = Describe("Dns configuration", func() {
+var _ = Describe("Dns configuration", Label("DHCP"), func() {
 	Context("when desiredState is configured", func() {
 		var (
 			searchDomain1 = "fufu.ostest.test.metalkube.org"

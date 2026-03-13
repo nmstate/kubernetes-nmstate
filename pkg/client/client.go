@@ -154,6 +154,15 @@ func ApplyDesiredState(ctx context.Context, cli client.Client, desiredState shar
 		return "Ignoring empty desired state", nil
 	}
 
+	if nmstatectl.IsKernelMode() {
+		log.Info("Kernel mode: applying desired state without checkpoint/rollback/probes")
+		setOutput, err := nmstatectl.Set(desiredState, DesiredStateConfigurationTimeout)
+		if err != nil {
+			return setOutput, err
+		}
+		return fmt.Sprintf("setOutput: %s \n", setOutput), nil
+	}
+
 	// Before apply we get the probes that are working fine, they should be
 	// working fine after apply
 	probes := probe.Select(ctx, cli)

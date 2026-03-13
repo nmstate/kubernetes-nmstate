@@ -24,7 +24,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("NodeNetworkState", func() {
+var _ = Describe("NodeNetworkState", Label("VLAN"), func() {
 	Context("when vlan configured", func() {
 		var (
 			vlanID = "102"

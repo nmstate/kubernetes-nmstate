@@ -25,7 +25,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-var _ = Describe("Enactment DesiredState", func() {
+var _ = Describe("Enactment DesiredState", Label("EnactmentDesiredState"), func() {
 	Context("when applying a policy to matching nodes", func() {
 		BeforeEach(func() {
 			By("Create a policy")

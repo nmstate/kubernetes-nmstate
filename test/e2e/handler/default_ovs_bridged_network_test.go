@@ -66,7 +66,7 @@ func ovsBridgeWithTheDefaultInterfaceAbsent(ovsBridgeName, ovsBridgeInternalPort
 `, primaryNic, ovsBridgeInternalPortName, ovsBridgeName))
 }
 
-var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", func() {
+var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", Label("OVS"), func() {
 	Context("when there is a default interface with dynamic address", func() {
 		const (
 			ovsDefaultNetwork     = "ovs-default-network"

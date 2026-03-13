@@ -42,7 +42,7 @@ func enactmentsFailingOrProgressing(policy string) int {
 	return failingOrProgressingEnactments
 }
 
-var _ = Describe("NNCP with maxUnavailable", func() {
+var _ = Describe("NNCP with maxUnavailable", Label("PolicyParallel"), func() {
 	duration := 15 * time.Second
 	interval := 500 * time.Millisecond
 	Context("when applying a policy to matching nodes", func() {

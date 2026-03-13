@@ -33,7 +33,7 @@ import (
 
 const expectedDummyName = "dummy0"
 
-var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
+var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", Label("NNSTimestamp"), func() {
 	var (
 		originalNNSs map[string]nmstatev1beta1.NodeNetworkState
 	)

@@ -128,7 +128,7 @@ interfaces:
 `, nic))
 }
 
-var _ = Describe("rollback", func() {
+var _ = Describe("rollback", Label("Rollback"), func() {
 	// This spec is done only at first node since policy has to be different
 	// per node (ip addresses has to be different at cluster).
 	Context("when connectivity to default gw is lost after state configuration", func() {
