@@ -29,7 +29,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -98,7 +98,7 @@ var _ = BeforeSuite(func() {
 
 	By("Detecting kernel mode from NNS")
 	nns := nmstatev1beta1.NodeNetworkState{}
-	err = testenv.Client.Get(context.TODO(), types.NamespacedName{Name: allNodes[0]}, &nns)
+	err = testenv.Client.Get(context.TODO(), k8stypes.NamespacedName{Name: allNodes[0]}, &nns)
 	Expect(err).ToNot(HaveOccurred())
 	isKernelMode = nns.Status.HostNetworkManagerVersion == "N/A (kernel mode)"
 	if isKernelMode {
