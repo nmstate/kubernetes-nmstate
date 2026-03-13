@@ -1,0 +1,4 @@
+_kubevirtci
+build/_output
+bundle
+docs
