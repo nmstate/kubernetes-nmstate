@@ -1,0 +1,99 @@
+---
+# Operator Deployment — from deploy/operator/operator.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nmstate-operator
+  namespace: {{ include "kubernetes-nmstate.operatorNamespace" . }}
+  labels:
+    app: kubernetes-nmstate-operator
+    {{- include "kubernetes-nmstate.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kubernetes-nmstate-operator
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.operator.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        app: kubernetes-nmstate-operator
+        name: kubernetes-nmstate-operator
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: nmstate-operator
+      tolerations:
+        {{- toYaml .Values.operator.tolerations | nindent 8 }}
+      affinity:
+        {{- toYaml .Values.operator.affinity | nindent 8 }}
+      priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nmstate-operator
+          args:
+            - --zap-time-encoding=iso8601
+          image: {{ include "kubernetes-nmstate.operatorImage" . }}
+          imagePullPolicy: {{ .Values.operator.image.pullPolicy }}
+          command:
+            - manager
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8081
+              name: healthprobe
+          resources:
+            {{- toYaml .Values.operator.resources | nindent 12 }}
+          terminationMessagePolicy: FallbackToLogsOnError
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: OPERATOR_NAME
+              value: "kubernetes-nmstate-operator"
+            - name: ENABLE_PROFILER
+              value: {{ .Values.operator.env.enableProfiler | quote }}
+            - name: PROFILER_PORT
+              value: {{ .Values.operator.env.profilerPort | quote }}
+            - name: RUN_OPERATOR
+              value: ""
+            - name: RELATED_IMAGE_HANDLER_IMAGE
+              value: {{ include "kubernetes-nmstate.handlerImage" . }}
+            - name: HANDLER_IMAGE_PULL_POLICY
+              value: {{ .Values.handler.image.pullPolicy }}
+            - name: HANDLER_NAMESPACE
+              value: {{ include "kubernetes-nmstate.handlerNamespace" . }}
+            - name: MONITORING_NAMESPACE
+              value: {{ .Values.monitoringNamespace }}
+            - name: OPERATOR_NAMESPACE
+              value: {{ include "kubernetes-nmstate.operatorNamespace" . }}
+            - name: KUBE_RBAC_PROXY_IMAGE
+              value: {{ .Values.kubeRBACProxy.image }}
