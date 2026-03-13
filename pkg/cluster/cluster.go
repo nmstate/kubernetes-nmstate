@@ -26,7 +26,7 @@ import (
 	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	ctrl "sigs.k8s.io/controller-runtime"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -50,8 +50,7 @@ func IsOpenShift(kclient client.Client) (bool, error) {
 
 // FetchOpenShiftTLSOpts detects OpenShift and fetches the TLS profile for
 // secure serving. Returns nil on non-OpenShift clusters.
-func FetchOpenShiftTLSOpts(scheme *runtime.Scheme) (func(*tls.Config), error) {
-	cfg := ctrl.GetConfigOrDie()
+func FetchOpenShiftTLSOpts(cfg *rest.Config, scheme *runtime.Scheme) (func(*tls.Config), error) {
 	kclient, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, fmt.Errorf("failed creating client for TLS profile detection: %w", err)

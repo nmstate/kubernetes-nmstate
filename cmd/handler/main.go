@@ -37,6 +37,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -134,9 +135,11 @@ func mainHandler() int {
 		defer handlerLock.Unlock()
 	}
 
+	cfg := ctrl.GetConfigOrDie()
+
 	// Detect OpenShift and fetch TLS profile early, before creating the
 	// manager, so both the metrics server and webhooks share the same config.
-	platformTLSOpts, err := cluster.FetchOpenShiftTLSOpts(scheme)
+	platformTLSOpts, err := cluster.FetchOpenShiftTLSOpts(cfg, scheme)
 	if err != nil {
 		setupLog.Error(err, "unable to fetch TLS configuration")
 		return generalExitStatus
@@ -145,7 +148,7 @@ func mainHandler() int {
 	// Compose the TLS opts applied to all TLS-enabled servers.
 	tlsOpts := composeTLSOpts(platformTLSOpts)
 
-	mgr, err := createManager(tlsOpts, platformTLSOpts != nil /*isOpenShift*/)
+	mgr, err := createManager(cfg, tlsOpts, platformTLSOpts != nil /*isOpenShift*/)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return generalExitStatus
@@ -241,7 +244,7 @@ func setupTLSProfileWatcher(mgr manager.Manager, cancel context.CancelFunc) erro
 // controller-runtime auto-generates a self-signed certificate.
 // When isOpenShift is true, authentication and authorization are enforced on the
 // metrics endpoint via TokenReview/SubjectAccessReview.
-func createManager(tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
+func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
 	// Get metrics bind address from environment variable, with default fallback
 	metricsBindAddress := os.Getenv("METRICS_BIND_ADDRESS")
 	if metricsBindAddress == "" {
@@ -268,7 +271,7 @@ func createManager(tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager
 	}
 
 	setupLog.Info("Creating manager")
-	return ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
+	return ctrl.NewManager(cfg, ctrlOptions)
 }
 
 // setupControllersByEnvironment configures controllers based on the current environment.
