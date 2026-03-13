@@ -46,7 +46,5 @@ func Add(mgr manager.Manager) error {
 	server.Register("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook())
 	server.Register("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook())
 	server.Register("/nodenetworkconfigurationpolicies-timestamp-mutate", setTimestampAnnotationHook())
-	server.Register("/nodenetworkconfigurationpolicies-update-validate", validatePolicyUpdateHook(mgr.GetClient()))
-	server.Register("/nodenetworkconfigurationpolicies-create-validate", validatePolicyCreateHook(mgr.GetClient()))
 	return mgr.Add(server)
 }

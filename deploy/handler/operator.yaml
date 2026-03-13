@@ -553,32 +553,63 @@ webhooks:
         apiGroups: ["*"]
         apiVersions: ["v1alpha1","v1beta1","v1"]
         resources: ["nodenetworkconfigurationpolicies", "nodenetworkconfigurationpolicies/status"]
-  - name: nodenetworkconfigurationpolicies-update-validate.nmstate.io
-    admissionReviewVersions: ["v1", "v1beta1"]
-    sideEffects: None
-    clientConfig:
-      service:
-        name: {{template "handlerPrefix" .}}nmstate-webhook
-        namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-update-validate"
-    rules:
-      - operations: ["UPDATE"]
-        apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1","v1"]
-        resources: ["nodenetworkconfigurationpolicies"]
-  - name: nodenetworkconfigurationpolicies-create-validate.nmstate.io
-    admissionReviewVersions: [ "v1", "v1beta1" ]
-    sideEffects: None
-    clientConfig:
-      service:
-        name: {{template "handlerPrefix" .}}nmstate-webhook
-        namespace: {{ .HandlerNamespace }}
-        path: "/nodenetworkconfigurationpolicies-create-validate"
-    rules:
-      - operations: ["CREATE"]
-        apiGroups: ["*"]
-        apiVersions: ["v1alpha1","v1beta1","v1"]
-        resources: ["nodenetworkconfigurationpolicies"]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{template "handlerPrefix" .}}nncp-validation-policy
+  labels:
+    app: kubernetes-nmstate
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["nmstate.io"]
+      apiVersions: ["v1", "v1beta1"]
+      resources: ["nodenetworkconfigurationpolicies"]
+      operations: ["CREATE", "UPDATE"]
+  validations:
+  - expression: >-
+      request.operation != 'CREATE' ||
+      (size(object.metadata.name) <= 63 &&
+       (object.metadata.name == '' ||
+        object.metadata.name.matches('^[A-Za-z0-9]([-A-Za-z0-9_.]*[A-Za-z0-9])?$')))
+    messageExpression: "'invalid policy name: \"' + object.metadata.name + '\": must be no more than 63 characters or match label value format'"
+    reason: Invalid
+  - expression: >-
+      request.operation != 'UPDATE' ||
+      object.spec == oldObject.spec ||
+      (has(oldObject.status) && has(oldObject.status.conditions) &&
+       oldObject.status.conditions.exists(c,
+         c.type == 'Available' && c.reason != '' &&
+         c.reason != 'ConfigurationProgressing'))
+    messageExpression: "'policy ' + object.metadata.name + ' is still in progress'"
+    reason: Forbidden
+  - expression: >-
+      request.operation != 'UPDATE' ||
+      object.spec == oldObject.spec ||
+      ((!has(object.spec.capture) && !has(oldObject.spec.capture)) ||
+       (has(object.spec.capture) && has(oldObject.spec.capture) &&
+        object.spec.capture == oldObject.spec.capture))
+    message: "invalid policy operation: capture field cannot be modified"
+    reason: Invalid
+  - expression: >-
+      !has(object.spec.nodeSelector) ||
+      object.spec.nodeSelector.all(k,
+        !format.labelValue().validate(object.spec.nodeSelector[k]).hasValue())
+    message: "nodeSelector values must be valid label values"
+    reason: Invalid
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{template "handlerPrefix" .}}nncp-validation-policy-binding
+  labels:
+    app: kubernetes-nmstate
+spec:
+  policyName: {{template "handlerPrefix" .}}nncp-validation-policy
+  validationActions:
+  - Deny
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

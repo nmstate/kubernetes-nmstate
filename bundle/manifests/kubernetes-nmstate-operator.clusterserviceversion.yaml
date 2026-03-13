@@ -131,6 +131,8 @@ spec:
           - admissionregistration.k8s.io
           resources:
           - mutatingwebhookconfigurations
+          - validatingadmissionpolicies
+          - validatingadmissionpolicybindings
           verbs:
           - '*'
         - apiGroups:
