@@ -1,11 +1,3 @@
-# kubernetes-nmstate has two binaries:
-# - the operator, which runs cluster-scoped reconciliation
-# - the handler, which is deployed by the operator after an NMState CR exists
-#
-# On plain kind nodes, NetworkManager is not available, so this Tiltfile deploys
-# the operator by default and makes the NMState instance opt-in. Set
-# TILT_ENABLE_HANDLER=1 when targeting a real cluster with NetworkManager.
-
 def env_bool(name, default):
     value = os.getenv(name, '')
     if value == '':
@@ -40,11 +32,19 @@ def object_selector(name, kind, namespace=''):
         'serviceaccount': 'ServiceAccount',
     }.get(kind.lower(), kind)
 
+    cluster_scoped_kinds = [
+        'ClusterRole',
+        'ClusterRoleBinding',
+        'CustomResourceDefinition',
+        'NMState',
+        'Namespace',
+    ]
+
+    if kind_name in cluster_scoped_kinds:
+        return '%s:%s:default' % (name, kind_name)
+
     if namespace:
         return '%s:%s:%s' % (name, kind_name, namespace)
-
-    if kind_name in ['CustomResourceDefinition', 'Namespace', 'ClusterRole']:
-        return '%s:%s:default' % (name, kind_name)
 
     return '%s:%s' % (name, kind_name)
 
