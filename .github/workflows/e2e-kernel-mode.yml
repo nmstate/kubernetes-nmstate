@@ -115,3 +115,6 @@ jobs:
           done
           echo ""
           echo "All nodes reporting network state via kernel mode successfully."
+
+      - name: Run kernel mode e2e tests
+        run: KUBECONFIG=~/.kube/config make test-e2e-handler-kernel
