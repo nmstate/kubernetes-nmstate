@@ -49,6 +49,10 @@ spec:
           imagePullPolicy: {{ .HandlerPullPolicy }}
           command:
           - manager
+          ports:
+          - containerPort: 8443
+            name: metrics
+            protocol: TCP
           resources:
             requests:
               cpu: "30m"
@@ -57,6 +61,19 @@ spec:
               cpu: "500m"
               memory: "1Gi"
           terminationMessagePolicy: FallbackToLogsOnError
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
           env:
             - name: WATCH_NAMESPACE
               value: ""
@@ -76,43 +93,21 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
-        - args:
-          - --logtostderr
-          - --secure-listen-address=:8443
-          - --upstream=http://127.0.0.1:8089
-          securityContext:
-            allowPrivilegeEscalation: false
-            capabilities:
-              drop:
-              - ALL
-          image: {{ .KubeRBACProxyImage }}
-          imagePullPolicy: IfNotPresent
-          name: kube-rbac-proxy
-          ports:
-          - containerPort: 8443
-            name: metrics
-            protocol: TCP
-          readinessProbe:
-            tcpSocket:
-              port: metrics
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          livenessProbe:
-            tcpSocket:
-              port: metrics
-            initialDelaySeconds: 10
-            periodSeconds: 10
-            timeoutSeconds: 1
-            successThreshold: 1
-            failureThreshold: 3
-          resources:
-            requests:
-              cpu: "10m"
-              memory: "20Mi"
-            limits:
-              cpu: "500m"
-              memory: "1Gi"
-          terminationMessagePolicy: FallbackToLogsOnError
+            - name: METRICS_BIND_ADDRESS
+              value: ":8443"
+            - name: METRICS_SECURE
+              value: "true"
+            - name: METRICS_CERT_DIR
+              value: "/tmp/k8s-metrics-server/serving-certs"
+          volumeMounts:
+            - name: metrics-certs
+              mountPath: /tmp/k8s-metrics-server/serving-certs
+              readOnly: true
+      volumes:
+        - name: metrics-certs
+          secret:
+            secretName: {{template "handlerPrefix" .}}nmstate-metrics-tls
+            optional: true
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -491,6 +486,8 @@ metadata:
   namespace: {{ .HandlerNamespace }}
   labels:
     prometheus.nmstate.io: "true"
+  annotations:
+    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}nmstate-metrics-tls
 spec:
   ports:
     - name: metrics
