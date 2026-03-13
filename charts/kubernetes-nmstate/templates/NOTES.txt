@@ -28,6 +28,6 @@ To enable the handler on nodes, create the NMState resource:
   EOF
 
 Or re-install with:
-  helm upgrade {{ .Release.Name }} charts/kubernetes-nmstate --set nmstateCR.create=true
+  helm upgrade {{ .Release.Name }} {{ .Chart.Name }} --set nmstateCR.create=true
 
 {{- end }}
