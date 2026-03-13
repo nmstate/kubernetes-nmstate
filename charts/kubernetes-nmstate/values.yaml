@@ -1,7 +1,7 @@
 # Default values for kubernetes-nmstate.
 # All image defaults mirror the Makefile defaults and Tiltfile configuration.
 
-# -- Operator component (runs as a Deployment, cluster-scoped)
+# Operator component (runs as a Deployment, cluster-scoped)
 operator:
   image:
     # IMAGE_REGISTRY / IMAGE_REPO / OPERATOR_IMAGE_NAME / OPERATOR_IMAGE_TAG
@@ -43,7 +43,7 @@ operator:
     target.workload.openshift.io/management: |
       {"effect": "PreferredDuringScheduling"}
 
-# -- Handler component (deployed as a DaemonSet *by the operator*, not by Helm directly)
+# Handler component (deployed as a DaemonSet *by the operator*, not by Helm directly)
 #    These values are passed to the operator as environment variables so it knows
 #    which handler image to deploy and where.
 handler:
@@ -56,20 +56,20 @@ handler:
   # HANDLER_NAMESPACE — defaults to operator.namespace when empty
   namespace: ""
 
-# -- kube-rbac-proxy image (KUBE_RBAC_PROXY_IMAGE in Makefile)
+# kube-rbac-proxy image (KUBE_RBAC_PROXY_IMAGE in Makefile)
 kubeRBACProxy:
   image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
 
-# -- MONITORING_NAMESPACE
+# MONITORING_NAMESPACE
 monitoringNamespace: monitoring
 
-# -- CRD management
+# CRD management
 #    true  → CRDs are placed in the special crds/ directory (auto-installed by Helm)
 #    The 4 nmstate.io CRDs are always shipped in charts/kubernetes-nmstate/crds/
 crds:
   install: true
 
-# -- Optionally create the NMState singleton CR after the operator is ready.
+# Optionally create the NMState singleton CR after the operator is ready.
 #    Mirrors the TILT_ENABLE_HANDLER / enable_handler behaviour in the Tiltfile.
 #    When false the operator is deployed but does not configure any nodes until
 #    an NMState CR is created separately.
@@ -78,9 +78,9 @@ nmstateCR:
   # Optional node selector for the handler DaemonSet (spec.nodeSelector)
   nodeSelector: {}
 
-# -- Image pull secrets
+# Image pull secrets
 imagePullSecrets: []
 
-# -- Helm name overrides
+# Helm name overrides
 nameOverride: ""
 fullnameOverride: ""

@@ -1,9 +1,6 @@
 {{- if .Values.nmstateCR.create }}
 ---
 # NMState singleton CR — triggers the operator to deploy the handler DaemonSet.
-# Mirrors deploy/examples/nmstate.io_v1_nmstate_cr.yaml
-# Enable via: helm install ... --set nmstateCR.create=true
-# Mirrors the TILT_ENABLE_HANDLER=1 behaviour in the Tiltfile.
 apiVersion: nmstate.io/v1
 kind: NMState
 metadata:

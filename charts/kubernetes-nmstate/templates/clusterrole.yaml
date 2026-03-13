@@ -1,5 +1,4 @@
 ---
-# ClusterRole — from deploy/operator/role.yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
