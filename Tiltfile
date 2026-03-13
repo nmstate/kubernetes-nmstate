@@ -1,3 +1,4 @@
+
 def env_bool(name, default):
     value = os.getenv(name, '')
     if value == '':
@@ -32,19 +33,11 @@ def object_selector(name, kind, namespace=''):
         'serviceaccount': 'ServiceAccount',
     }.get(kind.lower(), kind)
 
-    cluster_scoped_kinds = [
-        'ClusterRole',
-        'ClusterRoleBinding',
-        'CustomResourceDefinition',
-        'NMState',
-        'Namespace',
-    ]
-
-    if kind_name in cluster_scoped_kinds:
-        return '%s:%s:default' % (name, kind_name)
-
     if namespace:
         return '%s:%s:%s' % (name, kind_name, namespace)
+
+    if kind_name in ['CustomResourceDefinition', 'Namespace', 'ClusterRole']:
+        return '%s:%s:default' % (name, kind_name)
 
     return '%s:%s' % (name, kind_name)
 
