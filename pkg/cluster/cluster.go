@@ -58,8 +58,7 @@ func FetchOpenShiftTLSOpts(cfg *rest.Config, scheme *runtime.Scheme) (func(*tls.
 
 	isOCP, err := IsOpenShift(kclient)
 	if err != nil {
-		log.Info("Warning: could not determine if running on OpenShift, assuming not")
-		return nil, nil
+		return nil, fmt.Errorf("could not determine if running on OpenShift: %w", err)
 	}
 	if !isOCP {
 		return nil, nil
