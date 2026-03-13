@@ -51,9 +51,11 @@ func TestSetCommandAndDebugMode(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			originalDebugMode := debugMode
+			originalKernelMode := kernelMode
 			originalExecCommand := execCommand
 			defer func() {
 				debugMode = originalDebugMode
+				kernelMode = originalKernelMode
 				execCommand = originalExecCommand
 			}()
 
@@ -71,6 +73,7 @@ func TestSetCommandAndDebugMode(t *testing.T) {
 			desiredState := nmstate.State{Raw: []byte(`{"interfaces": []}`)}
 
 			SetDebugMode(tt.debugMode)
+			SetKernelMode(false)
 			_, err := Set(desiredState, timeout)
 			if err != nil {
 				t.Errorf("Set() failed: %v", err)
@@ -84,5 +87,156 @@ func TestSetCommandAndDebugMode(t *testing.T) {
 				t.Errorf("Arguments = %v, want %v", capturedArgs, tt.expectedArgs)
 			}
 		})
+	}
+}
+
+func TestSetKernelMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		debugMode    bool
+		kernelMode   bool
+		expectedArgs []string
+	}{
+		{
+			name:         "kernel mode without debug",
+			debugMode:    false,
+			kernelMode:   true,
+			expectedArgs: []string{"apply", "-k"},
+		},
+		{
+			name:         "kernel mode with debug",
+			debugMode:    true,
+			kernelMode:   true,
+			expectedArgs: []string{"apply", "-vv", "-k"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalDebugMode := debugMode
+			originalKernelMode := kernelMode
+			originalExecCommand := execCommand
+			defer func() {
+				debugMode = originalDebugMode
+				kernelMode = originalKernelMode
+				execCommand = originalExecCommand
+			}()
+
+			var capturedArgs []string
+			execCommand = func(name string, args ...string) *exec.Cmd {
+				capturedArgs = args
+				return exec.CommandContext(context.TODO(), "echo", "mocked output")
+			}
+
+			SetDebugMode(tt.debugMode)
+			SetKernelMode(tt.kernelMode)
+
+			desiredState := nmstate.State{Raw: []byte(`{"interfaces": []}`)}
+			_, err := Set(desiredState, 120*time.Second)
+			if err != nil {
+				t.Errorf("Set() failed: %v", err)
+			}
+
+			if !reflect.DeepEqual(capturedArgs, tt.expectedArgs) {
+				t.Errorf("Arguments = %v, want %v", capturedArgs, tt.expectedArgs)
+			}
+		})
+	}
+}
+
+func TestShowKernelMode(t *testing.T) {
+	tests := []struct {
+		name         string
+		kernelMode   bool
+		expectedArgs []string
+	}{
+		{
+			name:         "show without kernel mode",
+			kernelMode:   false,
+			expectedArgs: []string{"show"},
+		},
+		{
+			name:         "show with kernel mode",
+			kernelMode:   true,
+			expectedArgs: []string{"show", "-k"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			originalKernelMode := kernelMode
+			originalExecCommand := execCommand
+			defer func() {
+				kernelMode = originalKernelMode
+				execCommand = originalExecCommand
+			}()
+
+			var capturedArgs []string
+			execCommand = func(name string, args ...string) *exec.Cmd {
+				capturedArgs = args
+				return exec.CommandContext(context.TODO(), "echo", "mocked output")
+			}
+
+			SetKernelMode(tt.kernelMode)
+			_, err := Show()
+			if err != nil {
+				t.Errorf("Show() failed: %v", err)
+			}
+
+			if !reflect.DeepEqual(capturedArgs, tt.expectedArgs) {
+				t.Errorf("Arguments = %v, want %v", capturedArgs, tt.expectedArgs)
+			}
+		})
+	}
+}
+
+func TestCommitKernelMode(t *testing.T) {
+	originalKernelMode := kernelMode
+	originalExecCommand := execCommand
+	defer func() {
+		kernelMode = originalKernelMode
+		execCommand = originalExecCommand
+	}()
+
+	commandExecuted := false
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		commandExecuted = true
+		return exec.CommandContext(context.TODO(), "echo", "mocked output")
+	}
+
+	SetKernelMode(true)
+	output, err := Commit()
+	if err != nil {
+		t.Errorf("Commit() failed: %v", err)
+	}
+	if commandExecuted {
+		t.Error("Commit() should not execute a command in kernel mode")
+	}
+	if output != "commit skipped (kernel mode)" {
+		t.Errorf("Commit() output = %q, want %q", output, "commit skipped (kernel mode)")
+	}
+}
+
+func TestRollbackKernelMode(t *testing.T) {
+	originalKernelMode := kernelMode
+	originalExecCommand := execCommand
+	defer func() {
+		kernelMode = originalKernelMode
+		execCommand = originalExecCommand
+	}()
+
+	commandExecuted := false
+	execCommand = func(name string, args ...string) *exec.Cmd {
+		commandExecuted = true
+		return exec.CommandContext(context.TODO(), "echo", "mocked output")
+	}
+
+	SetKernelMode(true)
+	err := Rollback()
+	if err != nil {
+		t.Errorf("Rollback() failed: %v", err)
+	}
+	if commandExecuted {
+		t.Error("Rollback() should not execute a command in kernel mode")
 	}
 }

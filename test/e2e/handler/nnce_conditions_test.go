@@ -29,7 +29,7 @@ import (
 	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-var _ = Describe("EnactmentCondition", func() {
+var _ = Describe("EnactmentCondition", Label("EnactmentCondition"), func() {
 	Context("when applying valid config", func() {
 		AfterEach(func() {
 			By("Remove the bridge")

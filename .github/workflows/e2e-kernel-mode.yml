@@ -1,0 +1,117 @@
+name: E2E Kernel Mode
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  e2e-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Write kind config
+        run: |
+          cat > /tmp/kind-config.yaml <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+            - role: control-plane
+            - role: worker
+            - role: worker
+          EOF
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: kernel-mode-test
+          node_image: kindest/node:v1.32.0
+          config: /tmp/kind-config.yaml
+
+      - name: Create secondary docker networks and attach to kind nodes
+        run: |
+          docker network create --driver bridge kind-secondary-1
+          docker network create --driver bridge kind-secondary-2
+          for node in $(kind get nodes --name kernel-mode-test); do
+            docker network connect kind-secondary-1 "$node"
+            docker network connect kind-secondary-2 "$node"
+          done
+
+      - name: Build and load handler image
+        run: |
+          GO_VERSION=$(hack/go-version.sh)
+          docker build --build-arg GO_VERSION="$GO_VERSION" -f build/Dockerfile -t "$HANDLER_IMAGE" .
+          kind load docker-image "$HANDLER_IMAGE" --name kernel-mode-test
+        env:
+          HANDLER_IMAGE: quay.io/nmstate/kubernetes-nmstate-handler:latest
+
+      - name: Build and load operator image
+        run: |
+          GO_VERSION=$(hack/go-version.sh)
+          docker build --build-arg GO_VERSION="$GO_VERSION" -f build/Dockerfile.operator -t "$OPERATOR_IMAGE" .
+          kind load docker-image "$OPERATOR_IMAGE" --name kernel-mode-test
+        env:
+          OPERATOR_IMAGE: quay.io/nmstate/kubernetes-nmstate-operator:latest
+
+      - name: Deploy CRDs, RBAC, operator, and handler
+        run: |
+          HANDLER_PULL_POLICY=Never OPERATOR_PULL_POLICY=Never make manifests
+          kubectl apply -f deploy/crds/
+          kubectl apply -f build/_output/manifests/namespace.yaml
+          kubectl apply -f build/_output/manifests/service_account.yaml
+          kubectl apply -f build/_output/manifests/role.yaml
+          kubectl apply -f build/_output/manifests/role_binding.yaml
+          kubectl apply -f build/_output/manifests/operator.yaml
+          kubectl rollout status deployment/nmstate-operator -n nmstate --timeout=120s
+          kubectl apply -f build/_output/manifests/nmstate.io_v1_nmstate_cr.yaml
+
+      - name: Wait for handler pods to be ready
+        run: |
+          # Wait for the DaemonSet to be created by the operator
+          for i in $(seq 1 30); do
+            if kubectl -n nmstate get ds nmstate-handler &>/dev/null; then
+              break
+            fi
+            echo "Waiting for handler DaemonSet... ($i)"
+            sleep 5
+          done
+          kubectl -n nmstate rollout status daemonset/nmstate-handler --timeout=300s
+
+      - name: Verify kernel mode is active
+        run: |
+          for pod in $(kubectl -n nmstate get pods -l name=nmstate-handler -o jsonpath='{.items[*].metadata.name}'); do
+            echo "=== $pod ==="
+            kubectl -n nmstate logs "$pod" -c nmstate-handler | grep -E "kernel mode|NetworkManager"
+          done
+
+      - name: Verify NNS resources exist
+        run: |
+          kubectl get nns
+          for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+            echo "=== NNS for $node ==="
+            kubectl get nns "$node" -o jsonpath='{.status.hostNetworkManagerVersion}'
+            echo ""
+          done
+
+      - name: Verify NNS has interfaces and dns
+        run: |
+          for node in $(kubectl get nodes -o jsonpath='{.items[*].metadata.name}'); do
+            echo "=== $node ==="
+            ifaces=$(kubectl get nns "$node" -o jsonpath='{.status.currentState.interfaces[*].name}')
+            echo "  interfaces: $ifaces"
+            nm_version=$(kubectl get nns "$node" -o jsonpath='{.status.hostNetworkManagerVersion}')
+            echo "  NM version: $nm_version"
+            if [ -z "$ifaces" ]; then
+              echo "ERROR: No interfaces found in NNS for $node"
+              exit 1
+            fi
+            if [ "$nm_version" != "N/A (kernel mode)" ]; then
+              echo "ERROR: Expected 'N/A (kernel mode)' but got '$nm_version'"
+              exit 1
+            fi
+          done
+          echo ""
+          echo "All nodes reporting network state via kernel mode successfully."

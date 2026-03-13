@@ -22,7 +22,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Simple OVS bridge", func() {
+var _ = Describe("Simple OVS bridge", Label("OVS"), func() {
 	Context("when desiredState is configured with an ovs bridge up", func() {
 		BeforeEach(func() {
 			updateDesiredStateAndWait(ovsBrUp(bridge1))

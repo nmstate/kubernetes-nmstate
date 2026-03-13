@@ -23,7 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("NodeNetworkState", func() {
+var _ = Describe("NodeNetworkState", Label("VRF"), func() {
 	var (
 		node string
 	)

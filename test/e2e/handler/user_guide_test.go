@@ -25,7 +25,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-var _ = Describe("[user-guide] Introduction", func() {
+var _ = Describe("[user-guide] Introduction", Label("UserGuide"), func() {
 	runConfiguration := func() {
 		kubectlAndCheck("apply", "-f", "docs/user-guide/bond0-eth1-eth2_up.yaml")
 		kubectlAndCheck("wait", "nncp", "bond0-eth1-eth2", "--for", "condition=Available", "--timeout", "4m")

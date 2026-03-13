@@ -26,7 +26,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-var _ = Describe("NodeNetworkState", func() {
+var _ = Describe("NodeNetworkState", Label("MultiplePolicies"), func() {
 	Context("with multiple policies configured", func() {
 		var (
 			vlanIDs    = []string{"102", "103"}

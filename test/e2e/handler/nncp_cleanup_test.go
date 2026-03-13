@@ -31,7 +31,7 @@ import (
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
-var _ = Describe("NNCP cleanup", func() {
+var _ = Describe("NNCP cleanup", Label("PolicyCleanup"), func() {
 
 	BeforeEach(func() {
 		By("Create a policy")

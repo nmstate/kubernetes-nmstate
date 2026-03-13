@@ -62,7 +62,7 @@ func bondAbsentWithPrimaryUp(bondName string) nmstate.State {
 `, bondName, primaryNic))
 }
 
-var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", func() {
+var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", Label("DHCP"), func() {
 	Context("when there is a default interface with dynamic address", func() {
 		addressByNode := map[string]string{}
 		BeforeEach(func() {

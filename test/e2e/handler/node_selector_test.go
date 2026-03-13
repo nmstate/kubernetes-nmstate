@@ -34,7 +34,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
 
-var _ = Describe("NodeSelector", func() {
+var _ = Describe("NodeSelector", Label("NodeSelector"), func() {
 	var (
 		testNodeSelector            = map[string]string{"testKey": "testValue"}
 		numberOfEnactmentsForPolicy = func(policyName string) int {

@@ -147,7 +147,7 @@ routes:
 `, firstSecondaryNic, firstSecondaryNic))
 }
 
-var _ = Describe("Static addresses and routes", func() {
+var _ = Describe("Static addresses and routes", Label("StaticAddress"), func() {
 	Context("when desiredState is configured", func() {
 		var (
 			node               string

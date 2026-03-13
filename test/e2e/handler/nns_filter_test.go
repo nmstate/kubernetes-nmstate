@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("[nns] NNS Interface filter", func() {
+var _ = Describe("[nns] NNS Interface filter", Label("NNSFilter"), func() {
 	BeforeEach(func() {
 		// Make sure NNSes are present
 		for _, node := range nodes {

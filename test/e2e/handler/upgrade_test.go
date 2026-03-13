@@ -33,7 +33,7 @@ import (
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
-var _ = Describe("NodeNetworkConfigurationPolicy upgrade", func() {
+var _ = Describe("NodeNetworkConfigurationPolicy upgrade", Label("Upgrade"), func() {
 	Context("when v1beta1 is populated", func() {
 		BeforeEach(func() {
 			// Ensure TestPolicy doesn't exist before creating v1beta1 policy
