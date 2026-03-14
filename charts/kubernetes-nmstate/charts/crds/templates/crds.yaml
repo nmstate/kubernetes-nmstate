@@ -1,0 +1,9 @@
+{{- if .Values.enabled }}
+{{ .Files.Get "nmstate.io_nmstates.yaml" }}
+---
+{{ .Files.Get "nmstate.io_nodenetworkconfigurationenactments.yaml" }}
+---
+{{ .Files.Get "nmstate.io_nodenetworkconfigurationpolicies.yaml" }}
+---
+{{ .Files.Get "nmstate.io_nodenetworkstates.yaml" }}
+{{- end }}

@@ -67,7 +67,7 @@ monitoringNamespace: monitoring
 #    true  → CRDs are placed in the special crds/ directory (auto-installed by Helm)
 #    The 4 nmstate.io CRDs are always shipped in charts/kubernetes-nmstate/crds/
 crds:
-  install: true
+  enabled: true
 
 # Optionally create the NMState singleton CR after the operator is ready.
 #    Mirrors the TILT_ENABLE_HANDLER / enable_handler behaviour in the Tiltfile.

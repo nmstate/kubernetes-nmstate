@@ -78,11 +78,7 @@ spec:
                   NodeSelector is a selector which must be true for the policy to be applied to the node.
                   Selector which must match a node's labels for the policy to be scheduled on that node.
                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-                maxProperties: 256
                 type: object
-                x-kubernetes-validations:
-                - message: nodeSelector keys must be valid qualified names
-                  rule: self.all(k, !format.qualifiedName().validate(k).hasValue())
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed
@@ -196,11 +192,7 @@ spec:
                   NodeSelector is a selector which must be true for the policy to be applied to the node.
                   Selector which must match a node's labels for the policy to be scheduled on that node.
                   More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
-                maxProperties: 256
                 type: object
-                x-kubernetes-validations:
-                - message: nodeSelector keys must be valid qualified names
-                  rule: self.all(k, !format.qualifiedName().validate(k).hasValue())
             type: object
           status:
             description: NodeNetworkConfigurationPolicyStatus defines the observed
