@@ -44,3 +44,4 @@ icon: https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/refs/heads/ma
 maintainers:
   - name: nmstate-maintainers
     url: https://github.com/nmstate/kubernetes-nmstate/blob/main/MAINTAINERS.md
+    
