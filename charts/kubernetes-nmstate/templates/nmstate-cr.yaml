@@ -1,6 +1,7 @@
 {{- if .Values.nmstateCR.create }}
 ---
 # NMState singleton CR — triggers the operator to deploy the handler DaemonSet.
+# CRDs are guaranteed installed first via the crds sub-chart's crds/ directory.
 apiVersion: nmstate.io/v1
 kind: NMState
 metadata:

@@ -74,7 +74,7 @@ crds:
 #    When false the operator is deployed but does not configure any nodes until
 #    an NMState CR is created separately.
 nmstateCR:
-  create: false
+  create: true
   # Optional node selector for the handler DaemonSet (spec.nodeSelector)
   nodeSelector: {}
 
