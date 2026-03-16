@@ -25,15 +25,14 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
 
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 )
 
@@ -64,11 +63,11 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNNCP, ok := e.ObjectOld.(*nmstatev1beta1.NodeNetworkConfigurationPolicy)
+			oldNNCP, ok := e.ObjectOld.(*nmstatev1.NodeNetworkConfigurationPolicy)
 			if !ok {
 				return false
 			}
-			newNNCP, ok := e.ObjectNew.(*nmstatev1beta1.NodeNetworkConfigurationPolicy)
+			newNNCP, ok := e.ObjectNew.(*nmstatev1.NodeNetworkConfigurationPolicy)
 			if !ok {
 				return false
 			}
@@ -80,7 +79,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1beta1.NodeNetworkConfigurationPolicy{}).
+		For(&nmstatev1.NodeNetworkConfigurationPolicy{}).
 		WithEventFilter(onConditionChange).
 		Complete(r)
 	if err != nil {
@@ -91,7 +90,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) reportStatistics(ctx context.Context) error {
-	nncpList := nmstatev1beta1.NodeNetworkConfigurationPolicyList{}
+	nncpList := nmstatev1.NodeNetworkConfigurationPolicyList{}
 	if err := r.List(ctx, &nncpList); err != nil {
 		return err
 	}
@@ -113,13 +112,4 @@ func (r *NodeNetworkConfigurationPolicyReconciler) reportStatistics(ctx context.
 	}
 
 	return nil
-}
-
-func activeConditionType(conditions shared.ConditionList) shared.ConditionType {
-	for _, c := range conditions {
-		if c.Status == corev1.ConditionTrue {
-			return c.Type
-		}
-	}
-	return ""
 }
