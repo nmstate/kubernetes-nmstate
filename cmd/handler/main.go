@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -26,6 +27,8 @@ import (
 	"strconv"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
+	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,6 +37,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -41,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	// +kubebuilder:scaffold:imports
@@ -58,6 +63,7 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
+	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
@@ -84,6 +90,7 @@ func init() {
 
 	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
+	utilruntime.Must(configv1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 
 	metrics.Registry.MustRegister(monitoring.AppliedFeatures)
@@ -128,17 +135,45 @@ func mainHandler() int {
 		defer handlerLock.Unlock()
 	}
 
-	mgr, err := createManager()
+	cfg := ctrl.GetConfigOrDie()
+
+	// Detect OpenShift and fetch TLS profile early, before creating the
+	// manager, so both the metrics server and webhooks share the same config.
+	platformTLSOpts, err := cluster.FetchOpenShiftTLSOpts(cfg, scheme)
+	if err != nil {
+		setupLog.Error(err, "unable to fetch TLS configuration")
+		return generalExitStatus
+	}
+
+	// Compose the TLS opts applied to all TLS-enabled servers.
+	tlsOpts := composeTLSOpts(platformTLSOpts)
+
+	mgr, err := createManager(cfg, tlsOpts, platformTLSOpts != nil /*isOpenShift*/)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return generalExitStatus
 	}
 
-	if err := setupControllersByEnvironment(mgr); err != nil {
+	// Create a cancellable context so that controllers (e.g. the TLS
+	// security profile watcher) can trigger a graceful shutdown.
+	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
+	defer cancel()
+
+	// On OpenShift, watch for TLS profile changes on processes that serve
+	// TLS (webhook and metrics) and trigger a graceful shutdown so they
+	// restart with the new configuration.
+	if platformTLSOpts != nil && (environment.IsWebhook() || environment.IsMetricsManager()) {
+		if err := setupTLSProfileWatcher(mgr, cancel); err != nil {
+			setupLog.Error(err, "unable to set up TLS profile watcher")
+			return generalExitStatus
+		}
+	}
+
+	if err := setupControllersByEnvironment(mgr, tlsOpts); err != nil {
 		return generalExitStatus
 	}
 
-	return startManager(mgr)
+	return startManager(mgr, ctx)
 }
 
 // initializeLogging sets up logging configuration and handles early exit conditions
@@ -167,19 +202,68 @@ func setupHandlerLockIfNeeded() (*flock.Flock, error) {
 	return handlerLock, nil
 }
 
-// createManager creates and configures the controller manager
-func createManager() (manager.Manager, error) {
+// composeTLSOpts returns TLS options for all TLS-enabled servers.
+// Always disables HTTP/2 (CVE-2023-39325), and adds the platform profile opts if present.
+func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
+	return func(c *tls.Config) {
+		if tlsOpts != nil {
+			tlsOpts(c)
+		}
+		c.NextProtos = []string{"http/1.1"}
+	}
+}
+
+// setupTLSProfileWatcher watches for platform TLS profile changes and
+// triggers a graceful shutdown so the process restarts with the new config.
+func setupTLSProfileWatcher(mgr manager.Manager, cancel context.CancelFunc) error {
+	// Use a non-cached client for the initial fetch because the manager's
+	// cache is not started yet at this point.
+	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
+	if err != nil {
+		return fmt.Errorf("failed creating client for TLS profile watcher: %w", err)
+	}
+
+	tlsProfileSpec, err := tlspkg.FetchAPIServerTLSProfile(context.Background(), apiClient)
+	if err != nil {
+		return fmt.Errorf("unable to get initial TLS profile for watcher: %w", err)
+	}
+
+	return (&tlspkg.SecurityProfileWatcher{
+		Client:                mgr.GetClient(),
+		InitialTLSProfileSpec: tlsProfileSpec,
+		OnProfileChange: func(ctx context.Context, oldSpec, newSpec configv1.TLSProfileSpec) {
+			setupLog.Info("TLS profile has changed, initiating shutdown to reload",
+				"oldProfile", oldSpec, "newProfile", newSpec)
+			cancel()
+		},
+	}).SetupWithManager(mgr)
+}
+
+// createManager creates and configures the controller manager.
+// The metrics server always uses TLS (SecureServing). On non-OpenShift clusters
+// controller-runtime auto-generates a self-signed certificate.
+// When isOpenShift is true, authentication and authorization are enforced on the
+// metrics endpoint via TokenReview/SubjectAccessReview.
+func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
 	// Get metrics bind address from environment variable, with default fallback
 	metricsBindAddress := os.Getenv("METRICS_BIND_ADDRESS")
 	if metricsBindAddress == "" {
 		metricsBindAddress = ":8089"
 	}
 
+	metricsOpts := metricsserver.Options{
+		BindAddress:   metricsBindAddress,
+		SecureServing: true,
+		TLSOpts:       []func(*tls.Config){tlsOpts},
+	}
+
+	if isOpenShift {
+		metricsOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
+	}
+
 	ctrlOptions := ctrl.Options{
-		Scheme: scheme,
-		Metrics: metricsserver.Options{
-			BindAddress: metricsBindAddress,
-		},
+		Scheme:  scheme,
+		Metrics: metricsOpts,
 	}
 
 	if environment.IsHandler() {
@@ -187,16 +271,16 @@ func createManager() (manager.Manager, error) {
 	}
 
 	setupLog.Info("Creating manager")
-	return ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
+	return ctrl.NewManager(cfg, ctrlOptions)
 }
 
-// setupControllersByEnvironment configures controllers based on the current environment
-func setupControllersByEnvironment(mgr manager.Manager) error {
+// setupControllersByEnvironment configures controllers based on the current environment.
+func setupControllersByEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) error {
 	switch {
 	case environment.IsCertManager():
 		return setupCertManagerEnvironment(mgr)
 	case environment.IsWebhook():
-		return setupWebhookEnvironment(mgr)
+		return setupWebhookEnvironment(mgr, tlsOpts)
 	case environment.IsMetricsManager():
 		return setupMetricsManager(mgr)
 	case environment.IsHandler():
@@ -216,8 +300,8 @@ func setupCertManagerEnvironment(mgr manager.Manager) error {
 }
 
 // setupWebhookEnvironment configures the webhook
-func setupWebhookEnvironment(mgr manager.Manager) error {
-	if err := webhook.AddToManager(mgr); err != nil {
+func setupWebhookEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) error {
+	if err := webhook.AddToManager(mgr, tlsOpts); err != nil {
 		setupLog.Error(err, "Cannot initialize webhook")
 		return err
 	}
@@ -245,10 +329,10 @@ func setupHandlerEnvironment(mgr manager.Manager) error {
 }
 
 // startManager starts the manager and handles profiler setup
-func startManager(mgr manager.Manager) int {
+func startManager(mgr manager.Manager, ctx context.Context) int {
 	setProfiler()
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		return generalExitStatus
 	}
