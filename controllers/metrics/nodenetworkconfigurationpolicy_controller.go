@@ -27,8 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
@@ -54,28 +52,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	onConditionChange := predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool {
-			return true
-		},
-		DeleteFunc: func(event.DeleteEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNNCP, ok := e.ObjectOld.(*nmstatev1.NodeNetworkConfigurationPolicy)
-			if !ok {
-				return true
-			}
-			newNNCP, ok := e.ObjectNew.(*nmstatev1.NodeNetworkConfigurationPolicy)
-			if !ok {
-				return true
-			}
-			return activeConditionType(oldNNCP.Status.Conditions) != activeConditionType(newNNCP.Status.Conditions)
-		},
-		GenericFunc: func(event.GenericEvent) bool {
-			return false
-		},
-	}
+	onConditionChange := conditionChangePredicate(func(obj client.Object) (shared.ConditionList, bool) {
+		nncp, ok := obj.(*nmstatev1.NodeNetworkConfigurationPolicy)
+		if !ok {
+			return nil, false
+		}
+		return nncp.Status.Conditions, true
+	})
 
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1.NodeNetworkConfigurationPolicy{}).

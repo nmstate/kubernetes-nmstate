@@ -28,11 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/event"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 )
 
@@ -58,28 +56,13 @@ func (r *NodeNetworkConfigurationEnactmentStatusReconciler) Reconcile(ctx contex
 func (r *NodeNetworkConfigurationEnactmentStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.oldNodes = make(map[string]struct{})
 
-	onConditionChange := predicate.Funcs{
-		CreateFunc: func(event.CreateEvent) bool {
-			return true
-		},
-		DeleteFunc: func(event.DeleteEvent) bool {
-			return true
-		},
-		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNNCE, ok := e.ObjectOld.(*nmstatev1beta1.NodeNetworkConfigurationEnactment)
-			if !ok {
-				return true
-			}
-			newNNCE, ok := e.ObjectNew.(*nmstatev1beta1.NodeNetworkConfigurationEnactment)
-			if !ok {
-				return true
-			}
-			return activeConditionType(oldNNCE.Status.Conditions) != activeConditionType(newNNCE.Status.Conditions)
-		},
-		GenericFunc: func(event.GenericEvent) bool {
-			return false
-		},
-	}
+	onConditionChange := conditionChangePredicate(func(obj client.Object) (shared.ConditionList, bool) {
+		nnce, ok := obj.(*nmstatev1beta1.NodeNetworkConfigurationEnactment)
+		if !ok {
+			return nil, false
+		}
+		return nnce.Status.Conditions, true
+	})
 
 	err := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1beta1.NodeNetworkConfigurationEnactment{}).
