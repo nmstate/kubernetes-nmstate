@@ -25,7 +25,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-func Add(mgr manager.Manager) error {
+// Add registers webhook handlers with the manager. tlsOpts configures TLS
+// for the webhook server (includes HTTP/2 mitigation and OpenShift profile
+// when applicable).
+func Add(mgr manager.Manager, tlsOpts func(*tls.Config)) error {
+	server := webhook.NewServer(webhook.Options{
+		TLSOpts: []func(*tls.Config){tlsOpts},
+	})
+
 	// We need two hooks, the update of nncp and nncp/status (it's a subresource) happens
 	// at different times, also if you modify status at nncp webhook it does not modify it,
 	// so you need nncp/status webhook that will catch that and do the final modifications.
@@ -33,15 +40,6 @@ func Add(mgr manager.Manager) error {
 	// 1.- User changes nncp desiredState so it triggers deleteConditionsHook()
 	// 2.- Since we have deleted the condition the status-mutate webhook is called and
 	//     there we set conditions to Unknown. This final result will be updated.
-	server := webhook.NewServer(webhook.Options{
-		// Disable HTTP2 to avoid CVE-2023-39325
-		TLSOpts: []func(config *tls.Config){
-			func(c *tls.Config) {
-				c.NextProtos = []string{"http/1.1"}
-			},
-		},
-	},
-	)
 	server.Register("/readyz", healthz.CheckHandler{Checker: healthz.Ping})
 	server.Register("/nodenetworkconfigurationpolicies-mutate", deleteConditionsHook())
 	server.Register("/nodenetworkconfigurationpolicies-status-mutate", setConditionsUnknownHook())
