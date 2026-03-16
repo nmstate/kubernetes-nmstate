@@ -127,7 +127,7 @@ func bondUpWithEth1Eth2AndVlan(bondName string) nmstate.State {
 `, bondName, fmt.Sprintf(miimonFormat, 140), portFieldName, firstSecondaryNic, secondSecondaryNic, bondName, bondName))
 }
 
-var _ = Describe("NodeNetworkState", func() {
+var _ = Describe("NodeNetworkState", Label("DHCP"), func() {
 	Context("when desiredState is configured", func() {
 		Context("with a linux bridge up with no ports", func() {
 			BeforeEach(func() {

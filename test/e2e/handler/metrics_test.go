@@ -29,7 +29,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Metrics", func() {
+var _ = Describe("Metrics", Label("Metrics"), func() {
 	var (
 		extraBridgeName               = func() string { return bridge1 + "-extra" }
 		linuxBridgeWithCustomHostname = func(bridge string) nmstate.State {

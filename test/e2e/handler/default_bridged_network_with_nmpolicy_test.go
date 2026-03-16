@@ -28,7 +28,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nmpolicy", func() {
+var _ = Describe("NodeNetworkConfigurationPolicy default bridged network with nmpolicy", Label("DHCP"), func() {
 	var (
 		DefaultNetwork = "default-network"
 	)
