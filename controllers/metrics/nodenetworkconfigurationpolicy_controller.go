@@ -20,7 +20,6 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -65,13 +64,13 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldNNCP, ok := e.ObjectOld.(*nmstatev1.NodeNetworkConfigurationPolicy)
 			if !ok {
-				return false
+				return true
 			}
 			newNNCP, ok := e.ObjectNew.(*nmstatev1.NodeNetworkConfigurationPolicy)
 			if !ok {
-				return false
+				return true
 			}
-			return !slices.Equal(oldNNCP.Status.Conditions, newNNCP.Status.Conditions)
+			return activeConditionType(oldNNCP.Status.Conditions) != activeConditionType(newNNCP.Status.Conditions)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
