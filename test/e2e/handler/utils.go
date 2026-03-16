@@ -255,8 +255,12 @@ func resetDesiredStateForNodes() {
 
 // TODO: After we implement policy delete (it will cleanUp desiredState) we have to remove this.
 func resetDesiredStateForAllNodes() {
+	resetNICsState := resetPrimaryAndSecondaryNICs()
+	if isKernelMode {
+		resetNICsState = resetPrimaryAndSecondaryNICsKernelMode()
+	}
 	By("Resetting nics state primary up and secondaries disable ipv4 and ipv6 at all nodes")
-	setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetPrimaryAndSecondaryNICs())
+	setDesiredStateWithPolicyWithoutNodeSelector(TestPolicy, resetNICsState)
 	defer deletePolicy(TestPolicy)
 	policy.WaitForAvailableTestPolicy()
 }

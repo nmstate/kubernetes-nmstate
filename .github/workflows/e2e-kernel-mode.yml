@@ -1,0 +1,87 @@
+name: E2E Kernel Mode
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+jobs:
+  e2e-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Write kind config
+        run: |
+          cat > /tmp/kind-config.yaml <<'EOF'
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          containerdConfigPatches:
+            - |-
+              [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+                endpoint = ["http://kind-registry:5000"]
+          nodes:
+            - role: control-plane
+            - role: worker
+            - role: worker
+          EOF
+
+      - name: Start local registry
+        run: |
+          docker run -d --restart=always -p 5000:5000 --name kind-registry registry:2
+
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: kernel-mode-test
+          node_image: kindest/node:v1.32.0
+          config: /tmp/kind-config.yaml
+
+      - name: Connect registry to kind network
+        run: |
+          docker network connect kind kind-registry || true
+
+      - name: Create secondary docker networks and attach to kind nodes
+        run: |
+          docker network create --driver bridge kind-secondary-1
+          docker network create --driver bridge kind-secondary-2
+          for node in $(kind get nodes --name kernel-mode-test); do
+            docker network connect kind-secondary-1 "$node"
+            docker network connect kind-secondary-2 "$node"
+          done
+
+      - name: Install and start openvswitch on kind nodes
+        run: |
+          for node in $(kind get nodes --name kernel-mode-test); do
+            docker exec "$node" bash -c "apt-get update -qq && apt-get install -y -qq openvswitch-switch > /dev/null 2>&1 && systemctl start openvswitch-switch"
+          done
+
+      - name: Label kind worker nodes
+        run: |
+          for node in $(kubectl get nodes --no-headers -o custom-columns=NAME:.metadata.name | grep worker); do
+            kubectl label node "$node" node-role.kubernetes.io/worker="" --overwrite
+          done
+
+      - name: Deploy with cluster-sync
+        run: |
+          make cluster-up
+          make cluster-sync
+        env:
+          KUBEVIRT_PROVIDER: external
+          KUBECONFIG: /home/runner/.kube/config
+          DEV_IMAGE_REGISTRY: localhost:5000
+          IMAGE_BUILDER: docker
+          KUBEVIRT_NUM_NODES: 3
+          HANDLER_EXTRA_PARAMS: "--build-arg NMSTATE_SOURCE=packit"
+
+      - name: Run kernel mode e2e tests
+        run: make test-e2e-handler-kernel
+        env:
+          KUBEVIRT_PROVIDER: external
+          KUBECONFIG: /home/runner/.kube/config
+          SSH: /bin/true
+          PRIMARY_NIC: eth0
+          FIRST_SECONDARY_NIC: eth1
+          SECOND_SECONDARY_NIC: eth2

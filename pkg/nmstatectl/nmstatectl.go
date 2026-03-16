@@ -28,12 +28,20 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
 
-var debugMode bool
+var (
+	debugMode  bool
+	kernelMode bool
+	log        = logf.Log.WithName("nmstatectl")
+)
+
+func SetKernelMode(kernel bool) { kernelMode = kernel }
+func IsKernelMode() bool        { return kernelMode }
 
 const nmstateCommand = "nmstatectl"
 
@@ -88,11 +96,20 @@ func nmstatectl(arguments []string) (string, error) {
 }
 
 func ShowWithArgumentsAndOutputs(arguments []string, stdout, stderr io.Writer) error {
-	return nmstatectlWithInputAndOutputs(append([]string{"show"}, arguments...), "", stdout, stderr)
+	args := []string{"show"}
+	if kernelMode {
+		args = append(args, "-k")
+	}
+	args = append(args, arguments...)
+	return nmstatectlWithInputAndOutputs(args, "", stdout, stderr)
 }
 
 func Show() (string, error) {
-	return nmstatectl([]string{"show"})
+	args := []string{"show"}
+	if kernelMode {
+		args = append(args, "-k")
+	}
+	return nmstatectl(args)
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
@@ -103,17 +120,30 @@ func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
 	if debugMode {
 		args = append(args, "-vv")
 	}
-	args = append(args, "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds())))
+	if kernelMode {
+		log.Info("Kernel mode: applying with -k flag, skipping --no-commit and --timeout (checkpoints not supported)")
+		args = append(args, "-k")
+	} else {
+		args = append(args, "--no-commit", "--timeout", strconv.Itoa(int(timeout.Seconds())))
+	}
 
 	setOutput, err := nmstatectlWithInput(args, string(desiredState.Raw))
 	return setOutput, err
 }
 
 func Commit() (string, error) {
+	if kernelMode {
+		log.Info("Kernel mode: skipping commit (checkpoints not supported)")
+		return "commit skipped (kernel mode)", nil
+	}
 	return nmstatectl([]string{"commit"})
 }
 
 func Rollback() error {
+	if kernelMode {
+		log.Info("Kernel mode: skipping rollback (checkpoints not supported)")
+		return nil
+	}
 	_, err := nmstatectl([]string{"rollback"})
 	if err != nil {
 		return errors.Wrapf(err, "failed calling nmstatectl rollback")

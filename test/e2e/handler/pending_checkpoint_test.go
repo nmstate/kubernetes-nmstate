@@ -27,7 +27,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/runner"
 )
 
-var _ = Describe("checkpoin", func() {
+var _ = Describe("checkpoin", Label("Checkpoint"), func() {
 	Context("when is not committed from previous operation", func() {
 		BeforeEach(func() {
 			stateAsJSON, err := linuxBrUpNoPorts(bridge1).MarshalJSON()

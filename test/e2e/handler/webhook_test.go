@@ -35,7 +35,7 @@ import (
 
 // We just check the labe at CREATE/UPDATE events since mutated data is already
 // check at unit test.
-var _ = Describe("Mutating Admission Webhook", func() {
+var _ = Describe("Mutating Admission Webhook", Label("Webhook"), func() {
 	Context("when policy is created", func() {
 		BeforeEach(func() {
 			// Make sure test policy is not there so
@@ -77,7 +77,7 @@ var _ = Describe("Mutating Admission Webhook", func() {
 	})
 })
 
-var _ = Describe("Validation Admission Webhook", func() {
+var _ = Describe("Validation Admission Webhook", Label("Webhook"), func() {
 	Context("When a policy is created and progressing", func() {
 		BeforeEach(func() {
 			By("Creating a policy without waiting for it to be available")
