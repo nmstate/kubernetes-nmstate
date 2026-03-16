@@ -1,15 +1,11 @@
-# Default values for kubernetes-nmstate.
-# All image defaults mirror the Makefile defaults and Tiltfile configuration.
-
-# Operator component (runs as a Deployment, cluster-scoped)
 operator:
+  # Operator image
   image:
-    # IMAGE_REGISTRY / IMAGE_REPO / OPERATOR_IMAGE_NAME / OPERATOR_IMAGE_TAG
     registry: quay.io
     repository: nmstate/kubernetes-nmstate-operator
     tag: latest
     pullPolicy: IfNotPresent
-  # OPERATOR_NAMESPACE / HANDLER_NAMESPACE (default: nmstate)
+  # Operator namespace
   namespace: nmstate
   resources:
     requests:
@@ -18,10 +14,9 @@ operator:
     limits:
       cpu: "500m"
       memory: "1Gi"
+  # Operator environment variables
   env:
-    # ENABLE_PROFILER env var passed to operator container
     enableProfiler: "False"
-    # PROFILER_PORT env var
     profilerPort: "6060"
   tolerations:
     - key: node-role.kubernetes.io/control-plane
@@ -44,35 +39,27 @@ operator:
       {"effect": "PreferredDuringScheduling"}
 
 # Handler component (deployed as a DaemonSet *by the operator*, not by Helm directly)
-#    These values are passed to the operator as environment variables so it knows
-#    which handler image to deploy and where.
 handler:
   image:
-    # IMAGE_REGISTRY / IMAGE_REPO / HANDLER_IMAGE_NAME / HANDLER_IMAGE_TAG
     registry: quay.io
     repository: nmstate/kubernetes-nmstate-handler
     tag: latest
     pullPolicy: IfNotPresent
-  # HANDLER_NAMESPACE — defaults to operator.namespace when empty
+  # handler namespace, defaults to operator.namespace when empty
   namespace: ""
 
-# kube-rbac-proxy image (KUBE_RBAC_PROXY_IMAGE in Makefile)
+# kube-rbac-proxy image
 kubeRBACProxy:
   image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
 
-# MONITORING_NAMESPACE
+# Monitoring namespace
 monitoringNamespace: monitoring
 
 # CRD management
-#    true  → CRDs are placed in the special crds/ directory (auto-installed by Helm)
-#    The 4 nmstate.io CRDs are always shipped in charts/kubernetes-nmstate/crds/
 crds:
   enabled: true
 
 # Optionally create the NMState singleton CR after the operator is ready.
-#    Mirrors the TILT_ENABLE_HANDLER / enable_handler behaviour in the Tiltfile.
-#    When false the operator is deployed but does not configure any nodes until
-#    an NMState CR is created separately.
 nmstateCR:
   create: true
   # Optional node selector for the handler DaemonSet (spec.nodeSelector)
