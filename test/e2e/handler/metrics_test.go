@@ -242,7 +242,208 @@ routes:
 			})
 		})
 	})
+
+	Context("with policy status metric tracking", func() {
+		var initialAvailableCount int
+
+		BeforeEach(func() {
+			By("Getting initial Available policy count")
+			token, err := getPrometheusToken()
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(func() map[string]string {
+				return getMetrics(token)
+			}).WithPolling(time.Second).WithTimeout(5 * time.Second).ShouldNot(BeEmpty())
+			metrics := getMetrics(token)
+			initialAvailableCount = policyStatusMetric(metrics, "Available")
+		})
+
+		It("should increase and decrease Available count", func() {
+			By("Applying a valid bridge NNCP")
+			updateDesiredStateAndWait(simpleBridge(bridge1))
+
+			token, err := getPrometheusToken()
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Verifying Available count increased")
+			Eventually(func() int {
+				return policyStatusMetric(getMetrics(token), "Available")
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(Equal(initialAvailableCount + 1))
+
+			By("Deleting the bridge and policy")
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
+			deletePolicy(TestPolicy)
+
+			By("Verifying Available count decreased back to initial")
+			Eventually(func() int {
+				return policyStatusMetric(getMetrics(token), "Available")
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(Equal(initialAvailableCount))
+		})
+
+		It("should report Degraded count when applying invalid configuration", func() {
+			By("Getting initial Degraded count")
+			token, err := getPrometheusToken()
+			Expect(err).ToNot(HaveOccurred())
+			initialDegradedCount := policyStatusMetric(getMetrics(token), "Degraded")
+
+			By("Applying an invalid configuration")
+			updateDesiredState(nmstate.NewState(`interfaces:
+  - name: bad1
+    type: ethernet
+    state: up
+`))
+			policy.WaitForDegradedPolicy(TestPolicy)
+
+			By("Verifying Degraded count increased")
+			Eventually(func() int {
+				return policyStatusMetric(getMetrics(token), "Degraded")
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(Equal(initialDegradedCount + 1))
+
+			By("Deleting the degraded policy")
+			deletePolicy(TestPolicy)
+
+			By("Verifying Degraded count decreased back to initial")
+			Eventually(func() int {
+				return policyStatusMetric(getMetrics(token), "Degraded")
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(Equal(initialDegradedCount))
+		})
+
+		AfterEach(func() {
+			deletePolicy(TestPolicy)
+			resetDesiredStateForNodes()
+		})
+	})
+
+	Context("with enactment status metric tracking", func() {
+		It("should increase and decrease Available enactment count per node", func() {
+			token, err := getPrometheusToken()
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Getting initial Available enactment counts per node")
+			Eventually(func() map[string]string {
+				return getMetrics(token)
+			}).WithPolling(time.Second).WithTimeout(5 * time.Second).ShouldNot(BeEmpty())
+			initialMetrics := getMetrics(token)
+			initialCounts := map[string]int{}
+			for _, node := range nodes {
+				initialCounts[node] = enactmentStatusMetric(initialMetrics, node, "Available")
+			}
+
+			By("Applying a valid bridge NNCP")
+			updateDesiredStateAndWait(simpleBridge(bridge1))
+
+			By("Verifying Available enactment count increased on each node")
+			Eventually(func() bool {
+				metrics := getMetrics(token)
+				for _, node := range nodes {
+					if enactmentStatusMetric(metrics, node, "Available") != initialCounts[node]+1 {
+						return false
+					}
+				}
+				return true
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(BeTrue())
+
+			By("Deleting the policy")
+			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
+			deletePolicy(TestPolicy)
+
+			By("Verifying Available enactment count decreased back to initial on each node")
+			Eventually(func() bool {
+				metrics := getMetrics(token)
+				for _, node := range nodes {
+					if enactmentStatusMetric(metrics, node, "Available") != initialCounts[node] {
+						return false
+					}
+				}
+				return true
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(BeTrue())
+		})
+
+		It("should report Failing enactment count when applying invalid configuration", func() {
+			token, err := getPrometheusToken()
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Applying an invalid configuration")
+			updateDesiredState(nmstate.NewState(`interfaces:
+  - name: bad1
+    type: ethernet
+    state: up
+`))
+			policy.WaitForDegradedPolicy(TestPolicy)
+
+			By("Verifying Failing or Aborted enactment count increased on at least one node")
+			Eventually(func() int {
+				metrics := getMetrics(token)
+				total := 0
+				for _, node := range nodes {
+					total += enactmentStatusMetric(metrics, node, "Failing")
+					total += enactmentStatusMetric(metrics, node, "Aborted")
+				}
+				return total
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(BeNumerically(">=", len(nodes)))
+
+			By("Deleting the degraded policy")
+			deletePolicy(TestPolicy)
+
+			By("Verifying Failing and Aborted enactment counts decreased back to zero")
+			Eventually(func() int {
+				metrics := getMetrics(token)
+				total := 0
+				for _, node := range nodes {
+					total += enactmentStatusMetric(metrics, node, "Failing")
+					total += enactmentStatusMetric(metrics, node, "Aborted")
+				}
+				return total
+			}).
+				WithPolling(time.Second).
+				WithTimeout(30 * time.Second).
+				Should(Equal(0))
+		})
+
+		AfterEach(func() {
+			deletePolicy(TestPolicy)
+			resetDesiredStateForNodes()
+		})
+	})
 })
+
+// policyStatusMetric returns the metric value for a given NNCP status condition
+func policyStatusMetric(metrics map[string]string, status string) int {
+	key := fmt.Sprintf(`%s{status="%s"}`, monitoring.PolicyStatusOpts.Name, status)
+	if v, err := strconv.Atoi(metrics[key]); err == nil {
+		return v
+	}
+	return 0
+}
+
+// enactmentStatusMetric returns the metric value for a given node and NNCE status condition
+func enactmentStatusMetric(metrics map[string]string, node, status string) int {
+	key := fmt.Sprintf(`%s{node="%s",status="%s"}`, monitoring.EnactmentStatusOpts.Name, node, status)
+	if v, err := strconv.Atoi(metrics[key]); err == nil {
+		return v
+	}
+	return 0
+}
 
 // sumInterfaceTypeMetric sums the metric values for a given interface type across all nodes
 func sumInterfaceTypeMetric(metrics map[string]string, ifaceType string) int {
