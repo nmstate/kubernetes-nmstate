@@ -65,6 +65,7 @@ func (r *NodeNetworkConfigurationEnactmentStatusReconciler) SetupWithManager(mgr
 	})
 
 	err := ctrl.NewControllerManagedBy(mgr).
+		Named("nodenetworkconfigurationenactment-status").
 		For(&nmstatev1beta1.NodeNetworkConfigurationEnactment{}).
 		WithEventFilter(onConditionChange).
 		Complete(r)
