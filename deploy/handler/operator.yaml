@@ -687,3 +687,24 @@ subjects:
   - kind: ServiceAccount
     name: prometheus-k8s
     namespace: {{ .MonitoringNamespace }}
+{{- if .IsOpenShift }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    openshift.io/cluster-monitoring: ""
+    prometheus.nmstate.io: "true"
+  name: kubernetes-nmstate-prometheus-rules
+  namespace: {{ .HandlerNamespace }}
+spec:
+  groups:
+    - name: kubernetes-nmstate.rules
+      rules:
+        - expr: sum(kubernetes_nmstate_features_applied) by (name)
+          record: cluster:kubernetes_nmstate_features_applied:sum
+        - expr: sum(kubernetes_nmstate_network_interfaces) by (type)
+          record: cluster:kubernetes_nmstate_network_interfaces:sum
+        - expr: sum(kubernetes_nmstate_routes) by (ip_stack, type)
+          record: cluster:kubernetes_nmstate_routes:sum
+{{- end }}
