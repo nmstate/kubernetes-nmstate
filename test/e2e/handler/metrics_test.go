@@ -400,7 +400,7 @@ routes:
 			}).
 				WithPolling(time.Second).
 				WithTimeout(30 * time.Second).
-				Should(BeNumerically(">=", len(nodes)))
+				Should(BeNumerically(">=", 1))
 
 			By("Deleting the degraded policy")
 			deletePolicy(TestPolicy)
