@@ -81,7 +81,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="",resources=nodes,verbs=list;get
 // +kubebuilder:rbac:groups="console.openshift.io",resources=consoleplugins,verbs="*"
 // +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
-// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors,verbs=list;get;watch;update;create;patch
+// +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors;prometheusrules,verbs=list;get;watch;update;create;patch
 // +kubebuilder:rbac:groups="networking.k8s.io",resources=networkpolicies,verbs="*"
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
