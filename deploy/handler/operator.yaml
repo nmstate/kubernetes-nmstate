@@ -577,7 +577,7 @@ spec:
       object.spec == oldObject.spec ||
       (has(oldObject.status) && has(oldObject.status.conditions) &&
        oldObject.status.conditions.exists(c,
-         c.type == 'Available' && c.reason != '' &&
+         c.type == 'Available' && has(c.reason) && c.reason != '' &&
          c.reason != 'ConfigurationProgressing'))
     messageExpression: "'policy ' + object.metadata.name + ' is still in progress'"
     reason: Forbidden
