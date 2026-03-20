@@ -34,7 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nm"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
@@ -49,7 +49,7 @@ type NmstateUpdater func(
 	client client.Client,
 	node *corev1.Node,
 	observedState shared.State,
-	nns *nmstatev1beta1.NodeNetworkState,
+	nns *nmstatev1.NodeNetworkState,
 	versions *nmstate.DependencyVersions,
 ) error
 type NmstatectlShow func() (string, error)
@@ -81,7 +81,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
+	nnsInstance := &nmstatev1.NodeNetworkState{}
 	err = r.Get(ctx, request.NamespacedName, nnsInstance)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -162,18 +162,18 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch delete/update for current node.
-	onDeleteOrForceUpdateForThisNode := predicate.TypedFuncs[*nmstatev1beta1.NodeNetworkState]{
-		CreateFunc: func(createEvent event.TypedCreateEvent[*nmstatev1beta1.NodeNetworkState]) bool {
+	onDeleteOrForceUpdateForThisNode := predicate.TypedFuncs[*nmstatev1.NodeNetworkState]{
+		CreateFunc: func(createEvent event.TypedCreateEvent[*nmstatev1.NodeNetworkState]) bool {
 			return false
 		},
-		DeleteFunc: func(deleteEvent event.TypedDeleteEvent[*nmstatev1beta1.NodeNetworkState]) bool {
+		DeleteFunc: func(deleteEvent event.TypedDeleteEvent[*nmstatev1.NodeNetworkState]) bool {
 			return node.EventIsForThisNode(deleteEvent.Object)
 		},
-		UpdateFunc: func(updateEvent event.TypedUpdateEvent[*nmstatev1beta1.NodeNetworkState]) bool {
+		UpdateFunc: func(updateEvent event.TypedUpdateEvent[*nmstatev1.NodeNetworkState]) bool {
 			return node.EventIsForThisNode(updateEvent.ObjectNew) &&
 				shouldForceRefresh(updateEvent)
 		},
-		GenericFunc: func(event.TypedGenericEvent[*nmstatev1beta1.NodeNetworkState]) bool {
+		GenericFunc: func(event.TypedGenericEvent[*nmstatev1.NodeNetworkState]) bool {
 			return false
 		},
 	}
@@ -197,8 +197,8 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// Add watch for NNS
 	err = c.Watch(
 		source.Kind(mgr.GetCache(),
-			&nmstatev1beta1.NodeNetworkState{},
-			handler.TypedEnqueueRequestForOwner[*nmstatev1beta1.NodeNetworkState](mgr.GetScheme(), mgr.GetRESTMapper(), &corev1.Node{}),
+			&nmstatev1.NodeNetworkState{},
+			handler.TypedEnqueueRequestForOwner[*nmstatev1.NodeNetworkState](mgr.GetScheme(), mgr.GetRESTMapper(), &corev1.Node{}),
 			onDeleteOrForceUpdateForThisNode,
 		),
 	)
@@ -209,7 +209,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-func shouldForceRefresh(updateEvent event.TypedUpdateEvent[*nmstatev1beta1.NodeNetworkState]) bool {
+func shouldForceRefresh(updateEvent event.TypedUpdateEvent[*nmstatev1.NodeNetworkState]) bool {
 	newForceRefresh, hasForceRefreshNow := updateEvent.ObjectNew.GetLabels()[forceRefreshLabel]
 	if !hasForceRefreshNow {
 		return false

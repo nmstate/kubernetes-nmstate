@@ -33,7 +33,7 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
@@ -54,10 +54,10 @@ type DependencyVersions struct {
 	HostNetworkManagerVersion string
 }
 
-func InitializeNodeNetworkState(ctx context.Context, cli client.Client, node *corev1.Node) (*nmstatev1beta1.NodeNetworkState, error) {
+func InitializeNodeNetworkState(ctx context.Context, cli client.Client, node *corev1.Node) (*nmstatev1.NodeNetworkState, error) {
 	ownerRefList := []metav1.OwnerReference{{Name: node.Name, Kind: "Node", APIVersion: "v1", UID: node.UID}}
 
-	nodeNetworkState := nmstatev1beta1.NodeNetworkState{
+	nodeNetworkState := nmstatev1.NodeNetworkState{
 		// Create NodeNetworkState for this node
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            node.Name,
@@ -79,7 +79,7 @@ func CreateOrUpdateNodeNetworkState(
 	cli client.Client,
 	node *corev1.Node,
 	observedState shared.State,
-	nns *nmstatev1beta1.NodeNetworkState,
+	nns *nmstatev1.NodeNetworkState,
 	versions *DependencyVersions,
 ) error {
 	if nns == nil {
@@ -95,7 +95,7 @@ func CreateOrUpdateNodeNetworkState(
 func UpdateCurrentState(
 	ctx context.Context,
 	cli client.Client,
-	nodeNetworkState *nmstatev1beta1.NodeNetworkState,
+	nodeNetworkState *nmstatev1.NodeNetworkState,
 	observedState shared.State,
 	versions *DependencyVersions,
 ) error {

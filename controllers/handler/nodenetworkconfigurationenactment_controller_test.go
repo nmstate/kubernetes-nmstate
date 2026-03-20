@@ -35,7 +35,6 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstateenactment "github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
 
@@ -53,7 +52,7 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 				UID:  "12345",
 			},
 		}
-		enactment = nmstatev1beta1.NodeNetworkConfigurationEnactment{
+		enactment = nmstatev1.NodeNetworkConfigurationEnactment{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:   shared.EnactmentKey("node01", policy.Name).Name,
 				Labels: map[string]string{shared.EnactmentPolicyLabel: policy.Name},
@@ -73,8 +72,8 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 	BeforeEach(func() {
 		reconciler = NodeNetworkConfigurationEnactmentReconciler{}
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NodeNetworkConfigurationEnactment{},
 		)
 		s.AddKnownTypes(nmstatev1.GroupVersion,
 			&nmstatev1.NodeNetworkConfigurationPolicy{},
@@ -118,7 +117,7 @@ var _ = Describe("Node Network Configuration Enactment controller reconcile", fu
 			_, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
 
-			obtainedEnactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+			obtainedEnactment := nmstatev1.NodeNetworkConfigurationEnactment{}
 			err = cl.Get(context.TODO(), types.NamespacedName{Name: enactment.Name}, &obtainedEnactment)
 			Expect(errors.IsNotFound(err)).To(BeTrue())
 		})

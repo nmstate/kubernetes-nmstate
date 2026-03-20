@@ -24,7 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
 const (
@@ -40,14 +40,14 @@ const (
 
 type setter = func(*nmstate.ConditionList, string)
 
-func enactments(enactments ...nmstatev1beta1.NodeNetworkConfigurationEnactment) nmstatev1beta1.NodeNetworkConfigurationEnactmentList {
-	return nmstatev1beta1.NodeNetworkConfigurationEnactmentList{
-		Items: append([]nmstatev1beta1.NodeNetworkConfigurationEnactment{}, enactments...),
+func enactments(enactments ...nmstatev1.NodeNetworkConfigurationEnactment) nmstatev1.NodeNetworkConfigurationEnactmentList {
+	return nmstatev1.NodeNetworkConfigurationEnactmentList{
+		Items: append([]nmstatev1.NodeNetworkConfigurationEnactment{}, enactments...),
 	}
 }
 
-func enactment(policyGeneration int64, setters ...setter) nmstatev1beta1.NodeNetworkConfigurationEnactment {
-	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+func enactment(policyGeneration int64, setters ...setter) nmstatev1.NodeNetworkConfigurationEnactment {
+	enactment := nmstatev1.NodeNetworkConfigurationEnactment{
 		Status: nmstate.NodeNetworkConfigurationEnactmentStatus{
 			PolicyGeneration: policyGeneration,
 			Conditions:       nmstate.ConditionList{},
@@ -61,7 +61,7 @@ func enactment(policyGeneration int64, setters ...setter) nmstatev1beta1.NodeNet
 
 var _ = Describe("Enactment condition counter", func() {
 	type EnactmentCounterCase struct {
-		enactmentsToCount nmstatev1beta1.NodeNetworkConfigurationEnactmentList
+		enactmentsToCount nmstatev1.NodeNetworkConfigurationEnactmentList
 		policyGeneration  int64
 		expectedCount     ConditionCount
 	}

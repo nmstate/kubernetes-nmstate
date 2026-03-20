@@ -529,12 +529,12 @@ var _ = Describe("NMState operator", func() {
 	})
 })
 
-func getNMStateStatus(name string) nmstatev1.NMStateStatus {
+func getNMStateStatus(name string) shared.NMStateStatus {
 	nmstateInstance := &nmstatev1.NMState{}
 	key := types.NamespacedName{Name: name}
 	err := testenv.Client.Get(context.TODO(), key, nmstateInstance)
 	if err != nil {
-		return nmstatev1.NMStateStatus{}
+		return shared.NMStateStatus{}
 	}
 	return nmstateInstance.Status
 }
