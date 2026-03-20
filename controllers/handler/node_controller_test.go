@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
@@ -56,7 +56,7 @@ var _ = Describe("Node controller reconcile", func() {
 				UID:  "12345",
 			},
 		}
-		nodenetworkstate = nmstatev1beta1.NodeNetworkState{
+		nodenetworkstate = nmstatev1.NodeNetworkState{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: existingNodeName,
 			},
@@ -75,8 +75,8 @@ var _ = Describe("Node controller reconcile", func() {
 	BeforeEach(func() {
 		reconciler = NodeReconciler{}
 		s := scheme.Scheme
-		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-			&nmstatev1beta1.NodeNetworkState{},
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NodeNetworkState{},
 		)
 
 		objs := []runtime.Object{&node, &nodenetworkstate}
@@ -132,7 +132,7 @@ routes:
 			reconciler.lastState = filteredOutObservedState
 
 			reconciler.nmstateUpdater = func(context.Context, client.Client, *corev1.Node,
-				shared.State, *nmstatev1beta1.NodeNetworkState, *nmstate.DependencyVersions) error {
+				shared.State, *nmstatev1.NodeNetworkState, *nmstate.DependencyVersions) error {
 				return fmt.Errorf("we are not suppose to catch this error")
 			}
 
@@ -194,7 +194,7 @@ routes:
 				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
 				expectRequeueAfterIsSetWithNetworkStateRefresh(result)
-				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
+				obtainedNNS := nmstatev1.NodeNetworkState{}
 				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 				Expect(err).ToNot(HaveOccurred())
 				filteredOutExpectedState, err := state.FilterOut(shared.NewState(expectedStateRaw))
@@ -218,7 +218,7 @@ routes:
 					_, err := reconciler.Reconcile(context.Background(), request)
 					Expect(err).ToNot(HaveOccurred())
 
-					obtainedNNS := nmstatev1beta1.NodeNetworkState{}
+					obtainedNNS := nmstatev1.NodeNetworkState{}
 					nnsKey := types.NamespacedName{Name: existingNodeName}
 					err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 					Expect(err).ToNot(HaveOccurred())

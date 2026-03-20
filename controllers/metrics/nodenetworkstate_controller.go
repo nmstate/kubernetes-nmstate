@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 )
@@ -55,7 +55,7 @@ func (r *NodeNetworkStateReconciler) Reconcile(ctx context.Context, request ctrl
 
 	nodeName := request.Name
 
-	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
+	nnsInstance := &nmstatev1.NodeNetworkState{}
 	err := r.Get(ctx, request.NamespacedName, nnsInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -102,11 +102,11 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNNS, ok := e.ObjectOld.(*nmstatev1beta1.NodeNetworkState)
+			oldNNS, ok := e.ObjectOld.(*nmstatev1.NodeNetworkState)
 			if !ok {
 				return false
 			}
-			newNNS, ok := e.ObjectNew.(*nmstatev1beta1.NodeNetworkState)
+			newNNS, ok := e.ObjectNew.(*nmstatev1.NodeNetworkState)
 			if !ok {
 				return false
 			}
@@ -120,7 +120,7 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1beta1.NodeNetworkState{}).
+		For(&nmstatev1.NodeNetworkState{}).
 		WithEventFilter(onCreationOrUpdateForThisNNS).
 		Complete(r)
 	if err != nil {

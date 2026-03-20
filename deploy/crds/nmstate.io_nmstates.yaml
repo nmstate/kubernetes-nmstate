@@ -3994,6 +3994,7 @@ spec:
                 - debug
                 type: string
               metricsConfiguration:
+                default: {}
                 description: |-
                   MetricsConfiguration is an optional configuration for metrics server.
                   If MetricsConfiguration is specified, the handler will use the config defined here instead of its default values.

@@ -44,7 +44,7 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:printcolumn:name="Status Age",type="date",JSONPath=".status.conditions[?(@.status==\"True\")].lastTransitionTime",description="Status Age"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
 // +kubebuilder:pruning:PreserveUnknownFields
-// +kubebuilder:storageversion
+// +kubebuilder:deprecatedversion
 
 // NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
 type NodeNetworkConfigurationEnactment struct {

@@ -26,7 +26,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
@@ -35,10 +35,10 @@ const expectedDummyName = "dummy0"
 
 var _ = Describe("[nns] NNS LastSuccessfulUpdateTime", func() {
 	var (
-		originalNNSs map[string]nmstatev1beta1.NodeNetworkState
+		originalNNSs map[string]nmstatev1.NodeNetworkState
 	)
 	BeforeEach(func() {
-		originalNNSs = map[string]nmstatev1beta1.NodeNetworkState{}
+		originalNNSs = map[string]nmstatev1.NodeNetworkState{}
 		for _, node := range allNodes {
 			key := types.NamespacedName{Name: node}
 			originalNNSs[node] = nodeNetworkState(key)

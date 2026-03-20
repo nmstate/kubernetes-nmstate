@@ -39,7 +39,6 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	nmstatenode "github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/handler/linuxbridge"
@@ -203,7 +202,7 @@ func waitForEnactmentConsistency(policyName string, nodeSelector map[string]stri
 		// This handles the race where a handler might briefly create an enactment
 		// before realizing the selector doesn't match
 		Eventually(func() bool {
-			err := testenv.Client.Get(context.TODO(), enactmentKey, &nmstatev1beta1.NodeNetworkConfigurationEnactment{})
+			err := testenv.Client.Get(context.TODO(), enactmentKey, &nmstatev1.NodeNetworkConfigurationEnactment{})
 			return apierrors.IsNotFound(err)
 		}, EnactmentConsistencyTimeout, ReadInterval).Should(BeTrue(),
 			fmt.Sprintf("Enactment %s should not exist for non-matching node %s", enactmentKey.Name, node))
@@ -261,8 +260,8 @@ func resetDesiredStateForAllNodes() {
 	policy.WaitForAvailableTestPolicy()
 }
 
-func nodeNetworkState(key types.NamespacedName) nmstatev1beta1.NodeNetworkState {
-	state := nmstatev1beta1.NodeNetworkState{}
+func nodeNetworkState(key types.NamespacedName) nmstatev1.NodeNetworkState {
+	state := nmstatev1.NodeNetworkState{}
 	Eventually(func() error {
 		return testenv.Client.Get(context.TODO(), key, &state)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
@@ -279,7 +278,7 @@ func nodeNetworkConfigurationPolicy(policyName string) nmstatev1.NodeNetworkConf
 }
 
 func deleteNodeNeworkStates() {
-	nodeNetworkStateList := &nmstatev1beta1.NodeNetworkStateList{}
+	nodeNetworkStateList := &nmstatev1.NodeNetworkStateList{}
 	err := testenv.Client.List(context.TODO(), nodeNetworkStateList, &dynclient.ListOptions{})
 	Expect(err).ToNot(HaveOccurred())
 	var deleteErrors []error
@@ -314,7 +313,7 @@ func deletePolicy(name string) {
 	for _, node := range nodes {
 		enactmentKey := nmstate.EnactmentKey(node, name)
 		Eventually(func() bool {
-			err := testenv.Client.Get(context.TODO(), enactmentKey, &nmstatev1beta1.NodeNetworkConfigurationEnactment{})
+			err := testenv.Client.Get(context.TODO(), enactmentKey, &nmstatev1.NodeNetworkConfigurationEnactment{})
 			// if we face an unexpected error do a failure since
 			// we don't know if enactment was deleted
 			if err != nil && !apierrors.IsNotFound(err) {
@@ -336,12 +335,13 @@ func restartNodeWithoutWaiting(node string) {
 func waitForNodeToStart(node string) {
 	Byf("Waiting till node %s is rebooted", node)
 	// It will wait till uptime -p will return up that means that node was currently rebooted and is 0 min up
-	Eventually(func(g Gomega) string {
+	Eventually(func() string {
 		output, err := runner.RunAtNode(node, "uptime", "-p")
-		// Using g.Expect makes Eventually retry on errors directly
-		g.Expect(err).NotTo(HaveOccurred())
+		if err != nil {
+			return "not yet"
+		}
 		return output
-	}, 300*time.Second, 5*time.Second).Should(ContainSubstring("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
+	}, 300*time.Second, 5*time.Second).ShouldNot(Equal("up"), fmt.Sprintf("Node %s failed to start after reboot", node))
 }
 
 func createDummyConnection(nodesToModify []string, dummyName string) []error {

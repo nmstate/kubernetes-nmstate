@@ -49,7 +49,6 @@ import (
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/bridge"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
@@ -300,7 +299,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementNNCERetryCount(
 	ctx context.Context,
 	instance *nmstatev1.NodeNetworkConfigurationPolicy,
-	enactment *nmstatev1beta1.NodeNetworkConfigurationEnactment,
+	enactment *nmstatev1.NodeNetworkConfigurationEnactment,
 	generationKey string) error {
 	if enactment.Status.RetryCount == nil {
 		enactment.Status.RetryCount = map[string]int{}
@@ -367,11 +366,11 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 	ctx context.Context,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
-) (*nmstatev1beta1.NodeNetworkConfigurationEnactment, error) {
+) (*nmstatev1.NodeNetworkConfigurationEnactment, error) {
 	enactmentKey := nmstateapi.EnactmentKey(nodeName, policy.Name)
 	log := r.Log.WithName("initializeEnactment").WithValues("policy", policy.Name, "enactment", enactmentKey.Name)
 	// Return if it's already initialize or we cannot retrieve it
-	enactmentInstance := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+	enactmentInstance := nmstatev1.NodeNetworkConfigurationEnactment{}
 	err := r.APIClient.Get(ctx, enactmentKey, &enactmentInstance)
 	if err != nil && !apierrors.IsNotFound(err) {
 		return nil, errors.Wrap(err, "failed getting enactment ")
@@ -407,7 +406,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 		if err != nil {
 			return nil, errors.Wrap(err, "failed getting node")
 		}
-		enactmentInstance = nmstatev1beta1.NewEnactment(nodeInstance, policy)
+		enactmentInstance = nmstatev1.NewEnactment(nodeInstance, policy)
 		err = r.APIClient.Create(ctx, &enactmentInstance)
 		if err != nil {
 			return nil, errors.Wrapf(err, "error creating NodeNetworkConfigurationEnactment: %+v", enactmentInstance)
@@ -433,7 +432,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) initializeEnactment(
 func (r *NodeNetworkConfigurationPolicyReconciler) fillInEnactmentStatus(
 	ctx context.Context,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
-	enactmentInstance *nmstatev1beta1.NodeNetworkConfigurationEnactment,
+	enactmentInstance *nmstatev1.NodeNetworkConfigurationEnactment,
 	enactmentConditions enactmentconditions.EnactmentConditions) error {
 	log := r.Log.WithValues("nodenetworkconfigurationpolicy.fillInEnactmentStatus", enactmentInstance.Name)
 	currentState, err := nmstatectlShowFn()
@@ -505,9 +504,9 @@ func resetPolicyGeneration(status *nmstateapi.NodeNetworkConfigurationEnactmentS
 func (r *NodeNetworkConfigurationPolicyReconciler) enactmentForPolicy(
 	ctx context.Context,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
-) (*nmstatev1beta1.NodeNetworkConfigurationEnactment, error) {
+) (*nmstatev1.NodeNetworkConfigurationEnactment, error) {
 	enactmentKey := nmstateapi.EnactmentKey(nodeName, policy.Name)
-	instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+	instance := &nmstatev1.NodeNetworkConfigurationEnactment{}
 	err := r.APIClient.Get(ctx, enactmentKey, instance)
 	if err != nil {
 		return nil, errors.Wrap(err, "getting enactment failed")
@@ -516,7 +515,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) enactmentForPolicy(
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(ctx context.Context, enactmentKey types.NamespacedName) error {
-	var enactmentInstance nmstatev1beta1.NodeNetworkConfigurationEnactment
+	var enactmentInstance nmstatev1.NodeNetworkConfigurationEnactment
 	interval := time.Second
 	timeout := 10 * time.Second
 	pollErr := wait.PollUntilContextTimeout(ctx, interval, timeout, true, /*immediate*/
@@ -542,7 +541,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(ctx 
 		"policy", policyName,
 		"enactment", enactmentKey.Name,
 	)
-	enactmentInstance := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+	enactmentInstance := nmstatev1.NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: enactmentKey.Name,
 		},
@@ -656,8 +655,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) forceNNSRefresh(ctx context.C
 	}
 }
 
-func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(ctx context.Context, name string) (*nmstatev1beta1.NodeNetworkState, error) {
-	nns := &nmstatev1beta1.NodeNetworkState{}
+func (r *NodeNetworkConfigurationPolicyReconciler) readNNS(ctx context.Context, name string) (*nmstatev1.NodeNetworkState, error) {
+	nns := &nmstatev1.NodeNetworkState{}
 	err := r.Get(ctx, types.NamespacedName{Name: name}, nns)
 	if err != nil {
 		return nil, err

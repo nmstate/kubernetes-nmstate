@@ -34,7 +34,6 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
@@ -52,8 +51,8 @@ func EnactmentsStatusToYaml() string {
 	return string(manifest)
 }
 
-func NodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1beta1.NodeNetworkConfigurationEnactment {
-	enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+func NodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1.NodeNetworkConfigurationEnactment {
+	enactment := nmstatev1.NodeNetworkConfigurationEnactment{}
 	Eventually(func() error {
 		return testenv.Client.Get(context.TODO(), key, &enactment)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())
@@ -61,7 +60,7 @@ func NodeNetworkConfigurationEnactment(key types.NamespacedName) nmstatev1beta1.
 }
 
 func IndexEnactmentStatusByName() map[string]shared.NodeNetworkConfigurationEnactmentStatus {
-	enactmentList := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	enactmentList := nmstatev1.NodeNetworkConfigurationEnactmentList{}
 	Eventually(func() error {
 		return testenv.Client.List(context.TODO(), &enactmentList)
 	}, ReadTimeout, ReadInterval).ShouldNot(HaveOccurred())

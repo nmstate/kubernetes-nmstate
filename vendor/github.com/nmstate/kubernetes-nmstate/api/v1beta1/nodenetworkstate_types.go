@@ -25,7 +25,7 @@ import (
 
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:path=nodenetworkstates,shortName=nns,scope=Cluster
-// +kubebuilder:storageversion
+// +kubebuilder:deprecatedversion
 // +kubebuilder:object:root=true
 
 // NodeNetworkState is the Schema for the nodenetworkstates API

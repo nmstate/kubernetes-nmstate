@@ -351,7 +351,7 @@ func cleanStaleUnavailableCounts(mgr manager.Manager) error {
 		return err
 	}
 
-	enactmentList := &nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	enactmentList := &nmstatev1.NodeNetworkConfigurationEnactmentList{}
 	nodeLabel := client.MatchingLabels{nmstateapi.EnactmentNodeLabel: nodeName}
 	if err := apiClient.List(ctx, enactmentList, nodeLabel); err != nil {
 		return err
@@ -417,7 +417,7 @@ func decrementStaleUnavailableCount(ctx context.Context, cli client.Client, poli
 // during startup clean to prevent stale retry counts from previous interrupted reconciles.
 func resetStaleRetryCount(ctx context.Context, cli client.Client, enactmentName, generationKey string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		enactment := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		enactment := &nmstatev1.NodeNetworkConfigurationEnactment{}
 		if err := cli.Get(ctx, types.NamespacedName{Name: enactmentName}, enactment); err != nil {
 			return err
 		}
@@ -444,10 +444,10 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 			&corev1.Node{}: {
 				Field: metadataNameMatchingNodeNameSelector,
 			},
-			&nmstatev1beta1.NodeNetworkState{}: {
+			&nmstatev1.NodeNetworkState{}: {
 				Field: metadataNameMatchingNodeNameSelector,
 			},
-			&nmstatev1beta1.NodeNetworkConfigurationEnactment{}: {
+			&nmstatev1.NodeNetworkConfigurationEnactment{}: {
 				Label: nodeLabelMatchingNodeNameSelector,
 			},
 		},

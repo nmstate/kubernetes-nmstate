@@ -26,14 +26,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 )
 
 type CountByConditionStatus map[corev1.ConditionStatus]int
 
 type ConditionCount map[nmstate.ConditionType]CountByConditionStatus
 
-func Count(enactments nmstatev1beta1.NodeNetworkConfigurationEnactmentList, policyGeneration int64) ConditionCount {
+func Count(enactments nmstatev1.NodeNetworkConfigurationEnactmentList, policyGeneration int64) ConditionCount {
 	conditionCount := ConditionCount{}
 	for _, conditionType := range nmstate.NodeNetworkConfigurationEnactmentConditionTypes {
 		conditionCount[conditionType] = CountByConditionStatus{
@@ -137,7 +136,7 @@ func CountConditionsLogicalAnd(
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	filter LogicalConditionCountFilter) (int, error) {
 	conditionCount := 0
-	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	enactments := nmstatev1.NodeNetworkConfigurationEnactmentList{}
 	policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
 
 	if err := cli.List(ctx, &enactments, policyLabelFilter); err != nil {

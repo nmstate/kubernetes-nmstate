@@ -34,7 +34,6 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
@@ -42,12 +41,12 @@ func e(
 	node string,
 	policy string,
 	conditionsSetters ...func(*nmstate.ConditionList, string),
-) nmstatev1beta1.NodeNetworkConfigurationEnactment {
+) nmstatev1.NodeNetworkConfigurationEnactment {
 	conditions := nmstate.ConditionList{}
 	for _, conditionsSetter := range conditionsSetters {
 		conditionsSetter(&conditions, "")
 	}
-	return nmstatev1beta1.NodeNetworkConfigurationEnactment{
+	return nmstatev1.NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				nmstate.EnactmentPolicyLabel: policy,
@@ -175,7 +174,7 @@ func cleanTimestamps(conditions nmstate.ConditionList) nmstate.ConditionList {
 
 var _ = Describe("Policy Conditions", func() {
 	type ConditionsCase struct {
-		Enactments []nmstatev1beta1.NodeNetworkConfigurationEnactment
+		Enactments []nmstatev1.NodeNetworkConfigurationEnactment
 		Nodes      []corev1.Node
 		Policy     nmstatev1.NodeNetworkConfigurationPolicy
 		Pods       []corev1.Pod
@@ -184,9 +183,9 @@ var _ = Describe("Policy Conditions", func() {
 		func(c ConditionsCase) {
 			objs := []runtime.Object{}
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1.NodeNetworkConfigurationEnactmentList{},
 			)
 			s.AddKnownTypes(nmstatev1.GroupVersion,
 				&nmstatev1.NodeNetworkConfigurationPolicy{},
@@ -220,7 +219,7 @@ var _ = Describe("Policy Conditions", func() {
 			Expect(cleanTimestamps(updatedPolicy.Status.Conditions)).To(ConsistOf(cleanTimestamps(c.Policy.Status.Conditions)))
 		},
 		Entry("when all enactments are progressing then policy is progressing", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetProgressing),
 				e("node2", "policy1", enactmentconditions.SetProgressing),
 				e("node3", "policy1", enactmentconditions.SetProgressing),
@@ -230,7 +229,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyProgressing, "Policy is progressing 0/3 nodes finished"),
 		}),
 		Entry("when all enactments are success then policy is success", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -240,7 +239,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 		Entry("when not all enactments are created is progressing", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -250,7 +249,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyProgressing, "Policy is progressing 3/4 nodes finished"),
 		}),
 		Entry("when enactments are progressing/success then policy is progressing", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetProgressing),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -260,7 +259,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
 		}),
 		Entry("when enactments are failed/progressing/success then policy is degraded", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetProgressing),
 				e("node3", "policy1", enactmentconditions.SetFailedToConfigure),
@@ -271,7 +270,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyFailedToConfigure, "1/4 nodes failed to configure"),
 		}),
 		Entry("when all the enactments are at failing or success policy is degraded", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetFailedToConfigure),
 				e("node2", "policy1", enactmentconditions.SetFailedToConfigure),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -281,7 +280,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyFailedToConfigure, "2/3 nodes failed to configure"),
 		}),
 		Entry("when all the enactments are at failing policy is degraded", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetFailedToConfigure),
 				e("node2", "policy1", enactmentconditions.SetFailedToConfigure),
 				e("node3", "policy1", enactmentconditions.SetFailedToConfigure),
@@ -291,13 +290,13 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyFailedToConfigure, "3/3 nodes failed to configure"),
 		}),
 		Entry("when no node matches policy node selector, policy state is not matching", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{},
 			Nodes:      newNodes(3),
 			Pods:       newNmstatePods(3),
 			Policy:     s(map[string]string{"foo": "bar"}, p(SetPolicyNotMatching, "Policy does not match any node")),
 		}),
 		Entry("when some enacments has unknown state policy state is progressing", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1"),
 				e("node2", "policy1"),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -307,7 +306,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyProgressing, "Policy is progressing 1/3 nodes finished"),
 		}),
 		Entry("when some enactments are from different profile it does no affect the profile status", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -319,7 +318,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 		Entry("when a node does not run nmstate pod ignore it for policy conditions calculations", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -337,7 +336,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicySuccess, "3/3 nodes successfully configured"),
 		}),
 		Entry("when there is a NotReady node, ignore it for policy conditions calculations", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -352,7 +351,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicySuccess, "3/4 nodes successfully configured, 1 nodes ignored due to NotReady state"),
 		}),
 		Entry("when some enactments are pending and not all ready nodes finished, policy is progressing", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetPending),
@@ -362,7 +361,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyProgressing, "Policy is progressing 2/3 nodes finished"),
 		}),
 		Entry("when all ready nodes finished but some are pending, policy is progressing not available", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),
@@ -378,7 +377,7 @@ var _ = Describe("Policy Conditions", func() {
 			Policy: p(SetPolicyProgressing, "Policy is progressing 3/3 nodes finished, 1 pending, 1 nodes ignored due to NotReady state"),
 		}),
 		Entry("when all ready nodes finished but some are pending due to MaxUnavailable, policy is progressing", ConditionsCase{
-			Enactments: []nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			Enactments: []nmstatev1.NodeNetworkConfigurationEnactment{
 				e("node1", "policy1", enactmentconditions.SetSuccess),
 				e("node2", "policy1", enactmentconditions.SetSuccess),
 				e("node3", "policy1", enactmentconditions.SetSuccess),

@@ -154,7 +154,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy default ovs-bridged network", f
 
 				It("should keep the default IP address after node reboot", func() {
 					restartNodeWithoutWaiting(node)
-					waitForNodeToStart(node)
 
 					By("Wait for policy re-reconciled after node reboot")
 					policy.WaitForPolicyTransitionUpdate(ovsDefaultNetwork)

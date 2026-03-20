@@ -15,7 +15,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1beta1
+package v1
 
 import (
 	corev1 "k8s.io/api/core/v1"
@@ -23,7 +23,6 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
 // +kubebuilder:object:root=true
@@ -44,7 +43,7 @@ type NodeNetworkConfigurationEnactmentList struct {
 // +kubebuilder:printcolumn:name="Status Age",type="date",JSONPath=".status.conditions[?(@.status==\"True\")].lastTransitionTime",description="Status Age"
 // +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.status==\"True\")].reason",description="Reason"
 // +kubebuilder:pruning:PreserveUnknownFields
-// +kubebuilder:deprecatedversion
+// +kubebuilder:storageversion
 
 // NodeNetworkConfigurationEnactment is the Schema for the nodenetworkconfigurationenactments API
 type NodeNetworkConfigurationEnactment struct {
@@ -54,7 +53,7 @@ type NodeNetworkConfigurationEnactment struct {
 	Status shared.NodeNetworkConfigurationEnactmentStatus `json:"status,omitempty"`
 }
 
-func NewEnactment(node *corev1.Node, policy *nmstatev1.NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
+func NewEnactment(node *corev1.Node, policy *NodeNetworkConfigurationPolicy) NodeNetworkConfigurationEnactment {
 	enactment := NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: shared.EnactmentKey(node.Name, policy.Name).Name,
