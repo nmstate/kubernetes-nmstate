@@ -64,7 +64,7 @@ func resetDefaultInterface() nmstate.State {
 `, primaryNic))
 }
 
-var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func() {
+var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", Label("DHCP"), func() {
 	var (
 		DefaultNetwork = "default-network"
 	)

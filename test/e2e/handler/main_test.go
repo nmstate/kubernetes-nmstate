@@ -29,11 +29,13 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
@@ -51,6 +53,7 @@ var (
 	dnsTestNic                  string
 	portFieldName               string
 	miimonFormat                string
+	isKernelMode                bool
 	nodesInitialInterfacesState = make(map[string]map[string]string)
 	interfacesToIgnore          = []string{"flannel.1", "dummy0", "tunl0"}
 	knmstateReporter            *knmstatereporter.KubernetesNMStateReporter
@@ -93,16 +96,26 @@ var _ = BeforeSuite(func() {
 		}
 	}
 
-	resetDesiredStateForAllNodes()
-	expectedInitialState := interfacesState(resetPrimaryAndSecondaryNICs(), interfacesToIgnore)
-	for _, node := range allNodes {
-		Eventually(func(g Gomega) {
-			By("Wait for network configuration to show up at NNS to retrieve it")
-			nodeState := nodeInterfacesState(node, interfacesToIgnore)
-			for name, state := range expectedInitialState {
-				g.Expect(nodeState).To(HaveKeyWithValue(name, state))
-			}
-		}, 20*time.Second, time.Second).Should(Succeed())
+	By("Detecting kernel mode from NNS")
+	nns := nmstatev1beta1.NodeNetworkState{}
+	err = testenv.Client.Get(context.TODO(), k8stypes.NamespacedName{Name: allNodes[0]}, &nns)
+	Expect(err).ToNot(HaveOccurred())
+	isKernelMode = nns.Status.HostNetworkManagerVersion == "N/A (kernel mode)"
+
+	if isKernelMode {
+		By("Kernel mode detected — skipping NIC reset (nmstatectl apply -k cannot modify interfaces)")
+	} else {
+		resetDesiredStateForAllNodes()
+		expectedInitialState := interfacesState(resetPrimaryAndSecondaryNICs(), interfacesToIgnore)
+		for _, node := range allNodes {
+			Eventually(func(g Gomega) {
+				By("Wait for network configuration to show up at NNS to retrieve it")
+				nodeState := nodeInterfacesState(node, interfacesToIgnore)
+				for name, state := range expectedInitialState {
+					g.Expect(nodeState).To(HaveKeyWithValue(name, state))
+				}
+			}, 20*time.Second, time.Second).Should(Succeed())
+		}
 	}
 	knmstateReporter = knmstatereporter.New("test_logs/e2e/handler", testenv.OperatorNamespace, nodes)
 	knmstateReporter.Cleanup()

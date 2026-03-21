@@ -128,9 +128,14 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 		r.Log.Error(err, "failed retrieving handler nmstate version")
 	}
 
-	hostNetworkManagerVersion, err := nm.Version()
-	if err != nil {
-		r.Log.Error(err, "error retrieving host Networkmanager version")
+	var hostNetworkManagerVersion string
+	if nmstatectl.IsKernelMode() {
+		hostNetworkManagerVersion = "N/A (kernel mode)"
+	} else {
+		hostNetworkManagerVersion, err = nm.Version()
+		if err != nil {
+			r.Log.Error(err, "error retrieving host Networkmanager version")
+		}
 	}
 
 	return &nmstate.DependencyVersions{

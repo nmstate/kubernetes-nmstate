@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
-var _ = Describe("[nns] NNS Dependencies", func() {
+var _ = Describe("[nns] NNS Dependencies", Label("NNSDependencies"), func() {
 	BeforeEach(func() {
 		// Make sure NNSes are present
 		for _, node := range nodes {
