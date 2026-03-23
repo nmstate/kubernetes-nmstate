@@ -32,7 +32,6 @@ import (
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
@@ -220,7 +219,7 @@ func update(
 			return errors.Wrap(err, "getting policy failed")
 		}
 
-		enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+		enactments := nmstatev1.NodeNetworkConfigurationEnactmentList{}
 		policyLabelFilter := client.MatchingLabels{nmstate.EnactmentPolicyLabel: policy.Name}
 		if err := apiReader.List(ctx, &enactments, policyLabelFilter); err != nil {
 			return errors.Wrap(err, "getting enactments failed")
@@ -323,7 +322,7 @@ func setPolicyStatus(policy *nmstatev1.NodeNetworkConfigurationPolicy, policySta
 func calculatePolicyConditionStatus(
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	nmstateMatchingNodes *[]corev1.Node,
-	enactments *nmstatev1beta1.NodeNetworkConfigurationEnactmentList,
+	enactments *nmstatev1.NodeNetworkConfigurationEnactmentList,
 ) policyConditionStatus {
 	numberOfNmstateMatchingNodes := len(*nmstateMatchingNodes)
 	numberOfReadyNmstateMatchingNodes := len(node.FilterReady(*nmstateMatchingNodes))

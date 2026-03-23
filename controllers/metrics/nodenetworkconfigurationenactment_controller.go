@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 )
 
@@ -72,11 +72,11 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) SetupWithManager(mgr ctrl.
 			return true
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			oldNNCE, ok := e.ObjectOld.(*nmstatev1beta1.NodeNetworkConfigurationEnactment)
+			oldNNCE, ok := e.ObjectOld.(*nmstatev1.NodeNetworkConfigurationEnactment)
 			if !ok {
 				return false
 			}
-			newNNCE, ok := e.ObjectNew.(*nmstatev1beta1.NodeNetworkConfigurationEnactment)
+			newNNCE, ok := e.ObjectNew.(*nmstatev1.NodeNetworkConfigurationEnactment)
 			if !ok {
 				return false
 			}
@@ -89,7 +89,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) SetupWithManager(mgr ctrl.
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1beta1.NodeNetworkConfigurationEnactment{}).
+		For(&nmstatev1.NodeNetworkConfigurationEnactment{}).
 		WithEventFilter(onCreationOrUpdateForThisEnactment).
 		Complete(r)
 	if err != nil {
@@ -100,7 +100,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) SetupWithManager(mgr ctrl.
 }
 
 func (r *NodeNetworkConfigurationEnactmentReconciler) reportStatistics(ctx context.Context) error {
-	nnceList := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	nnceList := nmstatev1.NodeNetworkConfigurationEnactmentList{}
 	if err := r.List(ctx, &nnceList); err != nil {
 		return err
 	}

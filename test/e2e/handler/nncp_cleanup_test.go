@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
@@ -63,7 +63,7 @@ var _ = Describe("NNCP cleanup", func() {
 			for _, node := range nodes {
 				Eventually(func() bool {
 					key := nmstate.EnactmentKey(node, bridge1)
-					enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+					enactment := nmstatev1.NodeNetworkConfigurationEnactment{}
 					err := testenv.Client.Get(context.TODO(), key, &enactment)
 					return errors.IsNotFound(err)
 				}, 10*time.Second, 1*time.Second).Should(BeTrue(), "Enactment has not being deleted")
@@ -99,7 +99,7 @@ var _ = Describe("NNCP cleanup", func() {
 func verifyEnactmentRemoved(node string, timeout time.Duration) {
 	Eventually(func() bool {
 		key := nmstate.EnactmentKey(node, bridge1)
-		enactment := nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		enactment := nmstatev1.NodeNetworkConfigurationEnactment{}
 		err := testenv.Client.Get(context.TODO(), key, &enactment)
 		return errors.IsNotFound(err)
 	}, timeout, 1*time.Second).Should(BeTrue(), "Enactment has not being deleted")

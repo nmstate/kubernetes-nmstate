@@ -30,7 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 )
 
 var (
@@ -50,7 +50,7 @@ func Update(
 	// prevents the NNCE to final state so is forever at in progress makeing the NNCP also
 	// forever in progress too, this retry allow to overcome that issue.
 	return retry.OnError(retry.DefaultRetry, allErrors, func() error {
-		instance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		instance := &nmstatev1.NodeNetworkConfigurationEnactment{}
 		err := cli.Get(ctx, key, instance)
 		if err != nil {
 			return errors.Wrap(err, "getting enactment failed")

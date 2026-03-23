@@ -33,7 +33,6 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
@@ -96,10 +95,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			nmstatectlShowFn = func() (string, error) { return "", nil }
 			reconciler := NodeNetworkConfigurationPolicyReconciler{}
 			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkState{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkState{},
+				&nmstatev1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1.NodeNetworkConfigurationEnactmentList{},
 			)
 			s.AddKnownTypes(nmstatev1.GroupVersion,
 				&nmstatev1.NodeNetworkConfigurationPolicy{},
@@ -111,7 +110,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				},
 			}
 
-			nns := nmstatev1beta1.NodeNetworkState{
+			nns := nmstatev1.NodeNetworkState{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: nodeName,
 				},
@@ -125,7 +124,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 					UnavailableNodeCountMap: map[string]int{},
 				},
 			}
-			nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			nnce := nmstatev1.NodeNetworkConfigurationEnactment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
 				},
@@ -427,10 +426,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			nmstatectlShowFn = func() (string, error) { return "", nil }
 			reconciler = &NodeNetworkConfigurationPolicyReconciler{}
 			s = scheme.Scheme
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkState{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkState{},
+				&nmstatev1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1.NodeNetworkConfigurationEnactmentList{},
 			)
 			s.AddKnownTypes(nmstatev1.GroupVersion,
 				&nmstatev1.NodeNetworkConfigurationPolicy{},
@@ -446,7 +445,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 						Generation: 2,
 					},
 				}
-				nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+				nnce := nmstatev1.NodeNetworkConfigurationEnactment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
 						Labels: map[string]string{
@@ -474,7 +473,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				err := reconciler.fillInEnactmentStatus(context.TODO(), &nncp, &nnce, enactmentConditions)
 				Expect(err).ToNot(HaveOccurred())
 
-				updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+				updatedNNCE := &nmstatev1.NodeNetworkConfigurationEnactment{}
 				err = cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)
 				Expect(err).ToNot(HaveOccurred())
 
@@ -492,7 +491,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 						Generation: 1,
 					},
 				}
-				nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+				nnce := nmstatev1.NodeNetworkConfigurationEnactment{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
 						Labels: map[string]string{
@@ -519,7 +518,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				err := reconciler.fillInEnactmentStatus(context.TODO(), &nncp, &nnce, enactmentConditions)
 				Expect(err).ToNot(HaveOccurred())
 
-				updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+				updatedNNCE := &nmstatev1.NodeNetworkConfigurationEnactment{}
 				err = cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)
 				Expect(err).ToNot(HaveOccurred())
 

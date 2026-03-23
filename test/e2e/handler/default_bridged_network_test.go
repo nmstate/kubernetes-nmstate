@@ -142,7 +142,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy default bridged network", func(
 				nodeToReboot := nodes[0]
 
 				restartNodeWithoutWaiting(nodeToReboot)
-				waitForNodeToStart(nodeToReboot)
 
 				By("Wait for policy re-reconciled after node reboot")
 				policy.WaitForPolicyTransitionUpdate(DefaultNetwork)

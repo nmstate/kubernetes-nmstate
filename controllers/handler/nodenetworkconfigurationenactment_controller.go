@@ -33,7 +33,6 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
-	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
 )
 
@@ -53,7 +52,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) Reconcile(ctx context.Cont
 	log := r.Log.WithValues("nodenetworkconfigurationenactment", request.NamespacedName)
 
 	// Fetch the NodeNetworkConfigurationEnactment instance
-	enactmentInstance := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+	enactmentInstance := &nmstatev1.NodeNetworkConfigurationEnactment{}
 	err := r.Get(ctx, request.NamespacedName, enactmentInstance)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -102,7 +101,7 @@ func (r *NodeNetworkConfigurationEnactmentReconciler) SetupWithManager(mgr ctrl.
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).
-		For(&nmstatev1beta1.NodeNetworkConfigurationEnactment{}).
+		For(&nmstatev1.NodeNetworkConfigurationEnactment{}).
 		WithEventFilter(onCreationForThisEnactment).
 		Complete(r)
 	if err != nil {

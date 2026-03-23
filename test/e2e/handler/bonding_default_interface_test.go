@@ -127,7 +127,6 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 			nodeToReboot := nodes[0]
 			Byf("Reboot node %s and verify that bond still has ip of primary nic", nodeToReboot)
 			restartNodeWithoutWaiting(nodeToReboot)
-			waitForNodeToStart(nodeToReboot)
 
 			By("Wait for policy re-reconciled after node reboot")
 			policy.WaitForPolicyTransitionUpdate(TestPolicy)

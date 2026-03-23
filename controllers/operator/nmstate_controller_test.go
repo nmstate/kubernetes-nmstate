@@ -142,12 +142,14 @@ var _ = Describe("NMState controller reconcile", func() {
 			)
 			// Add v1beta1 types for server-side apply to work with CRDs
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
 				&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
 				&nmstatev1beta1.NodeNetworkConfigurationPolicyList{},
-				&nmstatev1beta1.NodeNetworkState{},
-				&nmstatev1beta1.NodeNetworkStateList{},
+			)
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1.NodeNetworkConfigurationEnactmentList{},
+				&nmstatev1.NodeNetworkState{},
+				&nmstatev1.NodeNetworkStateList{},
 			)
 			// Add CRD types
 			s.AddKnownTypes(apiextv1.SchemeGroupVersion,
@@ -415,8 +417,8 @@ var _ = Describe("NMState controller reconcile", func() {
 		BeforeEach(func() {
 			// set DNS probe config field in operator Spec
 			nmstate := newNMState()
-			nmstate.Spec.ProbeConfiguration = nmstatev1.NMStateProbeConfiguration{
-				DNS: nmstatev1.NMStateDNSProbeConfiguration{
+			nmstate.Spec.ProbeConfiguration = shared.NMStateProbeConfiguration{
+				DNS: shared.NMStateDNSProbeConfiguration{
 					Host: "google.com",
 				},
 			}

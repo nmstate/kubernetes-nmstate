@@ -314,7 +314,7 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 
 	selfSignConfiguration := instance.Spec.SelfSignConfiguration
 	if selfSignConfiguration == nil {
-		selfSignConfiguration = &nmstatev1.SelfSignConfiguration{
+		selfSignConfiguration = &shared.SelfSignConfiguration{
 			CARotateInterval:    "8760h0m0s",
 			CAOverlapInterval:   "24h0m0s",
 			CertRotateInterval:  "4380h0m0s",
@@ -326,7 +326,7 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 
 	metricsConfig := instance.Spec.MetricsConfiguration
 	if metricsConfig.BindAddress == "" {
-		metricsConfig = nmstatev1.NMStateMetricsConfiguration{
+		metricsConfig = shared.NMStateMetricsConfiguration{
 			BindAddress: ":8089",
 		}
 	}
