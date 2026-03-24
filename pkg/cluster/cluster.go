@@ -20,8 +20,11 @@ package cluster
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
+	"os"
 
+	configv1 "github.com/openshift/api/config/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -46,6 +49,13 @@ func IsOpenShift(kclient client.Client) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// IsOpenShiftFromEnv returns true if the IS_OPENSHIFT environment variable
+// is set to "true". The operator sets this variable on all handler-deployed
+// pods so they can skip the API server discovery call at startup.
+func IsOpenShiftFromEnv() bool {
+	return os.Getenv("IS_OPENSHIFT") == "true"
 }
 
 // FetchOpenShiftTLSOpts detects OpenShift and fetches the TLS profile for
@@ -76,4 +86,28 @@ func FetchOpenShiftTLSOpts(cfg *rest.Config, scheme *runtime.Scheme) (func(*tls.
 	}
 
 	return tlsOpts, nil
+}
+
+// FetchTLSProfileFromFile reads a TLS profile spec from a JSON file (mounted
+// from a ConfigMap) and returns the TLS options function and the raw spec.
+// This avoids calling the API server at startup, which is critical when
+// network connectivity may be temporarily unavailable.
+func FetchTLSProfileFromFile(path string) (func(*tls.Config), configv1.TLSProfileSpec, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, configv1.TLSProfileSpec{}, fmt.Errorf("failed reading TLS profile from %s: %w", path, err)
+	}
+
+	var spec configv1.TLSProfileSpec
+	if err := json.Unmarshal(data, &spec); err != nil {
+		return nil, configv1.TLSProfileSpec{}, fmt.Errorf("failed parsing TLS profile from %s: %w", path, err)
+	}
+
+	tlsOpts, unsupportedCiphers := tlspkg.NewTLSConfigFromProfile(spec)
+	if len(unsupportedCiphers) > 0 {
+		log.Info("TLS configuration contains unsupported ciphers that will be ignored",
+			"unsupportedCiphers", unsupportedCiphers)
+	}
+
+	return tlsOpts, spec, nil
 }
