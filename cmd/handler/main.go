@@ -96,6 +96,8 @@ func init() {
 	metrics.Registry.MustRegister(monitoring.AppliedFeatures)
 	metrics.Registry.MustRegister(monitoring.NetworkInterfaces)
 	metrics.Registry.MustRegister(monitoring.NetworkRoutes)
+	metrics.Registry.MustRegister(monitoring.PolicyStatus)
+	metrics.Registry.MustRegister(monitoring.EnactmentStatus)
 }
 
 func main() {
@@ -593,6 +595,26 @@ func setupMetricsManager(mgr manager.Manager) error {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkState metrics controller", "metrics", "NMState")
+		return err
+	}
+
+	setupLog.Info("Creating Metrics NodeNetworkConfigurationPolicy controller")
+	if err := (&controllersmetrics.NodeNetworkConfigurationPolicyReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("metrics").WithName("NodeNetworkConfigurationPolicy"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy metrics controller", "metrics", "NMState")
+		return err
+	}
+
+	setupLog.Info("Creating Metrics NodeNetworkConfigurationEnactment status controller")
+	if err := (&controllersmetrics.NodeNetworkConfigurationEnactmentStatusReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("metrics").WithName("NodeNetworkConfigurationEnactmentStatus"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create NodeNetworkConfigurationEnactment status metrics controller", "metrics", "NMState")
 		return err
 	}
 

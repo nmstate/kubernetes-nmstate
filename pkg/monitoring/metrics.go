@@ -39,6 +39,16 @@ var (
 		Help: "Number of network routes labeled by node, IP stack and type (static/dynamic)",
 	}
 
+	PolicyStatusOpts = prometheus.GaugeOpts{
+		Name: "kubernetes_nmstate_policies_status",
+		Help: "Number of NodeNetworkConfigurationPolicies labeled by their status condition",
+	}
+
+	EnactmentStatusOpts = prometheus.GaugeOpts{
+		Name: "kubernetes_nmstate_enactments_status",
+		Help: "Number of NodeNetworkConfigurationEnactments labeled by node and status condition",
+	}
+
 	AppliedFeatures = prometheus.NewGaugeVec(
 		AppliedFeaturesOpts,
 		[]string{"name"},
@@ -54,10 +64,22 @@ var (
 		[]string{"node", "ip_stack", "type"},
 	)
 
+	PolicyStatus = prometheus.NewGaugeVec(
+		PolicyStatusOpts,
+		[]string{"status"},
+	)
+
+	EnactmentStatus = prometheus.NewGaugeVec(
+		EnactmentStatusOpts,
+		[]string{"node", "status"},
+	)
+
 	gaugeOpts = []prometheus.GaugeOpts{
 		AppliedFeaturesOpts,
 		NetworkInterfacesOpts,
 		NetworkRoutesOpts,
+		PolicyStatusOpts,
+		EnactmentStatusOpts,
 	}
 )
 
