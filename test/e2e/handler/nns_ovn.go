@@ -27,7 +27,7 @@ import (
 	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 )
 
-var _ = Describe("[nns] NNS OVN bridge mappings", func() {
+var _ = Describe("[nns] NNS OVN bridge mappings", Label("OVN"), func() {
 	const (
 		bridgeName  = "ovsbr1"
 		networkName = "net1"

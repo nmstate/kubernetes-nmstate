@@ -69,6 +69,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
 	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
+	"github.com/nmstate/kubernetes-nmstate/pkg/nm"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
@@ -310,9 +311,29 @@ func setupWebhookEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) err
 	return nil
 }
 
+// detectAndSetKernelMode checks if NetworkManager is available and enables kernel mode if not.
+func detectAndSetKernelMode() {
+	_, err := nm.Version()
+	if err != nil {
+		setupLog.Info("NetworkManager not available, enabling kernel mode",
+			"error", err.Error())
+		nmstatectl.SetKernelMode(true)
+	} else {
+		setupLog.Info("NetworkManager detected, using standard mode")
+	}
+}
+
 // setupHandlerEnvironment cleans up unavailableNodeCounts after unexpected restart,
 // configures the handler controllers and performs health checks
 func setupHandlerEnvironment(mgr manager.Manager) error {
+	detectAndSetKernelMode()
+
+	if nmstatectl.IsKernelMode() {
+		if err := file.Touch("/tmp/kernel-mode"); err != nil {
+			setupLog.Error(err, "Failed to write kernel-mode flag file")
+		}
+	}
+
 	// Clean stale unavailable counts from node before starting controllers
 	// Prevents deadlock after unexpected cluster reboot where nodes were
 	// processing NNCP and left stale counts in etcd.

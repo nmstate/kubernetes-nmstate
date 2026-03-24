@@ -115,7 +115,7 @@ func ovsBrAndInternalPortAbsent(bridgeName, internalPortName string) nmstate.Sta
 `, internalPortName, bridgeName))
 }
 
-var _ = Describe("OVS Bridge", func() {
+var _ = Describe("OVS Bridge", Label("OVS"), func() {
 	Context("when desiredState is updated with ovs-bridge with link aggregation port", func() {
 		verifyInterfaces := func() {
 			for _, node := range nodes {

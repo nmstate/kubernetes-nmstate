@@ -205,8 +205,18 @@ test-reporter:
 		go run . --dry-run --fake=failure && \
 		go run . --dry-run --fake=stale
 
+# Features supported in kernel mode (no NetworkManager).
+# NodeSSH excluded: requires SSH to nodes (nmcli).
+# VLAN creation works but assigning static IP on VLAN fails (nispor limitation).
+KERNEL_MODE_FEATURES ?= (Nodes && !NodeSSH) || NNSDependencies || NNSFilter || \
+	(NNSTimestamp && !NodeSSH)
+
 test-e2e-handler:
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
+
+test-e2e-handler-kernel:
+	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) \
+		$(GINKGO) $(e2e_test_args) --label-filter="$(KERNEL_MODE_FEATURES)" ./test/e2e/handler ...
 
 test-e2e-operator: manifests
 	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
@@ -286,6 +296,7 @@ olm-push: bundle-push index-push
 	check-gen \
 	operator-sdk \
 	test-e2e-handler \
+	test-e2e-handler-kernel \
 	test-e2e-operator \
 	test-e2e \
 	test-reporter\

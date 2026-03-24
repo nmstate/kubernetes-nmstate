@@ -26,7 +26,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 )
 
-var _ = Describe("Nodes", func() {
+var _ = Describe("Nodes", Label("Nodes"), func() {
 	Context("when are up", func() {
 		It("should have NodeNetworkState with currentState for each node", func() {
 			for _, node := range nodes {
@@ -43,7 +43,7 @@ var _ = Describe("Nodes", func() {
 				}
 			})
 		})
-		Context("and new interface is configured", func() {
+		Context("and new interface is configured", Label("NodeSSH"), func() {
 			expectedDummyName := "dummy0"
 
 			BeforeEach(func() {

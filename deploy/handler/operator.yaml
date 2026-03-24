@@ -353,6 +353,19 @@ spec:
       tolerations: {{ toYaml .HandlerTolerations | nindent 8 }}
       affinity: {{ toYaml .HandlerAffinity | nindent 8 }}
       priorityClassName: system-node-critical
+      initContainers:
+        - name: ensure-dbus-socket
+          image: {{ .HandlerImage }}
+          imagePullPolicy: {{ .HandlerPullPolicy }}
+          command:
+            - sh
+            - -c
+            - "mkdir -p /host-run/dbus && test -e /host-run/dbus/system_bus_socket || touch /host-run/dbus/system_bus_socket"
+          volumeMounts:
+            - name: host-run
+              mountPath: /host-run
+          securityContext:
+            privileged: true
       containers:
         - name: nmstate-handler
           args:
@@ -437,17 +450,19 @@ spec:
               command:
               - bash
               - -c
-              - "nmstatectl show {{ .HandlerReadinessProbeExtraArg }} 2>&1"
+              - "if [ -f /tmp/kernel-mode ]; then nmstatectl show -k {{ .HandlerReadinessProbeExtraArg }} 2>&1; else nmstatectl show {{ .HandlerReadinessProbeExtraArg }} 2>&1; fi"
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10
             successThreshold: 1
             failureThreshold: 5
       volumes:
+        - name: host-run
+          hostPath:
+            path: /run
         - name: dbus-socket
           hostPath:
             path: /run/dbus/system_bus_socket
-            type: Socket
         - name: nmstate-lock
           hostPath:
             path: /var/k8s_nmstate

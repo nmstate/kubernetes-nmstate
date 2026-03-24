@@ -33,7 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var _ = Describe("LLDP configuration with nmpolicy", func() {
+var _ = Describe("LLDP configuration with nmpolicy", Label("LLDP"), func() {
 	var lldpdPod *corev1.Pod
 
 	lldpEnabledPolicyName := "lldp-enabled"

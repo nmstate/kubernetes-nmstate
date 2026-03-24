@@ -316,6 +316,33 @@ func resetPrimaryAndSecondaryNICs() nmstate.State {
 `, primaryNic, firstSecondaryNic, secondSecondaryNic))
 }
 
+func resetPrimaryAndSecondaryNICsKernelMode() nmstate.State {
+	return nmstate.NewState(fmt.Sprintf(`interfaces:
+  - name: %s
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: true
+    ipv6:
+      enabled: true
+  - name: %s
+    type: ethernet
+    state: up
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+  - name: %s
+    state: up
+    type: ethernet
+    ipv4:
+      enabled: false
+    ipv6:
+      enabled: false
+
+`, primaryNic, firstSecondaryNic, secondSecondaryNic))
+}
+
 func bridgeOnTheSecondaryInterfaceState() nmstate.State {
 	return nmstate.NewState(`interfaces:
   - name: brext
