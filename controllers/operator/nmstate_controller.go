@@ -19,6 +19,8 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -43,12 +45,15 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/render"
+	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 )
 
 const (
@@ -82,6 +87,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="operator.openshift.io",resources=consoles,verbs=list;get;watch;update
 // +kubebuilder:rbac:groups="monitoring.coreos.com",resources=servicemonitors;prometheusrules,verbs=list;get;watch;update;create;patch
 // +kubebuilder:rbac:groups="networking.k8s.io",resources=networkpolicies,verbs="*"
+// +kubebuilder:rbac:groups="config.openshift.io",resources=apiservers,verbs=get;list;watch
 
 func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	_ = r.Log.WithValues("nmstate", req.NamespacedName)
@@ -145,11 +151,33 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 }
 
 func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1.NMState{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&appsv1.DaemonSet{}).
-		Complete(r)
+		Owns(&appsv1.DaemonSet{})
+
+	// On OpenShift, watch APIServer CR changes to detect TLS profile updates.
+	// This triggers a reconcile that updates the TLS ConfigMap and rolls
+	// webhook/metrics Deployments via a hash annotation.
+	if r.IsOpenShift {
+		apiServerObj := &unstructured.Unstructured{}
+		apiServerObj.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   "config.openshift.io",
+			Version: "v1",
+			Kind:    "APIServer",
+		})
+		builder = builder.WatchesRawSource(source.Kind(
+			mgr.GetCache(),
+			apiServerObj,
+			handler.TypedEnqueueRequestsFromMapFunc(
+				func(ctx context.Context, obj *unstructured.Unstructured) []ctrl.Request {
+					return []ctrl.Request{{NamespacedName: types.NamespacedName{Name: "nmstate"}}}
+				},
+			),
+		))
+	}
+
+	return builder.Complete(r)
 }
 
 func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx context.Context) error {
@@ -357,6 +385,23 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["LogLevelHandlerCommandArg"] = logLevelHandlerCommandArg
 	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
 	data.Data["IsOpenShift"] = r.IsOpenShift
+
+	// On OpenShift, fetch and serialize the TLS profile so handler-deployed
+	// pods can read it from a ConfigMap instead of calling the API server.
+	// A hash annotation on the pod templates triggers a rolling restart
+	// when the TLS profile changes.
+	if r.IsOpenShift {
+		tlsProfileSpec, err := nmstatetls.FetchAPIServerTLSProfile(ctx, r.APIClient)
+		if err != nil {
+			return fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
+		}
+		tlsJSON, err := json.Marshal(tlsProfileSpec)
+		if err != nil {
+			return fmt.Errorf("failed serializing TLS profile: %w", err)
+		}
+		data.Data["TLSProfileJSON"] = string(tlsJSON)
+		data.Data["TLSProfileHash"] = fmt.Sprintf("%x", sha256.Sum256(tlsJSON))
+	}
 
 	return r.renderAndApply(ctx, instance, data, "handler", true)
 }

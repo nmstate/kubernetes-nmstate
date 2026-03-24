@@ -68,11 +68,13 @@ import (
 	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
-	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
 
-const generalExitStatus int = 1
+const (
+	generalExitStatus    int    = 1
+	tlsProfileConfigPath string = "/etc/nmstate/tls/profile.json"
+)
 
 type ProfilerConfig struct {
 	EnableProfiler bool   `envconfig:"ENABLE_PROFILER"`
@@ -137,37 +139,36 @@ func mainHandler() int {
 
 	cfg := ctrl.GetConfigOrDie()
 
-	// Detect OpenShift and fetch TLS profile early, before creating the
-	// manager, so both the metrics server and webhooks share the same config.
-	platformTLSOpts, err := cluster.FetchOpenShiftTLSOpts(cfg, scheme)
-	if err != nil {
-		setupLog.Error(err, "unable to fetch TLS configuration")
-		return generalExitStatus
+	// Detect OpenShift from env var set by the operator, avoiding an API
+	// server call that can fail when network connectivity is temporarily
+	// unavailable (e.g. during default interface reconfiguration).
+	isOpenShift := cluster.IsOpenShiftFromEnv()
+
+	var platformTLSOpts func(*tls.Config)
+	// Only load TLS profile on OpenShift for components that serve TLS
+	// (webhook and metrics). The handler DaemonSet uses default TLS.
+	// Read from a ConfigMap-mounted file to avoid API server calls.
+	// TLS profile changes are handled by the operator: it updates the
+	// ConfigMap and rolls the Deployments via a hash annotation.
+	if isOpenShift && !environment.IsHandler() {
+		opts, _, err := cluster.FetchTLSProfileFromFile(tlsProfileConfigPath)
+		if err != nil {
+			setupLog.Error(err, "unable to load TLS configuration from file")
+			return generalExitStatus
+		}
+		platformTLSOpts = opts
 	}
 
 	// Compose the TLS opts applied to all TLS-enabled servers.
 	tlsOpts := composeTLSOpts(platformTLSOpts)
 
-	mgr, err := createManager(cfg, tlsOpts, platformTLSOpts != nil /*isOpenShift*/)
+	mgr, err := createManager(cfg, tlsOpts, platformTLSOpts != nil)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return generalExitStatus
 	}
 
-	// Create a cancellable context so that controllers (e.g. the TLS
-	// security profile watcher) can trigger a graceful shutdown.
-	ctx, cancel := context.WithCancel(ctrl.SetupSignalHandler())
-	defer cancel()
-
-	// On OpenShift, watch for TLS profile changes on processes that serve
-	// TLS (webhook and metrics) and trigger a graceful shutdown so they
-	// restart with the new configuration.
-	if platformTLSOpts != nil && (environment.IsWebhook() || environment.IsMetricsManager()) {
-		if err := setupTLSProfileWatcher(mgr, cancel); err != nil {
-			setupLog.Error(err, "unable to set up TLS profile watcher")
-			return generalExitStatus
-		}
-	}
+	ctx := ctrl.SetupSignalHandler()
 
 	if err := setupControllersByEnvironment(mgr, tlsOpts); err != nil {
 		return generalExitStatus
@@ -211,32 +212,6 @@ func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
 		}
 		c.NextProtos = []string{"http/1.1"}
 	}
-}
-
-// setupTLSProfileWatcher watches for platform TLS profile changes and
-// triggers a graceful shutdown so the process restarts with the new config.
-func setupTLSProfileWatcher(mgr manager.Manager, cancel context.CancelFunc) error {
-	// Use a non-cached client for the initial fetch because the manager's
-	// cache is not started yet at this point.
-	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
-	if err != nil {
-		return fmt.Errorf("failed creating client for TLS profile watcher: %w", err)
-	}
-
-	tlsProfileSpec, err := nmstatetls.FetchAPIServerTLSProfile(context.Background(), apiClient)
-	if err != nil {
-		return fmt.Errorf("unable to get initial TLS profile for watcher: %w", err)
-	}
-
-	return (&nmstatetls.SecurityProfileWatcher{
-		Client:                mgr.GetClient(),
-		InitialTLSProfileSpec: tlsProfileSpec,
-		OnProfileChange: func(ctx context.Context, oldSpec, newSpec nmstatetls.TLSProfileSpec) {
-			setupLog.Info("TLS profile has changed, initiating shutdown to reload",
-				"oldProfile", oldSpec, "newProfile", newSpec)
-			cancel()
-		},
-	}).SetupWithManager(mgr)
 }
 
 // createManager creates and configures the controller manager.
