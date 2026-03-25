@@ -27,7 +27,6 @@ require (
 	github.com/MakeNowJust/heredoc v1.0.0 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect
-	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/blang/semver/v4 v4.0.0 // indirect
@@ -125,6 +124,7 @@ require (
 )
 
 require (
+	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/godbus/dbus/v5 v5.0.4
 	github.com/gofrs/flock v0.8.1
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -132,7 +132,6 @@ require (
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/openshift/api v0.0.0-20260213155647-8fe9fe363807
-	github.com/openshift/cluster-network-operator v0.0.0-20250121144718-0dfccc148f81
 	github.com/openshift/controller-runtime-common v0.0.0-20260307102856-5db94f69ad3a
 	github.com/pkg/errors v0.9.1
 	github.com/qinqon/kube-admission-webhook v0.21.1

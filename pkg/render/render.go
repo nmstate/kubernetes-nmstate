@@ -1,3 +1,20 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package render
 
 import (
@@ -55,7 +72,7 @@ func RenderDirs(manifestDirs []string, d *RenderData) ([]*unstructured.Unstructu
 			}
 
 			// Skip non-manifest files
-			if !(strings.HasSuffix(path, ".yml") || strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".json")) {
+			if !strings.HasSuffix(path, ".yml") && !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".json") {
 				return nil
 			}
 
@@ -123,11 +140,12 @@ func RenderTemplate(path string, d *RenderData) ([]*unstructured.Unstructured, e
 	out := []*unstructured.Unstructured{}
 
 	// special case - if the entire file is whitespace, skip
-	if len(strings.TrimSpace(rendered.String())) == 0 {
+	if strings.TrimSpace(rendered.String()) == "" {
 		return out, nil
 	}
 
-	decoder := yaml.NewYAMLOrJSONDecoder(&rendered, 4096)
+	const yamlDecoderBufferSize = 4096
+	decoder := yaml.NewYAMLOrJSONDecoder(&rendered, yamlDecoderBufferSize)
 	for {
 		u := unstructured.Unstructured{}
 		if err := decoder.Decode(&u); err != nil {
