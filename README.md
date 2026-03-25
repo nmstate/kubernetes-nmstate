@@ -1,5 +1,6 @@
-
 # kubernetes-nmstate
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate?ref=badge_shield)
+
 
 <img src="logo/fullcolor.png" alias="project logo" />
 
@@ -89,3 +90,7 @@ what this project is addressing.
 
 Contributions are welcome! Find details about the project's design and
 development workflow in the [developer guide](CONTRIBUTING.md).
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate?ref=badge_large)
