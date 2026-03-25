@@ -26,4 +26,7 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     # keep using the NM internal DHCP client as we always have
     ./cluster/cli.sh ssh ${node} -- sudo rm -f /etc/NetworkManager/conf.d/002-dhclient.conf
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart NetworkManager
+    # Enable persistent journal so logs survive node reboots
+    ./cluster/cli.sh ssh ${node} -- sudo mkdir -p /var/log/journal
+    ./cluster/cli.sh ssh ${node} -- sudo systemctl restart systemd-journald
 done
