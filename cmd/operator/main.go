@@ -41,9 +41,6 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"github.com/spf13/pflag"
 
-	openshiftconsolev1 "github.com/openshift/api/console/v1"
-	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
-
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/operator"
@@ -66,8 +63,6 @@ func init() {
 
 	utilruntime.Must(nmstatev1.AddToScheme(scheme))
 	utilruntime.Must(nmstatev1beta1.AddToScheme(scheme))
-	utilruntime.Must(openshiftoperatorv1.Install(scheme))
-	utilruntime.Must(openshiftconsolev1.Install(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
