@@ -41,7 +41,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -379,20 +380,30 @@ func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance
 func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) error {
 	// Enable console plugin for nmstate-console if not already enabled
 	pluginName := environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
+
+	consoleObj := &unstructured.Unstructured{}
+	consoleObj.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "operator.openshift.io",
+		Version: "v1",
+		Kind:    "Console",
+	})
+
 	consoleKey := client.ObjectKey{Name: "cluster"}
-	consoleObj := &openshiftoperatorv1.Console{}
 	if err := r.Get(ctx, consoleKey, consoleObj); err != nil {
 		r.Log.Error(err, "Could not get consoles.operator.openshift.io resource")
 		return err
 	}
 
-	if !stringInSlice(pluginName, consoleObj.Spec.Plugins) {
+	plugins, _, _ := unstructured.NestedStringSlice(consoleObj.Object, "spec", "plugins")
+	if !stringInSlice(pluginName, plugins) {
 		r.Log.Info("Enabling kubevirt plugin in Console")
-		consoleObj.Spec.Plugins = append(consoleObj.Spec.Plugins, pluginName)
-		err := r.Update(ctx, consoleObj)
-		if err != nil {
+		plugins = append(plugins, pluginName)
+		if err := unstructured.SetNestedStringSlice(consoleObj.Object, plugins, "spec", "plugins"); err != nil {
+			return fmt.Errorf("could not set spec.plugins: %w", err)
+		}
+		if err := r.Update(ctx, consoleObj); err != nil {
 			r.Log.Error(err, fmt.Sprintf("Could not update resource - APIVersion: %s, Kind: %s, Name: %s",
-				consoleObj.APIVersion, consoleObj.Kind, consoleObj.Name))
+				consoleObj.GetAPIVersion(), consoleObj.GetKind(), consoleObj.GetName()))
 			return err
 		}
 	}

@@ -22,12 +22,13 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	securityv1 "github.com/openshift/api/security/v1"
-	tlspkg "github.com/openshift/controller-runtime-common/pkg/tls"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -36,7 +37,8 @@ var log = logf.Log.WithName("cluster")
 // IsOpenShift returns true if the current cluster is an OpenShift/OKD cluster.
 func IsOpenShift(kclient client.Client) (bool, error) {
 	// if the cluster has the securityContextConstraint resource of the group security.openshift.io, then it is most likely an OCP/OKD cluster
-	_, err := kclient.RESTMapper().ResourcesFor(securityv1.SchemeGroupVersion.WithResource("securitycontextconstraints"))
+	sccGVR := schema.GroupVersion{Group: "security.openshift.io", Version: "v1"}.WithResource("securitycontextconstraints")
+	_, err := kclient.RESTMapper().ResourcesFor(sccGVR)
 
 	if err != nil {
 		if apimeta.IsNoMatchError(err) {
@@ -64,12 +66,12 @@ func FetchOpenShiftTLSOpts(cfg *rest.Config, scheme *runtime.Scheme) (func(*tls.
 		return nil, nil
 	}
 
-	tlsProfileSpec, err := tlspkg.FetchAPIServerTLSProfile(context.Background(), kclient)
+	tlsProfileSpec, err := nmstatetls.FetchAPIServerTLSProfile(context.Background(), kclient)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get TLS profile from API server: %w", err)
 	}
 
-	tlsOpts, unsupportedCiphers := tlspkg.NewTLSConfigFromProfile(tlsProfileSpec)
+	tlsOpts, unsupportedCiphers := nmstatetls.NewTLSConfigFromProfile(tlsProfileSpec)
 	if len(unsupportedCiphers) > 0 {
 		log.Info("TLS configuration contains unsupported ciphers that will be ignored",
 			"unsupportedCiphers", unsupportedCiphers)
