@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "kubernetes-nmstate.fullname" . }}-test-operator"
+  namespace: {{ include "kubernetes-nmstate.operatorNamespace" . }}
+  labels:
+    {{- include "kubernetes-nmstate.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: check-operator-running
+      image: bitnami/kubectl:latest
+      command:
+        - kubectl
+        - rollout
+        - status
+        - deployment/nmstate-operator
+        - -n
+        - {{ include "kubernetes-nmstate.operatorNamespace" . }}
+        - --timeout=120s
