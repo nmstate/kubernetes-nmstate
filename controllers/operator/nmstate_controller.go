@@ -41,15 +41,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	"github.com/openshift/cluster-network-operator/pkg/render"
-
 	openshiftoperatorv1 "github.com/openshift/api/operator/v1"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
-	nmstaterenderer "github.com/nmstate/kubernetes-nmstate/pkg/render"
+	"github.com/nmstate/kubernetes-nmstate/pkg/render"
 )
 
 const (
@@ -230,7 +228,7 @@ func (r *NMStateReconciler) applyRBAC(ctx context.Context, instance *nmstatev1.N
 func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	// Register ToYaml template method
-	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
+	data.Funcs["toYaml"] = render.ToYaml
 	// Prepare defaults
 	masterExistsNoScheduleTolerations := []corev1.Toleration{
 		{
@@ -364,7 +362,7 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 
 func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
-	data.Funcs["toYaml"] = nmstaterenderer.ToYaml
+	data.Funcs["toYaml"] = render.ToYaml
 	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "openshift-nmstate")
 	data.Data["PluginName"] = environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
 	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")

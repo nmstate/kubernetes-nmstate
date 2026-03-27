@@ -259,9 +259,6 @@ github.com/openshift/api/config/v1
 github.com/openshift/api/console/v1
 github.com/openshift/api/operator/v1
 github.com/openshift/api/security/v1
-# github.com/openshift/cluster-network-operator v0.0.0-20250121144718-0dfccc148f81
-## explicit; go 1.23
-github.com/openshift/cluster-network-operator/pkg/render
 # github.com/openshift/controller-runtime-common v0.0.0-20260307102856-5db94f69ad3a
 ## explicit; go 1.25.0
 github.com/openshift/controller-runtime-common/pkg/tls
