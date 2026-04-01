@@ -81,7 +81,7 @@ make check
 # Run unit tests
 make test/unit
 
-# Run e2e tests, you need a running k8s/openshift cluster with with kubernets-nmstate running.
+# Run e2e tests, you need a running k8s/openshift cluster with kubernetes-nmstate running.
 make test-e2e
 
 # Run e2e tests for handler only
@@ -118,9 +118,9 @@ HANDLER_IMAGE_TAG # latest
 ## Manifests
 
 The operator `operator.yaml` manifest from the `deploy` folder is a template to
-be able to replace the with correct docker image to use.
+be able to replace it with the correct docker image to use.
 
-Everytime cluster-sync is called it will regenerate the operator yaml with
+Every time cluster-sync is called it will regenerate the operator yaml with
 correct kubernetes-nmstate-handler image and apply it.
 
 
