@@ -333,9 +333,9 @@ routes:
 `)
 }
 
-func matchingBond(expectedBond map[string]interface{}) types.GomegaMatcher {
-	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]interface{})
-	expectedOptions := expectedLinkAggregation["options"].(map[string]interface{})
+func matchingBond(expectedBond map[string]any) types.GomegaMatcher {
+	expectedLinkAggregation := expectedBond["link-aggregation"].(map[string]any)
+	expectedOptions := expectedLinkAggregation["options"].(map[string]any)
 	return SatisfyAll(
 		HaveKeyWithValue("name", expectedBond["name"]),
 		HaveKeyWithValue("type", expectedBond["type"]),

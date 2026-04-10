@@ -36,7 +36,7 @@ type BeReadyMatcher struct {
 	obtainedDeployment *appsv1.Deployment
 }
 
-func (matcher *BeReadyMatcher) Match(obtained interface{}) (success bool, err error) {
+func (matcher *BeReadyMatcher) Match(obtained any) (success bool, err error) {
 	obtainedDeployment, ok := obtained.(appsv1.Deployment)
 
 	if !ok {
@@ -53,11 +53,11 @@ func (matcher *BeReadyMatcher) Match(obtained interface{}) (success bool, err er
 	return cond.Status == corev1.ConditionTrue, nil
 }
 
-func (matcher *BeReadyMatcher) FailureMessage(actual interface{}) (message string) {
+func (matcher *BeReadyMatcher) FailureMessage(actual any) (message string) {
 	return matcher.message("to equal")
 }
 
-func (matcher *BeReadyMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (matcher *BeReadyMatcher) NegatedFailureMessage(actual any) (message string) {
 	return matcher.message("to not equal")
 }
 
