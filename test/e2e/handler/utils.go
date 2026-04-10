@@ -718,7 +718,7 @@ func skipIfNotKubernetes() {
 }
 
 func maxUnavailableNodes() int {
-	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(nmstatenode.DefaultMaxunavailable))
+	m, _ := nmstatenode.ScaledMaxUnavailableNodeCount(len(nodes), intstr.FromString(maxUnavailable))
 	return m
 }
 
