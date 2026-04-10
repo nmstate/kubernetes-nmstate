@@ -198,7 +198,7 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					return slices.Contains(probe.Exec.Command, "nmstatectl show -vv 2>&1")
+					return slices.Contains(probe.Exec.Command, "nmstatectl show lo -vv 2>&1")
 				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should use verbose flag")
 			})
 			AfterEach(func() {
@@ -247,10 +247,10 @@ var _ = Describe("NMState operator", func() {
 					}
 
 					for _, cmd := range probe.Exec.Command {
-						if cmd == "nmstatectl show -vv 2>&1" {
+						if cmd == "nmstatectl show lo -vv 2>&1" {
 							return false // Should not have verbose flag in info mode
 						}
-						if cmd == "nmstatectl show  2>&1" {
+						if cmd == "nmstatectl show lo  2>&1" {
 							return true // Should have plain nmstatectl show command
 						}
 					}
@@ -305,7 +305,7 @@ var _ = Describe("NMState operator", func() {
 					}
 
 					for _, cmd := range probe.Exec.Command {
-						if cmd == "nmstatectl show -vv 2>&1" {
+						if cmd == "nmstatectl show lo -vv 2>&1" {
 							return true
 						}
 					}
