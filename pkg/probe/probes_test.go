@@ -23,7 +23,7 @@ import (
 )
 
 // nolint: funlen
-func TestDefaultGatewayParsing(t *testing.T) {
+func TestDefaultGw4Parsing(t *testing.T) {
 	tests := []struct {
 		desc          string
 		status        string
@@ -32,7 +32,7 @@ func TestDefaultGatewayParsing(t *testing.T) {
 		shouldErr     bool
 	}{
 		{
-			desc: "one single gateway",
+			desc: "one single IPv4 gateway",
 			status: `routes:
   running:
   - destination: 172.30.0.0/16
@@ -48,7 +48,7 @@ func TestDefaultGatewayParsing(t *testing.T) {
 			expectedGw:    "10.46.55.254",
 			expectedIface: "eth1",
 		}, {
-			desc: "two gateways, one on custom routing table",
+			desc: "two IPv4 gateways, one on custom routing table",
 			status: `routes:
   running:
   - destination: 172.30.0.0/16
@@ -68,7 +68,7 @@ func TestDefaultGatewayParsing(t *testing.T) {
 			expectedGw:    "10.46.55.254",
 			expectedIface: "eth1",
 		}, {
-			desc: "no next-hop-address",
+			desc: "no IPv4 default gateway",
 			status: `routes:
   running:
   - destination: 172.30.0.0/16
@@ -78,6 +78,69 @@ func TestDefaultGatewayParsing(t *testing.T) {
 `,
 			shouldErr: true,
 		}, {
+			desc: "only IPv6 gateway present",
+			status: `routes:
+  running:
+  - destination: ::/0
+    next-hop-interface: eth0
+    next-hop-address: fe80::dead:beef:fe51:782d
+    table-id: 254
+`,
+			shouldErr: true,
+		}, {
+			desc: "dual-stack picks IPv4 gateway",
+			status: `routes:
+  running:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth0
+    next-hop-address: 10.46.55.254
+    table-id: 254
+  - destination: ::/0
+    next-hop-interface: eth0
+    next-hop-address: fe80::dead:beef:fe51:782d
+    table-id: 254
+`,
+			expectedGw:    "10.46.55.254",
+			expectedIface: "eth0",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			gJSON, err := yamlToGJson(test.status)
+			if err != nil {
+				t.Fatalf("failed to parse test status, %v", err)
+			}
+			gw, err := defaultGw4(gJSON)
+			if err != nil && !test.shouldErr {
+				t.Fatalf("unexpected error %v", err)
+			}
+			if test.shouldErr && err == nil {
+				t.Fatalf("expecting error, did not fail")
+			}
+
+			expectedRoute := Route{
+				nextHop: net.ParseIP(test.expectedGw),
+				iface:   test.expectedIface,
+			}
+
+			if !expectedRoute.nextHop.Equal(gw.nextHop) || expectedRoute.iface != gw.iface {
+				t.Fatalf("expecting %+v, got %+v", expectedRoute, gw)
+			}
+		})
+	}
+}
+
+// nolint: funlen
+func TestDefaultGw6Parsing(t *testing.T) {
+	tests := []struct {
+		desc          string
+		status        string
+		expectedGw    string
+		expectedIface string
+		shouldErr     bool
+	}{
+		{
 			desc: "one single IPv6 gateway",
 			status: `routes:
   running:
@@ -104,7 +167,27 @@ func TestDefaultGatewayParsing(t *testing.T) {
 			expectedGw:    "fe80::dead:beef:fe51:782d",
 			expectedIface: "eth0",
 		}, {
-			desc: "dual-stack with single gateway per IP stack",
+			desc: "no IPv6 default gateway",
+			status: `routes:
+  running:
+  - destination: 172.30.0.0/16
+    next-hop-interface: eth0
+    next-hop-address: 169.254.169.4
+    table-id: 254
+`,
+			shouldErr: true,
+		}, {
+			desc: "only IPv4 gateway present",
+			status: `routes:
+  running:
+  - destination: 0.0.0.0/0
+    next-hop-interface: eth1
+    next-hop-address: 10.46.55.254
+    table-id: 254
+`,
+			shouldErr: true,
+		}, {
+			desc: "dual-stack picks IPv6 gateway",
 			status: `routes:
   running:
   - destination: 0.0.0.0/0
@@ -116,23 +199,8 @@ func TestDefaultGatewayParsing(t *testing.T) {
     next-hop-address: fe80::dead:beef:fe51:782d
     table-id: 254
 `,
-			expectedGw:    "10.46.55.254",
-			expectedIface: "eth0",
-		}, {
-			desc: "dual-stack with missing IPv4 default gateway",
-			status: `routes:
-  running:
-  - destination: 172.30.0.0/16
-    next-hop-interface: eth0
-    next-hop-address: 169.254.169.4
-    table-id: 254
-  - destination: ::/0
-    next-hop-interface: eth1
-    next-hop-address: fe80::dead:beef:fe51:782d
-    table-id: 254
-`,
 			expectedGw:    "fe80::dead:beef:fe51:782d",
-			expectedIface: "eth1",
+			expectedIface: "eth0",
 		},
 	}
 
@@ -142,7 +210,7 @@ func TestDefaultGatewayParsing(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to parse test status, %v", err)
 			}
-			defaultGw, err := defaultGw(gJSON)
+			gw, err := defaultGw6(gJSON)
 			if err != nil && !test.shouldErr {
 				t.Fatalf("unexpected error %v", err)
 			}
@@ -155,8 +223,8 @@ func TestDefaultGatewayParsing(t *testing.T) {
 				iface:   test.expectedIface,
 			}
 
-			if !expectedRoute.nextHop.Equal(defaultGw.nextHop) || expectedRoute.iface != defaultGw.iface {
-				t.Fatalf("expecting %+v, got %+v", expectedRoute, defaultGw)
+			if !expectedRoute.nextHop.Equal(gw.nextHop) || expectedRoute.iface != gw.iface {
+				t.Fatalf("expecting %+v, got %+v", expectedRoute, gw)
 			}
 		})
 	}
