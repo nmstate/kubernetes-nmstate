@@ -64,7 +64,8 @@ const (
 	nodeReadinessProbeTimeout = 120 * time.Second
 	mainRoutingTableID        = 254
 	ProbesTotalTimeout        = defaultGwRetrieveTimeout +
-		defaultDNSProbeTimeout +
+		defaultGwProbeTimeout +
+		defaultGwProbeTimeout +
 		defaultDNSProbeTimeout +
 		apiServerProbeTimeout +
 		nodeReadinessProbeTimeout
@@ -169,6 +170,64 @@ func defaultGw(currentState gjson.Result) (Route, error) {
 	return found, nil
 }
 
+func defaultGw4(currentState gjson.Result) (Route, error) {
+	var found Route
+	currentState.Get("routes.running").ForEach(
+		func(_, v gjson.Result) bool {
+			// we want to pick the next hop related to the "main" table because we may have multiple tables
+			if v.Get("destination").String() == "0.0.0.0/0" &&
+				v.Get("table-id").Int() == mainRoutingTableID {
+				found.nextHop = net.ParseIP(v.Get("next-hop-address").String())
+				found.iface = v.Get("next-hop-interface").String()
+				return false
+			}
+			return true
+		},
+	)
+
+	if found.nextHop == nil {
+		msg := "IPv4 default gw missing"
+		defaultGwLog := log.WithValues("path", "routes.running.next-hop-address", "table-id", mainRoutingTableID, "destination", "0.0.0.0/0")
+		defaultGwLogDebug := defaultGwLog.V(1)
+		if defaultGwLogDebug.Enabled() {
+			defaultGwLogDebug.Info(msg, "state", currentState.String())
+		} else {
+			defaultGwLog.Info(msg)
+		}
+		return Route{}, errors.New(msg)
+	}
+	return found, nil
+}
+
+func defaultGw6(currentState gjson.Result) (Route, error) {
+	var found Route
+	currentState.Get("routes.running").ForEach(
+		func(_, v gjson.Result) bool {
+			// we want to pick the next hop related to the "main" table because we may have multiple tables
+			if v.Get("destination").String() == "::/0" &&
+				v.Get("table-id").Int() == mainRoutingTableID {
+				found.nextHop = net.ParseIP(v.Get("next-hop-address").String())
+				found.iface = v.Get("next-hop-interface").String()
+				return false
+			}
+			return true
+		},
+	)
+
+	if found.nextHop == nil {
+		msg := "IPv6 default gw missing"
+		defaultGwLog := log.WithValues("path", "routes.running.next-hop-address", "table-id", mainRoutingTableID, "destination", "::/0")
+		defaultGwLogDebug := defaultGwLog.V(1)
+		if defaultGwLogDebug.Enabled() {
+			defaultGwLogDebug.Info(msg, "state", currentState.String())
+		} else {
+			defaultGwLog.Info(msg)
+		}
+		return Route{}, errors.New(msg)
+	}
+	return found, nil
+}
+
 func pingCondition(cli client.Client, timeout time.Duration) wait.ConditionWithContextFunc {
 	return func(context.Context) (bool, error) {
 		return runPing(cli)
@@ -190,6 +249,58 @@ func runPing(_ client.Client) (bool, error) {
 	pingOutput, err := ping(defaultGw)
 	if err != nil {
 		log.Error(err, fmt.Sprintf("error pinging default gateway -> output: '%s'", pingOutput))
+		return false, nil
+	}
+	return true, nil
+}
+
+func ping4Condition(cli client.Client, timeout time.Duration) wait.ConditionWithContextFunc {
+	return func(context.Context) (bool, error) {
+		return runPing4(cli)
+	}
+}
+
+func runPing4(_ client.Client) (bool, error) {
+	gjsonCurrentState, err := currentStateAsGJson()
+	if err != nil {
+		return false, errors.Wrap(err, "failed retrieving current state to retrieve IPv4 default gw")
+	}
+
+	defaultGw4, err := defaultGw4(gjsonCurrentState)
+	if err != nil {
+		log.Error(err, "failed to retrieve IPv4 default gw")
+		return false, nil
+	}
+
+	pingOutput, err := ping(defaultGw4)
+	if err != nil {
+		log.Error(err, fmt.Sprintf("error pinging IPv4 default gateway -> output: '%s'", pingOutput))
+		return false, nil
+	}
+	return true, nil
+}
+
+func ping6Condition(cli client.Client, timeout time.Duration) wait.ConditionWithContextFunc {
+	return func(context.Context) (bool, error) {
+		return runPing6(cli)
+	}
+}
+
+func runPing6(_ client.Client) (bool, error) {
+	gjsonCurrentState, err := currentStateAsGJson()
+	if err != nil {
+		return false, errors.Wrap(err, "failed retrieving current state to retrieve IPv6 default gw")
+	}
+
+	defaultGw6, err := defaultGw6(gjsonCurrentState)
+	if err != nil {
+		log.Error(err, "failed to retrieve IPv6 default gw")
+		return false, nil
+	}
+
+	pingOutput, err := ping(defaultGw6)
+	if err != nil {
+		log.Error(err, fmt.Sprintf("error pinging IPv6 default gateway -> output: '%s'", pingOutput))
 		return false, nil
 	}
 	return true, nil
@@ -266,15 +377,20 @@ func runDNS(_ client.Client, timeout time.Duration) (bool, error) {
 	return false, nil
 }
 
-// Select will return the external connectivity probes that are working (ping and dns) and
+// Select will return the external connectivity probes that are working (ping4, ping6 and dns) and
 // the internal connectivity probes
 func Select(ctx context.Context, cli client.Client) []Probe {
 	probes := []Probe{}
 	externalConnectivityProbes := []Probe{
 		{
-			name:      "ping",
+			name:      "ping4",
 			timeout:   defaultGwProbeTimeout,
-			condition: pingCondition,
+			condition: ping4Condition,
+		},
+		{
+			name:      "ping6",
+			timeout:   defaultGwProbeTimeout,
+			condition: ping6Condition,
 		},
 		{
 			name:      "dns",
