@@ -1,6 +1,6 @@
 # Design
 
-The system is implemented as an k8s operator using the
+The system is implemented as a k8s operator using the
 [operator-sdk](https://github.com/operator-framework/operator-sdk) but is
 deployed as a DaemonSet instead of Deployment with
 [filtering](https://sdk.operatorframework.io/docs/building-operators/golang/references/event-filtering/)
@@ -9,8 +9,8 @@ only events for the DaemonSet pod node.
 
 # NetworkManager compatibility
 
-kubernetes-nmstate is connecting to NetworkManager running on a host. That
-implies following dependency requirements:
+kubernetes-nmstate connects to NetworkManager running on a host. That
+implies the following dependency requirements:
 
 | kubernetes-nmstate version | NetworkManager version |
 | ---                        | ---                    |
@@ -40,7 +40,7 @@ want to deploy some changes at external cluster, following steps would be
 enough:
 
 ```bash
-doker login -u foo quay.io
+docker login -u foo quay.io
 make DEV_IMAGE_REGISTRY=quay.io IMAGE_REPO=foo cluster-sync
 ```
 
@@ -217,14 +217,14 @@ In Ubuntu 18.04 they introduced netplan for the network configuration. So to ena
 follow these steps:
 
 ```yaml
-# 1.- - edit /etc/netplan with:
+# 1. Edit /etc/netplan with:
 network:
   version: 2
   renderer: NetworkManager
 ```
 
 ```bash
-# 2.- apply the changes
+# 2. Apply the changes
 netplan generate
 netplan apply
 ```
