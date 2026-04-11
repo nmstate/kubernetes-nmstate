@@ -2,7 +2,7 @@
 
 ## Summary
 
-Support customize kubernetes-nmstate DNS resolving probes at NMState CR.
+Support customizing kubernetes-nmstate DNS resolving probes at NMState CR.
 
 ## Motivation
 
@@ -36,8 +36,8 @@ networking and install operators
 
 ### Workflow Description (go back to default DNS probe)
 
-1. The cluster admin remove the DNS probe customization
-2. The cluster admin creates an NNCP and the default name resolution is use for the DNS probe
+1. The cluster admin removes the DNS probe customization
+2. The cluster admin creates an NNCP and the default name resolution is used for the DNS probe
 
 ### Alternatives
 
@@ -51,8 +51,8 @@ time too.
 
 ### API Extensions
 
-This proposal add a new `probes` field under the `NMState` CR to configure the
-DNS probes name resolution, this way if the other probes need to be customize
+This proposal adds a new `probes` field under the `NMState` CR to configure the
+DNS probes name resolution, this way if the other probes need to be customized
 in the future more fields can be added there
 
 Following is the `NMState` CR example with custom DNS probe name resolution:
