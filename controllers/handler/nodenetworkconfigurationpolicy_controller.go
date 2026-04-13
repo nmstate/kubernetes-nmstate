@@ -99,6 +99,20 @@ var (
 			return false
 		},
 	}
+	onEnactmentDeleted = predicate.TypedFuncs[*nmstatev1beta1.NodeNetworkConfigurationEnactment]{
+		CreateFunc: func(event.TypedCreateEvent[*nmstatev1beta1.NodeNetworkConfigurationEnactment]) bool {
+			return false
+		},
+		DeleteFunc: func(event.TypedDeleteEvent[*nmstatev1beta1.NodeNetworkConfigurationEnactment]) bool {
+			return true
+		},
+		UpdateFunc: func(event.TypedUpdateEvent[*nmstatev1beta1.NodeNetworkConfigurationEnactment]) bool {
+			return false
+		},
+		GenericFunc: func(event.TypedGenericEvent[*nmstatev1beta1.NodeNetworkConfigurationEnactment]) bool {
+			return false
+		},
+	}
 	nmstatectlShowFn = nmstatectl.Show
 )
 
@@ -348,7 +362,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 		return errors.Wrap(err, "failed to add watch for NNCPs")
 	}
 
-	// Add watch to enque all NNCPs on nod label changes
+	// Add watch to enqueue all NNCPs on node label changes
 	err = c.Watch(
 		source.Kind(
 			mgr.GetCache(),
@@ -359,6 +373,29 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to add watch to enqueue NNCPs reconcile on node label change")
+	}
+
+	// Add watch on NNCE deletions (e.g. from ownerRef GC when a node is removed)
+	// to trigger NNCP reconciliation and recalculate policy conditions.
+	enactmentToPolicy := handler.TypedEnqueueRequestsFromMapFunc[*nmstatev1beta1.NodeNetworkConfigurationEnactment](
+		func(ctx context.Context, nnce *nmstatev1beta1.NodeNetworkConfigurationEnactment) []reconcile.Request {
+			policyName, ok := nnce.GetLabels()[nmstateapi.EnactmentPolicyLabel]
+			if !ok || policyName == "" {
+				return nil
+			}
+			return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: policyName}}}
+		},
+	)
+	err = c.Watch(
+		source.Kind(
+			mgr.GetCache(),
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			enactmentToPolicy,
+			onEnactmentDeleted,
+		),
+	)
+	if err != nil {
+		return errors.Wrap(err, "failed to add watch to enqueue NNCPs reconcile on enactment deletion")
 	}
 
 	return nil
