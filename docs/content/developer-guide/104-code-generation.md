@@ -27,7 +27,11 @@ make check-gen
 
 **Important**: Always run `make generate` after modifying types in `api/v1` or `api/v1beta1`, or after changing controller RBAC markers.
 
+**Tip**: When using Claude Code, you can run `/review-api-changes` to automatically review your API changes for compatibility and best practices.
+
 ## Manifests and Deployment
+
+**Note**: This section covers the [Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io/) framework for operator distribution.
 
 ```bash
 # Generate deployment manifests

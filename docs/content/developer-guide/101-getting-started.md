@@ -8,7 +8,7 @@ This page covers the prerequisites and basic building instructions for kubernete
 
 ## Prerequisites
 
-- Go 1.21 or later
+- Go
 - Container runtime (podman or docker)
 - kubectl
 - For local cluster development: [kubevirtci](https://github.com/kubevirt/kubevirtci)

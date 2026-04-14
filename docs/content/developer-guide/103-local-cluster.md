@@ -8,6 +8,10 @@ This page covers setting up and using a local development cluster for kubernetes
 
 ## Overview
 
+The kubernetes-nmstate project uses [kubevirtci](https://github.com/kubevirt/kubevirtci) for local cluster development. This guide provides the necessary commands and configuration so you don't need to learn kubevirtci separately.
+
+**Note**: kubevirtci is an external tool maintained by the KubeVirt project. Issues with kubevirtci itself are outside the scope of kubernetes-nmstate support.
+
 For detailed information about deploying a local virtualized cluster, see the [local virtualized cluster guide]({{< relref "/deployment/local-cluster" >}}).
 
 ## Quick Reference
