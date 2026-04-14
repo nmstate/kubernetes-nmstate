@@ -21,6 +21,7 @@ import (
 	"encoding/json"
 
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
@@ -30,6 +31,13 @@ func GenerateState(
 	currentState nmstateapi.State,
 	cachedState map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState) (
 	map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState, nmstateapi.State, error) {
+	// Netplan backend bypasses nmstatectl policy validation/capture and uses
+	// Try() for atomic apply with auto-rollback instead.
+	if backend.GetBackend().Name() == backend.BackendNetplan {
+		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
+			policySpec.DesiredState, nil
+	}
+
 	if len(desiredState.Raw) == 0 || len(currentState.Raw) == 0 {
 		return map[string]nmstateapi.NodeNetworkConfigurationEnactmentCapturedState{},
 			nmstateapi.State{}, nil

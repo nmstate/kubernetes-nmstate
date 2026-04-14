@@ -35,9 +35,9 @@ import (
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nm"
-	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	corev1 "k8s.io/api/core/v1"
@@ -72,13 +72,18 @@ type NodeReconciler struct {
 func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	currentStateRaw, err := r.nmstatectlShow()
 	if err != nil {
-		// We cannot call nmstatectl show let's reconcile again
+		// We cannot call backend show, let's reconcile again
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
-	if err != nil {
-		return ctrl.Result{}, err
+	var currentState shared.State
+	if backend.Name() == backend.BackendNMState {
+		currentState, err = state.FilterOut(shared.NewState(currentStateRaw))
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		currentState = shared.NewState(currentStateRaw)
 	}
 
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
@@ -123,6 +128,10 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 }
 
 func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
+	if backend.Name() != backend.BackendNMState {
+		return &nmstate.DependencyVersions{}
+	}
+
 	handlerNmstateVersion, err := nmstate.ExecuteCommand("nmstatectl", "--version")
 	if err != nil {
 		r.Log.Error(err, "failed retrieving handler nmstate version")
@@ -141,7 +150,7 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
-	r.nmstatectlShow = nmstatectl.Show
+	r.nmstatectlShow = backend.Show
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.

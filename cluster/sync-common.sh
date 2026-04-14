@@ -52,6 +52,21 @@ function push() {
         make IMAGE_REGISTRY=$DEV_IMAGE_REGISTRY manifests push
         return 0
     fi
+
+    # KIND provider: use local registry
+    if [[ "${KUBEVIRT_PROVIDER}" =~ ^kind ]]; then
+        local kind_registry="localhost:5000"
+        if [[ "${KUBEVIRT_PROVIDER}" != "kind" ]]; then
+            kind_registry="localhost:5001"
+        fi
+        IMAGE_REGISTRY=${kind_registry} make push
+        export OPERATOR_IMAGE_FULL_NAME=${repo}/kubernetes-nmstate-operator:latest
+        export HANDLER_IMAGE_FULL_NAME=${repo}/kubernetes-nmstate-handler:latest
+        export IMAGE_REGISTRY=${kind_registry}
+        make manifests
+        return 0
+    fi
+
     # Fetch registry port that can be used to upload images to the local kubevirtci cluster
     registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
     if [[ "${KUBEVIRT_PROVIDER}" =~ ^(okd|ocp)-.*$ ]]; then \

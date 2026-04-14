@@ -358,6 +358,12 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
 	data.Data["IsOpenShift"] = r.IsOpenShift
 
+	backendValue := instance.Spec.Backend
+	if backendValue == "" {
+		backendValue = "nmstate"
+	}
+	data.Data["Backend"] = backendValue
+
 	return r.renderAndApply(ctx, instance, data, "handler", true)
 }
 

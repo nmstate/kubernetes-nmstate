@@ -7,6 +7,8 @@ export IMAGE_REGISTRY ?= quay.io
 IMAGE_REPO ?= nmstate
 NAMESPACE ?= nmstate
 
+export BACKEND ?= nmstate
+
 ifeq ($(NMSTATE_VERSION), latest)
 HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git"
 endif
@@ -183,7 +185,7 @@ handler: SKIP_PUSH=true
 handler: push-handler
 
 push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) --build-arg BACKEND=$(BACKEND) -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator

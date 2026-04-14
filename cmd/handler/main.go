@@ -61,11 +61,11 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
-	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
@@ -311,6 +311,12 @@ func setupWebhookEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) err
 // setupHandlerEnvironment cleans up unavailableNodeCounts after unexpected restart,
 // configures the handler controllers and performs health checks
 func setupHandlerEnvironment(mgr manager.Manager) error {
+	// Initialize the backend based on NMSTATE_BACKEND environment variable
+	if err := backend.InitBackend(); err != nil {
+		setupLog.Error(err, "Failed to initialize backend")
+		return err
+	}
+
 	// Clean stale unavailable counts from node before starting controllers
 	// Prevents deadlock after unexpected cluster reboot where nodes were
 	// processing NNCP and left stale counts in etcd.
@@ -322,7 +328,7 @@ func setupHandlerEnvironment(mgr manager.Manager) error {
 	if err := setupHandlerControllers(mgr); err != nil {
 		return err
 	}
-	if err := checkNmstateIsWorking(); err != nil {
+	if err := checkBackendIsWorking(); err != nil {
 		return err
 	}
 	return createHealthyFile()
@@ -513,14 +519,14 @@ func createHealthyFile() error {
 	return nil
 }
 
-func checkNmstateIsWorking() error {
-	setupLog.Info("Checking availability of nmstatectl")
-	logWriter := nmstatelog.NewWriter(setupLog, 0)
-	if err := nmstatectl.ShowWithArgumentsAndOutputs([]string{"-vvv"}, logWriter, logWriter); err != nil {
-		setupLog.Error(err, "failed checking nmstatectl health")
+func checkBackendIsWorking() error {
+	b := backend.GetBackend()
+	setupLog.Info("Checking availability of backend", "backend", b.Name())
+	if _, err := b.Show(); err != nil {
+		setupLog.Error(err, "failed checking backend health", "backend", b.Name())
 		return err
 	}
-	setupLog.Info("Nmstatectl available, 'show' finished successfully.")
+	setupLog.Info("Backend available, 'show' finished successfully", "backend", b.Name())
 	return nil
 }
 

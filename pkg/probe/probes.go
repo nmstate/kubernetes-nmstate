@@ -37,8 +37,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
-	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 )
 
 var (
@@ -71,7 +71,7 @@ const (
 )
 
 func currentStateAsGJson() (gjson.Result, error) {
-	observedStateRaw, err := nmstatectl.Show()
+	observedStateRaw, err := backend.Show()
 	if err != nil {
 		return gjson.Result{}, errors.Wrap(err, "failed retrieving current state")
 	}
@@ -310,7 +310,7 @@ func Select(ctx context.Context, cli client.Client) []Probe {
 // Run will run the externalConnectivityProbes and also some internal
 // kubernetes cluster connectivity and node readiness probes
 func Run(ctx context.Context, cli client.Client, probes []Probe) error {
-	currentState, err := nmstatectl.Show()
+	currentState, err := backend.Show()
 	if err != nil {
 		return errors.Wrap(err, "failed to retrieve currentState at runProbes")
 	}

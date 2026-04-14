@@ -11,6 +11,16 @@ if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
 		while ! $(KUBECTL) get securitycontextconstraints; do sleep 1; done; \
 fi
 
+# KIND provider: install netplan dependencies on Debian-based nodes
+if [[ "$KUBEVIRT_PROVIDER" =~ ^kind ]]; then
+    echo 'Installing dbus and netplan on KIND nodes'
+    for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
+        docker exec ${node} bash -c "apt-get update && apt-get install -y dbus dbus-x11 netplan.io"
+        docker exec ${node} bash -c "systemctl start dbus && systemctl enable dbus"
+    done
+    exit 0
+fi
+
 echo 'Upgrading NetworkManager and enabling and starting up openvswitch'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
     if [[ "$NM_VERSION" == "latest" ]]; then

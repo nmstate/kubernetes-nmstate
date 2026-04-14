@@ -50,6 +50,7 @@ import (
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	"github.com/nmstate/kubernetes-nmstate/pkg/backend"
 	"github.com/nmstate/kubernetes-nmstate/pkg/bridge"
 	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
@@ -99,7 +100,7 @@ var (
 			return false
 		},
 	}
-	nmstatectlShowFn = nmstatectl.Show
+	nmstatectlShowFn = backend.Show
 )
 
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
