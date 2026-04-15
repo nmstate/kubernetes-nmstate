@@ -10,7 +10,7 @@ preview_baseurl="${url}/kubevirt-prow/pr-logs/pull/nmstate_kubernetes-nmstate${b
 ${IMAGE_BUILDER} run -v $(pwd)/docs:/docs/ -w /docs \
     -e GOBIN=/usr/local/bin \
     docker.io/hugomods/hugo:exts \
-    sh -c "npm install && command -v htmltest || go install github.com/wjdp/htmltest@latest && hugo --baseURL / --destination build/ && htmltest && hugo --baseURL '${preview_baseurl}' --destination build/"
+    sh -c "npm install && command -v htmltest || go install github.com/wjdp/htmltest@latest && hugo --config hugo.yaml,hugo.preview.yaml --baseURL / --destination build/ && htmltest && hugo --config hugo.yaml,hugo.preview.yaml --baseURL '${preview_baseurl}' --destination build/"
 
 # Copy the docs to the artifacts
 mkdir -p $ARTIFACTS/gh-pages
