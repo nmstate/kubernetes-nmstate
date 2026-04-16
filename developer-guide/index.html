@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<link rel="alternate" type="application/rss&#43;xml" href="https://nmstate.github.io/kubernetes-nmstate/developer-guide/index.xml">
 <meta name="robots" content="index, follow">
 
 
@@ -17,26 +18,25 @@
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-144x144.png" sizes="144x144">
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-192x192.png" sizes="192x192">
 
-<title>Troubleshooting | The Kubernetes NMState project</title>
-<meta name="description" content="Node network configuration is a risky business. A lot can go wrong and when it does, it can render the whole node unreachable and non-operational. This guide will show you how to obtain information about failed configuration and how does the operator protect the user from breaking the cluster networking.
-Invalid configuration If any of the following cases render the configuration faulty, the setup will be automatically rolled back and Enactment will report the failure. In addition, an event for the NodeNetworkConfigurationPolicy will be created.">
-<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting/">
+<title>Developer Guide | The Kubernetes NMState project</title>
+<meta name="description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
+Getting Started Testing Local Development Cluster Code Generation Advanced Topics">
+<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/developer-guide/">
   <meta property="og:site_name" content="The Kubernetes NMState project">
-  <meta property="og:title" content="Troubleshooting">
-  <meta property="og:description" content="Node network configuration is a risky business. A lot can go wrong and when it does, it can render the whole node unreachable and non-operational. This guide will show you how to obtain information about failed configuration and how does the operator protect the user from breaking the cluster networking.
-Invalid configuration If any of the following cases render the configuration faulty, the setup will be automatically rolled back and Enactment will report the failure. In addition, an event for the NodeNetworkConfigurationPolicy will be created.">
+  <meta property="og:title" content="Developer Guide">
+  <meta property="og:description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
+Getting Started Testing Local Development Cluster Code Generation Advanced Topics">
   <meta property="og:locale" content="en">
-  <meta property="og:type" content="article">
-    <meta property="article:section" content="user-guide">
+  <meta property="og:type" content="website">
 
-  <meta itemprop="name" content="Troubleshooting">
-  <meta itemprop="description" content="Node network configuration is a risky business. A lot can go wrong and when it does, it can render the whole node unreachable and non-operational. This guide will show you how to obtain information about failed configuration and how does the operator protect the user from breaking the cluster networking.
-Invalid configuration If any of the following cases render the configuration faulty, the setup will be automatically rolled back and Enactment will report the failure. In addition, an event for the NodeNetworkConfigurationPolicy will be created.">
-  <meta itemprop="wordCount" content="880">
+  <meta itemprop="name" content="Developer Guide">
+  <meta itemprop="description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
+Getting Started Testing Local Development Cluster Code Generation Advanced Topics">
+  <meta itemprop="wordCount" content="24">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Troubleshooting">
-  <meta name="twitter:description" content="Node network configuration is a risky business. A lot can go wrong and when it does, it can render the whole node unreachable and non-operational. This guide will show you how to obtain information about failed configuration and how does the operator protect the user from breaking the cluster networking.
-Invalid configuration If any of the following cases render the configuration faulty, the setup will be automatically rolled back and Enactment will report the failure. In addition, an event for the NodeNetworkConfigurationPolicy will be created.">
+  <meta name="twitter:title" content="Developer Guide">
+  <meta name="twitter:description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
+Getting Started Testing Local Development Cluster Code Generation Advanced Topics">
 <link rel="preload" href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" as="style" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
 <link href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" rel="stylesheet" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
 <script
@@ -45,7 +45,7 @@ Invalid configuration If any of the following cases render the configuration fau
   crossorigin="anonymous"></script>
 
   </head>
-  <body class="td-page">
+  <body class="td-section">
     <header>
       <nav class="td-navbar js-navbar-scroll" data-bs-theme="dark">
 <div class="container-fluid flex-column flex-md-row">
@@ -87,29 +87,29 @@ Invalid configuration If any of the following cases render the configuration fau
   <a href="/kubernetes-nmstate/deployment/arbitrary-cluster/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentarbitrary-cluster"><span class="">Deployment on Arbitrary Cluster</span></a>
 </li>
   </ul>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-kubernetes-nmstateuser-guide-li">
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-kubernetes-nmstateuser-guide-li">
   <a href="/kubernetes-nmstate/user-guide/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstateuser-guide"><span class="">User Guide</span></a>
   <ul class="ul-2 foldable">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstateuser-guide101-reporting-li">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstateuser-guide101-reporting-li">
   <a href="/kubernetes-nmstate/user-guide/101-reporting/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstateuser-guide101-reporting"><span class="">Reporting</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstateuser-guide102-configuration-li">
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstateuser-guide102-configuration-li">
   <a href="/kubernetes-nmstate/user-guide/102-configuration/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstateuser-guide102-configuration"><span class="">Configuration</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child active-path" id="m-kubernetes-nmstateuser-guide103-troubleshooting-li">
-  <a href="/kubernetes-nmstate/user-guide/103-troubleshooting/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstateuser-guide103-troubleshooting"><span class="td-sidebar-nav-active-item">Troubleshooting</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstateuser-guide103-troubleshooting-li">
+  <a href="/kubernetes-nmstate/user-guide/103-troubleshooting/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstateuser-guide103-troubleshooting"><span class="">Troubleshooting</span></a>
 </li>
   </ul>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-kubernetes-nmstatedeveloper-guide-li">
-  <a href="/kubernetes-nmstate/developer-guide/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstatedeveloper-guide"><span class="">Developer Guide</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-kubernetes-nmstatedeveloper-guide-li">
+  <a href="/kubernetes-nmstate/developer-guide/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstatedeveloper-guide"><span class="td-sidebar-nav-active-item">Developer Guide</span></a>
   <ul class="ul-2 foldable">
-    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeveloper-guide101-getting-started-li">
+    <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide101-getting-started-li">
   <a href="/kubernetes-nmstate/developer-guide/101-getting-started/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide101-getting-started"><span class="">Getting Started</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeveloper-guide102-testing-li">
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide102-testing-li">
   <a href="/kubernetes-nmstate/developer-guide/102-testing/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide102-testing"><span class="">Testing</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeveloper-guide103-local-cluster-li">
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide103-local-cluster-li">
   <a href="/kubernetes-nmstate/developer-guide/103-local-cluster/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide103-local-cluster"><span class="">Local Development Cluster</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeveloper-guide104-code-generation-li">
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide104-code-generation-li">
   <a href="/kubernetes-nmstate/developer-guide/104-code-generation/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide104-code-generation"><span class="">Code Generation</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeveloper-guide105-advanced-li">
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide105-advanced-li">
   <a href="/kubernetes-nmstate/developer-guide/105-advanced/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide105-advanced"><span class="">Advanced Topics</span></a>
 </li>
   </ul>
@@ -127,29 +127,14 @@ Invalid configuration If any of the following cases render the configuration fau
           </aside>
           <aside class="d-none d-xl-block col-xl-2 td-sidebar-toc d-print-none">
             <div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
-<a href="https://github.com/nmstate/kubernetes-nmstate/tree/main/content/user-guide/103-troubleshooting.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/edit/main/content/user-guide/103-troubleshooting.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/new/main/content/user-guide?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/issues/new?title=Troubleshooting" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
+<a href="https://github.com/nmstate/kubernetes-nmstate/tree/main/content/developer-guide/_index.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/edit/main/content/developer-guide/_index.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/new/main/content/developer-guide?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/issues/new?title=Developer%20Guide" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
   
 </div>
 
-            <div class="td-toc">
-        <nav id="TableOfContents">
-  <ul>
-    <li><a href="#invalid-configuration">Invalid configuration</a></li>
-    <li><a href="#enabling-debug-logging">Enabling debug logging</a>
-      <ul>
-        <li><a href="#setting-debug-log-level">Setting debug log level</a></li>
-        <li><a href="#verifying-debug-mode">Verifying debug mode</a></li>
-        <li><a href="#reverting-to-info-log-level">Reverting to info log level</a></li>
-      </ul>
-    </li>
-    <li><a href="#continue-reading">Continue reading</a></li>
-  </ul>
-</nav>
-      </div>
-    
+            
             
 
           </aside>
@@ -157,157 +142,64 @@ Invalid configuration If any of the following cases render the configuration fau
             
   
 
-            <nav aria-label="breadcrumb" class="td-breadcrumbs">
+            <nav aria-label="breadcrumb" class="td-breadcrumbs td-breadcrumbs__single">
   <ol class="breadcrumb">
-  <li class="breadcrumb-item">
-    <a href="/kubernetes-nmstate/user-guide/">User Guide</a></li>
   <li class="breadcrumb-item active" aria-current="page">
-    Troubleshooting</li>
+    Developer Guide</li>
   </ol>
 </nav>
             
 <div class="td-content">
-	<h1>Troubleshooting</h1>
-	
+	<h1>Developer Guide</h1>
+  
 	<header class="article-meta">
 		
 </header>
-	<p>Node network configuration is a risky business. A lot can go wrong and when it
-does, it can render the whole node unreachable and non-operational. This guide
-will show you how to obtain information about failed configuration and how does
-the operator protect the user from breaking the cluster networking.</p>
-<h2 id="invalid-configuration">Invalid configuration</h2>
-<p>If any of the following cases render the configuration faulty, the setup will be
-automatically rolled back and Enactment will report the failure. In addition,
-an event for the NodeNetworkConfigurationPolicy will be created.</p>
+	<p>This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.</p>
 <ul>
-<li>Configuration fails to be applied on the host (due to missing interfaces, inability to obtain IP, invalid attributes, &hellip;)</li>
-<li>Connectivity to the default gateway is broken</li>
-<li>Connectivity to the API server is broken</li>
+<li><a href="/kubernetes-nmstate/developer-guide/101-getting-started/">Getting Started</a></li>
+<li><a href="/kubernetes-nmstate/developer-guide/102-testing/">Testing</a></li>
+<li><a href="/kubernetes-nmstate/developer-guide/103-local-cluster/">Local Development Cluster</a></li>
+<li><a href="/kubernetes-nmstate/developer-guide/104-code-generation/">Code Generation</a></li>
+<li><a href="/kubernetes-nmstate/developer-guide/105-advanced/">Advanced Topics</a></li>
 </ul>
-<p>In the following example, we will create a Policy configuring an unavailable
-interface and observe the results:</p>
-<!-- When updating following example, don't forget to update respective attached file -->
-<p><a href="/user-guide/eth666_up.yaml">Download example</a></p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#ae81ff"># When updating this file, don&#39;t forget to update the tutorial.
-apiVersion: nmstate.io/v1
-kind: NodeNetworkConfigurationPolicy
-metadata:
-  name: eth666
-spec:
-  desiredState:
-    interfaces:
-    - name: eth666
-      type: ethernet
-      state: up
-</span>
-</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl apply -f eth666_up.yaml
-</span></span></code></pre></div><p>Let&rsquo;s wait for <code>Degraded</code> condition since we anticipate the Policy to fail.
-Usually, one would wait for <code>Available</code> until the timeout.</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl wait nncp eth666 --for condition<span style="color:#f92672">=</span>Degraded --timeout 2m
-</span></span></code></pre></div><p>We can list the Enactments to see why we are in the <code>Degraded</code> state:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl get nnce
-</span></span></code></pre></div><pre tabindex="0"><code>NAME            STATUS
-node01.eth666   Failing
-node02.eth666   Failing
-</code></pre><p>Both Enactments have <code>FailedToConfigure</code>, let&rsquo;s see why:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl get nnce node01.eth666 -o yaml
-</span></span></code></pre></div><pre tabindex="0"><code># output truncated
-status:
-  conditions:
-  - lastHeartbeatTime: &#34;2020-02-08T20:23:15Z&#34;
-    lastTransitionTime: &#34;2020-02-08T20:23:15Z&#34;
-    message: |-
-      error reconciling NodeNetworkConfigurationPolicy at desired state apply: , failed to execute nmstatectl set --no-commit --timeout 240: &#39;exit status 1&#39; &#39;&#39; &#39;2020-02-08 20:23:09,563 root         DEBUG    Checkpoint /org/freedesktop/NetworkManager/Checkpoint/3 created for all devices: 240
-      2020-02-08 20:23:09,564 root         DEBUG    Adding new interfaces: [&#39;eth666&#39;]
-      2020-02-08 20:23:09,564 root         DEBUG    Connection settings for ConnectionSetting.create:
-      id: eth666
-      iface: eth666
-      uuid: 70b556e5-e2da-4e46-a98f-531bc73d0bf5
-      type: 802-3-ethernet
-      autoconnect: True
-      autoconnect_slaves: &lt;enum NM_SETTING_CONNECTION_AUTOCONNECT_SLAVES_YES of type NM.SettingConnectionAutoconnectSlaves&gt;
-      2020-02-08 20:23:09,565 root         DEBUG    Editing interfaces: []
-      2020-02-08 20:23:09,567 root         DEBUG    Executing NM action: func=add_connection_async
-      2020-02-08 20:23:09,572 root         DEBUG    Connection adding succeeded: dev=eth666
-      2020-02-08 20:23:09,572 root         DEBUG    Executing NM action: func=safe_activate_async
-      2020-02-08 20:23:09,573 root         ERROR    NM main-loop aborted: Connection activation failed on connection_id eth666: error=nm-manager-error-quark: No suitable device found for this connection (devicecni0 not available because profile is not compatible with device (mismatching interface name)). (3)      2020-02-08 20:23:09,576 root         DEBUG    Checkpoint /org/freedesktop/NetworkManager/Checkpoint/3 rollback executed: dbus.Dictionary({dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/9&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/10&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/5&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/8&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/3&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/7&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/2&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/6&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/1&#39;): dbus.UInt32(0), dbus.String(&#39;/org/freedesktop/NetworkManager/Devices/4&#39;): dbus.UInt32(0)}, signature=dbus.Signature(&#39;su&#39;))
-      Traceback (most recent call last):
-        File &#34;/usr/bin/nmstatectl&#34;, line 11, in &lt;module&gt;
-          load_entry_point(&#39;nmstate==0.2.2&#39;, &#39;console_scripts&#39;, &#39;nmstatectl&#39;)()
-        File &#34;/usr/lib/python3.7/site-packages/nmstatectl/nmstatectl.py&#34;, line 59, in main
-          return args.func(args)
-        File &#34;/usr/lib/python3.7/site-packages/nmstatectl/nmstatectl.py&#34;, line 221, in apply
-          return apply_state(statedata, args.verify, args.commit, args.timeout)
-        File &#34;/usr/lib/python3.7/site-packages/nmstatectl/nmstatectl.py&#34;, line 237, in apply_state
-          checkpoint = libnmstate.apply(state, verify_change, commit, timeout)
-        File &#34;/usr/lib/python3.7/site-packages/libnmstate/netapplier.py&#34;, line 66, in apply
-          state.State(desired_state), verify_change, commit, rollback_timeout
-        File &#34;/usr/lib/python3.7/site-packages/libnmstate/netapplier.py&#34;, line 148, in _apply_ifaces_state
-          con_profiles=ifaces_add_configs + ifaces_edit_configs,
-        File &#34;/usr/lib64/python3.7/contextlib.py&#34;, line 119, in __exit__
-          next(self.gen)
-        File &#34;/usr/lib/python3.7/site-packages/libnmstate/netapplier.py&#34;, line 215, in _setup_providers
-          mainloop.error
-      libnmstate.error.NmstateLibnmError: Unexpected failure of libnm when running the mainloop: run execution
-      &#39;
-    reason: FailedToConfigure
-    status: &#34;True&#34;
-    type: Failing
-</code></pre><p>The message in <code>Failing</code> condition is currently a little bloated since it
-contains the whole error output of a failed call. The interesting message is in
-the <code>ERROR</code> log line:</p>
-<pre tabindex="0"><code>Connection activation failed on connection_id eth666: error=nm-manager-error-quark: No suitable device found for this connection
-</code></pre><p>In addition, events are generated in the default namespace:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>$ kubectl get events | grep Warning
-</span></span><span style="display:flex;"><span>6m55s       Warning   ReconcileFailed           nodenetworkconfigurationpolicy/eth666   error reconciling NodeNetworkConfigurationPolicy on node node02 at desired state apply: <span style="color:#e6db74">&#34;&#34;</span>,...
-</span></span></code></pre></div><p>And these events are also linked to the NodeNetworkConfigurationPolicy when using <code>kubectl describe</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl describe nodenetworkconfigurationpolicies.nmstate.io eth666
-</span></span></code></pre></div><pre tabindex="0"><code># output truncated
-Events:
-  Type     Reason           Age    From                    Message
-  ----     ------           ----   ----                    -------
-  Warning  ReconcileFailed  8m25s  node02.nmstate-handler  error reconciling NodeNetworkConfigurationPolicy on node node02 at desired state apply: &#34;&#34;,
-(...)
-NmstateError: InvalidArgument: Ethernet interface eth666 does not exists
-&#39;
-</code></pre><p>The configuration therefore failed due to absence of NIC <code>eth666</code> on the node.
-Now we can either fix the Policy to edit an available interface or safely remove
-it:</p>
-<pre tabindex="0"><code>kubectl delete nncp eth666
-</code></pre><h2 id="enabling-debug-logging">Enabling debug logging</h2>
-<p>For advanced troubleshooting, you can enable verbose debug logging by configuring the <code>LogLevel</code> field in the NMState custom resource. This will provide more detailed output from nmstatectl operations, which can be helpful when diagnosing complex networking issues.</p>
-<h3 id="setting-debug-log-level">Setting debug log level</h3>
-<p>To enable debug logging, update the NMState CR with <code>logLevel: debug</code>:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">apiVersion</span>: <span style="color:#ae81ff">nmstate.io/v1</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">kind</span>: <span style="color:#ae81ff">NMState</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">metadata</span>:
-</span></span><span style="display:flex;"><span>  <span style="color:#f92672">name</span>: <span style="color:#ae81ff">nmstate</span>
-</span></span><span style="display:flex;"><span><span style="color:#f92672">spec</span>:
-</span></span><span style="display:flex;"><span>  <span style="color:#f92672">logLevel: debug  # Valid values</span>: <span style="color:#e6db74">&#34;info&#34;</span> <span style="color:#ae81ff">(default) or &#34;debug&#34;</span>
-</span></span></code></pre></div><p>Apply the configuration:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl patch nmstate nmstate --type<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;merge&#39;</span> -p<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;{&#34;spec&#34;:{&#34;logLevel&#34;:&#34;debug&#34;}}&#39;</span>
-</span></span></code></pre></div><h3 id="verifying-debug-mode">Verifying debug mode</h3>
-<p>You can verify that debug mode is active by checking the handler DaemonSet pods:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl logs -n nmstate -l component<span style="color:#f92672">=</span>kubernetes-nmstate-handler --tail<span style="color:#f92672">=</span><span style="color:#ae81ff">50</span>
-</span></span></code></pre></div><p>When debug mode is enabled, you should see more verbose output including:</p>
-<ul>
-<li>Detailed nmstatectl command execution logs</li>
-<li>Verbose nmstate operations with <code>-vv</code> flag</li>
-<li>Additional debugging information from network configuration operations</li>
-</ul>
-<h3 id="reverting-to-info-log-level">Reverting to info log level</h3>
-<p>To reduce log verbosity, revert to info log level:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl patch nmstate nmstate --type<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;merge&#39;</span> -p<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;{&#34;spec&#34;:{&#34;logLevel&#34;:&#34;info&#34;}}&#39;</span>
-</span></span></code></pre></div><p><strong>Note:</strong> Debug logging significantly increases log volume and should primarily be used for troubleshooting purposes. Consider reverting to info level after resolving issues to maintain optimal performance.</p>
-<h2 id="continue-reading">Continue reading</h2>
-<p>This was the last article from the introduction series. You can continue reading
-specific recipes on how to configure various interface types. You will find them
-in the <a href="/kubernetes-nmstate/deployment/">Deployment</a> or <a href="/kubernetes-nmstate/examples/">Examples</a> pages.</p>
 
-	
+  <div class="section-index">
+    
+    
+    <hr class="panel-line">
+        <div class="entry">
+                <h5>
+                    <a href="/kubernetes-nmstate/developer-guide/101-getting-started/">Getting Started</a>
+                </h5>
+                <p></p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/kubernetes-nmstate/developer-guide/102-testing/">Testing</a>
+                </h5>
+                <p></p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/kubernetes-nmstate/developer-guide/103-local-cluster/">Local Development Cluster</a>
+                </h5>
+                <p></p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/kubernetes-nmstate/developer-guide/104-code-generation/">Code Generation</a>
+                </h5>
+                <p></p>
+            </div>
+        <div class="entry">
+                <h5>
+                    <a href="/kubernetes-nmstate/developer-guide/105-advanced/">Advanced Topics</a>
+                </h5>
+                <p></p>
+            </div>
+        </div>
 </div>
-
 
           </main>
         </div>
