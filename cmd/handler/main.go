@@ -74,6 +74,12 @@ import (
 
 const generalExitStatus int = 1
 
+const (
+	defaultRetriesUntilFail = 5
+	defaultMaxBackoff       = 30 * time.Second
+	defaultInitialBackoff   = 1 * time.Second
+)
+
 type ProfilerConfig struct {
 	EnableProfiler bool   `envconfig:"ENABLE_PROFILER"`
 	ProfilerPort   string `envconfig:"PROFILER_PORT" default:"6060"`
@@ -479,7 +485,10 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		Log:       ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy"),
 		Scheme:    mgr.GetScheme(),
 		//nolint:staticcheck // TODO: migrate to GetEventRecorder
-		Recorder: mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
+		Recorder:           mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
+		RetriesUntilFail:   getEnvAsInt("NNCP_MAX_RETRIES", defaultRetriesUntilFail),
+		MaximumTimeBackoff: getEnvAsDuration("NNCP_MAX_BACKOFF_SECONDS", defaultMaxBackoff),
+		InitialBackoff:     getEnvAsDuration("NNCP_INITIAL_BACKOFF_SECONDS", defaultInitialBackoff),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 		return err
@@ -655,6 +664,31 @@ func lockHandler() (*flock.Flock, error) {
 			return locked, nil
 		})
 	return handlerLock, err
+}
+
+// getEnvAsInt reads an integer from an environment variable with a default fallback.
+func getEnvAsInt(key string, defaultVal int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return intVal
+		} else {
+			setupLog.Info(fmt.Sprintf("WARNING: invalid integer for %s=%q, using default %d: %v", key, value, defaultVal, err))
+		}
+	}
+	return defaultVal
+}
+
+// getEnvAsDuration reads a seconds value from an environment variable and
+// returns it as a time.Duration, falling back to defaultVal if unset or invalid.
+func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
+	if value, exists := os.LookupEnv(key); exists {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return time.Duration(intVal) * time.Second
+		} else {
+			setupLog.Info(fmt.Sprintf("WARNING: invalid integer for %s=%q, using default %d: %v", key, value, defaultVal, err))
+		}
+	}
+	return defaultVal
 }
 
 func dumpMetricFamiliesToStdout() int {

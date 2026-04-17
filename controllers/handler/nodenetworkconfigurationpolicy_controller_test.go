@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -94,7 +95,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	DescribeTable("when claimNodeRunningUpdate is called and",
 		func(c incrementUnavailableNodeCountCase) {
 			nmstatectlShowFn = func() (string, error) { return "", nil }
-			reconciler := NodeNetworkConfigurationPolicyReconciler{}
+			reconciler := NodeNetworkConfigurationPolicyReconciler{
+				RetriesUntilFail:   5,
+				MaximumTimeBackoff: 30 * time.Second,
+				InitialBackoff:     1 * time.Second,
+			}
 			s := scheme.Scheme
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 				&nmstatev1beta1.NodeNetworkState{},
@@ -305,7 +310,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		)
 
 		BeforeEach(func() {
-			reconciler = &NodeNetworkConfigurationPolicyReconciler{}
+			reconciler = &NodeNetworkConfigurationPolicyReconciler{
+				RetriesUntilFail:   5,
+				MaximumTimeBackoff: 30 * time.Second,
+				InitialBackoff:     1 * time.Second,
+			}
 			s = scheme.Scheme
 			s.AddKnownTypes(nmstatev1.GroupVersion,
 				&nmstatev1.NodeNetworkConfigurationPolicy{},
@@ -425,7 +434,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 		BeforeEach(func() {
 			nmstatectlShowFn = func() (string, error) { return "", nil }
-			reconciler = &NodeNetworkConfigurationPolicyReconciler{}
+			reconciler = &NodeNetworkConfigurationPolicyReconciler{
+				RetriesUntilFail:   5,
+				MaximumTimeBackoff: 30 * time.Second,
+				InitialBackoff:     1 * time.Second,
+			}
 			s = scheme.Scheme
 			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
 				&nmstatev1beta1.NodeNetworkState{},

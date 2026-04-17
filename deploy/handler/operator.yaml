@@ -413,6 +413,12 @@ spec:
               value: "{{ .ProbeConfiguration.DNS.Host }}"
             - name: METRICS_BIND_ADDRESS
               value: "{{ .MetricsConfiguration.BindAddress }}"
+            - name: NNCP_MAX_RETRIES
+              value: "{{ .NNCPMaxRetries }}"
+            - name: NNCP_MAX_BACKOFF_SECONDS
+              value: "{{ .NNCPMaxBackoffSeconds }}"
+            - name: NNCP_INITIAL_BACKOFF_SECONDS
+              value: "{{ .NNCPInitialBackoffSeconds }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
