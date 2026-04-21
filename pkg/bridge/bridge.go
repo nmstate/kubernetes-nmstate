@@ -31,11 +31,11 @@ import (
 const minVlanID = 2
 const maxVlanID = 4094
 
-var defaultVlanFiltering = map[string]interface{}{
+var defaultVlanFiltering = map[string]any{
 	"mode": "trunk",
-	"trunk-tags": []map[string]interface{}{
+	"trunk-tags": []map[string]any{
 		{
-			"id-range": map[string]interface{}{
+			"id-range": map[string]any{
 				"min": minVlanID,
 				"max": maxVlanID,
 			},

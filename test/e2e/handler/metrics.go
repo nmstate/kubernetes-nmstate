@@ -43,7 +43,7 @@ func getPrometheusToken() (string, error) {
 
 func indexMetrics(metrics string) map[string]string {
 	metricsMap := map[string]string{}
-	for _, metric := range strings.Split(metrics, "\n") {
+	for metric := range strings.SplitSeq(metrics, "\n") {
 		if strings.Contains(metric, "#") { // Ignore comments
 			continue
 		}

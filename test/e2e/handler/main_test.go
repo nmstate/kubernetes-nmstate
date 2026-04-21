@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -150,10 +151,5 @@ var _ = ReportAfterEach(func(specReport types.SpecReport) {
 })
 
 func containsNode(nodes []string, node string) bool {
-	for _, n := range nodes {
-		if n == node {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(nodes, node)
 }

@@ -304,12 +304,7 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					for _, cmd := range probe.Exec.Command {
-						if cmd == "nmstatectl show lo -vv 2>&1" {
-							return true
-						}
-					}
-					return false
+					return slices.Contains(probe.Exec.Command, "nmstatectl show lo -vv 2>&1")
 				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should be updated with verbose flag")
 			})
 			AfterEach(func() {
