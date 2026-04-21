@@ -6,8 +6,8 @@ type: docs
 
 Node network configuration is a risky business. A lot can go wrong and when it
 does, it can render the whole node unreachable and non-operational. This guide
-will show you how to obtain information about failed configuration and how does
-the operator protect the user from breaking the cluster networking.
+will show you how to obtain information about failed configuration and how the
+operator protects the user from breaking the cluster networking.
 
 ## Invalid configuration
 
