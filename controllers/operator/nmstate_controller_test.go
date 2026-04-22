@@ -276,10 +276,10 @@ var _ = Describe("NMState controller reconcile", func() {
 		BeforeEach(func() {
 			request.Name = existingNMStateName
 		})
-		It("should return a Result", func() {
+		It("should return a Result with RequeueAfter", func() {
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 	})
 	Context("when one of manifest directory is empty", func() {
@@ -330,7 +330,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 		It("should not add default NodeSelector to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
@@ -371,7 +371,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 		It("should add Tolerations to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
@@ -400,7 +400,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 		It("should add InfraNodeSelector to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
@@ -442,7 +442,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 		It("should add InfraTolerations to webhook deployment", func() {
 			deployment := &appsv1.Deployment{}
@@ -485,7 +485,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 		It("should add DNS probe host to handler daemonset", func() {
 			ds := &appsv1.DaemonSet{}
@@ -507,7 +507,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			request.Name = existingNMStateName
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 		It("should apply network policies", func() {
 			netpols := &networkingv1.NetworkPolicyList{}
@@ -533,7 +533,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				request.Name = existingNMStateName
 				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
+				Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 			})
 			It("should add verbose arguments to handler daemonset container args", func() {
 				ds := &appsv1.DaemonSet{}
@@ -561,7 +561,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				request.Name = existingNMStateName
 				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
+				Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 			})
 			It("should not add verbose arguments to handler daemonset container args", func() {
 				ds := &appsv1.DaemonSet{}
@@ -588,7 +588,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				request.Name = existingNMStateName
 				result, err := reconciler.Reconcile(context.Background(), request)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{}))
+				Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 			})
 			It("should not add verbose arguments to handler daemonset container args", func() {
 				ds := &appsv1.DaemonSet{}
@@ -647,7 +647,7 @@ var _ = Describe("NMState controller reconcile", func() {
 
 			result, err := reconciler.Reconcile(context.Background(), request)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(result).To(Equal(ctrl.Result{}))
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 
 		Context("On single node cluster", func() {
