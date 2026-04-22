@@ -1,6 +1,6 @@
 # Design
 
-The system is implemented as an k8s operator using the
+The system is implemented as a k8s operator using the
 [operator-sdk](https://github.com/operator-framework/operator-sdk) but is
 deployed as a DaemonSet instead of Deployment with
 [filtering](https://sdk.operatorframework.io/docs/building-operators/golang/references/event-filtering/)
@@ -40,7 +40,7 @@ documentation.
 Common new contributor PR issues are:
 
 - Missing DCO sign-off:\
-  Developers Certificate of Origin (DCO) Sign-off is a requirement for getting
+  Developer Certificate of Origin (DCO) Sign-off is a requirement for getting
   patches into the project (see [Developers Certificate of
   Origin](https://developercertificate.org/)). You can "sign" this certificate
   by including a line in the git commit of "Signed-off-by: Legal Name
@@ -73,11 +73,11 @@ need you to:
 
 # Releasing
 
-To cut a release, push images to quay and publish it on GitHub
-the command `make release` do all this automatically, the version  is at
+To cut a release, push images to quay and publish it on GitHub.
+The command `make release` does all this automatically; the version is at
 `version/version.go` and the description at `version/description`.
 
-So the step would be:
+So the steps would be:
  - Prepare a release calling `make prepare-(patch|minor|major)`
  - Edit version/description to set a description and order commits
  - Create a PR to review it
@@ -116,7 +116,7 @@ In Ubuntu 18.04 they introduced netplan for the network configuration. So to ena
 follow these steps:
 
 ```yaml
-# 1.- - edit /etc/netplan with:
+# 1. edit /etc/netplan with:
 network:
   version: 2
   renderer: NetworkManager
