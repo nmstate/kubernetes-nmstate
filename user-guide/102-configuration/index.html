@@ -32,7 +32,7 @@ A Policy describes what is the desired network configuration on cluster nodes. I
   <meta itemprop="name" content="Configuration">
   <meta itemprop="description" content="The operator allows users to configure various network interface types, DNS and routing on cluster nodes. The configuration is driven by two main object types, NodeNetworkConfigurationPolicy (Policy) and NodeNetworkConfigurationEnactment (Enactment).
 A Policy describes what is the desired network configuration on cluster nodes. It is created by users and applies cluster-wide. An Enactment, on the other hand, is a read-only object that carries execution state of a Policy per each Node.">
-  <meta itemprop="wordCount" content="1675">
+  <meta itemprop="wordCount" content="1676">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Configuration">
   <meta name="twitter:description" content="The operator allows users to configure various network interface types, DNS and routing on cluster nodes. The configuration is driven by two main object types, NodeNetworkConfigurationPolicy (Policy) and NodeNetworkConfigurationEnactment (Enactment).
@@ -188,7 +188,7 @@ configuration is persistent on the node and survives reboots.</p>
 <p>:warning: Changing a policy that is in progress has undefined behaviour.</p>
 <h2 id="creating-interfaces">Creating interfaces</h2>
 <p>Each Policy has a name (<code>metadata.name</code>) and desired state
-(<code>spec.desiredState</code>). The desired state can contains declarative specification
+(<code>spec.desiredState</code>). The desired state can contain a declarative specification
 of the node network configuration following <a href="https://nmstate.github.io/">nmstate
 API</a>.</p>
 <p>In the following example, we will create a Policy that configures a bonding over

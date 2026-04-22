@@ -26,7 +26,7 @@
       <link>https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       <guid>https://nmstate.github.io/kubernetes-nmstate/user-guide/103-troubleshooting/</guid>
-      <description>&lt;p&gt;Node network configuration is a risky business. A lot can go wrong and when it&#xA;does, it can render the whole node unreachable and non-operational. This guide&#xA;will show you how to obtain information about failed configuration and how does&#xA;the operator protect the user from breaking the cluster networking.&lt;/p&gt;&#xA;&lt;h2 id=&#34;invalid-configuration&#34;&gt;Invalid configuration&lt;/h2&gt;&#xA;&lt;p&gt;If any of the following cases render the configuration faulty, the setup will be&#xA;automatically rolled back and Enactment will report the failure. In addition,&#xA;an event for the NodeNetworkConfigurationPolicy will be created.&lt;/p&gt;</description>
+      <description>&lt;p&gt;Node network configuration is a risky business. A lot can go wrong and when it&#xA;does, it can render the whole node unreachable and non-operational. This guide&#xA;will show you how to obtain information about failed configuration and how the&#xA;operator protects the user from breaking the cluster networking.&lt;/p&gt;&#xA;&lt;h2 id=&#34;invalid-configuration&#34;&gt;Invalid configuration&lt;/h2&gt;&#xA;&lt;p&gt;If any of the following cases render the configuration faulty, the setup will be&#xA;automatically rolled back and Enactment will report the failure. In addition,&#xA;an event for the NodeNetworkConfigurationPolicy will be created.&lt;/p&gt;</description>
     </item>
   </channel>
 </rss>
