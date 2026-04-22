@@ -18,10 +18,13 @@ limitations under the License.
 package state
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
+	"sigs.k8s.io/yaml"
 )
 
 var _ = Describe("FilterOut", func() {
@@ -387,6 +390,102 @@ routes:
 			returnedState, err := filterOut(state)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
+
+	Context("when the number of interfaces exceeds the threshold", func() {
+		It("should strip verbose fields from VLAN interfaces but keep essential ones", func() {
+			// Build a state with more than interfaceCountThreshold interfaces
+			// by generating VLAN interfaces
+			yamlStr := "interfaces:\n"
+			yamlStr += "- name: eth0\n  state: up\n  type: ethernet\n  mtu: 1500\n  mac-address: 00:11:22:33:44:55\n"
+			for i := 0; i < interfaceCountThreshold+10; i++ {
+				yamlStr += fmt.Sprintf(`- name: eth0.%d
+  type: vlan
+  state: up
+  mtu: 1400
+  mac-address: 02:00:00:%02x:%02x:00
+  ipv4:
+    enabled: true
+    address:
+    - ip: 192.168.%d.1
+      prefix-length: 24
+  vlan:
+    id: %d
+    base-iface: eth0
+  lldp:
+    enabled: false
+  ethtool:
+    feature:
+      tx-checksum-ip-generic: true
+`, i, i/256, i%256, i%256, i)
+			}
+			yamlStr += "routes:\n  config: []\n  running: []\n"
+
+			state := nmstate.NewState(yamlStr)
+			result, err := filterOut(state)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Parse the result to verify
+			var parsed rootState
+			err = yaml.Unmarshal(result.Raw, &parsed)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Ethernet interface should be untouched
+			eth0 := parsed.Interfaces[0]
+			Expect(eth0.Name).To(Equal("eth0"))
+			Expect(eth0.Data).To(HaveKey("mtu"))
+			Expect(eth0.Data).To(HaveKey("mac-address"))
+
+			// VLAN interfaces should have verbose fields stripped
+			vlan0 := parsed.Interfaces[1]
+			Expect(vlan0.Name).To(Equal("eth0.0"))
+			Expect(vlan0.Type).To(Equal("vlan"))
+			Expect(vlan0.Data).To(HaveKey("state"))
+			Expect(vlan0.Data).To(HaveKey("vlan"))
+			Expect(vlan0.Data).To(HaveKey("ipv4"))
+			// Verbose fields should be gone
+			Expect(vlan0.Data).NotTo(HaveKey("mtu"))
+			Expect(vlan0.Data).NotTo(HaveKey("mac-address"))
+			Expect(vlan0.Data).NotTo(HaveKey("lldp"))
+			Expect(vlan0.Data).NotTo(HaveKey("ethtool"))
+		})
+
+		It("should not strip fields when interface count is below threshold", func() {
+			state := nmstate.NewState(`
+interfaces:
+- name: eth0
+  state: up
+  type: ethernet
+  mtu: 1500
+- name: eth0.100
+  type: vlan
+  state: up
+  mtu: 1400
+  mac-address: 02:00:00:00:64:00
+  ipv4:
+    enabled: true
+  vlan:
+    id: 100
+    base-iface: eth0
+  lldp:
+    enabled: false
+routes:
+  config: []
+  running: []
+`)
+			result, err := filterOut(state)
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed rootState
+			err = yaml.Unmarshal(result.Raw, &parsed)
+			Expect(err).ToNot(HaveOccurred())
+
+			// VLAN should retain all fields when below threshold
+			vlan := parsed.Interfaces[1]
+			Expect(vlan.Data).To(HaveKey("mtu"))
+			Expect(vlan.Data).To(HaveKey("mac-address"))
+			Expect(vlan.Data).To(HaveKey("lldp"))
 		})
 	})
 })

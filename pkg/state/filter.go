@@ -220,6 +220,50 @@ func isUnmanaged(ifaceData map[string]interface{}) bool {
 	return ifaceData["state"] == "ignore"
 }
 
+const (
+	// interfaceCountThreshold is the number of interfaces above which
+	// verbose fields are stripped from VLAN interfaces to reduce the
+	// NodeNetworkState object size and avoid exceeding the etcd request
+	// size limit (1.5 MB).
+	interfaceCountThreshold = 500
+
+	// vlanInterfaceType is the nmstate type string for VLAN interfaces.
+	vlanInterfaceType = "vlan"
+)
+
+// vlanEssentialFields is the set of fields to preserve on VLAN interfaces
+// when the interface count exceeds the threshold. All other fields are
+// stripped to reduce serialized size.
+var vlanEssentialFields = map[string]struct{}{
+	"name":  {},
+	"type":  {},
+	"state": {},
+	"ipv4":  {},
+	"ipv6":  {},
+	"vlan":  {},
+}
+
+// stripVerboseVlanFields removes non-essential fields from VLAN interfaces
+// when the total interface count exceeds the threshold. This prevents the
+// NodeNetworkState from exceeding the etcd request size limit on nodes
+// with large numbers of VLANs.
+func stripVerboseVlanFields(interfaces []interfaceState) []interfaceState {
+	if len(interfaces) <= interfaceCountThreshold {
+		return interfaces
+	}
+	for i := range interfaces {
+		if interfaces[i].Type != vlanInterfaceType {
+			continue
+		}
+		for key := range interfaces[i].Data {
+			if _, keep := vlanEssentialFields[key]; !keep {
+				delete(interfaces[i].Data, key)
+			}
+		}
+	}
+	return interfaces
+}
+
 func filterOut(currentState shared.State) (shared.State, error) {
 	var state rootState
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
@@ -227,6 +271,7 @@ func filterOut(currentState shared.State) (shared.State, error) {
 	}
 
 	state.Interfaces = filterOutInterfaces(state.Interfaces)
+	state.Interfaces = stripVerboseVlanFields(state.Interfaces)
 	if state.Routes != nil {
 		state.Routes.Running = filterOutRoutes(state.Routes.Running, state.Interfaces)
 		state.Routes.Config = filterOutRoutes(state.Routes.Config, state.Interfaces)
