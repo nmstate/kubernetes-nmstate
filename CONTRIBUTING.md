@@ -10,7 +10,7 @@ only events for the DaemonSet pod node.
 # NetworkManager compatibility
 
 kubernetes-nmstate is connecting to NetworkManager running on a host. That
-implies following dependency requirements:
+implies the following dependency requirements:
 
 | kubernetes-nmstate version | NetworkManager version |
 | ---                        | ---                    |
@@ -94,7 +94,7 @@ There is a possibility to enable golang pprof profiler.
  - You can change profiler port by editing 'PROFILER_PORT' - default is 6060
  - Deploy new code to cluster - example:  `make cluster-sync`
  - Find nmstate-handler pod name - `kubectl get pods -n nmstate`
- - Create port forwarding to pod - example: `kubectl port-forward pod pod_name 6060:6060 -n nmstate`
+ - Create port forwarding to pod - example: `kubectl port-forward pod/pod_name 6060:6060 -n nmstate`
  - Use `go tool pprof ...` to gather relevant metrics.
    Examples:
     - open in browser `http://localhost:6060/debug/pprof/`

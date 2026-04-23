@@ -2,7 +2,7 @@
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate?ref=badge_shield)
 
 
-<img src="logo/fullcolor.png" alias="project logo" />
+<img src="logo/fullcolor.png" alt="project logo" />
 
 [keɪ ɛn ɛm steɪt] Declarative node network configuration driven through Kubernetes API.
 
@@ -41,7 +41,7 @@ You can choose to deploy this operator on a
 [local virtualized cluster](https://nmstate.github.io/kubernetes-nmstate/deployment/local-cluster) or on your
 [arbitrary cluster](https://nmstate.github.io/kubernetes-nmstate/deployment/arbitrary-cluster).
 
-Following comprehensive 101 series is the best place to start learning about all
+The following comprehensive 101 series is the best place to start learning about all
 the features:
 
 1. [Reporting](https://nmstate.github.io/kubernetes-nmstate/user-guide/101-reporting) -
@@ -82,7 +82,7 @@ others that extend support for [Open vSwitch bridges](https://github.com/kubevir
 [SR-IOV](https://github.com/hustcat/sriov-cni), and more...
 
 However, in all of these cases, the node must have the networks setup before the
-pod is scheduled. Setting up the networks in a dynamic and heterogenous cluster,
+pod is scheduled. Setting up the networks in a dynamic and heterogeneous cluster,
 with dynamic networking requirements, is a challenge by itself - and this is
 what this project is addressing.
 
