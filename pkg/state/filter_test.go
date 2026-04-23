@@ -19,6 +19,7 @@ package state
 
 import (
 	"fmt"
+	"os"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -395,11 +396,11 @@ routes:
 
 	Context("when the number of interfaces exceeds the threshold", func() {
 		It("should strip verbose fields from VLAN interfaces but keep essential ones", func() {
-			// Build a state with more than interfaceCountThreshold interfaces
+			// Build a state with more than defaultInterfaceCountThreshold interfaces
 			// by generating VLAN interfaces
 			yamlStr := "interfaces:\n"
 			yamlStr += "- name: eth0\n  state: up\n  type: ethernet\n  mtu: 1500\n  mac-address: 00:11:22:33:44:55\n"
-			for i := 0; i < interfaceCountThreshold+10; i++ {
+			for i := 0; i < defaultInterfaceCountThreshold+10; i++ {
 				yamlStr += fmt.Sprintf(`- name: eth0.%d
   type: vlan
   state: up
@@ -486,6 +487,71 @@ routes:
 			Expect(vlan.Data).To(HaveKey("mtu"))
 			Expect(vlan.Data).To(HaveKey("mac-address"))
 			Expect(vlan.Data).To(HaveKey("lldp"))
+		})
+	})
+
+	Context("when the VLAN_FILTER_INTERFACE_COUNT_THRESHOLD env var is set", func() {
+		AfterEach(func() {
+			os.Unsetenv("VLAN_FILTER_INTERFACE_COUNT_THRESHOLD")
+		})
+
+		It("should use the env var value as the threshold", func() {
+			os.Setenv("VLAN_FILTER_INTERFACE_COUNT_THRESHOLD", "1")
+
+			// With threshold=1, even 2 interfaces should trigger stripping
+			state := nmstate.NewState(`
+interfaces:
+- name: eth0
+  state: up
+  type: ethernet
+  mtu: 1500
+  mac-address: 00:11:22:33:44:55
+- name: eth0.100
+  type: vlan
+  state: up
+  mtu: 1400
+  mac-address: 02:00:00:00:64:00
+  ipv4:
+    enabled: true
+  vlan:
+    id: 100
+    base-iface: eth0
+  lldp:
+    enabled: false
+routes:
+  config: []
+  running: []
+`)
+			result, err := filterOut(state)
+			Expect(err).ToNot(HaveOccurred())
+
+			var parsed rootState
+			err = yaml.Unmarshal(result.Raw, &parsed)
+			Expect(err).ToNot(HaveOccurred())
+
+			// VLAN should have verbose fields stripped
+			vlan := parsed.Interfaces[1]
+			Expect(vlan.Data).NotTo(HaveKey("mtu"))
+			Expect(vlan.Data).NotTo(HaveKey("mac-address"))
+			Expect(vlan.Data).NotTo(HaveKey("lldp"))
+			// Essential fields preserved
+			Expect(vlan.Data).To(HaveKey("state"))
+			Expect(vlan.Data).To(HaveKey("vlan"))
+			Expect(vlan.Data).To(HaveKey("ipv4"))
+		})
+
+		It("should fall back to default when env var is invalid", func() {
+			os.Setenv("VLAN_FILTER_INTERFACE_COUNT_THRESHOLD", "not-a-number")
+
+			Expect(getInterfaceCountThreshold()).To(Equal(defaultInterfaceCountThreshold))
+		})
+
+		It("should fall back to default when env var is zero or negative", func() {
+			os.Setenv("VLAN_FILTER_INTERFACE_COUNT_THRESHOLD", "0")
+			Expect(getInterfaceCountThreshold()).To(Equal(defaultInterfaceCountThreshold))
+
+			os.Setenv("VLAN_FILTER_INTERFACE_COUNT_THRESHOLD", "-5")
+			Expect(getInterfaceCountThreshold()).To(Equal(defaultInterfaceCountThreshold))
 		})
 	})
 })

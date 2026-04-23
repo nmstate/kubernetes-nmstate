@@ -18,6 +18,8 @@ limitations under the License.
 package state
 
 import (
+	"os"
+	"strconv"
 	"strings"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -221,15 +223,28 @@ func isUnmanaged(ifaceData map[string]interface{}) bool {
 }
 
 const (
-	// interfaceCountThreshold is the number of interfaces above which
-	// verbose fields are stripped from VLAN interfaces to reduce the
-	// NodeNetworkState object size and avoid exceeding the etcd request
-	// size limit (1.5 MB).
-	interfaceCountThreshold = 500
+	// defaultInterfaceCountThreshold is the default number of interfaces
+	// above which verbose fields are stripped from VLAN interfaces to
+	// reduce the NodeNetworkState object size and avoid exceeding the
+	// etcd request size limit (1.5 MB). Can be overridden via the
+	// VLAN_FILTER_INTERFACE_COUNT_THRESHOLD environment variable.
+	defaultInterfaceCountThreshold = 500
 
 	// vlanInterfaceType is the nmstate type string for VLAN interfaces.
 	vlanInterfaceType = "vlan"
 )
+
+// getInterfaceCountThreshold returns the interface count threshold,
+// checking the VLAN_FILTER_INTERFACE_COUNT_THRESHOLD environment variable
+// first, falling back to the default value.
+func getInterfaceCountThreshold() int {
+	if val, ok := os.LookupEnv("VLAN_FILTER_INTERFACE_COUNT_THRESHOLD"); ok {
+		if n, err := strconv.Atoi(val); err == nil && n > 0 {
+			return n
+		}
+	}
+	return defaultInterfaceCountThreshold
+}
 
 // vlanEssentialFields is the set of fields to preserve on VLAN interfaces
 // when the interface count exceeds the threshold. All other fields are
@@ -248,7 +263,7 @@ var vlanEssentialFields = map[string]struct{}{
 // NodeNetworkState from exceeding the etcd request size limit on nodes
 // with large numbers of VLANs.
 func stripVerboseVlanFields(interfaces []interfaceState) []interfaceState {
-	if len(interfaces) <= interfaceCountThreshold {
+	if len(interfaces) <= getInterfaceCountThreshold() {
 		return interfaces
 	}
 	for i := range interfaces {
