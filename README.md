@@ -86,6 +86,23 @@ pod is scheduled. Setting up the networks in a dynamic and heterogeneous cluster
 with dynamic networking requirements, is a challenge by itself - and this is
 what this project is addressing.
 
+# Quick Start (Development)
+
+```bash
+# Clone and build
+git clone https://github.com/nmstate/kubernetes-nmstate.git
+cd kubernetes-nmstate
+make build
+
+# Run unit tests
+make test/unit
+
+# Deploy to a local cluster (requires kubevirtci)
+make cluster-up cluster-sync
+```
+
+See the [developer guide](CONTRIBUTING.md) for full setup instructions.
+
 # Development and Contributing
 
 Contributions are welcome! Find details about the project's design and
