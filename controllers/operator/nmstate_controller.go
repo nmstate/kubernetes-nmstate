@@ -25,6 +25,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -53,6 +54,12 @@ import (
 
 const (
 	nmstateOperatorFieldOwner = client.FieldOwner("nmstate-operator")
+
+	// The periodic resync interval.
+	// We will re-run the reconciliation logic, even if the NMState
+	// configuration hasn't changed. This ensures that externally
+	// modified resources (e.g. namespace annotations) are restored.
+	ResyncPeriod = 5 * time.Minute
 )
 
 // NMStateReconciler reconciles a NMState object
@@ -141,7 +148,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	r.Log.Info("Reconcile complete.")
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: ResyncPeriod}, nil
 }
 
 func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
