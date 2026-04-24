@@ -1,0 +1,33 @@
+Thank you for installing {{ .Chart.Name }}.
+
+The kubernetes-nmstate operator has been deployed.
+
+Operator namespace : {{ include "kubernetes-nmstate.operatorNamespace" . }}
+Handler namespace  : {{ include "kubernetes-nmstate.handlerNamespace" . }}
+Operator image     : {{ include "kubernetes-nmstate.operatorImage" . }}
+Handler image      : {{ include "kubernetes-nmstate.handlerImage" . }}
+
+Check the operator status:
+  kubectl rollout status deployment/nmstate-operator -n {{ include "kubernetes-nmstate.operatorNamespace" . }}
+
+{{- if .Values.nmstateCR.create }}
+
+The NMState singleton CR was created. The operator will deploy the handler
+DaemonSet on nodes automatically. To watch handler pods:
+  kubectl get pods -n {{ include "kubernetes-nmstate.handlerNamespace" . }} -l component=kubernetes-nmstate-handler
+
+{{- else }}
+
+The NMState CR was NOT created — handler DaemonSet deployment is opt-in.
+To enable the handler on nodes, create the NMState resource:
+  kubectl apply -f - <<EOF
+  apiVersion: nmstate.io/v1
+  kind: NMState
+  metadata:
+    name: nmstate
+  EOF
+
+Or re-install with:
+  helm upgrade {{ .Release.Name }} charts/kubernetes-nmstate --set nmstateCR.create=true
+
+{{- end }}
