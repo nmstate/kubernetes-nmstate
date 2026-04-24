@@ -27,6 +27,9 @@ spec:
         description: kubernetes-nmstate-metrics dump nmstate metrics
         target.workload.openshift.io/management: |
           {"effect": "PreferredDuringScheduling"}
+{{- if .IsOpenShift }}
+        nmstate.io/tls-profile-hash: "{{ .TLSProfileHash }}"
+{{- end }}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -78,6 +81,8 @@ spec:
               value: "6060"
             - name: METRICS_BIND_ADDRESS
               value: ":8443"
+            - name: IS_OPENSHIFT
+              value: "{{ .IsOpenShift }}"
           ports:
           - containerPort: 8443
             name: metrics
@@ -100,10 +105,16 @@ spec:
           - name: metrics-tls
             readOnly: true
             mountPath: /tmp/k8s-metrics-server/serving-certs
+          - name: tls-config
+            readOnly: true
+            mountPath: /etc/nmstate/tls
       volumes:
         - name: metrics-tls
           secret:
             secretName: {{template "handlerPrefix" .}}openshift-nmstate-metrics
+        - name: tls-config
+          configMap:
+            name: {{template "handlerPrefix" .}}nmstate-tls-config
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -131,6 +142,9 @@ spec:
         description: kubernetes-nmstate-webhook resets NNCP status
         target.workload.openshift.io/management: |
           {"effect": "PreferredDuringScheduling"}
+{{- if .IsOpenShift }}
+        nmstate.io/tls-profile-hash: "{{ .TLSProfileHash }}"
+{{- end }}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -180,6 +194,8 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
+            - name: IS_OPENSHIFT
+              value: "{{ .IsOpenShift }}"
           ports:
           - containerPort: 9443
             name: webhook-server
@@ -211,6 +227,11 @@ spec:
           - name: tls-key-pair
             readOnly: true
             mountPath: /tmp/k8s-webhook-server/serving-certs/
+{{- if .IsOpenShift }}
+          - name: tls-config
+            readOnly: true
+            mountPath: /etc/nmstate/tls
+{{- end }}
       volumes:
         - name: tls-key-pair
           secret:
@@ -218,6 +239,11 @@ spec:
             secretName: {{template "handlerPrefix" .}}nmstate-webhook
 {{- else }}
             secretName: {{template "handlerPrefix" .}}openshift-nmstate-webhook
+{{- end }}
+{{- if .IsOpenShift }}
+        - name: tls-config
+          configMap:
+            name: {{template "handlerPrefix" .}}nmstate-tls-config
 {{- end }}
 {{- if not .IsOpenShift }}
 ---
@@ -413,6 +439,8 @@ spec:
               value: "{{ .ProbeConfiguration.DNS.Host }}"
             - name: METRICS_BIND_ADDRESS
               value: "{{ .MetricsConfiguration.BindAddress }}"
+            - name: IS_OPENSHIFT
+              value: "{{ .IsOpenShift }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
