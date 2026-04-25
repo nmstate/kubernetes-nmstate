@@ -130,12 +130,12 @@ func isInInterfaces(interfaceName string, interfaces []interfaceState) bool {
 	return false
 }
 
-func filterOutDynamicAttributes(iface map[string]interface{}) {
+func filterOutDynamicAttributes(iface map[string]any) {
 	filterOutBridgeDynamicAttributes(iface)
 	filterOutIPAddressLifetimeAttributes(iface)
 }
 
-func filterOutBridgeDynamicAttributes(iface map[string]interface{}) {
+func filterOutBridgeDynamicAttributes(iface map[string]any) {
 	// The gc-timer and hello-time are deep into linux-bridge like this
 	//    - bridge:
 	//        options:
@@ -149,7 +149,7 @@ func filterOutBridgeDynamicAttributes(iface map[string]interface{}) {
 	if !hasBridge {
 		return
 	}
-	bridge, ok := bridgeRaw.(map[string]interface{})
+	bridge, ok := bridgeRaw.(map[string]any)
 	if !ok {
 		return
 	}
@@ -158,7 +158,7 @@ func filterOutBridgeDynamicAttributes(iface map[string]interface{}) {
 	if !hasOptions {
 		return
 	}
-	options, ok := optionsRaw.(map[string]interface{})
+	options, ok := optionsRaw.(map[string]any)
 	if !ok {
 		return
 	}
@@ -167,7 +167,7 @@ func filterOutBridgeDynamicAttributes(iface map[string]interface{}) {
 	delete(options, "hello-timer")
 }
 
-func filterOutIPAddressLifetimeAttributes(iface map[string]interface{}) {
+func filterOutIPAddressLifetimeAttributes(iface map[string]any) {
 	// The preferred-life-time and valid-life-time are in IPv4/IPv6 address entries like this:
 	//    - ipv4:
 	//        address:
@@ -179,19 +179,19 @@ func filterOutIPAddressLifetimeAttributes(iface map[string]interface{}) {
 	filterOutAddressLifetimes(iface, "ipv6")
 }
 
-func filterOutAddressLifetimes(iface map[string]interface{}, ipVersion string) {
-	ip, ok := iface[ipVersion].(map[string]interface{})
+func filterOutAddressLifetimes(iface map[string]any, ipVersion string) {
+	ip, ok := iface[ipVersion].(map[string]any)
 	if !ok {
 		return
 	}
 
-	addresses, ok := ip["address"].([]interface{})
+	addresses, ok := ip["address"].([]any)
 	if !ok {
 		return
 	}
 
 	for _, addrRaw := range addresses {
-		addr, ok := addrRaw.(map[string]interface{})
+		addr, ok := addrRaw.(map[string]any)
 		if !ok {
 			continue
 		}
@@ -212,11 +212,11 @@ func filterOutInterfaces(ifacesState []interfaceState) []interfaceState {
 	return filteredInterfaces
 }
 
-func isVeth(ifaceData map[string]interface{}) bool {
+func isVeth(ifaceData map[string]any) bool {
 	return ifaceData["type"] == "veth"
 }
 
-func isUnmanaged(ifaceData map[string]interface{}) bool {
+func isUnmanaged(ifaceData map[string]any) bool {
 	return ifaceData["state"] == "ignore"
 }
 

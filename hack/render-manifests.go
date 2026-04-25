@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func exitWithError(err error, cause string, args ...interface{}) {
+func exitWithError(err error, cause string, args ...any) {
 	fmt.Fprintf(os.Stderr, "render-manifests.go: error: %v\n", errors.Wrapf(err, cause, args...))
 	os.Exit(1)
 }
