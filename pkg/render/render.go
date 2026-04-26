@@ -36,13 +36,13 @@ import (
 
 type RenderData struct {
 	Funcs template.FuncMap
-	Data  map[string]interface{}
+	Data  map[string]any
 }
 
 func MakeRenderData() RenderData {
 	return RenderData{
 		Funcs: template.FuncMap{},
-		Data:  map[string]interface{}{},
+		Data:  map[string]any{},
 	}
 }
 
