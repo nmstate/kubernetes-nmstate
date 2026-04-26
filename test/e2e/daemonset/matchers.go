@@ -35,14 +35,14 @@ type BeReadyMatcher struct {
 	obtainedDaemonSet *v1.DaemonSet
 }
 
-func (matcher *BeReadyMatcher) Match(obtained interface{}) (success bool, err error) {
+func (matcher *BeReadyMatcher) Match(obtained any) (success bool, err error) {
 	obtainedDaemonset, ok := obtained.(v1.DaemonSet)
 
 	if !ok {
 		return false, fmt.Errorf(
 			"daemonset.IsReady matcher expects a v1.DaemonSet %v %v",
 			reflect.TypeOf(obtained),
-			reflect.TypeOf(obtainedDaemonset),
+			reflect.TypeFor[v1.DaemonSet](),
 		)
 	}
 
@@ -50,11 +50,11 @@ func (matcher *BeReadyMatcher) Match(obtained interface{}) (success bool, err er
 	return matcher.expectedNumberOfPods() == matcher.availableNumberOfPods(), nil
 }
 
-func (matcher *BeReadyMatcher) FailureMessage(actual interface{}) (message string) {
+func (matcher *BeReadyMatcher) FailureMessage(actual any) (message string) {
 	return matcher.message("to equal")
 }
 
-func (matcher *BeReadyMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+func (matcher *BeReadyMatcher) NegatedFailureMessage(actual any) (message string) {
 	return matcher.message("to not equal")
 }
 
