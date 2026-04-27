@@ -70,6 +70,9 @@ var _ = BeforeSuite(func() {
 
 	testenv.Start()
 
+	By("Configuring lower retry values for E2E tests to speed up retry tests")
+	testenv.PatchHandlerRetryConfig()
+
 	portFieldName = "port"
 	miimonFormat = "%d"
 

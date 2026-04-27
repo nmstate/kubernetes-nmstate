@@ -62,6 +62,9 @@ var _ = BeforeSuite(func() {
 
 	testenv.Start()
 
+	By("Configuring lower retry values for E2E tests to speed up retry tests")
+	testenv.PatchHandlerRetryConfig()
+
 	By("Getting node list from cluster")
 	nodeList := corev1.NodeList{}
 	Expect(testenv.Client.List(context.TODO(), &nodeList, &client.ListOptions{})).To(Succeed())

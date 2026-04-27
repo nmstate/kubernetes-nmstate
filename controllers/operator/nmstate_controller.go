@@ -357,6 +357,9 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["LogLevelHandlerCommandArg"] = logLevelHandlerCommandArg
 	data.Data["HandlerReadinessProbeExtraArg"] = handlerReadinessProbeExtraArg
 	data.Data["IsOpenShift"] = r.IsOpenShift
+	data.Data["NNCPMaxRetries"] = environment.GetEnvVar("NNCP_MAX_RETRIES", "5")
+	data.Data["NNCPMaxBackoffSeconds"] = environment.GetEnvVar("NNCP_MAX_BACKOFF_SECONDS", "30")
+	data.Data["NNCPInitialBackoffSeconds"] = environment.GetEnvVar("NNCP_INITIAL_BACKOFF_SECONDS", "1")
 
 	return r.renderAndApply(ctx, instance, data, "handler", true)
 }
