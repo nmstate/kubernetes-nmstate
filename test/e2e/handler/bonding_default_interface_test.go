@@ -139,7 +139,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy bonding default interface", fun
 	})
 })
 
-func verifyBondIsUpWithPrimaryNicIP(node string, expectedBond map[string]interface{}, ip string) {
+func verifyBondIsUpWithPrimaryNicIP(node string, expectedBond map[string]any, ip string) {
 	interfacesForNode(node).Should(ContainElement(matchingBond(expectedBond)))
 
 	Eventually(func() string {
