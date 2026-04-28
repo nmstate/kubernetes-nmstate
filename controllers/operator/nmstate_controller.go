@@ -192,8 +192,8 @@ func (r *NMStateReconciler) applyCRDs(ctx context.Context, instance *nmstatev1.N
 
 func (r *NMStateReconciler) applyNamespace(ctx context.Context, instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
-	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+	data.Data["HandlerNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	data.Data["HandlerPrefix"] = environment.GetEnvVar("HANDLER_PREFIX", "")
 	data.Data["IsOpenShift"] = r.IsOpenShift
 
 	return r.renderAndApply(ctx, instance, data, "namespace", false)
@@ -201,9 +201,9 @@ func (r *NMStateReconciler) applyNamespace(ctx context.Context, instance *nmstat
 
 func (r *NMStateReconciler) applyNetworkPolicies(ctx context.Context, instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
-	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["OperatorNamespace"] = os.Getenv("OPERATOR_NAMESPACE")
-	data.Data["PluginNamespace"] = os.Getenv("HANDLER_NAMESPACE")
+	data.Data["HandlerNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	data.Data["OperatorNamespace"] = environment.GetEnvVar("OPERATOR_NAMESPACE", "")
+	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
 	data.Data["IsOpenShift"] = r.IsOpenShift
 
 	return r.renderAndApply(ctx, instance, data, "netpol", true)
@@ -211,10 +211,10 @@ func (r *NMStateReconciler) applyNetworkPolicies(ctx context.Context, instance *
 
 func (r *NMStateReconciler) applyRBAC(ctx context.Context, instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
-	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
-	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
-	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
+	data.Data["HandlerNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	data.Data["HandlerImage"] = environment.GetEnvVar("RELATED_IMAGE_HANDLER_IMAGE", "")
+	data.Data["HandlerPullPolicy"] = environment.GetEnvVar("HANDLER_IMAGE_PULL_POLICY", "")
+	data.Data["HandlerPrefix"] = environment.GetEnvVar("HANDLER_PREFIX", "")
 
 	if err := setClusterReaderExist(ctx, r.Client, data); err != nil {
 		return errors.Wrap(err, "failed checking if cluster-reader ClusterRole exists")
@@ -337,12 +337,12 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		handlerReadinessProbeExtraArg = "-vv"
 	}
 
-	data.Data["HandlerNamespace"] = os.Getenv("HANDLER_NAMESPACE")
-	data.Data["HandlerImage"] = os.Getenv("RELATED_IMAGE_HANDLER_IMAGE")
-	data.Data["HandlerPullPolicy"] = os.Getenv("HANDLER_IMAGE_PULL_POLICY")
-	data.Data["HandlerPrefix"] = os.Getenv("HANDLER_PREFIX")
-	data.Data["MonitoringNamespace"] = os.Getenv("MONITORING_NAMESPACE")
-	data.Data["KubeRBACProxyImage"] = os.Getenv("KUBE_RBAC_PROXY_IMAGE")
+	data.Data["HandlerNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	data.Data["HandlerImage"] = environment.GetEnvVar("RELATED_IMAGE_HANDLER_IMAGE", "")
+	data.Data["HandlerPullPolicy"] = environment.GetEnvVar("HANDLER_IMAGE_PULL_POLICY", "")
+	data.Data["HandlerPrefix"] = environment.GetEnvVar("HANDLER_PREFIX", "")
+	data.Data["MonitoringNamespace"] = environment.GetEnvVar("MONITORING_NAMESPACE", "")
+	data.Data["KubeRBACProxyImage"] = environment.GetEnvVar("KUBE_RBAC_PROXY_IMAGE", "")
 	data.Data["InfraNodeSelector"] = infraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = infraAffinity
@@ -418,8 +418,8 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 	if r.IsOpenShift {
 		err := r.Delete(ctx, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: os.Getenv("HANDLER_NAMESPACE"),
-				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-cert-manager",
+				Namespace: environment.GetEnvVar("HANDLER_NAMESPACE", ""),
+				Name:      environment.GetEnvVar("HANDLER_PREFIX", "") + "nmstate-cert-manager",
 			},
 		})
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -429,8 +429,8 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 		// Remove the non openshift secret
 		err = r.Delete(ctx, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: os.Getenv("HANDLER_NAMESPACE"),
-				Name:      os.Getenv("HANDLER_PREFIX") + "nmstate-webhook",
+				Namespace: environment.GetEnvVar("HANDLER_NAMESPACE", ""),
+				Name:      environment.GetEnvVar("HANDLER_PREFIX", "") + "nmstate-webhook",
 			},
 		})
 		if err != nil && !apierrors.IsNotFound(err) {

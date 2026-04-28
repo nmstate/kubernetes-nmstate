@@ -252,10 +252,7 @@ func setupTLSProfileWatcher(mgr manager.Manager, cancel context.CancelFunc) erro
 // metrics endpoint via TokenReview/SubjectAccessReview.
 func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
 	// Get metrics bind address from environment variable, with default fallback
-	metricsBindAddress := os.Getenv("METRICS_BIND_ADDRESS")
-	if metricsBindAddress == "" {
-		metricsBindAddress = ":8089"
-	}
+	metricsBindAddress := environment.GetEnvVar("METRICS_BIND_ADDRESS", ":8089")
 
 	metricsOpts := metricsserver.Options{
 		BindAddress:   metricsBindAddress,
@@ -486,9 +483,9 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		Scheme:    mgr.GetScheme(),
 		//nolint:staticcheck // TODO: migrate to GetEventRecorder
 		Recorder:           mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
-		RetriesUntilFail:   getEnvAsInt("NNCP_MAX_RETRIES", defaultRetriesUntilFail),
-		MaximumTimeBackoff: getEnvAsDuration("NNCP_MAX_BACKOFF_SECONDS", defaultMaxBackoff),
-		InitialBackoff:     getEnvAsDuration("NNCP_INITIAL_BACKOFF_SECONDS", defaultInitialBackoff),
+		RetriesUntilFail:   environment.GetEnvVarAsInt("NNCP_MAX_RETRIES", defaultRetriesUntilFail),
+		MaximumTimeBackoff: environment.GetEnvVarAsDuration("NNCP_MAX_BACKOFF_SECONDS", defaultMaxBackoff),
+		InitialBackoff:     environment.GetEnvVarAsDuration("NNCP_INITIAL_BACKOFF_SECONDS", defaultInitialBackoff),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 		return err
@@ -535,7 +532,7 @@ func checkNmstateIsWorking() error {
 
 func retrieveCertAndCAIntervals() (certificate.Options, error) {
 	certManagerOpts := certificate.Options{
-		Namespace:   os.Getenv("POD_NAMESPACE"),
+		Namespace:   environment.GetEnvVar("POD_NAMESPACE", ""),
 		WebhookName: "nmstate",
 		WebhookType: certificate.MutatingWebhook,
 		ExtraLabels: names.IncludeRelationshipLabels(nil),
@@ -664,31 +661,6 @@ func lockHandler() (*flock.Flock, error) {
 			return locked, nil
 		})
 	return handlerLock, err
-}
-
-// getEnvAsInt reads an integer from an environment variable with a default fallback.
-func getEnvAsInt(key string, defaultVal int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		} else {
-			setupLog.Info(fmt.Sprintf("WARNING: invalid integer for %s=%q, using default %d: %v", key, value, defaultVal, err))
-		}
-	}
-	return defaultVal
-}
-
-// getEnvAsDuration reads a seconds value from an environment variable and
-// returns it as a time.Duration, falling back to defaultVal if unset or invalid.
-func getEnvAsDuration(key string, defaultVal time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return time.Duration(intVal) * time.Second
-		} else {
-			setupLog.Info(fmt.Sprintf("WARNING: invalid integer for %s=%q, using default %d: %v", key, value, defaultVal, err))
-		}
-	}
-	return defaultVal
 }
 
 func dumpMetricFamiliesToStdout() int {

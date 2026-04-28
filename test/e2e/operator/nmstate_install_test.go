@@ -20,7 +20,6 @@ package operator
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
 	"time"
 
@@ -42,6 +41,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
+	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	"k8s.io/kubectl/pkg/drain"
 )
 
@@ -120,7 +120,7 @@ var _ = Describe("NMState operator", func() {
 				altOperator TestData
 			)
 			BeforeEach(func() {
-				altOperator = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE")+"-alt", manifestsDir, manifestFiles)
+				altOperator = NewOperatorTestData(environment.GetVarWithDefault("HANDLER_NAMESPACE", "nmstate")+"-alt", manifestsDir, manifestFiles)
 				By("Wait for operand to be ready")
 				EventuallyOperandIsReady(defaultOperator)
 
