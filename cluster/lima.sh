@@ -53,24 +53,22 @@ function lima::ensure_linux() {
 
     # Build the environment variable assignments with proper escaping via printf %q
     # to handle values containing spaces or special characters.
+    # Note: must be bash 3.2 compatible (no associative arrays) since macOS
+    # ships bash 3.2 and this function runs on the host before re-exec.
     local env_vars=""
-    local -A _forward_vars=(
-        [ARCHS]="${ARCHS:-amd64}"
-        [KUBEVIRT_PROVIDER]="${KUBEVIRT_PROVIDER:-}"
-        [KUBEVIRT_NUM_NODES]="${KUBEVIRT_NUM_NODES:-}"
-        [KUBEVIRT_NUM_SECONDARY_NICS]="${KUBEVIRT_NUM_SECONDARY_NICS:-}"
-        [KUBEVIRT_DEPLOY_PROMETHEUS]="${KUBEVIRT_DEPLOY_PROMETHEUS:-}"
-        [KUBEVIRT_DEPLOY_GRAFANA]="${KUBEVIRT_DEPLOY_GRAFANA:-}"
-        [KUBECONFIG]="${KUBECONFIG:-}"
-        [NM_VERSION]="${NM_VERSION:-}"
-        [NMSTATE_VERSION]="${NMSTATE_VERSION:-}"
-        [DEV_IMAGE_REGISTRY]="${DEV_IMAGE_REGISTRY:-}"
-        [IMAGE_REGISTRY]="${IMAGE_REGISTRY:-}"
-        [IMAGE_REPO]="${IMAGE_REPO:-}"
-    )
-    for key in "${!_forward_vars[@]}"; do
-        env_vars+="$key=$(printf '%q' "${_forward_vars[$key]}") "
-    done
+    _add_env() { env_vars+="$1=$(printf '%q' "$2") "; }
+    _add_env ARCHS               "${ARCHS:-amd64}"
+    _add_env KUBEVIRT_PROVIDER    "${KUBEVIRT_PROVIDER:-}"
+    _add_env KUBEVIRT_NUM_NODES   "${KUBEVIRT_NUM_NODES:-}"
+    _add_env KUBEVIRT_NUM_SECONDARY_NICS "${KUBEVIRT_NUM_SECONDARY_NICS:-}"
+    _add_env KUBEVIRT_DEPLOY_PROMETHEUS  "${KUBEVIRT_DEPLOY_PROMETHEUS:-}"
+    _add_env KUBEVIRT_DEPLOY_GRAFANA     "${KUBEVIRT_DEPLOY_GRAFANA:-}"
+    _add_env KUBECONFIG           "${KUBECONFIG:-}"
+    _add_env NM_VERSION           "${NM_VERSION:-}"
+    _add_env NMSTATE_VERSION      "${NMSTATE_VERSION:-}"
+    _add_env DEV_IMAGE_REGISTRY   "${DEV_IMAGE_REGISTRY:-}"
+    _add_env IMAGE_REGISTRY       "${IMAGE_REGISTRY:-}"
+    _add_env IMAGE_REPO           "${IMAGE_REPO:-}"
 
     # Escape script path and arguments
     local escaped_args=""
