@@ -1,0 +1,54 @@
+# Lima VM for kubernetes-nmstate development on macOS
+#
+# Provides a Linux environment for building images and deploying to an
+# external Kubernetes cluster. On Apple Silicon, the VM runs arm64 natively
+# using Apple's Virtualization.framework for near-native performance.
+#
+# Note: `make cluster-up` (kubevirtci) is not supported on macOS because
+# kubevirtci is amd64-only and Go's runtime crashes under arm64 emulation.
+# Use KUBEVIRT_PROVIDER=external with a remote x86_64 cluster instead.
+#
+# See docs/content/developer-guide/106-macos-development.md for full instructions.
+
+vmType: "vz"
+rosetta:
+  enabled: true
+
+images:
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2"
+    arch: "aarch64"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+    arch: "x86_64"
+
+cpus: 4
+memory: "8GiB"
+disk: "60GiB"
+
+mounts:
+  - location: "~"
+    writable: true
+
+containerd:
+  system: false
+  user: false
+
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      # Install Docker
+      dnf install -y dnf-plugins-core
+      dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo
+      dnf install -y docker-ce docker-ce-cli containerd.io
+      systemctl enable --now docker
+      usermod -aG docker "${LIMA_CIDATA_USER}"
+      # Install Go (match project version)
+      GO_VERSION=$(curl -s https://go.dev/VERSION?m=text | head -1)
+      curl -fsSL "https://go.dev/dl/${GO_VERSION}.linux-$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/').tar.gz" | tar -C /usr/local -xz
+      echo 'export PATH=/usr/local/go/bin:$HOME/go/bin:$PATH' > /etc/profile.d/go.sh
+      # Install kubectl
+      curl -fsSL "https://dl.k8s.io/release/$(curl -fsSL https://dl.k8s.io/release/stable.txt)/bin/linux/$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/')/kubectl" -o /usr/local/bin/kubectl
+      chmod +x /usr/local/bin/kubectl
+      # Build tools
+      dnf install -y make git gcc jq skopeo

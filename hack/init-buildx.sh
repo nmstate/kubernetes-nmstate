@@ -20,7 +20,8 @@ export DOCKER_CLI_EXPERIMENTAL=enabled
 # If there is no buildx let's install it
 if ! docker buildx > /dev/null 2>&1; then
     mkdir -p ~/.docker/cli-plugins
-    curl -L https://github.com/docker/buildx/releases/download/v0.6.3/buildx-v0.6.3.linux-amd64 --output ~/.docker/cli-plugins/docker-buildx
+    BUILDX_ARCH=$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/')
+    curl -L "https://github.com/docker/buildx/releases/download/v0.6.3/buildx-v0.6.3.linux-${BUILDX_ARCH}" --output ~/.docker/cli-plugins/docker-buildx
     chmod a+x ~/.docker/cli-plugins/docker-buildx
 fi
 

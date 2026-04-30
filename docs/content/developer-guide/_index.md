@@ -11,3 +11,4 @@ This guide covers setting up a development environment and common development wo
 - [Local Development Cluster]({{< relref "/developer-guide/103-local-cluster" >}})
 - [Code Generation]({{< relref "/developer-guide/104-code-generation" >}})
 - [Advanced Topics]({{< relref "/developer-guide/105-advanced" >}})
+- [macOS Development]({{< relref "/developer-guide/106-macos-development" >}})

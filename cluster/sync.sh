@@ -2,6 +2,9 @@
 
 set -ex
 
+source ./cluster/lima.sh
+lima::ensure_linux
+
 source ./cluster/sync-common.sh
 source ./cluster/sync-operator.sh
 

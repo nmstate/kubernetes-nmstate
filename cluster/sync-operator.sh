@@ -2,7 +2,13 @@
 
 set -ex
 
+source ./cluster/lima.sh
+lima::ensure_linux
+
 kubectl=./cluster/kubectl.sh
+MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
+OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE:-nmstate}
+HANDLER_NAMESPACE=${HANDLER_NAMESPACE:-nmstate}
 
 source ./cluster/sync-common.sh
 

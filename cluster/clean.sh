@@ -2,6 +2,9 @@
 
 set -ex
 
+source ./cluster/lima.sh
+lima::ensure_linux
+
 function eventually {
     timeout=15
     interval=5
