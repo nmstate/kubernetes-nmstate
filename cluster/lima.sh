@@ -24,20 +24,16 @@ function lima::ensure_linux() {
         if ! limactl start "${LIMA_TEMPLATE}" --name "${LIMA_VM_NAME}" --tty=false; then
             echo "ERROR: Lima VM creation failed." >&2
             echo "Serial log (last 50 lines):" >&2
-            tail -50 "${HOME}/.lima/${LIMA_VM_NAME}/serial.log" 2>/dev/null || true
+            tail -50 "${LIMA_HOME:-$HOME/.lima}/${LIMA_VM_NAME}/serial.log" 2>/dev/null || true
             exit 1
         fi
     fi
 
     local status
-    status=$(limactl list --json 2>/dev/null | python3 -c "
-import sys, json
-for line in sys.stdin:
-    obj = json.loads(line)
-    if obj.get('name') == '${LIMA_VM_NAME}':
-        print(obj.get('status', ''))
-        break
-" 2>/dev/null || echo "")
+    status=$(limactl list --json 2>/dev/null \
+        | grep "\"name\":\"${LIMA_VM_NAME}\"" \
+        | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' \
+        | head -n1)
 
     if [[ "$status" != "Running" ]]; then
         echo "Starting Lima VM '${LIMA_VM_NAME}'..." >&2
@@ -54,21 +50,34 @@ for line in sys.stdin:
     # from usermod -aG aren't loaded — docker ps would fail with permission denied.
     # Default to amd64 image builds — external clusters are x86_64 and the
     # arm64 Lima VM would otherwise produce arm64 images that can't run there.
-    local _archs="${ARCHS:-amd64}"
+
+    # Build the environment variable assignments with proper escaping via printf %q
+    # to handle values containing spaces or special characters.
+    local env_vars=""
+    local -A _forward_vars=(
+        [ARCHS]="${ARCHS:-amd64}"
+        [KUBEVIRT_PROVIDER]="${KUBEVIRT_PROVIDER:-}"
+        [KUBEVIRT_NUM_NODES]="${KUBEVIRT_NUM_NODES:-}"
+        [KUBEVIRT_NUM_SECONDARY_NICS]="${KUBEVIRT_NUM_SECONDARY_NICS:-}"
+        [KUBEVIRT_DEPLOY_PROMETHEUS]="${KUBEVIRT_DEPLOY_PROMETHEUS:-}"
+        [KUBEVIRT_DEPLOY_GRAFANA]="${KUBEVIRT_DEPLOY_GRAFANA:-}"
+        [KUBECONFIG]="${KUBECONFIG:-}"
+        [NM_VERSION]="${NM_VERSION:-}"
+        [NMSTATE_VERSION]="${NMSTATE_VERSION:-}"
+        [DEV_IMAGE_REGISTRY]="${DEV_IMAGE_REGISTRY:-}"
+        [IMAGE_REGISTRY]="${IMAGE_REGISTRY:-}"
+        [IMAGE_REPO]="${IMAGE_REPO:-}"
+    )
+    for key in "${!_forward_vars[@]}"; do
+        env_vars+="$key=$(printf '%q' "${_forward_vars[$key]}") "
+    done
+
+    # Escape script path and arguments
+    local escaped_args=""
+    for arg in "$@"; do
+        escaped_args+=" $(printf '%q' "$arg")"
+    done
 
     exec limactl shell --workdir "$(pwd)" "${LIMA_VM_NAME}" \
-        sg docker -c "\
-        ARCHS='${_archs}' \
-        KUBEVIRT_PROVIDER='${KUBEVIRT_PROVIDER:-}' \
-        KUBEVIRT_NUM_NODES='${KUBEVIRT_NUM_NODES:-}' \
-        KUBEVIRT_NUM_SECONDARY_NICS='${KUBEVIRT_NUM_SECONDARY_NICS:-}' \
-        KUBEVIRT_DEPLOY_PROMETHEUS='${KUBEVIRT_DEPLOY_PROMETHEUS:-}' \
-        KUBEVIRT_DEPLOY_GRAFANA='${KUBEVIRT_DEPLOY_GRAFANA:-}' \
-        KUBECONFIG='${KUBECONFIG:-}' \
-        NM_VERSION='${NM_VERSION:-}' \
-        NMSTATE_VERSION='${NMSTATE_VERSION:-}' \
-        DEV_IMAGE_REGISTRY='${DEV_IMAGE_REGISTRY:-}' \
-        IMAGE_REGISTRY='${IMAGE_REGISTRY:-}' \
-        IMAGE_REPO='${IMAGE_REPO:-}' \
-        bash $0 $@"
+        sg docker -c "${env_vars}bash $(printf '%q' "$0")${escaped_args}"
 }

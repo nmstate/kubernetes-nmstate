@@ -19,7 +19,12 @@ esac
 # then we shouldn't alter the existing configuration to avoid the
 # risk of possibly breaking it
 if ! grep -E '^enabled$' /proc/sys/fs/binfmt_misc/${QEMU_BINFMT} 2>/dev/null; then
-    # Use tonistiigi/binfmt which provides multi-arch images (works on both amd64 and arm64 hosts),
-    # unlike multiarch/qemu-user-static which is amd64-only.
-    ${IMAGE_BUILDER} run --rm --privileged tonistiigi/binfmt --install all
+    if [[ "$HOST_ARCH" == "aarch64" ]]; then
+        # On arm64 hosts, use tonistiigi/binfmt which provides multi-arch images,
+        # unlike multiarch/qemu-user-static which is amd64-only.
+        ${IMAGE_BUILDER} run --rm --privileged docker.io/tonistiigi/binfmt --install all
+    else
+        # On amd64 hosts, use the original multiarch/qemu-user-static.
+        ${IMAGE_BUILDER} run --rm --privileged docker.io/multiarch/qemu-user-static --reset -p yes
+    fi
 fi
