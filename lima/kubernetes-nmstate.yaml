@@ -15,9 +15,9 @@ rosetta:
   enabled: true
 
 images:
-  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-42-1.1.aarch64.qcow2"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-44-1.7.aarch64.qcow2"
     arch: "aarch64"
-  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/42/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-42-1.1.x86_64.qcow2"
+  - location: "https://download.fedoraproject.org/pub/fedora/linux/releases/44/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-44-1.7.x86_64.qcow2"
     arch: "x86_64"
 
 cpus: 4
@@ -44,7 +44,7 @@ provision:
       systemctl enable --now docker
       usermod -aG docker "${LIMA_CIDATA_USER}"
       # Install Go — pinned to match the version in build/Dockerfile
-      GO_VERSION=1.25.0
+      GO_VERSION=1.25
       curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-$(uname -m | sed 's/aarch64/arm64/;s/x86_64/amd64/').tar.gz" | tar -C /usr/local -xz
       echo 'export PATH=/usr/local/go/bin:$HOME/go/bin:$PATH' > /etc/profile.d/go.sh
       # Install kubectl

@@ -17,7 +17,7 @@ function lima::ensure_linux() {
         exit 1
     fi
 
-    if ! limactl list --json 2>/dev/null | grep -q "\"name\":\"${LIMA_VM_NAME}\""; then
+    if [[ -z $(limactl list "${LIMA_VM_NAME}" --json 2>/dev/null) ]]; then
         echo "Lima VM '${LIMA_VM_NAME}' not found. Creating it..." >&2
         echo "This will download a VM image and install dependencies (Docker, Go, etc.)." >&2
         echo "First-time setup — this is a one-time operation." >&2
@@ -30,10 +30,7 @@ function lima::ensure_linux() {
     fi
 
     local status
-    status=$(limactl list --json 2>/dev/null \
-        | grep "\"name\":\"${LIMA_VM_NAME}\"" \
-        | sed -n 's/.*"status":"\([^"]*\)".*/\1/p' \
-        | head -n1)
+    status=$(limactl list "${LIMA_VM_NAME}" --json 2>/dev/null | sed -n 's/.*"status":"\([^"]*\)".*/\1/p')
 
     if [[ "$status" != "Running" ]]; then
         echo "Starting Lima VM '${LIMA_VM_NAME}'..." >&2
