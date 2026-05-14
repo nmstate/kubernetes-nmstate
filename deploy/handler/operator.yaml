@@ -437,8 +437,6 @@ spec:
               value: "/var/k8s_nmstate/handler_lock"
             - name: PROBE_DNS_HOST
               value: "{{ .ProbeConfiguration.DNS.Host }}"
-            - name: METRICS_BIND_ADDRESS
-              value: "{{ .MetricsConfiguration.BindAddress }}"
             - name: NNCP_MAX_RETRIES
               value: "{{ .NNCPMaxRetries }}"
             - name: NNCP_MAX_BACKOFF_SECONDS

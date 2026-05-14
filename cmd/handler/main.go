@@ -221,22 +221,33 @@ func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
 }
 
 // createManager creates and configures the controller manager.
-// The metrics server always uses TLS (SecureServing). On non-OpenShift clusters
-// controller-runtime auto-generates a self-signed certificate.
-// When isOpenShift is true, authentication and authorization are enforced on the
-// metrics endpoint via TokenReview/SubjectAccessReview.
+//
+// Only the nmstate-metrics Deployment enables the metrics server: it is the
+// sole component that populates custom metrics and is wired to the
+// ServiceMonitor. All other components (handler, webhook, cert-manager)
+// disable it to avoid exposing unused HTTPS ports.
+//
+// When the metrics server is enabled, it always uses TLS (SecureServing).
+// On non-OpenShift clusters controller-runtime auto-generates a self-signed
+// certificate. When isOpenShift is true, authentication and authorization
+// are enforced on the metrics endpoint via TokenReview/SubjectAccessReview.
 func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
-	// Get metrics bind address from environment variable, with default fallback
-	metricsBindAddress := environment.GetEnvVar("METRICS_BIND_ADDRESS", ":8089")
+	var metricsOpts metricsserver.Options
 
-	metricsOpts := metricsserver.Options{
-		BindAddress:   metricsBindAddress,
-		SecureServing: true,
-		TLSOpts:       []func(*tls.Config){tlsOpts},
-	}
-
-	if isOpenShift {
-		metricsOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
+	if environment.IsMetricsManager() {
+		metricsBindAddress := environment.GetEnvVar("METRICS_BIND_ADDRESS", ":8089")
+		metricsOpts = metricsserver.Options{
+			BindAddress:   metricsBindAddress,
+			SecureServing: true,
+			TLSOpts:       []func(*tls.Config){tlsOpts},
+		}
+		if isOpenShift {
+			metricsOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
+		}
+	} else {
+		metricsOpts = metricsserver.Options{
+			BindAddress: "0",
+		}
 	}
 
 	ctrlOptions := ctrl.Options{
