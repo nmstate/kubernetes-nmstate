@@ -24,8 +24,10 @@ import (
 
 // NodeNetworkConfigurationPolicySpec defines the desired state of NodeNetworkConfigurationPolicy
 type NodeNetworkConfigurationPolicySpec struct {
-	// NodeSelector is a selector which must be true for the policy to be applied to the node.
-	// Selector which must match a node's labels for the policy to be scheduled on that node.
+	// NodeSelector is a selector that determines which nodes the policy will be applied to.
+    // It uses simple key-value label matching (equality-based selection only). All specified
+    // labels must match a node's labels for the policy to be scheduled on that node.
+    // Note: matchLabels and matchExpressions are not supported; only direct key-value pair matching is available.
 	// More info: https://kubernetes.io/docs/concepts/configuration/assign-pod-node/
 	// +optional
 	// +kubebuilder:validation:MaxProperties=256
