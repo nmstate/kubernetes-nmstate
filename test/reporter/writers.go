@@ -297,10 +297,10 @@ func writeString(writer io.Writer, message string) {
 	writer.Write([]byte(message))
 }
 
-func writeMessage(writer io.Writer, message string, args ...interface{}) {
+func writeMessage(writer io.Writer, message string, args ...any) {
 	formattedMessage := message
 	if len(args) > 0 {
-		formattedMessage = fmt.Sprintf(formattedMessage, args)
+		formattedMessage = fmt.Sprintf(formattedMessage, args...)
 	}
 	writeString(writer, formattedMessage)
 }

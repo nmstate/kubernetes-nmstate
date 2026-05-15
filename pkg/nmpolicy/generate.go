@@ -36,7 +36,7 @@ func GenerateState(
 	}
 	nmstatePolicy := struct {
 		Capture      map[string]string `json:"capture,omitempty"`
-		DesiredState nmstateapi.State  `json:"desiredState,omitempty"`
+		DesiredState nmstateapi.State  `json:"desiredState,omitzero"`
 	}{
 		Capture:      policySpec.Capture,
 		DesiredState: policySpec.DesiredState,

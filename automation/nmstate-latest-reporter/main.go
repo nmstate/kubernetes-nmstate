@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -181,12 +182,7 @@ func getEventType(buildStatus finished) string {
 }
 
 func shouldNotify(eventType string) bool {
-	for _, event := range notifyOn {
-		if event == eventType {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(notifyOn, eventType)
 }
 
 func generateMessage() (slackMessage, finished, error) {

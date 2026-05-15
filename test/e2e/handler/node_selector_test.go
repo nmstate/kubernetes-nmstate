@@ -19,6 +19,7 @@ package handler
 
 import (
 	"context"
+	"maps"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -123,9 +124,7 @@ func addLabelsToNode(nodeName string, labelsToAdd map[string]string) {
 	if len(node.Labels) == 0 {
 		node.Labels = labelsToAdd
 	} else {
-		for k, v := range labelsToAdd {
-			node.Labels[k] = v
-		}
+		maps.Copy(node.Labels, labelsToAdd)
 	}
 	err = testenv.Client.Update(context.Background(), &node)
 	ExpectWithOffset(1, err).ToNot(HaveOccurred(), "should success updating node with new labels")

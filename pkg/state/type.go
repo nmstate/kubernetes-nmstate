@@ -38,12 +38,12 @@ type routes struct {
 
 type routeState struct {
 	routeFields `yaml:",inline"`
-	Data        map[string]interface{}
+	Data        map[string]any
 }
 
 type interfaceState struct {
 	interfaceFields `yaml:",inline"`
-	Data            map[string]interface{}
+	Data            map[string]any
 }
 
 type dnsResolver struct {
@@ -52,8 +52,8 @@ type dnsResolver struct {
 }
 
 type DNSResolverData struct {
-	Search []interface{} `json:"search" yaml:"search"`
-	Server []interface{} `json:"server" yaml:"server"`
+	Search []any `json:"search" yaml:"search"`
+	Server []any `json:"server" yaml:"server"`
 }
 
 // interfaceFields allows unmarshaling directly into the defined fields

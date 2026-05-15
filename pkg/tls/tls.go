@@ -67,7 +67,7 @@ func FetchAPIServerTLSProfile(ctx context.Context, k8sClient client.Client) (TLS
 }
 
 // parseTLSSecurityProfile extracts the TLS profile type and custom spec from an unstructured APIServer object.
-func parseTLSSecurityProfile(obj map[string]interface{}) (*tlsSecurityProfile, error) {
+func parseTLSSecurityProfile(obj map[string]any) (*tlsSecurityProfile, error) {
 	profileMap, found, err := unstructured.NestedMap(obj, "spec", "tlsSecurityProfile")
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract spec.tlsSecurityProfile: %w", err)
