@@ -45,7 +45,7 @@ function digest {
 
 function push() {
     if isExternal; then
-        if [[ ! -v DEV_IMAGE_REGISTRY ]]; then
+        if [[ -z "${DEV_IMAGE_REGISTRY+x}" ]]; then
             echo "Missing DEV_IMAGE_REGISTRY variable"
             return 1
         fi

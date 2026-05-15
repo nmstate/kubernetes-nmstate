@@ -1,12 +1,13 @@
-FROM registry.access.redhat.com/ubi9/ubi AS build
+FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi AS build
 ARG GO_VERSION=1.25
+ARG TARGETARCH
 
 COPY . .
 
 RUN ./build/install-go.sh ${GO_VERSION}
 ENV PATH=/usr/local/go/bin/:$PATH
 
-RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=false go build -o manager ./cmd/handler
+RUN --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=false GOARCH=${TARGETARCH} go build -o manager ./cmd/handler
 
 FROM quay.io/centos/centos:stream9
 

@@ -2,6 +2,21 @@
 
 set -ex
 
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "ERROR: make cluster-up is not supported on macOS." >&2
+    echo "" >&2
+    echo "kubevirtci requires x86_64 Linux and cannot run under arm64 emulation." >&2
+    echo "Set up a Kubernetes cluster on a remote x86_64 Linux machine, then use:" >&2
+    echo "" >&2
+    echo "  export KUBEVIRT_PROVIDER=external" >&2
+    echo "  export KUBECONFIG=/path/to/your/cluster/kubeconfig" >&2
+    echo "  export DEV_IMAGE_REGISTRY=<your-registry>" >&2
+    echo "  make cluster-sync" >&2
+    echo "" >&2
+    echo "See docs/content/developer-guide/106-macos-development.md for details." >&2
+    exit 1
+fi
+
 source ./cluster/kubevirtci.sh
 kubevirtci::install
 
