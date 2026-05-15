@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -78,4 +79,23 @@ func FetchTLSProfileFromFile(path string) (func(*tls.Config), nmstatetls.TLSProf
 	}
 
 	return tlsOpts, spec, nil
+}
+
+// FetchTLSAdherenceFromFile reads the cluster-wide tlsAdherence policy from a
+// plain text file (mounted from a ConfigMap) and returns it. A missing file
+// or empty content is returned as the zero value ("") with no error: that is
+// the documented "no opinion" state, and matches clusters where the
+// TLSAdherence feature gate is disabled or the field has not yet been set.
+//
+// Any leading/trailing whitespace (notably the trailing newline that some
+// editors add) is trimmed before returning.
+func FetchTLSAdherenceFromFile(path string) (nmstatetls.TLSAdherencePolicy, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("failed reading TLS adherence from %s: %w", path, err)
+	}
+	return nmstatetls.TLSAdherencePolicy(strings.TrimSpace(string(data))), nil
 }

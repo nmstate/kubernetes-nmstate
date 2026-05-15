@@ -35,15 +35,22 @@ import (
 )
 
 // SecurityProfileWatcher watches the APIServer object for TLS profile changes
-// and triggers a callback when the profile changes.
+// and triggers a callback when the profile or the cluster-wide tlsAdherence
+// policy changes.
 type SecurityProfileWatcher struct {
 	client.Client
 
 	// InitialTLSProfileSpec is the TLS profile spec that was configured when the operator started.
 	InitialTLSProfileSpec TLSProfileSpec
 
-	// OnProfileChange is called when the TLS profile changes.
-	OnProfileChange func(ctx context.Context, oldTLSProfileSpec, newTLSProfileSpec TLSProfileSpec)
+	// InitialTLSAdherencePolicy is the tlsAdherence policy that was observed
+	// when the operator started. An empty value is valid and means "no
+	// opinion" (currently equivalent to LegacyAdheringComponentsOnly).
+	InitialTLSAdherencePolicy TLSAdherencePolicy
+
+	// OnProfileChange is called when the TLS profile or the tlsAdherence
+	// policy changes. Both old and new values are passed for each.
+	OnProfileChange func(ctx context.Context, oldProfile, newProfile TLSProfileSpec, oldAdherence, newAdherence TLSAdherencePolicy)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -108,11 +115,17 @@ func (r *SecurityProfileWatcher) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, fmt.Errorf("failed to get TLS profile from APIServer %s: %w", req.String(), err)
 	}
 
-	if !reflect.DeepEqual(r.InitialTLSProfileSpec, currentTLSProfileSpec) {
+	currentAdherence := parseTLSAdherence(obj.Object)
+
+	profileChanged := !reflect.DeepEqual(r.InitialTLSProfileSpec, currentTLSProfileSpec)
+	adherenceChanged := r.InitialTLSAdherencePolicy != currentAdherence
+
+	if profileChanged || adherenceChanged {
 		if r.OnProfileChange != nil {
-			r.OnProfileChange(ctx, r.InitialTLSProfileSpec, currentTLSProfileSpec)
+			r.OnProfileChange(ctx, r.InitialTLSProfileSpec, currentTLSProfileSpec, r.InitialTLSAdherencePolicy, currentAdherence)
 		}
 		r.InitialTLSProfileSpec = currentTLSProfileSpec
+		r.InitialTLSAdherencePolicy = currentAdherence
 	}
 
 	return ctrl.Result{}, nil

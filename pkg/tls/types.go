@@ -27,6 +27,31 @@ const (
 	TLSProfileCustomType       TLSProfileType = "Custom"
 )
 
+// TLSAdherencePolicy mirrors apiserver.config.openshift.io/v1 TLSAdherencePolicy.
+// It controls how strictly cluster components must honor the cluster-wide TLS profile.
+// See: https://github.com/openshift/api PR #2680.
+//
+// Behavior of the documented values:
+//   - "" (unset): no opinion, currently treated as LegacyAdheringComponentsOnly.
+//     Subject to change.
+//   - LegacyAdheringComponentsOnly: existing behavior; components that already
+//     honor the profile continue to do so.
+//   - StrictAllComponents: all components must honor the cluster TLS profile.
+//
+// The TLSAdherence feature gate (DevPreviewNoUpgrade, TechPreviewNoUpgrade)
+// guards this field on the cluster side; kubernetes-nmstate reads it
+// opportunistically and tolerates an absent or empty value.
+type TLSAdherencePolicy string
+
+const (
+	// TLSAdherenceLegacyAdheringComponentsOnly means existing behavior:
+	// only components that already honor the cluster TLS profile continue to do so.
+	TLSAdherenceLegacyAdheringComponentsOnly TLSAdherencePolicy = "LegacyAdheringComponentsOnly"
+
+	// TLSAdherenceStrictAllComponents means all components must honor the cluster TLS profile.
+	TLSAdherenceStrictAllComponents TLSAdherencePolicy = "StrictAllComponents"
+)
+
 // TLSProtocolVersion is a way to specify the protocol version used for TLS connections.
 type TLSProtocolVersion string
 

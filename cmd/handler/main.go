@@ -68,12 +68,14 @@ import (
 	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
 
 const (
-	generalExitStatus    int    = 1
-	tlsProfileConfigPath string = "/etc/nmstate/tls/profile.json"
+	generalExitStatus      int    = 1
+	tlsProfileConfigPath   string = "/etc/nmstate/tls/profile.json"
+	tlsAdherenceConfigPath string = "/etc/nmstate/tls/adherence"
 )
 
 const (
@@ -163,6 +165,24 @@ func mainHandler() int {
 			return generalExitStatus
 		}
 		platformTLSOpts = opts
+
+		// Read the cluster-wide tlsAdherence policy from the same
+		// ConfigMap. A missing file or empty value means "no opinion"
+		// (currently equivalent to LegacyAdheringComponentsOnly).
+		// kubernetes-nmstate already honors the cluster TLS profile
+		// regardless of the adherence policy, so this is logged for
+		// observability only — but the value is also exposed via
+		// ShouldHonorClusterTLSProfile for any future code path that
+		// needs to gate behavior on it.
+		adherence, err := cluster.FetchTLSAdherenceFromFile(tlsAdherenceConfigPath)
+		if err != nil {
+			setupLog.Error(err, "unable to load TLS adherence from file")
+			return generalExitStatus
+		}
+		setupLog.Info("Loaded cluster TLS configuration",
+			"adherence", string(adherence),
+			"shouldHonorClusterTLSProfile", nmstatetls.ShouldHonorClusterTLSProfile(adherence),
+		)
 	}
 
 	// Compose the TLS opts applied to all TLS-enabled servers.
