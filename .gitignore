@@ -86,4 +86,20 @@ tags
 ### Test logs ###
 test_logs
 
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+
+### JetBrains IDEs ###
+.idea/
+*.iml
+
+### Go coverage ###
+coverage.out
+coverage.html
+
+### AgentReady reports ###
+.agentready/
+
 # End of https://www.gitignore.io/api/go,vim,emacs,visualstudiocode
