@@ -1,0 +1,73 @@
+operator:
+  # Operator image
+  image:
+    registry: quay.io
+    repository: nmstate/kubernetes-nmstate-operator
+    tag: latest
+    pullPolicy: IfNotPresent
+  # Operator namespace
+  namespace: nmstate
+  resources:
+    requests:
+      cpu: "60m"
+      memory: "30Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+  # Operator environment variables
+  env:
+    enableProfiler: "False"
+    profilerPort: "6060"
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+      effect: NoSchedule
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+      effect: NoSchedule
+  affinity:
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 10
+          preference:
+            matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+  # Additional pod annotations
+  podAnnotations:
+    target.workload.openshift.io/management: |
+      {"effect": "PreferredDuringScheduling"}
+
+# Handler component (deployed as a DaemonSet *by the operator*, not by Helm directly)
+handler:
+  image:
+    registry: quay.io
+    repository: nmstate/kubernetes-nmstate-handler
+    tag: latest
+    pullPolicy: IfNotPresent
+  # handler namespace, defaults to operator.namespace when empty
+  namespace: ""
+
+# kube-rbac-proxy image
+kubeRBACProxy:
+  image: quay.io/openshift/origin-kube-rbac-proxy:4.10.0
+
+# Monitoring namespace
+monitoringNamespace: monitoring
+
+# CRD management
+crds:
+  enabled: true
+
+# Optionally create the NMState singleton CR after the operator is ready.
+nmstateCR:
+  create: true
+  # Optional node selector for the handler DaemonSet (spec.nodeSelector)
+  nodeSelector: {}
+
+# Image pull secrets
+imagePullSecrets: []
+
+# Helm name overrides
+nameOverride: ""
+fullnameOverride: ""

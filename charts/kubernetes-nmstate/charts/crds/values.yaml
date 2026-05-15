@@ -1,0 +1,2 @@
+# Set to false if you manage CRDs externally (e.g. GitOps, cluster-admin).
+enabled: true
