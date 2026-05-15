@@ -7,4 +7,5 @@ metadata:
   namespace: {{ .HandlerNamespace }}
 data:
   profile.json: '{{ .TLSProfileJSON }}'
+  adherence: '{{ .TLSAdherencePolicy }}'
 {{- end }}

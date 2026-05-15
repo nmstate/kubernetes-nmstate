@@ -392,18 +392,24 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	// On OpenShift, fetch and serialize the TLS profile so handler-deployed
 	// pods can read it from a ConfigMap instead of calling the API server.
 	// A hash annotation on the pod templates triggers a rolling restart
-	// when the TLS profile changes.
+	// when the TLS profile or the tlsAdherence policy changes.
 	if r.IsOpenShift {
-		tlsProfileSpec, err := nmstatetls.FetchAPIServerTLSProfile(ctx, r.APIClient)
+		tlsConfig, err := nmstatetls.FetchAPIServerTLSConfig(ctx, r.APIClient)
 		if err != nil {
 			return fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
 		}
-		tlsJSON, err := json.Marshal(tlsProfileSpec)
+		tlsJSON, err := json.Marshal(tlsConfig.Profile)
 		if err != nil {
 			return fmt.Errorf("failed serializing TLS profile: %w", err)
 		}
 		data.Data["TLSProfileJSON"] = string(tlsJSON)
-		data.Data["TLSProfileHash"] = fmt.Sprintf("%x", sha256.Sum256(tlsJSON))
+		data.Data["TLSAdherencePolicy"] = string(tlsConfig.Adherence)
+		// Hash both the profile and the adherence policy so that a change
+		// to either field rolls the dependent Deployments.
+		hashInput := append([]byte{}, tlsJSON...)
+		hashInput = append(hashInput, '|')
+		hashInput = append(hashInput, []byte(tlsConfig.Adherence)...)
+		data.Data["TLSProfileHash"] = fmt.Sprintf("%x", sha256.Sum256(hashInput))
 	}
 
 	return r.renderAndApply(ctx, instance, data, "handler", true)
