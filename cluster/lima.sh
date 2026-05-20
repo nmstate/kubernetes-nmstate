@@ -30,7 +30,7 @@ function lima::ensure_linux() {
     fi
 
     local status
-    status=$(limactl list "${LIMA_VM_NAME}" --json 2>/dev/null | sed -n 's/.*"status":"\([^"]*\)".*/\1/p')
+    status=$(limactl list "${LIMA_VM_NAME}" --format '{{.Status}}' 2>/dev/null)
 
     if [[ "$status" != "Running" ]]; then
         echo "Starting Lima VM '${LIMA_VM_NAME}'..." >&2
@@ -66,6 +66,9 @@ function lima::ensure_linux() {
     _add_env DEV_IMAGE_REGISTRY   "${DEV_IMAGE_REGISTRY:-}"
     _add_env IMAGE_REGISTRY       "${IMAGE_REGISTRY:-}"
     _add_env IMAGE_REPO           "${IMAGE_REPO:-}"
+    _add_env OPERATOR_NAMESPACE   "${OPERATOR_NAMESPACE:-}"
+    _add_env HANDLER_NAMESPACE    "${HANDLER_NAMESPACE:-}"
+    _add_env MANIFESTS_DIR        "${MANIFESTS_DIR:-}"
 
     # Escape script path and arguments
     local escaped_args=""
