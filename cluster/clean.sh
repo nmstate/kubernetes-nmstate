@@ -2,6 +2,9 @@
 
 set -ex
 
+source ./cluster/lima.sh
+lima::ensure_linux
+
 function eventually {
     timeout=15
     interval=5
@@ -48,11 +51,11 @@ function isRemoved {
 }
 
 function isHandlerRemoved {
-    isRemoved daemonset ${HANDLER_NAMESPACE} app=kubernetes-nmstate
+    isRemoved daemonset ${HANDLER_NAMESPACE:-nmstate} app=kubernetes-nmstate
 }
 
 function isWebhookRemoved {
-    isRemoved deployment ${HANDLER_NAMESPACE} app=kubernetes-nmstate
+    isRemoved deployment ${HANDLER_NAMESPACE:-nmstate} app=kubernetes-nmstate
 }
 
 function wait_removed() {
