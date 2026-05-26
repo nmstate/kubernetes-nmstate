@@ -3,7 +3,6 @@
   <head>
     <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link rel="alternate" type="application/rss&#43;xml" href="https://nmstate.github.io/kubernetes-nmstate/developer-guide/index.xml">
 <meta name="robots" content="index, follow">
 
 
@@ -18,25 +17,30 @@
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-144x144.png" sizes="144x144">
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-192x192.png" sizes="192x192">
 
-<title>Developer Guide | The Kubernetes NMState project</title>
-<meta name="description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
-Getting Started Testing Local Development Cluster Code Generation Advanced Topics macOS Development">
-<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/developer-guide/">
+<title>macOS Development | The Kubernetes NMState project</title>
+<meta name="description" content="This page covers developing kubernetes-nmstate on macOS using a Lima virtual machine and an external Kubernetes cluster.
+Overview On macOS (especially Apple Silicon), make cluster-up is not supported because kubevirtci is amd64-only and Go’s runtime crashes under arm64 emulation (both Rosetta and QEMU user-static). Instead, the macOS workflow uses:
+An external Kubernetes cluster running on x86_64 Linux (remote machine, cloud VM, etc.) A Lima VM on your Mac for building images and running make cluster-sync Lima provides a lightweight Linux VM with automatic file sharing — you edit code on macOS and build inside the VM transparently.">
+<meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/developer-guide/106-macos-development/">
   <meta property="og:site_name" content="The Kubernetes NMState project">
-  <meta property="og:title" content="Developer Guide">
-  <meta property="og:description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
-Getting Started Testing Local Development Cluster Code Generation Advanced Topics macOS Development">
+  <meta property="og:title" content="macOS Development">
+  <meta property="og:description" content="This page covers developing kubernetes-nmstate on macOS using a Lima virtual machine and an external Kubernetes cluster.
+Overview On macOS (especially Apple Silicon), make cluster-up is not supported because kubevirtci is amd64-only and Go’s runtime crashes under arm64 emulation (both Rosetta and QEMU user-static). Instead, the macOS workflow uses:
+An external Kubernetes cluster running on x86_64 Linux (remote machine, cloud VM, etc.) A Lima VM on your Mac for building images and running make cluster-sync Lima provides a lightweight Linux VM with automatic file sharing — you edit code on macOS and build inside the VM transparently.">
   <meta property="og:locale" content="en">
-  <meta property="og:type" content="website">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="developer-guide">
 
-  <meta itemprop="name" content="Developer Guide">
-  <meta itemprop="description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
-Getting Started Testing Local Development Cluster Code Generation Advanced Topics macOS Development">
-  <meta itemprop="wordCount" content="26">
+  <meta itemprop="name" content="macOS Development">
+  <meta itemprop="description" content="This page covers developing kubernetes-nmstate on macOS using a Lima virtual machine and an external Kubernetes cluster.
+Overview On macOS (especially Apple Silicon), make cluster-up is not supported because kubevirtci is amd64-only and Go’s runtime crashes under arm64 emulation (both Rosetta and QEMU user-static). Instead, the macOS workflow uses:
+An external Kubernetes cluster running on x86_64 Linux (remote machine, cloud VM, etc.) A Lima VM on your Mac for building images and running make cluster-sync Lima provides a lightweight Linux VM with automatic file sharing — you edit code on macOS and build inside the VM transparently.">
+  <meta itemprop="wordCount" content="696">
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Developer Guide">
-  <meta name="twitter:description" content="This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.
-Getting Started Testing Local Development Cluster Code Generation Advanced Topics macOS Development">
+  <meta name="twitter:title" content="macOS Development">
+  <meta name="twitter:description" content="This page covers developing kubernetes-nmstate on macOS using a Lima virtual machine and an external Kubernetes cluster.
+Overview On macOS (especially Apple Silicon), make cluster-up is not supported because kubevirtci is amd64-only and Go’s runtime crashes under arm64 emulation (both Rosetta and QEMU user-static). Instead, the macOS workflow uses:
+An external Kubernetes cluster running on x86_64 Linux (remote machine, cloud VM, etc.) A Lima VM on your Mac for building images and running make cluster-sync Lima provides a lightweight Linux VM with automatic file sharing — you edit code on macOS and build inside the VM transparently.">
 <link rel="preload" href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" as="style" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
 <link href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" rel="stylesheet" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
 <script
@@ -45,7 +49,7 @@ Getting Started Testing Local Development Cluster Code Generation Advanced Topic
   crossorigin="anonymous"></script>
 
   </head>
-  <body class="td-section">
+  <body class="td-page">
     <header>
       <nav class="td-navbar js-navbar-scroll" data-bs-theme="dark">
 <div class="container-fluid flex-column flex-md-row">
@@ -99,7 +103,7 @@ Getting Started Testing Local Development Cluster Code Generation Advanced Topic
 </li>
   </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child active-path" id="m-kubernetes-nmstatedeveloper-guide-li">
-  <a href="/kubernetes-nmstate/developer-guide/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstatedeveloper-guide"><span class="td-sidebar-nav-active-item">Developer Guide</span></a>
+  <a href="/kubernetes-nmstate/developer-guide/" class="align-left ps-0 td-sidebar-link td-sidebar-link__section" id="m-kubernetes-nmstatedeveloper-guide"><span class="">Developer Guide</span></a>
   <ul class="ul-2 foldable">
     <li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide101-getting-started-li">
   <a href="/kubernetes-nmstate/developer-guide/101-getting-started/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide101-getting-started"><span class="">Getting Started</span></a>
@@ -111,8 +115,8 @@ Getting Started Testing Local Development Cluster Code Generation Advanced Topic
   <a href="/kubernetes-nmstate/developer-guide/104-code-generation/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide104-code-generation"><span class="">Code Generation</span></a>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide105-advanced-li">
   <a href="/kubernetes-nmstate/developer-guide/105-advanced/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide105-advanced"><span class="">Advanced Topics</span></a>
-</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeveloper-guide106-macos-development-li">
-  <a href="/kubernetes-nmstate/developer-guide/106-macos-development/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide106-macos-development"><span class="">macOS Development</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child active-path" id="m-kubernetes-nmstatedeveloper-guide106-macos-development-li">
+  <a href="/kubernetes-nmstate/developer-guide/106-macos-development/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeveloper-guide106-macos-development"><span class="td-sidebar-nav-active-item">macOS Development</span></a>
 </li>
   </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstateexamples-li">
@@ -129,14 +133,42 @@ Getting Started Testing Local Development Cluster Code Generation Advanced Topic
           </aside>
           <aside class="d-none d-xl-block col-xl-2 td-sidebar-toc d-print-none">
             <div class="td-page-meta ms-2 pb-1 pt-2 mb-0">
-<a href="https://github.com/nmstate/kubernetes-nmstate/tree/main/content/developer-guide/_index.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/edit/main/content/developer-guide/_index.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
+<a href="https://github.com/nmstate/kubernetes-nmstate/tree/main/content/developer-guide/106-macos-development.md" class="td-page-meta--view td-page-meta__view" target="_blank" rel="noopener"><i class="fa-solid fa-file-lines fa-fw"></i> View page source</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/edit/main/content/developer-guide/106-macos-development.md" class="td-page-meta--edit td-page-meta__edit" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Edit this page</a>
   <a href="https://github.com/nmstate/kubernetes-nmstate/new/main/content/developer-guide?filename=change-me.md&amp;value=---%0Atitle%3A&#43;%22Long&#43;Page&#43;Title%22%0AlinkTitle%3A&#43;%22Short&#43;Nav&#43;Title%22%0Aweight%3A&#43;100%0Adescription%3A&#43;%3E-%0A&#43;&#43;&#43;&#43;&#43;Page&#43;description&#43;for&#43;heading&#43;and&#43;indexes.%0A---%0A%0A%23%23&#43;Heading%0A%0AEdit&#43;this&#43;template&#43;to&#43;create&#43;your&#43;new&#43;page.%0A%0A%2A&#43;Give&#43;it&#43;a&#43;good&#43;name%2C&#43;ending&#43;in&#43;%60.md%60&#43;-&#43;e.g.&#43;%60getting-started.md%60%0A%2A&#43;Edit&#43;the&#43;%22front&#43;matter%22&#43;section&#43;at&#43;the&#43;top&#43;of&#43;the&#43;page&#43;%28weight&#43;controls&#43;how&#43;its&#43;ordered&#43;amongst&#43;other&#43;pages&#43;in&#43;the&#43;same&#43;directory%3B&#43;lowest&#43;number&#43;first%29.%0A%2A&#43;Add&#43;a&#43;good&#43;commit&#43;message&#43;at&#43;the&#43;bottom&#43;of&#43;the&#43;page&#43;%28%3C80&#43;characters%3B&#43;use&#43;the&#43;extended&#43;description&#43;field&#43;for&#43;more&#43;detail%29.%0A%2A&#43;Create&#43;a&#43;new&#43;branch&#43;so&#43;you&#43;can&#43;preview&#43;your&#43;new&#43;file&#43;and&#43;request&#43;a&#43;review&#43;via&#43;Pull&#43;Request.%0A" class="td-page-meta--child td-page-meta__child" target="_blank" rel="noopener"><i class="fa-solid fa-pen-to-square fa-fw"></i> Create child page</a>
-  <a href="https://github.com/nmstate/kubernetes-nmstate/issues/new?title=Developer%20Guide" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
+  <a href="https://github.com/nmstate/kubernetes-nmstate/issues/new?title=macOS%20Development" class="td-page-meta--issue td-page-meta__issue" target="_blank" rel="noopener"><i class="fa-solid fa-list-check fa-fw"></i> Create documentation issue</a>
   
 </div>
 
-            
+            <div class="td-toc">
+        <nav id="TableOfContents">
+  <ul>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#prerequisites">Prerequisites</a></li>
+    <li><a href="#quick-start">Quick Start</a></li>
+    <li><a href="#how-it-works">How It Works</a></li>
+    <li><a href="#workflow">Workflow</a></li>
+    <li><a href="#configuration">Configuration</a>
+      <ul>
+        <li><a href="#vm-name">VM Name</a></li>
+        <li><a href="#environment-variables">Environment Variables</a></li>
+      </ul>
+    </li>
+    <li><a href="#stopping-and-restarting">Stopping and Restarting</a></li>
+    <li><a href="#cleanup">Cleanup</a></li>
+    <li><a href="#troubleshooting">Troubleshooting</a>
+      <ul>
+        <li><a href="#docker-socket-permissions">Docker socket permissions</a></li>
+        <li><a href="#registry-authentication">Registry authentication</a></li>
+        <li><a href="#disk-space">Disk space</a></li>
+        <li><a href="#manual-shell-access">Manual shell access</a></li>
+      </ul>
+    </li>
+    <li><a href="#why-not-cluster-up-on-macos">Why Not cluster-up on macOS?</a></li>
+  </ul>
+</nav>
+      </div>
+    
             
 
           </aside>
@@ -144,71 +176,112 @@ Getting Started Testing Local Development Cluster Code Generation Advanced Topic
             
   
 
-            <nav aria-label="breadcrumb" class="td-breadcrumbs td-breadcrumbs__single">
+            <nav aria-label="breadcrumb" class="td-breadcrumbs">
   <ol class="breadcrumb">
+  <li class="breadcrumb-item">
+    <a href="/kubernetes-nmstate/developer-guide/">Developer Guide</a></li>
   <li class="breadcrumb-item active" aria-current="page">
-    Developer Guide</li>
+    macOS Development</li>
   </ol>
 </nav>
             
 <div class="td-content">
-	<h1>Developer Guide</h1>
-  
+	<h1>macOS Development</h1>
+	
 	<header class="article-meta">
 		
 </header>
-	<p>This guide covers setting up a development environment and common development workflows for kubernetes-nmstate.</p>
+	<p>This page covers developing kubernetes-nmstate on macOS using a <a href="https://lima-vm.io/">Lima</a> virtual machine and an external Kubernetes cluster.</p>
+<h2 id="overview">Overview</h2>
+<p>On macOS (especially Apple Silicon), <code>make cluster-up</code> is <strong>not supported</strong> because kubevirtci is amd64-only and Go&rsquo;s runtime crashes under arm64 emulation (both Rosetta and QEMU user-static). Instead, the macOS workflow uses:</p>
+<ol>
+<li>An <strong>external Kubernetes cluster</strong> running on x86_64 Linux (remote machine, cloud VM, etc.)</li>
+<li>A <strong>Lima VM</strong> on your Mac for building images and running <code>make cluster-sync</code></li>
+</ol>
+<p>Lima provides a lightweight Linux VM with automatic file sharing — you edit code on macOS and build inside the VM transparently.</p>
+<h2 id="prerequisites">Prerequisites</h2>
+<p>Install Lima via Homebrew:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>brew install lima
+</span></span></code></pre></div><p>You also need an x86_64 Linux machine with a running Kubernetes cluster. See the <a href="/kubernetes-nmstate/developer-guide/103-local-cluster/">Local Development Cluster</a> page for how to set one up with <code>make cluster-up</code> on Linux.</p>
+<h2 id="quick-start">Quick Start</h2>
+<p>Set up your environment:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>export KUBEVIRT_PROVIDER<span style="color:#f92672">=</span>external
+</span></span><span style="display:flex;"><span>export KUBECONFIG<span style="color:#f92672">=</span>/path/to/your/cluster/kubeconfig
+</span></span><span style="display:flex;"><span>export DEV_IMAGE_REGISTRY<span style="color:#f92672">=</span>&lt;your-registry&gt;   <span style="color:#75715e"># e.g., quay.io/yourusername</span>
+</span></span></code></pre></div><p>Then build and deploy:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>make cluster-sync
+</span></span></code></pre></div><p>On macOS, <code>cluster-sync</code> detects Darwin, ensures the Lima VM is running (creating it automatically on first use), and re-executes itself inside the VM. Inside the VM, it builds container images, pushes them to your registry, and deploys to the external cluster. This is completely transparent.</p>
+<h2 id="how-it-works">How It Works</h2>
+<p>The cluster scripts that support macOS (<code>cluster/sync.sh</code>, <code>cluster/clean.sh</code>, etc.) source <code>cluster/lima.sh</code> and call <code>lima::ensure_linux</code> at the top. This function:</p>
+<ol>
+<li>Checks if running on macOS (on Linux, it returns immediately — zero overhead)</li>
+<li>Verifies Lima is installed</li>
+<li>Creates the VM from <code>lima/kubernetes-nmstate.yaml</code> if it doesn&rsquo;t exist</li>
+<li>Starts the VM if it&rsquo;s stopped</li>
+<li>Re-executes the same script inside the VM via <code>limactl shell</code>, forwarding all relevant environment variables (including <code>KUBEVIRT_PROVIDER</code>, <code>KUBECONFIG</code>, <code>DEV_IMAGE_REGISTRY</code>)</li>
+</ol>
+<p>Scripts that require kubevirtci (<code>cluster/up.sh</code>, <code>cluster/down.sh</code>) detect macOS and exit with a helpful error message instead.</p>
+<h2 id="workflow">Workflow</h2>
 <ul>
-<li><a href="/kubernetes-nmstate/developer-guide/101-getting-started/">Getting Started</a></li>
-<li><a href="/kubernetes-nmstate/developer-guide/102-testing/">Testing</a></li>
-<li><a href="/kubernetes-nmstate/developer-guide/103-local-cluster/">Local Development Cluster</a></li>
-<li><a href="/kubernetes-nmstate/developer-guide/104-code-generation/">Code Generation</a></li>
-<li><a href="/kubernetes-nmstate/developer-guide/105-advanced/">Advanced Topics</a></li>
-<li><a href="/kubernetes-nmstate/developer-guide/106-macos-development/">macOS Development</a></li>
+<li><strong>Edit code</strong> using your macOS editor or IDE — changes are immediately visible inside the VM via Lima&rsquo;s shared mount</li>
+<li><strong>Run <code>make cluster-sync</code></strong> from your macOS terminal to build and deploy</li>
+<li><strong>Run <code>make cluster-clean</code></strong> to clean up deployed resources</li>
+<li><strong>Run unit tests</strong> inside the VM: <code>limactl shell kubernetes-nmstate</code> then <code>make test/unit</code></li>
+<li><strong>Manage the external cluster</strong> (up/down) directly on the Linux machine</li>
 </ul>
+<h2 id="configuration">Configuration</h2>
+<h3 id="vm-name">VM Name</h3>
+<p>The default Lima VM name is <code>kubernetes-nmstate</code>. Override it with:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>export LIMA_VM_NAME<span style="color:#f92672">=</span>my-custom-vm
+</span></span><span style="display:flex;"><span>make cluster-sync
+</span></span></code></pre></div><h3 id="environment-variables">Environment Variables</h3>
+<p>All standard environment variables are forwarded into the VM automatically:</p>
+<ul>
+<li><code>KUBEVIRT_PROVIDER</code>, <code>KUBECONFIG</code></li>
+<li><code>KUBEVIRT_NUM_NODES</code>, <code>KUBEVIRT_NUM_SECONDARY_NICS</code></li>
+<li><code>KUBEVIRT_DEPLOY_PROMETHEUS</code>, <code>KUBEVIRT_DEPLOY_GRAFANA</code></li>
+<li><code>NM_VERSION</code>, <code>NMSTATE_VERSION</code></li>
+<li><code>DEV_IMAGE_REGISTRY</code>, <code>IMAGE_REGISTRY</code>, <code>IMAGE_REPO</code></li>
+</ul>
+<p><strong>Important</strong>: <code>KUBECONFIG</code> must point to a file under your home directory (<code>~</code>) since that&rsquo;s what Lima mounts into the VM.</p>
+<h2 id="stopping-and-restarting">Stopping and Restarting</h2>
+<p>Stop the VM (preserves state):</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl stop kubernetes-nmstate
+</span></span></code></pre></div><p>Restart it later:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl start kubernetes-nmstate
+</span></span></code></pre></div><p>Or just run a make target — the scripts will start the VM automatically if it&rsquo;s stopped.</p>
+<h2 id="cleanup">Cleanup</h2>
+<p>Delete the VM entirely:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl delete kubernetes-nmstate
+</span></span></code></pre></div><h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="docker-socket-permissions">Docker socket permissions</h3>
+<p>If you see <code>permission denied</code> errors when running Docker commands inside the VM, your user may not have picked up the <code>docker</code> group yet. Run:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl shell kubernetes-nmstate
+</span></span><span style="display:flex;"><span>newgrp docker
+</span></span></code></pre></div><h3 id="registry-authentication">Registry authentication</h3>
+<p>If <code>make cluster-sync</code> fails with <code>unauthorized: access to the requested resource is not authorized</code>, the Lima VM doesn&rsquo;t have your container registry credentials. macOS Docker Desktop stores credentials in the macOS Keychain via the <code>osxkeychain</code> helper, which isn&rsquo;t available inside the VM. Log in to your registry inside the VM:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl shell kubernetes-nmstate
+</span></span><span style="display:flex;"><span>docker login quay.io
+</span></span></code></pre></div><p>You only need to do this once — the credentials are stored in <code>~/.docker/config.json</code> which persists across VM restarts.</p>
+<h3 id="disk-space">Disk space</h3>
+<p>If you run out of space in the VM, delete unused Docker images:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl shell kubernetes-nmstate
+</span></span><span style="display:flex;"><span>docker system prune -a
+</span></span></code></pre></div><h3 id="manual-shell-access">Manual shell access</h3>
+<p>For debugging or running commands not covered by the transparent integration:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span>limactl shell kubernetes-nmstate
+</span></span><span style="display:flex;"><span>cd /Users/&lt;your-user&gt;/Developer/kubernetes-nmstate
+</span></span></code></pre></div><h2 id="why-not-cluster-up-on-macos">Why Not cluster-up on macOS?</h2>
+<p>kubevirtci provisions Kubernetes nodes as Docker containers running x86_64 Linux. On Apple Silicon Macs, these containers need emulation:</p>
+<ul>
+<li><strong>Rosetta / qemu-user-static</strong> (user-mode emulation): Go&rsquo;s garbage collector crashes because its <code>lfstack</code> pointer packing assumes a 48-bit x86_64 address space, but arm64 emulation maps memory at addresses that overflow this packing.</li>
+<li><strong>QEMU full system emulation</strong>: Works correctly but is too slow — kubevirtci nodes take 30+ minutes to boot and are unusable for development.</li>
+</ul>
+<p>Until kubevirtci provides native arm64 images, an external x86_64 cluster is the recommended approach.</p>
 
-  <div class="section-index">
-    
-    
-    <hr class="panel-line">
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/developer-guide/101-getting-started/">Getting Started</a>
-                </h5>
-                <p></p>
-            </div>
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/developer-guide/102-testing/">Testing</a>
-                </h5>
-                <p></p>
-            </div>
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/developer-guide/103-local-cluster/">Local Development Cluster</a>
-                </h5>
-                <p></p>
-            </div>
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/developer-guide/104-code-generation/">Code Generation</a>
-                </h5>
-                <p></p>
-            </div>
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/developer-guide/105-advanced/">Advanced Topics</a>
-                </h5>
-                <p></p>
-            </div>
-        <div class="entry">
-                <h5>
-                    <a href="/kubernetes-nmstate/developer-guide/106-macos-development/">macOS Development</a>
-                </h5>
-                <p></p>
-            </div>
-        </div>
+	
 </div>
+
 
           </main>
         </div>
