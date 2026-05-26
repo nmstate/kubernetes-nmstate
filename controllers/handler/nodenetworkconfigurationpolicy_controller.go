@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	goruntime "runtime"
 	"sort"
 	"strconv"
 	"time"
@@ -59,6 +60,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/policyconditions"
+	"github.com/nmstate/kubernetes-nmstate/pkg/qeth"
 	"github.com/nmstate/kubernetes-nmstate/pkg/selectors"
 )
 
@@ -184,6 +186,21 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	}
 	previousConditions := &enactmentInstance.Status.Conditions
 	enactmentConditions := enactmentconditions.New(r.APIClient, nmstateapi.EnactmentKey(nodeName, instance.Name))
+	if goruntime.GOARCH == "s390x" {
+		vniccHook := qeth.NewVniccHook(log)
+		cleanedState, err := vniccHook.ProcessAndStrip(enactmentInstance.Status.DesiredState)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("qeth vnicc pre-processing failed: %w", err)
+		}
+		enactmentInstance.Status.DesiredState = cleanedState
+		// Strip from policy spec (used by nmpolicy.GenerateState → nmstatectl policy)
+		// Modified in-memory only — NOT written back to Kubernetes
+		cleanedSpecState, err := vniccHook.ProcessAndStrip(instance.Spec.DesiredState)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("qeth vnicc pre-processing (spec) failed: %w", err)
+		}
+		instance.Spec.DesiredState = cleanedSpecState
+	}
 
 	err = r.fillInEnactmentStatus(ctx, instance, enactmentInstance, enactmentConditions)
 	if err != nil {
