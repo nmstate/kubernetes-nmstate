@@ -87,6 +87,9 @@ linters:
       - std-error-handling
     rules:
       - linters:
+          - lll
+        source: "\\+kubebuilder:rbac:"
+      - linters:
           - dupl
           - gocritic
           - mnd

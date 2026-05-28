@@ -63,7 +63,7 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/nmstate/kubernetes-nmstate-operator:latest
-    createdAt: "2026-03-25T12:36:37Z"
+    createdAt: "2026-05-29T12:19:37Z"
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
     operatorframework.io/suggested-namespace: nmstate
@@ -112,14 +112,27 @@ spec:
           - configmaps
           - endpoints
           - events
-          - namespaces
-          - persistentvolumeclaims
-          - pods
-          - secrets
           - serviceaccounts
           - services
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - namespaces
+          verbs:
+          - create
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - ""
           resources:
@@ -128,20 +141,48 @@ spec:
           - get
           - list
         - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+          - list
+          - watch
+        - apiGroups:
+          - ""
+          resources:
+          - secrets
+          verbs:
+          - delete
+          - get
+          - list
+          - watch
+        - apiGroups:
           - admissionregistration.k8s.io
           resources:
           - mutatingwebhookconfigurations
           - validatingadmissionpolicies
           - validatingadmissionpolicybindings
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apiextensions.k8s.io
-          - nmstate.io
           resources:
-          - '*'
+          - customresourcedefinitions
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - apps
           resources:
@@ -150,7 +191,13 @@ spec:
           - replicasets
           - statefulsets
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - config.openshift.io
           resources:
@@ -164,7 +211,13 @@ spec:
           resources:
           - consoleplugins
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
         - apiGroups:
           - monitoring.coreos.com
           resources:
@@ -182,7 +235,39 @@ spec:
           resources:
           - networkpolicies
           verbs:
-          - '*'
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - nmstate.io
+          resources:
+          - nmstates
+          - nodenetworkconfigurationenactments
+          - nodenetworkconfigurationpolicies
+          - nodenetworkstates
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - nmstate.io
+          resources:
+          - nmstates/status
+          - nodenetworkconfigurationenactments/status
+          - nodenetworkconfigurationpolicies/status
+          - nodenetworkstates/status
+          verbs:
+          - get
+          - patch
+          - update
         - apiGroups:
           - operator.openshift.io
           resources:
@@ -193,14 +278,45 @@ spec:
           - update
           - watch
         - apiGroups:
+          - policy
+          resources:
+          - poddisruptionbudgets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
           - rbac.authorization.k8s.io
           resources:
           - clusterrolebindings
-          - clusterroles
           - rolebindings
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - rbac.authorization.k8s.io
+          resources:
+          - clusterroles
           - roles
           verbs:
-          - '*'
+          - bind
+          - create
+          - delete
+          - escalate
+          - get
+          - list
+          - patch
+          - update
+          - watch
         serviceAccountName: nmstate-operator
       deployments:
       - label:
@@ -308,24 +424,6 @@ spec:
               - effect: NoSchedule
                 key: node-role.kubernetes.io/master
                 operator: Exists
-      permissions:
-      - rules:
-        - apiGroups:
-          - apps
-          resources:
-          - daemonsets
-          - deployments
-          - replicasets
-          - statefulsets
-          verbs:
-          - '*'
-        - apiGroups:
-          - policy
-          resources:
-          - poddisruptionbudgets
-          verbs:
-          - '*'
-        serviceAccountName: nmstate-operator
     strategy: deployment
   installModes:
   - supported: false
