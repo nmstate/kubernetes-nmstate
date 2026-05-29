@@ -177,7 +177,7 @@ make cluster-clean
 ```
 
 Cluster configuration via environment variables:
-- `KUBEVIRT_PROVIDER`: Kubernetes version (default: k8s-1.32)
+- `KUBEVIRT_PROVIDER`: Kubernetes version (default: k8s-1.34)
 - `KUBEVIRT_NUM_NODES`: Number of nodes (default: 3)
 - `KUBEVIRT_NUM_SECONDARY_NICS`: Secondary NICs per node (default: 2)
 - `KUBECONFIG`: Path to kubeconfig (auto-detected via ./cluster/kubeconfig.sh)
