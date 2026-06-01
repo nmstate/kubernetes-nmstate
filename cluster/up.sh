@@ -28,6 +28,14 @@ fi
 
 echo 'Upgrading NetworkManager and enabling and starting up openvswitch'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
+    # Blacklist the igb kernel module to prevent RTNL lock contention.
+    # kubevirtci VMs include an emulated Intel 82576 (igb) NIC for SRIOV
+    # testing that kubernetes-nmstate does not use. The igb watchdog task
+    # can stall on emulated register reads, holding a spinlock that blocks
+    # igb_get_stats64 under the RTNL mutex and deadlocking all netlink
+    # operations (including nmstatectl).
+    ./cluster/cli.sh ssh ${node} -- 'for dev in /sys/class/net/*; do [ -L "$dev/device/driver" ] && [ "$(basename "$(readlink "$dev/device/driver")")" = "igb" ] && sudo ip link set dev "${dev##*/}" down; done; sudo modprobe -r igb' || true
+    ./cluster/cli.sh ssh ${node} -- 'echo "blacklist igb" | sudo tee /etc/modprobe.d/blacklist-igb.conf > /dev/null'
     if [[ "$NM_VERSION" == "latest" ]]; then
         echo "Installing NetworkManager from copr networkmanager/NetworkManager-main"
         ./cluster/cli.sh ssh ${node} -- sudo dnf install -y dnf-plugins-core
