@@ -10,14 +10,27 @@ rules:
   - configmaps
   - endpoints
   - events
-  - namespaces
-  - persistentvolumeclaims
-  - pods
-  - secrets
   - serviceaccounts
   - services
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - ""
   resources:
@@ -26,20 +39,48 @@ rules:
   - get
   - list
 - apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - delete
+  - get
+  - list
+  - watch
+- apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
   - validatingadmissionpolicies
   - validatingadmissionpolicybindings
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - apiextensions.k8s.io
-  - nmstate.io
   resources:
-  - '*'
+  - customresourcedefinitions
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - apps
   resources:
@@ -48,7 +89,13 @@ rules:
   - replicasets
   - statefulsets
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - config.openshift.io
   resources:
@@ -62,7 +109,13 @@ rules:
   resources:
   - consoleplugins
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - monitoring.coreos.com
   resources:
@@ -80,7 +133,39 @@ rules:
   resources:
   - networkpolicies
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nmstates
+  - nodenetworkconfigurationenactments
+  - nodenetworkconfigurationpolicies
+  - nodenetworkstates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nmstates/status
+  - nodenetworkconfigurationenactments/status
+  - nodenetworkconfigurationpolicies/status
+  - nodenetworkstates/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - operator.openshift.io
   resources:
@@ -91,33 +176,42 @@ rules:
   - update
   - watch
 - apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterrolebindings
-  - clusterroles
-  - rolebindings
-  - roles
-  verbs:
-  - '*'
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: nmstate-operator
-  namespace: '{{ .OperatorNamespace }}'
-rules:
-- apiGroups:
-  - apps
-  resources:
-  - daemonsets
-  - deployments
-  - replicasets
-  - statefulsets
-  verbs:
-  - '*'
-- apiGroups:
   - policy
   resources:
   - poddisruptionbudgets
   verbs:
-  - '*'
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - rolebindings
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterroles
+  - roles
+  verbs:
+  - bind
+  - create
+  - delete
+  - escalate
+  - get
+  - list
+  - patch
+  - update
+  - watch

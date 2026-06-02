@@ -49,7 +49,9 @@ rules:
   - replicasets
   - statefulsets
   verbs:
-  - '*'
+  - get
+  - list
+  - watch
 - apiGroups:
   - apps
   resourceNames:
@@ -91,43 +93,97 @@ metadata:
   name: {{template "handlerPrefix" .}}nmstate-handler
   namespace: {{ .HandlerNamespace }}
 rules:
+# Webhooks: cert-manager reads and updates CA bundles on mutating webhooks.
+# Validating webhooks are only watched, never written.
 - apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
   - validatingwebhookconfigurations
   verbs:
-  - '*'
+  - get
+  - list
+  - watch
+# nmstate.io: explicit resources with minimum required verbs.
+# NodeNetworkState: handler creates and updates state reports.
 - apiGroups:
   - nmstate.io
   resources:
-  - '*'
+  - nodenetworkstates
   verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - pods
-  - nodes
-  - namespaces
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - list
   - get
+  - list
+  - watch
   - create
   - update
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nodenetworkstates/status
+  verbs:
+  - get
+  - update
+# NodeNetworkConfigurationPolicy: handler reads policies and updates status.
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nodenetworkconfigurationpolicies
+  verbs:
+  - get
+  - list
   - watch
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nodenetworkconfigurationpolicies/status
+  verbs:
+  - get
+  - update
+# NodeNetworkConfigurationEnactment: handler creates, deletes, and updates status.
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nodenetworkconfigurationenactments
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - nmstate.io
+  resources:
+  - nodenetworkconfigurationenactments/status
+  verbs:
+  - get
+  - update
+# Nodes: handler only reads node objects for selectors and state reporting.
 - apiGroups:
   - ""
   resources:
-  - configmaps
+  - nodes
   verbs:
-  - "*"
+  - get
+  - list
+  - watch
+# Namespaces: handler only reads the default namespace as an API connectivity probe.
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
+  resourceNames:
+  - default
+  verbs:
+  - get
+# Auth delegation for the webhook server.
 - apiGroups:
   - authentication.k8s.io
   resources:

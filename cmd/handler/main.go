@@ -257,6 +257,10 @@ func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool
 
 	if environment.IsHandler() {
 		cacheResourcesOnNodes(&ctrlOptions)
+	} else if environment.IsCertManager() {
+		if err := restrictCertManagerCache(&ctrlOptions); err != nil {
+			return nil, err
+		}
 	}
 
 	setupLog.Info("Creating manager")
@@ -441,6 +445,29 @@ func cacheResourcesOnNodes(ctrlOptions *ctrl.Options) {
 			},
 		},
 	}
+}
+
+// restrictCertManagerCache scopes the Secret informer to the handler namespace.
+// The cert-manager only reads and writes Secrets in its own namespace (POD_NAMESPACE),
+// so a cluster-wide cache is unnecessary and would require cluster-wide RBAC.
+func restrictCertManagerCache(ctrlOptions *ctrl.Options) error {
+	handlerNamespace := environment.GetEnvVar("POD_NAMESPACE", "")
+	if handlerNamespace == "" {
+		handlerNamespace = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	}
+	if handlerNamespace == "" {
+		return fmt.Errorf("failed to restrict cert-manager cache: neither POD_NAMESPACE nor HANDLER_NAMESPACE is set")
+	}
+	ctrlOptions.Cache = cache.Options{
+		ByObject: map[client.Object]cache.ByObject{
+			&corev1.Secret{}: {
+				Namespaces: map[string]cache.Config{
+					handlerNamespace: {},
+				},
+			},
+		},
+	}
+	return nil
 }
 
 func setupHandlerControllers(mgr manager.Manager) error {
