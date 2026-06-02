@@ -62,6 +62,8 @@ main() {
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
     make cluster-sync
 
+    ./hack/detach-igb-workers.sh
+
     make E2E_TEST_TIMEOUT=2h E2E_TEST_ARGS="--no-color --output-dir=$ARTIFACTS --junit-report=junit.functest.xml" test-e2e-handler
 }
 
