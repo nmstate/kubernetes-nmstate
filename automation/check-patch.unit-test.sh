@@ -12,6 +12,11 @@ main() {
     cd ${TMP_PROJECT_PATH}
     export ARCHS="amd64 arm64"
     make all
+    # Also build the handler with nmstate from the git Copr (NMSTATE_SOURCE=git),
+    # the same code path exercised by periodic-knmstate-e2e-handler-k8s-latest.
+    # This shifts-left multi-arch Copr/chroot regressions to per-PR CI instead of
+    # only catching them in the nightly periodic job.
+    make NMSTATE_VERSION=latest handler
     make test-reporter
     make UNIT_TEST_ARGS="--output-dir=$ARTIFACTS --no-color --compilers=2" test/unit
 }
