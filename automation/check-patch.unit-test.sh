@@ -12,6 +12,9 @@ main() {
     cd ${TMP_PROJECT_PATH}
     export ARCHS="amd64 arm64"
     make all
+    # Verify handler also builds with nmstate from git copr (NMSTATE_SOURCE=git),
+    # the same code path used by periodic-knmstate-e2e-handler-k8s-latest.
+    make NMSTATE_VERSION=latest handler
     make test-reporter
     make UNIT_TEST_ARGS="--output-dir=$ARTIFACTS --no-color --compilers=2" test/unit
 }
