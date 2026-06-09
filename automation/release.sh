@@ -10,6 +10,8 @@
 git config credential.helper '!f() { sleep 1; echo "username=${GITHUB_USER}"; echo "password=${GITHUB_TOKEN}"; }; f'
 
 source automation/check-patch.setup.sh
+source automation/publish-release.env
+
 cd ${TMP_PROJECT_PATH}
 make \
     IMAGE_REGISTRY=${IMAGE_REGISTRY:-quay.io}  \
