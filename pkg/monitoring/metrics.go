@@ -20,7 +20,6 @@ package monitoring
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	pgo "github.com/prometheus/client_model/go"
-	"k8s.io/utils/ptr"
 )
 
 var (
@@ -88,8 +87,8 @@ func Families() []pgo.MetricFamily {
 	for _, gauge := range gaugeOpts {
 		metricTypeGauge := pgo.MetricType_GAUGE
 		metricFamilies = append(metricFamilies, pgo.MetricFamily{
-			Name: ptr.To(gauge.Name),
-			Help: ptr.To(gauge.Help),
+			Name: new(gauge.Name),
+			Help: new(gauge.Help),
 			Type: &metricTypeGauge,
 		})
 	}
