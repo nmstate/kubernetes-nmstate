@@ -158,6 +158,12 @@ rules:
 - apiGroups:
   - nmstate.io
   resources:
+  - nmstates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - nmstate.io
+  resources:
   - nmstates/status
   - nodenetworkconfigurationenactments/status
   - nodenetworkconfigurationpolicies/status
