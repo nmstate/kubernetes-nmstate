@@ -92,6 +92,7 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings;rolebindings,verbs=get;list;watch;create;update;patch;delete
 // nmstate.io: explicit resources instead of wildcard; includes /status subresources.
 // +kubebuilder:rbac:groups=nmstate.io,resources=nmstates;nodenetworkstates;nodenetworkconfigurationpolicies;nodenetworkconfigurationenactments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=nmstate.io,resources=nmstates/finalizers,verbs=update
 // +kubebuilder:rbac:groups=nmstate.io,resources=nmstates/status;nodenetworkstates/status;nodenetworkconfigurationpolicies/status;nodenetworkconfigurationenactments/status,verbs=get;update;patch
 // CRDs: operator manages the 3 nmstate CRDs — no need for wildcard over all apiextensions resources.
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=get;list;watch;create;update;patch;delete
