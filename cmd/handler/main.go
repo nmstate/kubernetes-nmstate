@@ -28,6 +28,7 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -333,7 +334,13 @@ func startManager(mgr manager.Manager, ctx context.Context) int {
 }
 
 // cleanStaleUnavailableCounts cleans up stale unavailable node counts that have been
-// left in NNCP status after unexpected cluster reboots.
+// left in NNCP status after unexpected handler restarts or cluster reboots.
+//
+// At handler startup, no applies are in progress for this node. Any enactment that
+// is NOT in Available=True state may have a stale UnavailableNodeCountMap entry from
+// a previous interrupted reconcile. We check !IsAvailable rather than IsProgressing
+// because crashes can leave enactments in various non-progressing states (Failing,
+// Pending, empty conditions) that still have stale counts.
 func cleanStaleUnavailableCounts(mgr manager.Manager) error {
 	ctx := context.Background()
 	nodeName := environment.NodeName()
@@ -350,14 +357,17 @@ func cleanStaleUnavailableCounts(mgr manager.Manager) error {
 		return err
 	}
 
-	// For each enactment that was "Progressing" (interrupted by reboot)
+	// For each enactment that is not Available (may have a stale count from an interrupted apply)
 	for i := range enactmentList.Items {
 		enactment := &enactmentList.Items[i]
-		if enactmentstatus.IsProgressing(&enactment.Status.Conditions) {
+		if !enactmentstatus.IsAvailable(&enactment.Status.Conditions) {
 			policyName := enactment.Labels[nmstateapi.EnactmentPolicyLabel]
+			if policyName == "" {
+				continue
+			}
 			generationKey := strconv.FormatInt(enactment.Status.PolicyGeneration, 10)
 
-			setupLog.Info("detected stale progressing enactment, cleaning up",
+			setupLog.Info("detected stale non-available enactment, cleaning up",
 				"enactment", enactment.Name,
 				"policy", policyName,
 				"generation", generationKey)
@@ -386,6 +396,10 @@ func decrementStaleUnavailableCount(ctx context.Context, cli client.Client, poli
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
 		if err := cli.Get(ctx, types.NamespacedName{Name: policyName}, policy); err != nil {
+			if apierrors.IsNotFound(err) {
+				setupLog.Info("Policy not found during stale count cleanup, skipping", "policy", policyName)
+				return nil
+			}
 			return err
 		}
 
