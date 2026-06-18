@@ -74,10 +74,7 @@ func IsProgressing(conditions *nmstate.ConditionList) bool {
 
 func IsAvailable(conditions *nmstate.ConditionList) bool {
 	availableCondition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionAvailable)
-	if availableCondition != nil && availableCondition.Status == corev1.ConditionTrue {
-		return true
-	}
-	return false
+	return availableCondition != nil && availableCondition.Status == corev1.ConditionTrue
 }
 
 func IsRetrying(conditions *nmstate.ConditionList) bool {
