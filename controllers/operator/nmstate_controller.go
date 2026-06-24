@@ -385,7 +385,6 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["HandlerPullPolicy"] = environment.GetEnvVar("HANDLER_IMAGE_PULL_POLICY", "")
 	data.Data["HandlerPrefix"] = environment.GetEnvVar("HANDLER_PREFIX", "")
 	data.Data["MonitoringNamespace"] = environment.GetEnvVar("MONITORING_NAMESPACE", "")
-	data.Data["KubeRBACProxyImage"] = environment.GetEnvVar("KUBE_RBAC_PROXY_IMAGE", "")
 	data.Data["InfraNodeSelector"] = infraNodeSelector
 	data.Data["InfraTolerations"] = infraTolerations
 	data.Data["WebhookAffinity"] = infraAffinity
