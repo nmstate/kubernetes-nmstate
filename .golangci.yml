@@ -18,6 +18,7 @@ linters:
     - lll
     - misspell
     - mnd
+    - modernize
     - nakedret
     - noctx
     - rowserrcheck
@@ -85,6 +86,9 @@ linters:
       - legacy
       - std-error-handling
     rules:
+      - linters:
+          - lll
+        source: "\\+kubebuilder:rbac:"
       - linters:
           - dupl
           - gocritic

@@ -10,7 +10,7 @@ If you don't comply with these rules, you waste your energy, time of reviewers
 and cause suffering of future generations.
 -->
 
-**Is this a BUG FIX or a FEATURE ?**:
+**Is this a BUG FIX or a FEATURE?**:
 
 > Uncomment only one, leave it on its own line:
 >

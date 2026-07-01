@@ -1,0 +1,10 @@
+{{define "handlerPrefix"}}{{with $prefix := .HandlerPrefix}}{{$prefix | printf "%s-"}}{{end -}}{{end}}
+{{- if .IsOpenShift }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{template "handlerPrefix" .}}nmstate-tls-config
+  namespace: {{ .HandlerNamespace }}
+data:
+  profile.json: '{{ .TLSProfileJSON }}'
+{{- end }}

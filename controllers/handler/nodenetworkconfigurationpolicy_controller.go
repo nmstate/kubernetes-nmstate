@@ -63,9 +63,7 @@ import (
 )
 
 const (
-	ReconcileFailed    = "ReconcileFailed"
-	MaximumTimeBackoff = 30
-	RetriesUntilFail   = 5
+	ReconcileFailed = "ReconcileFailed"
 )
 
 var (
@@ -111,6 +109,15 @@ type NodeNetworkConfigurationPolicyReconciler struct {
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
 	Recorder  record.EventRecorder
+	// RetriesUntilFail is the number of retry attempts before marking an NNCE as failed.
+	// Expected range: >= 1. Defaults to 5 via NNCP_MAX_RETRIES env var.
+	RetriesUntilFail int
+	// MaximumTimeBackoff is the upper bound for exponential backoff between retries.
+	// Expected range: > 0. Defaults to 30s via NNCP_MAX_BACKOFF_SECONDS env var.
+	MaximumTimeBackoff time.Duration
+	// InitialBackoff is the starting backoff duration for the first retry.
+	// Expected range: > 0. Defaults to 1s via NNCP_INITIAL_BACKOFF_SECONDS env var.
+	InitialBackoff time.Duration
 }
 
 func init() {
@@ -213,10 +220,10 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	// This prevents unnecessary network disruption when a spurious reconcile
 	// (e.g., from informer re-list after reconnection) re-triggers processing
 	// of an already-failed policy.
-	if enactmentInstance.Status.RetryCount[generationKey] >= RetriesUntilFail {
+	if enactmentInstance.Status.RetryCount[generationKey] >= r.RetriesUntilFail {
 		log.Info("Retry count already exhausted, skipping apply",
 			"retryCount", enactmentInstance.Status.RetryCount[generationKey],
-			"maxRetries", RetriesUntilFail,
+			"maxRetries", r.RetriesUntilFail,
 			"generation", generationKey)
 		return ctrl.Result{}, nil
 	}
@@ -264,7 +271,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 			return ctrl.Result{}, err
 		}
 
-		if enactmentInstance.Status.RetryCount[generationKey] >= RetriesUntilFail {
+		if enactmentInstance.Status.RetryCount[generationKey] >= r.RetriesUntilFail {
 			enactmentConditions.NotifyFailedToConfigure(ctx, errmsg)
 			if r.Recorder != nil {
 				r.Recorder.Event(instance,
@@ -272,7 +279,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 					ReconcileFailed,
 					fmt.Errorf(
 						"reconciliation of enactment %q has failed after %d retries",
-						enactmentInstance.Name, RetriesUntilFail).Error())
+						enactmentInstance.Name, r.RetriesUntilFail).Error())
 			}
 			return ctrl.Result{}, nil
 		}
@@ -281,7 +288,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 			fmt.Errorf("failed to reconcile NodeNetworkConfigurationPolicy on node %s. Retrying %d/%d",
 				nodeName,
 				enactmentInstance.Status.RetryCount[generationKey]+1,
-				RetriesUntilFail),
+				r.RetriesUntilFail),
 		)
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -329,7 +336,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) SetupWithManager(mgr ctrl.Man
 		mgr,
 		controller.Options{
 			Reconciler:  r,
-			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](time.Second, time.Second*MaximumTimeBackoff),
+			RateLimiter: workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](r.InitialBackoff, r.MaximumTimeBackoff),
 		})
 	if err != nil {
 		return errors.Wrap(err, "failed to create NodeNetworkConfigurationPolicy controller")

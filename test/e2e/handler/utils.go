@@ -20,6 +20,7 @@ package handler
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -60,12 +61,12 @@ var (
 	maxUnavailable = environment.GetVarWithDefault("NMSTATE_MAX_UNAVAILABLE", nmstatenode.DefaultMaxunavailable)
 )
 
-func Byf(message string, arguments ...interface{}) {
+func Byf(message string, arguments ...any) {
 	By(fmt.Sprintf(message, arguments...))
 }
 
-func interfaceName(iface interface{}) string {
-	name, hasName := iface.(map[string]interface{})["name"]
+func interfaceName(iface any) string {
+	name, hasName := iface.(map[string]any)["name"]
 	Expect(hasName).
 		To(
 			BeTrue(),
@@ -75,7 +76,7 @@ func interfaceName(iface interface{}) string {
 	return name.(string)
 }
 
-func interfacesName(interfaces []interface{}) []string {
+func interfacesName(interfaces []any) []string {
 	var names []string
 	for _, iface := range interfaces {
 		names = append(names, interfaceName(iface))
@@ -83,11 +84,11 @@ func interfacesName(interfaces []interface{}) []string {
 	return names
 }
 
-func interfaceByName(interfaces []interface{}, searchedName string) map[string]interface{} {
-	var dummy map[string]interface{}
+func interfaceByName(interfaces []any, searchedName string) map[string]any {
+	var dummy map[string]any
 	for _, iface := range interfaces {
 		if interfaceName(iface) == searchedName {
-			return iface.(map[string]interface{})
+			return iface.(map[string]any)
 		}
 	}
 	Fail(fmt.Sprintf("interface %s not found at %+v", searchedName, interfaces))
@@ -400,11 +401,11 @@ func deleteConnectionAndWait(nodesToModify []string, interfaceName string) {
 	waitForInterfaceDeletion(nodesToModify, interfaceName)
 }
 
-func interfaces(state nmstate.State) []interface{} {
-	var stateUnstructured map[string]interface{}
+func interfaces(state nmstate.State) []any {
+	var stateUnstructured map[string]any
 	err := yaml.Unmarshal(state.Raw, &stateUnstructured)
 	Expect(err).ToNot(HaveOccurred(), "Should parse correctly yaml: %s", state)
-	interfaces := stateUnstructured["interfaces"].([]interface{})
+	interfaces := stateUnstructured["interfaces"].([]any)
 	return interfaces
 }
 
@@ -464,7 +465,7 @@ func vrfForNodeInterfaceEventually(node, vrfID string) AsyncAssertion {
 }
 
 func interfacesForNode(node string) AsyncAssertion {
-	return Eventually(func() []interface{} {
+	return Eventually(func() []any {
 		var currentStateYaml nmstate.State
 		currentState(node, &currentStateYaml).ShouldNot(BeEmpty())
 
@@ -603,12 +604,7 @@ func autoDNS(node, name string) bool {
 }
 
 func ifaceInSlice(ifaceName string, names []string) bool {
-	for _, name := range names {
-		if ifaceName == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(names, ifaceName)
 }
 
 func nodeInterfacesState(node string, exclude []string) map[string]string {
@@ -628,7 +624,7 @@ func interfacesState(state nmstate.State, exclude []string) map[string]string {
 		if ifaceInSlice(name, exclude) {
 			continue
 		}
-		state, hasState := iface.(map[string]interface{})["state"]
+		state, hasState := iface.(map[string]any)["state"]
 		if !hasState {
 			state = "unknown"
 		}

@@ -1,0 +1,4 @@
+# hugo.preview.yaml - Configuration for CI preview builds
+# The config is merged with hugo.yaml and enables uglyURLs for GCS CI docs preview
+
+uglyURLs: true

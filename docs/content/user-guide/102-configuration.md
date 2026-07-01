@@ -26,7 +26,7 @@ configuration is persistent on the node and survives reboots.
 ## Creating interfaces
 
 Each Policy has a name (`metadata.name`) and desired state
-(`spec.desiredState`). The desired state can contains declarative specification
+(`spec.desiredState`). The desired state can contain a declarative specification
 of the node network configuration following [nmstate
 API](https://nmstate.github.io/).
 

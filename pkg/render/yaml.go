@@ -27,7 +27,7 @@ import (
 // always return a string, even on marshal error (empty string).
 //
 // This is designed to be called from a template.
-func ToYaml(v interface{}) string {
+func ToYaml(v any) string {
 	data, err := yaml.Marshal(v)
 	if err != nil {
 		// Swallow errors inside of a template.

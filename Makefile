@@ -11,8 +11,6 @@ ifeq ($(NMSTATE_VERSION), latest)
 HANDLER_EXTRA_PARAMS:= "--build-arg NMSTATE_SOURCE=git"
 endif
 
-HOST_OS=$(shell uname -s | tr "[:upper:]" "[:lower:]")
-
 HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
@@ -52,7 +50,7 @@ LINTER_IMAGE_TAG ?= v0.0.10
 
 unit_test_args ?=  -r -keep-going --randomize-all --randomize-suites --race --trace $(UNIT_TEST_ARGS)
 
-export KUBEVIRT_PROVIDER ?= k8s-1.32
+export KUBEVIRT_PROVIDER ?= k8s-1.34
 export KUBEVIRT_NUM_NODES ?= 3 # 1 control-plane, 2 worker needed for e2e tests
 export KUBEVIRT_NUM_SECONDARY_NICS ?= 2
 
@@ -179,17 +177,21 @@ generate: gen-k8s gen-crds gen-rbac
 manifests:
 	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -kube-rbac-proxy-image=$(KUBE_RBAC_PROXY_IMAGE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
 
+require-image-builder:
+	@test -n "$(IMAGE_BUILDER)" || { echo "Error: IMAGE_BUILDER is not set and could not be auto-detected (neither podman nor docker is running/available)." >&2; exit 1; }
+	@test -x "hack/build-push-container.$(IMAGE_BUILDER).sh" || { echo "Error: unsupported IMAGE_BUILDER '$(IMAGE_BUILDER)': hack/build-push-container.$(IMAGE_BUILDER).sh not found or not executable (expected 'podman' or 'docker')." >&2; exit 1; }
+
 handler: SKIP_PUSH=true
 handler: push-handler
 
-push-handler:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
+push-handler: require-image-builder
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${HANDLER_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh ${HANDLER_EXTRA_PARAMS} --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile
 
 operator: SKIP_PUSH=true
 operator: push-operator
 
-push-operator:
-	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.${HOST_OS}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
+push-operator: require-image-builder
+	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
 
 push: push-handler push-operator
 
@@ -281,6 +283,7 @@ olm-push: bundle-push index-push
 	vet \
 	handler \
 	push-handler \
+	require-image-builder \
 	test/unit \
 	generate \
 	check-gen \

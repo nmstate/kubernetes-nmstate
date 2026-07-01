@@ -1,11 +1,10 @@
 #!/bin/bash -xe
-architecture=""
-case $(uname -m) in
-    x86_64)           architecture="amd64" ;;
-    aarch64|arm64)    architecture="arm64" ;;
-    *)
-                      echo "Unsupported architecture: $(uname -m), must be (x86_64|aarch64|arm64)."
-                      exit 1;
+
+architecture=$(uname -m)
+
+case $architecture in
+    x86_64)        architecture="amd64" ;;
+    aarch64|arm64) architecture="arm64" ;;
 esac
 
 path_combined="$(uname -s | tr '[:upper:]' '[:lower:]')-${architecture}"

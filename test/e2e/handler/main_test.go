@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -52,7 +53,7 @@ var (
 	portFieldName               string
 	miimonFormat                string
 	nodesInitialInterfacesState = make(map[string]map[string]string)
-	interfacesToIgnore          = []string{"flannel.1", "dummy0", "tunl0"}
+	interfacesToIgnore          = []string{"flannel.1", "dummy0", "tunl0", "cni0"}
 	knmstateReporter            *knmstatereporter.KubernetesNMStateReporter
 )
 
@@ -69,6 +70,9 @@ var _ = BeforeSuite(func() {
 	dnsTestNic = environment.GetVarWithDefault("DNS_TEST_NIC", primaryNic)
 
 	testenv.Start()
+
+	By("Configuring lower retry values for E2E tests to speed up retry tests")
+	testenv.PatchHandlerRetryConfig()
 
 	portFieldName = "port"
 	miimonFormat = "%d"
@@ -150,10 +154,5 @@ var _ = ReportAfterEach(func(specReport types.SpecReport) {
 })
 
 func containsNode(nodes []string, node string) bool {
-	for _, n := range nodes {
-		if n == node {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(nodes, node)
 }

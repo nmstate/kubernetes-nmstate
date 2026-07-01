@@ -6,8 +6,8 @@ Support customize kubernetes-nmstate DNS resolving probes at NMState CR.
 
 ## Motivation
 
-At some cluster their network configuration is not compatible with DNS health
-probe the kubernetes-nmstate cluster health probes, so the NNCPs will fail.
+In some clusters, the network configuration is not compatible with the
+kubernetes-nmstate DNS health probes, so the NNCPs will fail.
 
 ### User Stories
 
@@ -36,8 +36,8 @@ networking and install operators
 
 ### Workflow Description (go back to default DNS probe)
 
-1. The cluster admin remove the DNS probe customization
-2. The cluster admin creates an NNCP and the default name resolution is use for the DNS probe
+1. The cluster admin removes the DNS probe customization
+2. The cluster admin creates an NNCP and the DNS probe will use the default name resolution
 
 ### Alternatives
 

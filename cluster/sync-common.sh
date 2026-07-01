@@ -1,3 +1,5 @@
+repo=${IMAGE_REPO:-nmstate}
+
 function eventually {
     timeout=$(( $KUBEVIRT_NUM_NODES * 30 ))
     interval=5
@@ -38,12 +40,12 @@ function isOpenshift {
 function digest {
     local registry=${1}
     local image=${2}
-    skopeo inspect --tls-verify=false docker://${registry}/nmstate/kubernetes-nmstate-${image}:latest |jq -r '.Digest'
+    skopeo inspect --tls-verify=false docker://${registry}/${repo}/kubernetes-nmstate-${image}:latest |jq -r '.Digest'
 }
 
 function push() {
     if isExternal; then
-        if [[ ! -v DEV_IMAGE_REGISTRY ]]; then
+        if [[ -z "${DEV_IMAGE_REGISTRY:-}" ]]; then
             echo "Missing DEV_IMAGE_REGISTRY variable"
             return 1
         fi
@@ -62,8 +64,8 @@ function push() {
     IMAGE_REGISTRY=${registry} make push
 
     # Generate the manifests potinting to the sha256 digest of the pushed images and the local registry
-    export OPERATOR_IMAGE_FULL_NAME=nmstate/kubernetes-nmstate-operator@$(digest $registry operator)
-    export HANDLER_IMAGE_FULL_NAME=nmstate/kubernetes-nmstate-handler@$(digest $registry handler)
+    export OPERATOR_IMAGE_FULL_NAME=${repo}/kubernetes-nmstate-operator@$(digest $registry operator)
+    export HANDLER_IMAGE_FULL_NAME=${repo}/kubernetes-nmstate-handler@$(digest $registry handler)
     export IMAGE_REGISTRY=registry:5000
     make manifests
 }

@@ -5,7 +5,7 @@ type: docs
 ---
 
 Kubernetes-nmstate project allows you to spin up a virtualized
-Kubernets/OpenShift cluster thanks to
+Kubernetes/OpenShift cluster thanks to
 [kubevirtci](https://github.com/kubevirt/kubevirtci) project.
 In this guide, we will create a local Kubernetes
 cluster with two nodes and preinstalled node dependencies. Then we will deploy

@@ -20,7 +20,6 @@ package operator
 import (
 	"context"
 	"fmt"
-	"os"
 	"slices"
 	"time"
 
@@ -42,6 +41,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
+	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	"k8s.io/kubectl/pkg/drain"
 )
 
@@ -120,7 +120,7 @@ var _ = Describe("NMState operator", func() {
 				altOperator TestData
 			)
 			BeforeEach(func() {
-				altOperator = NewOperatorTestData(os.Getenv("HANDLER_NAMESPACE")+"-alt", manifestsDir, manifestFiles)
+				altOperator = NewOperatorTestData(environment.GetVarWithDefault("HANDLER_NAMESPACE", "nmstate")+"-alt", manifestsDir, manifestFiles)
 				By("Wait for operand to be ready")
 				EventuallyOperandIsReady(defaultOperator)
 
@@ -198,7 +198,7 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					return slices.Contains(probe.Exec.Command, "nmstatectl show -vv 2>&1")
+					return slices.Contains(probe.Exec.Command, "nmstatectl show lo -vv 2>&1")
 				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should use verbose flag")
 			})
 			AfterEach(func() {
@@ -247,10 +247,10 @@ var _ = Describe("NMState operator", func() {
 					}
 
 					for _, cmd := range probe.Exec.Command {
-						if cmd == "nmstatectl show -vv 2>&1" {
+						if cmd == "nmstatectl show lo -vv 2>&1" {
 							return false // Should not have verbose flag in info mode
 						}
-						if cmd == "nmstatectl show  2>&1" {
+						if cmd == "nmstatectl show lo  2>&1" {
 							return true // Should have plain nmstatectl show command
 						}
 					}
@@ -304,12 +304,7 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					for _, cmd := range probe.Exec.Command {
-						if cmd == "nmstatectl show -vv 2>&1" {
-							return true
-						}
-					}
-					return false
+					return slices.Contains(probe.Exec.Command, "nmstatectl show lo -vv 2>&1")
 				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should be updated with verbose flag")
 			})
 			AfterEach(func() {

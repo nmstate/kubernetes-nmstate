@@ -47,7 +47,7 @@ to learn about supported versions of NetworkManager.
 Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
 please find the [latest
 release](https://github.com/nmstate/kubernetes-nmstate/releases) and follow the
-the Installation guide attached to it.
+Installation guide attached to it.
 
 You can stop here and play with the cluster on your own or continue with one of
 the [user guides]({{< relref "/user-guide" >}}) that will guide you through

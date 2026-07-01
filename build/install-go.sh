@@ -1,21 +1,17 @@
 #!/bin/bash -xe
 
 version=$1
-arch=""
+arch=$(uname -m)
 os=linux
-go_mod_version=$1
 
 dnf install -y jq
 
-case $(uname -m) in
-    x86_64)  arch="amd64";;
+case $arch in
+    x86_64)  arch="amd64" ;;
     aarch64) arch="arm64" ;;
 esac
 
-if [ "$arch" == "" ]; then
-    echo "Unknown architecture $(uname -m)"
-    exit 1
-fi
+echo "Installing Go ${version} for architecture: ${arch}"
 
 tarball_url="https://go.dev/dl/go${version}.${os}-${arch}.tar.gz"
 

@@ -52,7 +52,14 @@ func NodesRunningNmstate(ctx context.Context, cli client.Reader, nodeSelector ma
 
 	pods := corev1.PodList{}
 	byComponent := client.MatchingLabels{"component": "kubernetes-nmstate-handler"}
-	err = cli.List(ctx, &pods, byComponent)
+	handlerNamespace := environment.GetEnvVar("POD_NAMESPACE", "")
+	if handlerNamespace == "" {
+		handlerNamespace = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	}
+	if handlerNamespace == "" {
+		return []corev1.Node{}, errors.New("failed to get nodes running nmstate: neither POD_NAMESPACE nor HANDLER_NAMESPACE is set")
+	}
+	err = cli.List(ctx, &pods, byComponent, client.InNamespace(handlerNamespace))
 	if err != nil {
 		return []corev1.Node{}, errors.Wrap(err, "getting pods failed")
 	}

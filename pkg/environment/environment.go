@@ -19,6 +19,7 @@ package environment
 
 import (
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/pkg/errors"
@@ -55,7 +56,7 @@ func IsHandler() bool {
 
 // Returns node name runnig the pod
 func NodeName() string {
-	return os.Getenv("NODE_NAME")
+	return GetEnvVar("NODE_NAME", "")
 }
 
 func LookupAsDuration(varName string) (time.Duration, error) {
@@ -77,4 +78,26 @@ func GetEnvVar(key, fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+// GetEnvVarAsInt reads an integer from an environment variable, returning
+// defaultVal if the variable is unset or not a valid integer.
+func GetEnvVarAsInt(key string, defaultVal int) int {
+	if value, exists := os.LookupEnv(key); exists {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return intVal
+		}
+	}
+	return defaultVal
+}
+
+// GetEnvVarAsDuration reads a seconds value from an environment variable and
+// returns it as a time.Duration, falling back to defaultVal if unset or invalid.
+func GetEnvVarAsDuration(key string, defaultVal time.Duration) time.Duration {
+	if value, exists := os.LookupEnv(key); exists {
+		if intVal, err := strconv.Atoi(value); err == nil {
+			return time.Duration(intVal) * time.Second
+		}
+	}
+	return defaultVal
 }

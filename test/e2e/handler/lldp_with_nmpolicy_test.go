@@ -29,7 +29,6 @@ import (
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -63,7 +62,7 @@ var _ = Describe("LLDP configuration with nmpolicy", func() {
 					Command: []string{"/bin/bash"},
 					Args:    []string{"-c", "dnf install -y lldpd && lldpd -d"},
 					SecurityContext: &corev1.SecurityContext{
-						Privileged: ptr.To(true),
+						Privileged: new(true),
 					},
 				}},
 				HostNetwork: true,
