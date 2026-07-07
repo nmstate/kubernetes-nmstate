@@ -35,9 +35,9 @@ main() {
     # up the handler (verified inside the sync script).
     make cluster-sync-operator-helm
 
-    # Two-step uninstall: the NMState CR has a finalizer processed by the
-    # operator, so it must be fully removed before the operator goes away.
-    $kubectl delete nmstate nmstate --wait
+    # Two-step uninstall (handled inside helm-uninstall): the NMState CR has
+    # a finalizer processed by the operator, so it is removed before the
+    # chart release.
     make helm-uninstall
     ! $kubectl get deployment -n nmstate nmstate-operator
     ! $kubectl get ds -n nmstate nmstate-handler

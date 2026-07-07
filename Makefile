@@ -300,6 +300,9 @@ helm-install: helm
 		--wait --timeout 5m
 
 helm-uninstall: helm
+	# The NMState CR carries a finalizer processed by the operator, so it
+	# must be fully removed before the operator is uninstalled.
+	$(KUBECTL) --kubeconfig $(KUBECONFIG) delete nmstate --all --ignore-not-found --wait --timeout=5m
 	$(HELM) uninstall $(HELM_RELEASE_NAME) \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace $(OPERATOR_NAMESPACE) \
