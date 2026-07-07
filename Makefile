@@ -228,6 +228,16 @@ push-operator: require-image-builder
 
 push: push-handler push-operator
 
+CHART_VERSION ?=
+CHART_APP_VERSION ?= v$(CHART_VERSION)
+CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+HELM_REGISTRY_CONFIG ?= $(HOME)/.docker/config.json
+
+push-chart: helm
+	@test -n "$(CHART_VERSION)" || { echo "Error: CHART_VERSION is required (e.g. make CHART_VERSION=0.86.0 push-chart)" >&2; exit 1; }
+	$(HELM) package charts/kubernetes-nmstate --version $(CHART_VERSION) --app-version $(CHART_APP_VERSION) --destination build/_output
+	$(HELM) push build/_output/kubernetes-nmstate-$(CHART_VERSION).tgz $(CHART_OCI_REPO) --registry-config $(HELM_REGISTRY_CONFIG)
+
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
@@ -342,6 +352,7 @@ olm-push: bundle-push index-push
 	vet \
 	handler \
 	push-handler \
+	push-chart \
 	require-image-builder \
 	test/unit \
 	generate \
