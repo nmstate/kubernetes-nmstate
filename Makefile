@@ -186,8 +186,24 @@ check-bundle: bundle
 
 generate: gen-k8s gen-crds gen-rbac
 
-manifests:
-	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -kube-rbac-proxy-image=$(KUBE_RBAC_PROXY_IMAGE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+manifests: helm
+	rm -rf $(MANIFESTS_DIR)
+	mkdir -p $(MANIFESTS_DIR)
+	$(HELM) template nmstate charts/kubernetes-nmstate \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--set createNamespace=true \
+		--set nmstate.enabled=false \
+		--set operator.image=$(OPERATOR_IMAGE) \
+		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
+		--set handler.image=$(HANDLER_IMAGE) \
+		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
+		--set handler.namespace=$(HANDLER_NAMESPACE) \
+		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--set kubeRbacProxy.image=$(KUBE_RBAC_PROXY_IMAGE) \
+		--output-dir $(MANIFESTS_DIR)/.helm-render
+	mv $(MANIFESTS_DIR)/.helm-render/kubernetes-nmstate/templates/*.yaml $(MANIFESTS_DIR)/
+	rm -rf $(MANIFESTS_DIR)/.helm-render
+	cp deploy/examples/*.yaml $(MANIFESTS_DIR)/
 
 require-image-builder:
 	@test -n "$(IMAGE_BUILDER)" || { echo "Error: IMAGE_BUILDER is not set and could not be auto-detected (neither podman nor docker is running/available)." >&2; exit 1; }
