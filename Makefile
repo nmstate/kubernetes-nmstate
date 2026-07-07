@@ -154,6 +154,18 @@ ifeq (,$(wildcard $(OPERATOR_SDK)))
 endif
 endif
 
+HELM_VERSION ?= v3.16.2
+HELM = $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
+helm: ## Download helm locally.
+ifeq (,$(wildcard $(HELM)))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(HELM)) ;\
+	curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$$(go env GOOS)-$$(go env GOARCH).tar.gz | tar -xzO $$(go env GOOS)-$$(go env GOARCH)/helm > $(HELM) ;\
+	chmod +x $(HELM) ;\
+	}
+endif
+
 gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
@@ -288,6 +300,7 @@ olm-push: bundle-push index-push
 	generate \
 	check-gen \
 	operator-sdk \
+	helm \
 	test-e2e-handler \
 	test-e2e-operator \
 	test-e2e \
