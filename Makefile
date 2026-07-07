@@ -164,8 +164,9 @@ ifeq (,$(wildcard $(HELM)))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(HELM)) ;\
-	curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$$(go env GOOS)-$$(go env GOARCH).tar.gz | tar -xzO $$(go env GOOS)-$$(go env GOARCH)/helm > $(HELM) ;\
-	chmod +x $(HELM) ;\
+	curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$$(go env GOOS)-$$(go env GOARCH).tar.gz | tar -xzO $$(go env GOOS)-$$(go env GOARCH)/helm > $(HELM).tmp ;\
+	chmod +x $(HELM).tmp ;\
+	mv $(HELM).tmp $(HELM) ;\
 	}
 endif
 
@@ -174,6 +175,7 @@ gen-k8s:
 
 gen-crds:
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
+	mkdir -p charts/kubernetes-nmstate/crds
 	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/nmstate.io_nmstates.yaml
 
 gen-rbac:
