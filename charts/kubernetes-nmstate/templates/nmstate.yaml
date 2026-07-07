@@ -1,0 +1,10 @@
+{{- if .Values.nmstate.enabled }}
+apiVersion: nmstate.io/v1
+kind: NMState
+metadata:
+  name: {{ .Values.nmstate.name }}
+{{- with .Values.nmstate.spec }}
+spec:
+  {{- toYaml . | nindent 2 }}
+{{- end }}
+{{- end }}

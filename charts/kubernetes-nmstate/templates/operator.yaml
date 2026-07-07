@@ -1,0 +1,109 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nmstate-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: kubernetes-nmstate-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: kubernetes-nmstate-operator
+  template:
+    metadata:
+      annotations:
+        target.workload.openshift.io/management: |
+          {"effect": "PreferredDuringScheduling"}
+      labels:
+        app: kubernetes-nmstate-operator
+        name: kubernetes-nmstate-operator
+    spec:
+      serviceAccountName: nmstate-operator
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 10
+            preference:
+              matchExpressions:
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+      priorityClassName: system-cluster-critical
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nmstate-operator
+          args:
+          - --zap-time-encoding=iso8601
+          # Replace this with the built image name
+          image: {{ include "kubernetes-nmstate.operatorImage" . }}
+          imagePullPolicy: {{ .Values.operator.pullPolicy }}
+          command:
+          - manager
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthprobe
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - containerPort: 8081
+              name: healthprobe
+          resources:
+            requests:
+              cpu: "60m"
+              memory: "30Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          terminationMessagePolicy: FallbackToLogsOnError
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+            - name: OPERATOR_NAME
+              value: "kubernetes-nmstate-operator"
+            - name: ENABLE_PROFILER
+              value: "False"
+            - name: PROFILER_PORT
+              value: "6060"
+            - name: RUN_OPERATOR
+              value: ""
+            - name: RELATED_IMAGE_HANDLER_IMAGE
+              value: {{ include "kubernetes-nmstate.handlerImage" . }}
+            - name: HANDLER_IMAGE_PULL_POLICY
+              value: {{ .Values.handler.pullPolicy }}
+            - name: HANDLER_NAMESPACE
+              value: {{ .Values.handler.namespace }}
+            - name: MONITORING_NAMESPACE
+              value: {{ .Values.monitoring.namespace }}
+            - name: OPERATOR_NAMESPACE
+              value: {{ .Release.Namespace }}
+            - name: KUBE_RBAC_PROXY_IMAGE
+              value: {{ .Values.kubeRbacProxy.image }}
