@@ -267,6 +267,32 @@ cluster-sync:
 cluster-sync-operator:
 	./cluster/sync-operator.sh
 
+cluster-sync-operator-helm:
+	./cluster/sync-operator-helm.sh
+
+HELM_RELEASE_NAME ?= nmstate
+
+helm-install: helm
+	$(HELM) upgrade --install $(HELM_RELEASE_NAME) charts/kubernetes-nmstate \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--create-namespace \
+		--set nmstate.enabled=true \
+		--set operator.image=$(OPERATOR_IMAGE) \
+		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
+		--set handler.image=$(HANDLER_IMAGE) \
+		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
+		--set handler.namespace=$(HANDLER_NAMESPACE) \
+		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--set kubeRbacProxy.image=$(KUBE_RBAC_PROXY_IMAGE) \
+		--wait --timeout 5m
+
+helm-uninstall: helm
+	$(HELM) uninstall $(HELM_RELEASE_NAME) \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--wait --timeout 5m
+
 version-patch:
 	./hack/tag-version.sh patch
 version-minor:
@@ -330,6 +356,9 @@ olm-push: bundle-push index-push
 	cluster-up \
 	cluster-down \
 	cluster-sync-operator \
+	cluster-sync-operator-helm \
+	helm-install \
+	helm-uninstall \
 	cluster-sync \
 	cluster-clean \
 	release \
