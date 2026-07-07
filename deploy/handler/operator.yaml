@@ -87,15 +87,19 @@ spec:
           - containerPort: 8443
             name: metrics
             protocol: TCP
-          readinessProbe:
+          startupProbe:
             tcpSocket:
               port: metrics
             initialDelaySeconds: 10
             periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            tcpSocket:
+              port: metrics
+            periodSeconds: 10
           livenessProbe:
             tcpSocket:
               port: metrics
-            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 1
             successThreshold: 1
@@ -200,6 +204,12 @@ spec:
           - containerPort: 9443
             name: webhook-server
             protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: webhook-server
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 18
           readinessProbe:
             httpGet:
               path: /readyz
@@ -208,7 +218,6 @@ spec:
               httpHeaders:
               - name: Content-Type
                 value: application/json
-            initialDelaySeconds: 10
             periodSeconds: 10
           livenessProbe:
             httpGet:
@@ -218,7 +227,6 @@ spec:
               httpHeaders:
                 - name: Content-Type
                   value: application/json
-            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 1
             successThreshold: 1
