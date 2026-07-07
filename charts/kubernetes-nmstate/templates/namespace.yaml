@@ -1,9 +1,11 @@
+{{- if .Values.createNamespace }}
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: {{ .OperatorNamespace }}
+  name: {{ .Release.Namespace }}
   labels:
-    name: {{ .OperatorNamespace }}
+    name: {{ .Release.Namespace }}
     pod-security.kubernetes.io/enforce: privileged
     pod-security.kubernetes.io/audit: privileged
     pod-security.kubernetes.io/warn: privileged
+{{- end }}

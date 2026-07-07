@@ -105,7 +105,7 @@ SKIP_IMAGE_BUILD ?= false
 
 all: check handler operator
 
-check: lint vet whitespace-check gofmt-check promlint-check
+check: lint lint-helm vet whitespace-check gofmt-check promlint-check
 
 format: whitespace-format gofmt
 
@@ -132,6 +132,9 @@ promlint-check:
 lint:
 	hack/lint.sh
 
+lint-helm: helm
+	$(HELM) lint charts/kubernetes-nmstate
+
 OPERATOR_SDK = $(CURDIR)/build/_output/bin/operator-sdk_${OPERATOR_SDK_VERSION}
 operator-sdk: ## Download operator-sdk locally.
 ifneq (,$(shell operator-sdk version 2>/dev/null | grep "operator-sdk version: \"v$(OPERATOR_SDK_VERSION)\"" ))
@@ -147,28 +150,59 @@ ifeq (,$(wildcard $(OPERATOR_SDK)))
 endif
 endif
 
+HELM_VERSION ?= v3.16.2
+HELM = $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
+helm: ## Download helm locally.
+ifeq (,$(wildcard $(HELM)))
+	@{ \
+	set -e ;\
+	mkdir -p $(dir $(HELM)) ;\
+	curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$$(go env GOOS)-$$(go env GOARCH).tar.gz | tar -xzO $$(go env GOOS)-$$(go env GOARCH)/helm > $(HELM).tmp ;\
+	chmod +x $(HELM).tmp ;\
+	mv $(HELM).tmp $(HELM) ;\
+	}
+endif
+
 gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-crds:
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
+	mkdir -p charts/kubernetes-nmstate/crds
+	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/nmstate.io_nmstates.yaml
 
 gen-rbac:
-	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=deploy/operator
+	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
 
 check-gen: check-manifests check-bundle
 
 check-manifests: generate
 	git diff --exit-code -s api || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
+	git diff --exit-code -s charts || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
 	git diff --exit-code -I'^    createdAt: ' -s || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
 
 generate: gen-k8s gen-crds gen-rbac
 
-manifests:
-	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+manifests: helm
+	rm -rf $(MANIFESTS_DIR)
+	mkdir -p $(MANIFESTS_DIR)
+	$(HELM) template nmstate charts/kubernetes-nmstate \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--set createNamespace=true \
+		--set nmstate.enabled=false \
+		--set operator.image=$(OPERATOR_IMAGE) \
+		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
+		--set handler.image=$(HANDLER_IMAGE) \
+		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
+		--set handler.namespace=$(HANDLER_NAMESPACE) \
+		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--output-dir $(MANIFESTS_DIR)/.helm-render
+	mv $(MANIFESTS_DIR)/.helm-render/kubernetes-nmstate/templates/*.yaml $(MANIFESTS_DIR)/
+	rm -rf $(MANIFESTS_DIR)/.helm-render
+	cp deploy/examples/*.yaml $(MANIFESTS_DIR)/
 
 require-image-builder:
 	@test -n "$(IMAGE_BUILDER)" || { echo "Error: IMAGE_BUILDER is not set and could not be auto-detected (neither podman nor docker is running/available)." >&2; exit 1; }
@@ -187,6 +221,16 @@ push-operator: require-image-builder
 	SKIP_PUSH=$(SKIP_PUSH) SKIP_IMAGE_BUILD=$(SKIP_IMAGE_BUILD) IMAGE=${OPERATOR_IMAGE} hack/build-push-container.${IMAGE_BUILDER}.sh --build-arg GO_VERSION=$(GO_VERSION) -f build/Dockerfile.operator
 
 push: push-handler push-operator
+
+CHART_VERSION ?=
+CHART_APP_VERSION ?= v$(CHART_VERSION)
+CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+HELM_REGISTRY_CONFIG ?= $(HOME)/.docker/config.json
+
+push-chart: helm
+	@test -n "$(CHART_VERSION)" || { echo "Error: CHART_VERSION is required (e.g. make CHART_VERSION=0.86.0 push-chart)" >&2; exit 1; }
+	$(HELM) package charts/kubernetes-nmstate --version $(CHART_VERSION) --app-version $(CHART_APP_VERSION) --destination build/_output
+	$(HELM) push build/_output/kubernetes-nmstate-$(CHART_VERSION).tgz $(CHART_OCI_REPO) --registry-config $(HELM_REGISTRY_CONFIG)
 
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
@@ -226,6 +270,34 @@ cluster-sync:
 
 cluster-sync-operator:
 	./cluster/sync-operator.sh
+
+cluster-sync-operator-helm:
+	./cluster/sync-operator-helm.sh
+
+HELM_RELEASE_NAME ?= nmstate
+
+helm-install: helm
+	$(HELM) upgrade --install $(HELM_RELEASE_NAME) charts/kubernetes-nmstate \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--create-namespace \
+		--set nmstate.enabled=true \
+		--set operator.image=$(OPERATOR_IMAGE) \
+		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
+		--set handler.image=$(HANDLER_IMAGE) \
+		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
+		--set handler.namespace=$(HANDLER_NAMESPACE) \
+		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--wait --timeout 5m
+
+helm-uninstall: helm
+	# The NMState CR carries a finalizer processed by the operator, so it
+	# must be fully removed before the operator is uninstalled.
+	$(KUBECTL) --kubeconfig $(KUBECONFIG) delete nmstate --all --ignore-not-found --wait --timeout=5m
+	$(HELM) uninstall $(HELM_RELEASE_NAME) \
+		--kubeconfig $(KUBECONFIG) \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--wait --timeout 5m
 
 version-patch:
 	./hack/tag-version.sh patch
@@ -276,11 +348,14 @@ olm-push: bundle-push index-push
 	vet \
 	handler \
 	push-handler \
+	push-chart \
 	require-image-builder \
 	test/unit \
 	generate \
 	check-gen \
 	operator-sdk \
+	helm \
+	lint-helm \
 	test-e2e-handler \
 	test-e2e-operator \
 	test-e2e \
@@ -288,6 +363,9 @@ olm-push: bundle-push index-push
 	cluster-up \
 	cluster-down \
 	cluster-sync-operator \
+	cluster-sync-operator-helm \
+	helm-install \
+	helm-uninstall \
 	cluster-sync \
 	cluster-clean \
 	release \

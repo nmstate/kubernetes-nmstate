@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nmstate-operator
-  namespace: {{ .OperatorNamespace }}
+  namespace: {{ .Release.Namespace }}
   labels:
     app: kubernetes-nmstate-operator
 spec:
@@ -46,8 +46,8 @@ spec:
           args:
           - --zap-time-encoding=iso8601
           # Replace this with the built image name
-          image: {{ .OperatorImage }}
-          imagePullPolicy: {{ .OperatorPullPolicy }}
+          image: {{ include "kubernetes-nmstate.operatorImage" . }}
+          imagePullPolicy: {{ .Values.operator.pullPolicy }}
           command:
           - manager
           securityContext:
@@ -96,12 +96,12 @@ spec:
             - name: RUN_OPERATOR
               value: ""
             - name: RELATED_IMAGE_HANDLER_IMAGE
-              value: {{ .HandlerImage }}
+              value: {{ include "kubernetes-nmstate.handlerImage" . }}
             - name: HANDLER_IMAGE_PULL_POLICY
-              value: {{ .HandlerPullPolicy }}
+              value: {{ .Values.handler.pullPolicy }}
             - name: HANDLER_NAMESPACE
-              value: {{ .HandlerNamespace }}
+              value: {{ .Values.handler.namespace }}
             - name: MONITORING_NAMESPACE
-              value: {{ .MonitoringNamespace }}
+              value: {{ .Values.monitoring.namespace }}
             - name: OPERATOR_NAMESPACE
-              value: {{ .OperatorNamespace }}
+              value: {{ .Release.Namespace }}
