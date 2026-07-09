@@ -22,7 +22,7 @@ source ./cluster/kubevirtci.sh
 
 DNSMASQ_CONTAINER="${KUBEVIRT_PROVIDER}-dnsmasq"
 LLDPD_SWITCH_CONTAINER="${KUBEVIRT_PROVIDER}-lldpd-switch"
-LLDPD_SWITCH_IMAGE="${LLDPD_SWITCH_IMAGE:-docker.io/library/alpine:latest}"
+LLDPD_SWITCH_IMAGE="localhost/kubernetes-nmstate-lldpd-switch:latest"
 
 # Same container runtime detection kubevirtci cluster-up uses, so we talk to
 # the runtime that owns the cluster containers.
@@ -45,18 +45,18 @@ function up() {
         return 0
     fi
     down
+
+    # Install lldpd at image build time: containers joining another container
+    # network namespace do not get working DNS in every environment (e.g.
+    # CI), so the switch container must not do any network I/O at runtime.
+    ${CRI} build -t "${LLDPD_SWITCH_IMAGE}" -f cluster/lldpd-switch.Dockerfile cluster/
+
     ${CRI} run -d --name "${LLDPD_SWITCH_CONTAINER}" \
         --cap-add=NET_ADMIN --cap-add=NET_RAW \
         --network "container:${DNSMASQ_CONTAINER}" \
         "${LLDPD_SWITCH_IMAGE}" \
         sh -c '
             set -ex
-            # podman does not wire up working DNS for containers joining
-            # another container network namespace in every environment
-            # (e.g. CI); use the kubevirtci dnsmasq listening on br0, the
-            # same resolver the cluster VMs use.
-            echo "nameserver 192.168.66.2" > /etc/resolv.conf
-            apk add --no-cache lldpd
             echo "configure lldp tx-interval 5" > /etc/lldpd.conf
             echo "configure system hostname lldp-switch" >> /etc/lldpd.conf
             # Transmit on the bridge ports attached to the node VM NICs,
