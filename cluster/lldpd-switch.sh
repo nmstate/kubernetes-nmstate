@@ -49,7 +49,10 @@ function up() {
     # Install lldpd at image build time: containers joining another container
     # network namespace do not get working DNS in every environment (e.g.
     # CI), so the switch container must not do any network I/O at runtime.
-    ${CRI} build -t "${LLDPD_SWITCH_IMAGE}" -f cluster/lldpd-switch.Dockerfile cluster/
+    # Build with the host network so the build container resolves names with
+    # the host resolver (the CI package proxy hostname is only resolvable
+    # there).
+    ${CRI} build --network host -t "${LLDPD_SWITCH_IMAGE}" -f cluster/lldpd-switch.Dockerfile cluster/
 
     ${CRI} run -d --name "${LLDPD_SWITCH_CONTAINER}" \
         --cap-add=NET_ADMIN --cap-add=NET_RAW \
