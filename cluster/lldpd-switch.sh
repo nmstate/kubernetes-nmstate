@@ -51,6 +51,11 @@ function up() {
         "${LLDPD_SWITCH_IMAGE}" \
         sh -c '
             set -ex
+            # podman does not wire up working DNS for containers joining
+            # another container network namespace in every environment
+            # (e.g. CI); use the kubevirtci dnsmasq listening on br0, the
+            # same resolver the cluster VMs use.
+            echo "nameserver 192.168.66.2" > /etc/resolv.conf
             apk add --no-cache lldpd
             echo "configure lldp tx-interval 5" > /etc/lldpd.conf
             echo "configure system hostname lldp-switch" >> /etc/lldpd.conf
