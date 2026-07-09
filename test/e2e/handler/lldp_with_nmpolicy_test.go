@@ -18,23 +18,22 @@ limitations under the License.
 package handler
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
-	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+// The LLDP neighbors are transmitted by the lldpd "switch" container started
+// by cluster/lldpd-switch.sh at cluster-up: it joins the kubevirtci cluster
+// network namespace and runs lldpd on the bridge ports attached to the node
+// NICs, so nodes receive LLDPDUs inbound exactly like from a production
+// top-of-rack switch. The emulated switch advertises "lldp-switch" as its
+// system name.
 var _ = Describe("LLDP configuration with nmpolicy", func() {
-	var lldpdPod *corev1.Pod
-
 	lldpEnabledPolicyName := "lldp-enabled"
 	lldpDisabledPolicyName := "lldp-disabled"
 
@@ -49,33 +48,6 @@ var _ = Describe("LLDP configuration with nmpolicy", func() {
 	interfacesWithLldpEnabledState := nmstate.NewState(`interfaces: "{{ capture.ethernets-lldp.interfaces }}"`)
 
 	BeforeEach(func() {
-		By("Starting lldpd at one node")
-		lldpdPod = &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "lldpd",
-			},
-			Spec: corev1.PodSpec{
-				Containers: []corev1.Container{{
-					Name:    "lldpd",
-					Image:   "quay.io/fedora/fedora-toolbox",
-					Command: []string{"/bin/bash"},
-					Args:    []string{"-c", "dnf install -y lldpd && lldpd -d"},
-					SecurityContext: &corev1.SecurityContext{
-						Privileged: new(true),
-					},
-				}},
-				HostNetwork: true,
-			},
-		}
-		Expect(testenv.Client.Create(context.Background(), lldpdPod)).To(Succeed())
-		Eventually(func() (corev1.PodPhase, error) {
-			if err := testenv.Client.Get(context.Background(), client.ObjectKeyFromObject(lldpdPod), lldpdPod); err != nil {
-				return "", err
-			}
-			return lldpdPod.Status.Phase, nil
-		}).WithTimeout(time.Minute).WithPolling(time.Second).Should(Equal(corev1.PodRunning))
-
 		By("Enabling LLDP on up ethernet interfaces")
 		setDesiredStateWithPolicyAndCapture(lldpEnabledPolicyName, interfacesWithLldpEnabledState, configureLldpOnEthernetsCapture("true"))
 		policy.WaitForAvailablePolicy(lldpEnabledPolicyName)
@@ -87,9 +59,6 @@ var _ = Describe("LLDP configuration with nmpolicy", func() {
 			setDesiredStateWithPolicyAndCapture(lldpDisabledPolicyName, interfacesWithLldpEnabledState, configureLldpOnEthernetsCapture("false"))
 			policy.WaitForAvailablePolicy(lldpDisabledPolicyName)
 			deletePolicy(lldpDisabledPolicyName)
-
-			By("Delete lldpd pod")
-			Expect(testenv.Client.Delete(context.Background(), lldpdPod)).To(Succeed())
 		})
 	})
 
@@ -104,12 +73,12 @@ var _ = Describe("LLDP configuration with nmpolicy", func() {
 			).Should(Equal("true"), fmt.Sprintf("Interface %s should have enabled lldp", primaryNic))
 		}
 
-		Byf("Check %s has neighbors", primaryNic)
-		Eventually(
-			func() string {
-				return lldpNeighbors(lldpdPod.Spec.NodeName, primaryNic)
-			},
-			5*time.Minute, time.Second,
-		).ShouldNot(BeEmpty(), fmt.Sprintf("Interface %s should have lldp neighbors", primaryNic))
+		Byf("Check %s has the emulated switch as neighbor", primaryNic)
+		Eventually(func(g Gomega) {
+			for _, node := range nodes {
+				g.Expect(lldpNeighbors(node, primaryNic)).To(ContainSubstring("lldp-switch"),
+					fmt.Sprintf("Interface %s at node %s should have the emulated switch as lldp neighbor", primaryNic, node))
+			}
+		}, 5*time.Minute, time.Second).Should(Succeed())
 	})
 })
