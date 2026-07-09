@@ -108,12 +108,6 @@ func MaxUnavailableNodeCount(ctx context.Context, cli client.Reader, policy *nms
 }
 
 func ScaledMaxUnavailableNodeCount(matchingNodes int, intOrPercent intstr.IntOrString) (int, error) {
-	correctMaxUnavailable := func(maxUnavailable int) int {
-		if maxUnavailable < 1 {
-			return MinMaxunavailable
-		}
-		return maxUnavailable
-	}
 	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(&intOrPercent, matchingNodes, true)
 	if err != nil {
 		defaultMaxUnavailable := intstr.FromString(DefaultMaxunavailable)
@@ -122,9 +116,9 @@ func ScaledMaxUnavailableNodeCount(matchingNodes int, intOrPercent intstr.IntOrS
 			matchingNodes,
 			true,
 		)
-		return correctMaxUnavailable(maxUnavailable), err
+		return maxUnavailable, err
 	}
-	return correctMaxUnavailable(maxUnavailable), nil
+	return maxUnavailable, nil
 }
 
 // Return true if the event name is the name of
