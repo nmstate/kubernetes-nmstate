@@ -22,7 +22,7 @@ source ./cluster/kubevirtci.sh
 
 DNSMASQ_CONTAINER="${KUBEVIRT_PROVIDER}-dnsmasq"
 LLDPD_SWITCH_CONTAINER="${KUBEVIRT_PROVIDER}-lldpd-switch"
-LLDPD_SWITCH_IMAGE="${LLDPD_SWITCH_IMAGE:-quay.io/fedora/fedora:latest}"
+LLDPD_SWITCH_IMAGE="${LLDPD_SWITCH_IMAGE:-docker.io/library/alpine:latest}"
 
 # Same container runtime detection kubevirtci cluster-up uses, so we talk to
 # the runtime that owns the cluster containers.
@@ -46,20 +46,39 @@ function up() {
     fi
     down
     ${CRI} run -d --name "${LLDPD_SWITCH_CONTAINER}" \
-        --privileged \
+        --cap-add=NET_ADMIN --cap-add=NET_RAW \
         --network "container:${DNSMASQ_CONTAINER}" \
         "${LLDPD_SWITCH_IMAGE}" \
-        bash -c '
+        sh -c '
             set -ex
-            dnf install -y lldpd
+            apk add --no-cache lldpd
             echo "configure lldp tx-interval 5" > /etc/lldpd.conf
             echo "configure system hostname lldp-switch" >> /etc/lldpd.conf
             # Transmit on the bridge ports attached to the node VM NICs,
             # like a real switch does on each of its ports. Exact interface
             # names make lldpd accept the tap devices unconditionally.
-            ports=$(ls /sys/class/net | grep -E "^(tap[0-9]+|stap[0-9]+-[0-9]+)$" | paste -sd, -)
+            ports=$(ls /sys/class/net | grep -E "^(tap[0-9]+|stap[0-9]+-[0-9]+)$" | tr "\n" "," | sed "s/,$//")
+            if [ -z "${ports}" ]; then
+                echo "no tap/stap bridge ports found in the cluster network namespace" >&2
+                exit 1
+            fi
             exec lldpd -d -I "${ports}"
         '
+
+    # lldpd starts in the background; fail cluster-up right away instead of
+    # timing out later in the LLDP e2e tests if it did not come up.
+    for _ in $(seq 1 30); do
+        if [ "$(${CRI} inspect -f '{{.State.Running}}' "${LLDPD_SWITCH_CONTAINER}" 2>/dev/null)" != "true" ]; then
+            break
+        fi
+        if ${CRI} exec "${LLDPD_SWITCH_CONTAINER}" pgrep lldpd >/dev/null 2>&1; then
+            return 0
+        fi
+        sleep 2
+    done
+    ${CRI} logs "${LLDPD_SWITCH_CONTAINER}" || true
+    echo "the LLDP switch emulation container failed to start lldpd" >&2
+    exit 1
 }
 
 function down() {

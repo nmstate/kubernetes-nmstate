@@ -31,7 +31,8 @@ import (
 // by cluster/lldpd-switch.sh at cluster-up: it joins the kubevirtci cluster
 // network namespace and runs lldpd on the bridge ports attached to the node
 // NICs, so nodes receive LLDPDUs inbound exactly like from a production
-// top-of-rack switch.
+// top-of-rack switch. The emulated switch advertises "lldp-switch" as its
+// system name.
 var _ = Describe("LLDP configuration with nmpolicy", func() {
 	lldpEnabledPolicyName := "lldp-enabled"
 	lldpDisabledPolicyName := "lldp-disabled"
@@ -73,13 +74,11 @@ var _ = Describe("LLDP configuration with nmpolicy", func() {
 		}
 
 		Byf("Check %s has the emulated switch as neighbor", primaryNic)
-		for _, node := range nodes {
-			Eventually(
-				func() string {
-					return lldpNeighbors(node, primaryNic)
-				},
-				5*time.Minute, time.Second,
-			).ShouldNot(BeEmpty(), fmt.Sprintf("Interface %s at node %s should have lldp neighbors", primaryNic, node))
-		}
+		Eventually(func(g Gomega) {
+			for _, node := range nodes {
+				g.Expect(lldpNeighbors(node, primaryNic)).To(ContainSubstring("lldp-switch"),
+					fmt.Sprintf("Interface %s at node %s should have the emulated switch as lldp neighbor", primaryNic, node))
+			}
+		}, 5*time.Minute, time.Second).Should(Succeed())
 	})
 })
