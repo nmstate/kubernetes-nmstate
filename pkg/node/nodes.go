@@ -43,6 +43,12 @@ func (f MaxUnavailableLimitReachedError) Error() string {
 	return "maximal number of nodes are already processing policy configuration"
 }
 
+type InvalidMaxUnavailableError struct{}
+
+func (e InvalidMaxUnavailableError) Error() string {
+	return "invalid maxUnavailable configuration: computed value is 0"
+}
+
 func NodesRunningNmstate(ctx context.Context, cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
 	nodes := corev1.NodeList{}
 	err := cli.List(ctx, &nodes, client.MatchingLabels(nodeSelector))

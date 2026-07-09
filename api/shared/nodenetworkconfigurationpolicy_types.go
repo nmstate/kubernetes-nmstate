@@ -46,7 +46,7 @@ type NodeNetworkConfigurationPolicySpec struct {
 
 	// MaxUnavailable specifies percentage or number
 	// of machines that can be updating at a time. Default is "50%".
-	// The computed value must result in at least 1 node being available for updates.
+	// The computed value must result in at least 1 node being allowed to undergo updates at a time.
 	// If set to 0 or a percentage that rounds to 0, the policy will fail with FailedToConfigure.
 	// +optional
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
