@@ -64,3 +64,7 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     ./cluster/cli.sh ssh ${node} -- sudo mkdir -p /var/log/journal
     ./cluster/cli.sh ssh ${node} -- sudo systemctl restart systemd-journald
 done
+
+# Emulate a production LLDP-speaking switch on the cluster network so nodes
+# receive LLDP neighbors on their NICs (consumed by the LLDP e2e tests)
+./cluster/lldpd-switch.sh up

@@ -12,4 +12,6 @@ fi
 source ./cluster/kubevirtci.sh
 kubevirtci::install
 
+./cluster/lldpd-switch.sh down
+
 $(kubevirtci::path)/cluster-up/down.sh
