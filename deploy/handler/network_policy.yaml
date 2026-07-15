@@ -122,6 +122,25 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: allow-webhook-egress-dns
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-webhook
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: allow-metrics-egress-api-6443
   namespace: {{ .HandlerNamespace }}
 spec:
@@ -133,6 +152,43 @@ spec:
     - ports:
         - protocol: TCP
           port: 6443
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-metrics-egress-dns
+  namespace: {{ .HandlerNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate
+      component: kubernetes-nmstate-metrics
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+  policyTypes:
+    - Egress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-operator-egress-dns
+  namespace: {{ .OperatorNamespace }}
+spec:
+  podSelector:
+    matchLabels:
+      app: kubernetes-nmstate-operator
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
   policyTypes:
     - Egress
 ---
