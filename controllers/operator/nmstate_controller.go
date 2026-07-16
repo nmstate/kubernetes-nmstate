@@ -69,6 +69,10 @@ type NMStateReconciler struct {
 	IsOpenShift bool
 	deployments []client.ObjectKey
 	daemonSets  []client.ObjectKey
+	// tlsProfileWarning holds a human-readable description of cluster TLS
+	// profile entries that cannot be honored and were dropped. Empty when
+	// the profile is fully honored. Reported as a Degraded condition.
+	tlsProfileWarning string
 }
 
 // Core resources: services, endpoints, events, configmaps need full CRUD for handler deployment manifests.
@@ -412,6 +416,13 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		if err != nil {
 			return fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
 		}
+		// Strict adherence: refuse to roll out a profile the components
+		// cannot honor; it would crash-loop the TLS-serving pods.
+		_, unsupported, err := nmstatetls.NewTLSConfigFromProfile(tlsProfileSpec)
+		if err != nil {
+			return fmt.Errorf("cluster TLS profile cannot be honored: %w", err)
+		}
+		r.tlsProfileWarning = unsupported.Message()
 		tlsJSON, err := json.Marshal(tlsProfileSpec)
 		if err != nil {
 			return fmt.Errorf("failed serializing TLS profile: %w", err)
@@ -625,13 +636,24 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 			shared.NmstateSuccessfullyDeployed,
 			"All components are available and ready",
 		)
-		// Clear any previous degraded condition when available
-		instance.Status.Conditions.Set(
-			shared.NmstateConditionDegraded,
-			corev1.ConditionFalse,
-			shared.NmstateSuccessfullyDeployed,
-			"All components are available and ready",
-		)
+		if r.tlsProfileWarning != "" {
+			// The cluster TLS profile contains entries the components
+			// cannot honor; the served config is a strict subset.
+			instance.Status.Conditions.Set(
+				shared.NmstateConditionDegraded,
+				corev1.ConditionTrue,
+				shared.NmstateTLSProfileNotFullyHonored,
+				r.tlsProfileWarning,
+			)
+		} else {
+			// Clear any previous degraded condition when available
+			instance.Status.Conditions.Set(
+				shared.NmstateConditionDegraded,
+				corev1.ConditionFalse,
+				shared.NmstateSuccessfullyDeployed,
+				"All components are available and ready",
+			)
+		}
 	}
 
 	// Clear managed fields before applying server-side apply to status subresource
