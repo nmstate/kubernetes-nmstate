@@ -31,7 +31,7 @@ echo "${rendered}" | grep -q 'value: "123"' \
     || fail 'expected MONITORING_NAMESPACE env value to render as the string "123"'
 
 # No string-valued field may render one of the ambiguous inputs unquoted
-if echo "${rendered}" | grep -E '^\s*(name|namespace|value):\s*(null|yes|123)\s*$'; then
+if echo "${rendered}" | grep -E '^[[:space:]]*(name|namespace|value):[[:space:]]*(null|yes|123)[[:space:]]*$'; then
     fail 'found unquoted YAML-ambiguous value in rendered output'
 fi
 

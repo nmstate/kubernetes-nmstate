@@ -17,16 +17,16 @@ kubernetes-nmstate handler on the nodes. Verify the handler rollout:
 No NMState custom resource was created (nmstate.enabled=false). Create one to
 make the operator deploy the kubernetes-nmstate handler:
 
-  kubectl apply -f - <<EOF
-  apiVersion: nmstate.io/v1
-  kind: NMState
-  metadata:
-    name: nmstate
-  EOF
+  kubectl apply -f - <<'EOF'
+apiVersion: nmstate.io/v1
+kind: NMState
+metadata:
+  name: nmstate
+EOF
 {{- end }}
 
 Before uninstalling the release, delete the NMState custom resource first so
 the operator can process its finalizer:
 
-  kubectl delete nmstate --all --wait
+  kubectl delete nmstate --all --ignore-not-found --wait --timeout=5m
   helm uninstall {{ .Release.Name }} --namespace {{ .Release.Namespace | quote }} --wait
