@@ -73,7 +73,6 @@ func FetchTLSProfileFromFile(path string) (func(*tls.Config), nmstatetls.TLSProf
 
 	tlsOpts, unsupported, err := nmstatetls.NewTLSConfigFromProfile(spec)
 	if err != nil {
-		// Fail closed: serving with Go defaults could exceed the profile.
 		return nil, nmstatetls.TLSProfileSpec{}, fmt.Errorf("TLS profile from %s cannot be honored: %w", path, err)
 	}
 	if !unsupported.IsEmpty() {

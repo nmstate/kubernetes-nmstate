@@ -38,15 +38,12 @@ var (
 	ErrCustomProfileNil = errors.New("custom TLS profile specified but Custom field is nil")
 
 	// ErrUnknownProfileType is returned when the profile type is not recognized.
-	// Strict adherence forbids guessing a fallback profile.
 	ErrUnknownProfileType = errors.New("unknown TLS profile type")
 
-	// ErrNoSupportedCiphers is returned when the profile names ciphers but none
-	// are supported; falling back to Go defaults could exceed the profile.
+	// ErrNoSupportedCiphers is returned when none of the profile ciphers is supported.
 	ErrNoSupportedCiphers = errors.New("TLS profile specifies ciphers but none are supported")
 
-	// ErrNoSupportedCurves is returned when the profile names curves but none
-	// are supported; falling back to Go defaults could exceed the profile.
+	// ErrNoSupportedCurves is returned when none of the profile curves is supported.
 	ErrNoSupportedCurves = errors.New("TLS profile specifies curves but none are supported")
 
 	apiServerGVK = schema.GroupVersionKind{
@@ -124,9 +121,8 @@ type tlsSecurityProfile struct {
 }
 
 // GetTLSProfileSpec returns a TLSProfileSpec for the given profile.
-// If no profile is configured, the default Intermediate profile is returned.
-// Unknown profile types are an error: strict adherence forbids silently
-// serving a different profile than the one configured.
+// If no profile is configured, the default Intermediate profile is returned;
+// unknown profile types are an error.
 func GetTLSProfileSpec(profile *tlsSecurityProfile) (TLSProfileSpec, error) {
 	if profile == nil || profile.profileType == "" {
 		return *TLSProfiles[TLSProfileIntermediateType], nil
@@ -146,26 +142,21 @@ func GetTLSProfileSpec(profile *tlsSecurityProfile) (TLSProfileSpec, error) {
 	return *profile.customSpec, nil
 }
 
-// tls13CipherSuiteNames are the TLS 1.3 cipher suites Go always enables.
-// They cannot be restricted via tls.Config.CipherSuites.
+// tls13CipherSuiteNames are the TLS 1.3 cipher suites Go always enables;
+// they cannot be restricted via tls.Config.CipherSuites.
 var tls13CipherSuiteNames = []string{
 	"TLS_AES_128_GCM_SHA256",
 	"TLS_AES_256_GCM_SHA384",
 	"TLS_CHACHA20_POLY1305_SHA256",
 }
 
-// UnsupportedEntries lists profile entries that Go cannot honor and that
-// were dropped, as well as restrictions that Go cannot enforce. Dropping
-// entries keeps the served configuration a strict subset of the profile,
-// which is still adherent, but must be reported. Unenforceable
-// restrictions mean the served configuration exceeds the profile and must
-// be reported too.
+// UnsupportedEntries lists profile entries that were dropped because Go does
+// not support them, and restrictions that Go cannot enforce.
 type UnsupportedEntries struct {
 	Ciphers []string
 	Curves  []string
 	// UnenforceableCiphers lists TLS 1.3 cipher suites that Go always
-	// offers even though the profile excludes them: Go does not allow
-	// restricting TLS 1.3 cipher suites.
+	// offers even though the profile excludes them.
 	UnenforceableCiphers []string
 }
 
@@ -174,8 +165,7 @@ func (u UnsupportedEntries) IsEmpty() bool {
 	return len(u.Ciphers) == 0 && len(u.Curves) == 0 && len(u.UnenforceableCiphers) == 0
 }
 
-// Message returns a human-readable description of the dropped entries and
-// unenforceable restrictions.
+// Message returns a human-readable description of the entries.
 func (u UnsupportedEntries) Message() string {
 	parts := []string{}
 	if len(u.Ciphers) > 0 {
@@ -196,7 +186,6 @@ func (u UnsupportedEntries) Message() string {
 // offer even though the profile's cipher list excludes them.
 func unenforceableTLS13Ciphers(profileCiphers []string) []string {
 	if len(profileCiphers) == 0 {
-		// No cipher restriction requested; Go defaults are within profile.
 		return nil
 	}
 	allowed := map[string]bool{}
@@ -214,13 +203,8 @@ func unenforceableTLS13Ciphers(profileCiphers []string) []string {
 
 // NewTLSConfigFromProfile returns a function that configures a tls.Config
 // based on the provided TLSProfileSpec, along with any profile entries that
-// are not supported and were dropped.
-//
-// It fails closed (returns an error) when the profile cannot be honored at
-// all: unknown minimum TLS version, no supported cipher while the minimum
-// version is below TLS 1.3, or no supported curve while curves are
-// specified. In those cases serving would silently fall back to Go defaults
-// that may exceed the profile.
+// could not be honored. It returns an error when the profile cannot be
+// honored at all, instead of falling back to Go defaults that may exceed it.
 func NewTLSConfigFromProfile(profile TLSProfileSpec) (func(*tls.Config), UnsupportedEntries, error) {
 	minVersion, err := tlsVersion(string(profile.MinTLSVersion))
 	if err != nil {

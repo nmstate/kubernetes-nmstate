@@ -69,9 +69,8 @@ type NMStateReconciler struct {
 	IsOpenShift bool
 	deployments []client.ObjectKey
 	daemonSets  []client.ObjectKey
-	// tlsProfileWarning holds a human-readable description of cluster TLS
-	// profile entries that cannot be honored and were dropped. Empty when
-	// the profile is fully honored. Reported as a Degraded condition.
+	// tlsProfileWarning describes cluster TLS profile entries that cannot be
+	// honored; reported as a Degraded condition. Request-scoped.
 	tlsProfileWarning string
 }
 
@@ -151,8 +150,6 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	r.deployments = []client.ObjectKey{}
 	r.daemonSets = []client.ObjectKey{}
-	// Request-scoped state, reset together with deployments/daemonSets so a
-	// failed reconcile cannot leak a stale warning into the next run.
 	r.tlsProfileWarning = ""
 
 	if err := r.applyManifests(instance, ctx); err != nil {
@@ -419,8 +416,8 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		if err != nil {
 			return fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
 		}
-		// Strict adherence: refuse to roll out a profile the components
-		// cannot honor; it would crash-loop the TLS-serving pods.
+		// Refuse to roll out a profile the components cannot honor; it
+		// would crash-loop the TLS-serving pods.
 		_, unsupported, err := nmstatetls.NewTLSConfigFromProfile(tlsProfileSpec)
 		if err != nil {
 			return fmt.Errorf("cluster TLS profile cannot be honored: %w", err)
@@ -640,8 +637,6 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 			"All components are available and ready",
 		)
 		if r.tlsProfileWarning != "" {
-			// The cluster TLS profile contains entries the components
-			// cannot honor; the served config is a strict subset.
 			instance.Status.Conditions.Set(
 				shared.NmstateConditionDegraded,
 				corev1.ConditionTrue,
