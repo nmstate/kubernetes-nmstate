@@ -18,6 +18,7 @@ limitations under the License.
 package tls
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -74,14 +75,15 @@ func handshake(profile TLSProfileSpec) cryptotls.ConnectionState {
 		}
 		defer conn.Close()
 		// Drive the handshake from the server side.
-		_ = conn.(*cryptotls.Conn).Handshake()
+		_ = conn.(*cryptotls.Conn).HandshakeContext(context.Background())
 	}()
 
 	clientConf := &cryptotls.Config{InsecureSkipVerify: true} //nolint:gosec // test-only client
-	conn, err := cryptotls.Dial("tcp", listener.Addr().String(), clientConf)
+	dialer := &cryptotls.Dialer{Config: clientConf}
+	rawConn, err := dialer.DialContext(context.Background(), "tcp", listener.Addr().String())
 	Expect(err).NotTo(HaveOccurred())
+	conn := rawConn.(*cryptotls.Conn)
 	defer conn.Close()
-	Expect(conn.Handshake()).To(Succeed())
 	state := conn.ConnectionState()
 	<-done
 	return state
