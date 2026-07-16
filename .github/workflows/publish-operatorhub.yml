@@ -16,8 +16,7 @@ on:
         default: true
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 env:
   OPERATOR_NAME: kubernetes-nmstate-operator
