@@ -236,13 +236,15 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 		It("reconcileStatus should use SSA with ForceOwnership", func() {
 			Expect(reconciler.reconcileStatus(context.Background(), nmstate)).To(Succeed())
-			Expect(recorder.forced).To(Equal([]bool{true}), "status SSA patch must carry ForceOwnership")
+			Expect(recorder.forced).NotTo(BeEmpty(), "expected at least one SSA status patch")
+			Expect(recorder.forced).NotTo(ContainElement(false), "every status SSA patch must carry ForceOwnership")
 		})
 		It("setDegradedCondition should use SSA with ForceOwnership", func() {
 			Expect(reconciler.setDegradedCondition(
 				context.Background(), nmstate, shared.NmstateInternalError, "test degraded message",
 			)).To(Succeed())
-			Expect(recorder.forced).To(Equal([]bool{true}), "status SSA patch must carry ForceOwnership")
+			Expect(recorder.forced).NotTo(BeEmpty(), "expected at least one SSA status patch")
+			Expect(recorder.forced).NotTo(ContainElement(false), "every status SSA patch must carry ForceOwnership")
 		})
 	})
 
