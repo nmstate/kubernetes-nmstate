@@ -36,8 +36,10 @@ jobs:
         fetch-depth: 0
     - name: Bump version and push tag
       run: |
-        # Find the latest stable semver tag reachable from HEAD
-        LATEST_TAG=$(git tag --merged HEAD --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+        # Find the latest stable semver tag reachable from HEAD.
+        # Use '|| true' to prevent pipefail from aborting when grep
+        # finds no matches or head closes the pipe early.
+        LATEST_TAG=$(git tag --merged HEAD --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
         if [ -z "$LATEST_TAG" ]; then
           echo "Error: no stable semver tag (vMAJOR.MINOR.PATCH) found on this branch"
           exit 1
