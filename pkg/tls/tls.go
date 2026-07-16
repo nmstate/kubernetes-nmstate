@@ -92,9 +92,12 @@ func parseTLSSecurityProfile(obj map[string]any) (*tlsSecurityProfile, error) {
 
 		ciphersRaw, _, _ := unstructured.NestedStringSlice(customMap, "ciphers")
 
+		curvesRaw, _, _ := unstructured.NestedStringSlice(customMap, "curves")
+
 		profile.customSpec = &TLSProfileSpec{
 			Ciphers:       ciphersRaw,
 			MinTLSVersion: TLSProtocolVersion(minVersion),
+			Curves:        curvesRaw,
 		}
 	}
 
