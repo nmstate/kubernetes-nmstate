@@ -45,7 +45,11 @@ spec:
       app: kubernetes-nmstate
       component: kubernetes-nmstate-metrics
   ingress:
-  - ports:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .MonitoringNamespace }}
+    ports:
     - protocol: TCP
       port: 8443
   policyTypes:
@@ -62,12 +66,20 @@ spec:
       app: kubernetes-nmstate
       component: kubernetes-nmstate-metrics
   ingress:
-    - ports:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ .MonitoringNamespace }}
+      ports:
         - protocol: TCP
           port: 443
   policyTypes:
     - Ingress
 ---
+# Webhook ingress: kube-apiserver calls webhooks from hostNetwork.
+# We cannot restrict by namespaceSelector because hostNetwork traffic
+# originates from the node IP, not from a pod within a namespace.
+# Restricting with a from: selector would break webhook functionality.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
