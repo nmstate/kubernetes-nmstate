@@ -247,6 +247,7 @@ func (r *NMStateReconciler) applyNetworkPolicies(ctx context.Context, instance *
 	data.Data["HandlerNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
 	data.Data["OperatorNamespace"] = environment.GetEnvVar("OPERATOR_NAMESPACE", "")
 	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "")
+	data.Data["MonitoringNamespace"] = environment.GetEnvVar("MONITORING_NAMESPACE", "")
 	data.Data["IsOpenShift"] = r.IsOpenShift
 
 	return r.renderAndApply(ctx, instance, data, "netpol", true)
