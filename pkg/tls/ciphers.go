@@ -101,14 +101,6 @@ func tlsVersion(versionName string) (uint16, error) {
 	return 0, fmt.Errorf("unknown tls version %q", versionName)
 }
 
-func tlsVersionOrDie(versionName string) uint16 {
-	version, err := tlsVersion(versionName)
-	if err != nil {
-		panic(err)
-	}
-	return version
-}
-
 func cipherSuite(cipherName string) (uint16, error) {
 	if cipher, ok := ianaCiphers[cipherName]; ok {
 		return cipher, nil

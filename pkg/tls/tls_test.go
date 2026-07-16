@@ -18,6 +18,8 @@ limitations under the License.
 package tls
 
 import (
+	cryptotls "crypto/tls"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -74,5 +76,86 @@ var _ = Describe("GetTLSProfileSpec", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(spec.MinTLSVersion).To(Equal(VersionTLS13))
 		Expect(spec.Curves).To(BeEmpty())
+	})
+})
+
+var _ = Describe("GetTLSProfileSpec strictness", func() {
+	It("errors on unknown profile type instead of falling back", func() {
+		_, err := GetTLSProfileSpec(&tlsSecurityProfile{profileType: TLSProfileType("Bogus")})
+		Expect(err).To(MatchError(ErrUnknownProfileType))
+	})
+
+	It("errors on Custom profile with nil spec", func() {
+		_, err := GetTLSProfileSpec(&tlsSecurityProfile{profileType: TLSProfileCustomType})
+		Expect(err).To(MatchError(ErrCustomProfileNil))
+	})
+})
+
+var _ = Describe("NewTLSConfigFromProfile", func() {
+	It("applies min version, ciphers and curves", func() {
+		opts, unsupported, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS12,
+			Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
+			Curves:        []string{"X25519MLKEM768", "X25519"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(unsupported.IsEmpty()).To(BeTrue())
+		conf := &cryptotls.Config{}
+		opts(conf)
+		Expect(conf.MinVersion).To(Equal(uint16(cryptotls.VersionTLS12)))
+		Expect(conf.CipherSuites).To(Equal([]uint16{cryptotls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}))
+		Expect(conf.CurvePreferences).To(Equal([]cryptotls.CurveID{cryptotls.X25519MLKEM768, cryptotls.X25519}))
+	})
+
+	It("leaves CurvePreferences nil when profile has no curves", func() {
+		opts, _, err := NewTLSConfigFromProfile(*TLSProfiles[TLSProfileIntermediateType])
+		Expect(err).NotTo(HaveOccurred())
+		conf := &cryptotls.Config{}
+		opts(conf)
+		Expect(conf.CurvePreferences).To(BeNil())
+	})
+
+	It("reports partially unsupported entries but still succeeds", func() {
+		_, unsupported, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS12,
+			Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256", "NOT-A-CIPHER"},
+			Curves:        []string{"X25519", "brainpoolP256r1"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(unsupported.Ciphers).To(Equal([]string{"NOT-A-CIPHER"}))
+		Expect(unsupported.Curves).To(Equal([]string{"brainpoolP256r1"}))
+		Expect(unsupported.Message()).To(ContainSubstring("NOT-A-CIPHER"))
+		Expect(unsupported.Message()).To(ContainSubstring("brainpoolP256r1"))
+	})
+
+	It("fails closed when no cipher is supported below TLS 1.3", func() {
+		_, _, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS12,
+			Ciphers:       []string{"NOT-A-CIPHER"},
+		})
+		Expect(err).To(MatchError(ErrNoSupportedCiphers))
+	})
+
+	It("does not fail on unsupported ciphers with TLS 1.3 minimum", func() {
+		_, _, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS13,
+			Ciphers:       []string{"NOT-A-CIPHER"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("fails closed when no curve is supported", func() {
+		_, _, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS13,
+			Curves:        []string{"brainpoolP256r1"},
+		})
+		Expect(err).To(MatchError(ErrNoSupportedCurves))
+	})
+
+	It("fails closed on unknown minimum TLS version", func() {
+		_, _, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: TLSProtocolVersion("VersionTLS99"),
+		})
+		Expect(err).To(HaveOccurred())
 	})
 })

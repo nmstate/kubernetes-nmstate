@@ -22,6 +22,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,6 +36,18 @@ const (
 var (
 	// ErrCustomProfileNil is returned when a custom TLS profile is specified but the Custom field is nil.
 	ErrCustomProfileNil = errors.New("custom TLS profile specified but Custom field is nil")
+
+	// ErrUnknownProfileType is returned when the profile type is not recognized.
+	// Strict adherence forbids guessing a fallback profile.
+	ErrUnknownProfileType = errors.New("unknown TLS profile type")
+
+	// ErrNoSupportedCiphers is returned when the profile names ciphers but none
+	// are supported; falling back to Go defaults could exceed the profile.
+	ErrNoSupportedCiphers = errors.New("TLS profile specifies ciphers but none are supported")
+
+	// ErrNoSupportedCurves is returned when the profile names curves but none
+	// are supported; falling back to Go defaults could exceed the profile.
+	ErrNoSupportedCurves = errors.New("TLS profile specifies curves but none are supported")
 
 	apiServerGVK = schema.GroupVersionKind{
 		Group:   "config.openshift.io",
@@ -112,18 +125,18 @@ type tlsSecurityProfile struct {
 
 // GetTLSProfileSpec returns a TLSProfileSpec for the given profile.
 // If no profile is configured, the default Intermediate profile is returned.
+// Unknown profile types are an error: strict adherence forbids silently
+// serving a different profile than the one configured.
 func GetTLSProfileSpec(profile *tlsSecurityProfile) (TLSProfileSpec, error) {
-	defaultProfile := *TLSProfiles[TLSProfileIntermediateType]
-
 	if profile == nil || profile.profileType == "" {
-		return defaultProfile, nil
+		return *TLSProfiles[TLSProfileIntermediateType], nil
 	}
 
 	if profile.profileType != TLSProfileCustomType {
 		if tlsConfig, ok := TLSProfiles[profile.profileType]; ok {
 			return *tlsConfig, nil
 		}
-		return defaultProfile, nil
+		return TLSProfileSpec{}, fmt.Errorf("%w: %q", ErrUnknownProfileType, profile.profileType)
 	}
 
 	if profile.customSpec == nil {
@@ -133,11 +146,58 @@ func GetTLSProfileSpec(profile *tlsSecurityProfile) (TLSProfileSpec, error) {
 	return *profile.customSpec, nil
 }
 
-// NewTLSConfigFromProfile returns a function that configures a tls.Config based on the provided TLSProfileSpec,
-// along with any cipher names from the profile that are not supported.
-func NewTLSConfigFromProfile(profile TLSProfileSpec) (tlsConfig func(*tls.Config), unsupportedCiphers []string) {
-	minVersion := tlsVersionOrDie(string(profile.MinTLSVersion))
-	cipherSuites, unsupported := cipherCodes(profile.Ciphers)
+// UnsupportedEntries lists profile entries that Go cannot honor and that
+// were dropped. Dropping entries keeps the served configuration a strict
+// subset of the profile, which is still adherent, but must be reported.
+type UnsupportedEntries struct {
+	Ciphers []string
+	Curves  []string
+}
+
+// IsEmpty returns true when every profile entry is supported.
+func (u UnsupportedEntries) IsEmpty() bool {
+	return len(u.Ciphers) == 0 && len(u.Curves) == 0
+}
+
+// Message returns a human-readable description of the dropped entries.
+func (u UnsupportedEntries) Message() string {
+	msg := ""
+	if len(u.Ciphers) > 0 {
+		msg += fmt.Sprintf("unsupported ciphers ignored: %s", strings.Join(u.Ciphers, ", "))
+	}
+	if len(u.Curves) > 0 {
+		if msg != "" {
+			msg += "; "
+		}
+		msg += fmt.Sprintf("unsupported curves ignored: %s", strings.Join(u.Curves, ", "))
+	}
+	return msg
+}
+
+// NewTLSConfigFromProfile returns a function that configures a tls.Config
+// based on the provided TLSProfileSpec, along with any profile entries that
+// are not supported and were dropped.
+//
+// It fails closed (returns an error) when the profile cannot be honored at
+// all: unknown minimum TLS version, no supported cipher while the minimum
+// version is below TLS 1.3, or no supported curve while curves are
+// specified. In those cases serving would silently fall back to Go defaults
+// that may exceed the profile.
+func NewTLSConfigFromProfile(profile TLSProfileSpec) (func(*tls.Config), UnsupportedEntries, error) {
+	minVersion, err := tlsVersion(string(profile.MinTLSVersion))
+	if err != nil {
+		return nil, UnsupportedEntries{}, err
+	}
+	cipherSuites, unsupportedCiphers := cipherCodes(profile.Ciphers)
+	curves, unsupportedCurves := curveCodes(profile.Curves)
+	unsupported := UnsupportedEntries{Ciphers: unsupportedCiphers, Curves: unsupportedCurves}
+
+	if len(profile.Ciphers) > 0 && len(cipherSuites) == 0 && minVersion < tls.VersionTLS13 {
+		return nil, unsupported, ErrNoSupportedCiphers
+	}
+	if len(profile.Curves) > 0 && len(curves) == 0 {
+		return nil, unsupported, ErrNoSupportedCurves
+	}
 
 	return func(tlsConf *tls.Config) {
 		tlsConf.MinVersion = minVersion
@@ -145,5 +205,8 @@ func NewTLSConfigFromProfile(profile TLSProfileSpec) (tlsConfig func(*tls.Config
 		if minVersion != tls.VersionTLS13 {
 			tlsConf.CipherSuites = cipherSuites
 		}
-	}, unsupported
+		if len(curves) > 0 {
+			tlsConf.CurvePreferences = curves
+		}
+	}, unsupported, nil
 }
