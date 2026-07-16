@@ -638,7 +638,7 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 	instance.SetManagedFields(nil)
 
 	//nolint:staticcheck // TODO: migrate to SubResource("status").Apply()
-	return r.Client.Status().Patch(ctx, instance, client.Apply, nmstateOperatorFieldOwner)
+	return r.Client.Status().Patch(ctx, instance, client.Apply, nmstateOperatorFieldOwner, client.ForceOwnership)
 }
 
 func (r *NMStateReconciler) setDegradedCondition(
@@ -665,7 +665,19 @@ func (r *NMStateReconciler) setDegradedCondition(
 		reason,
 		message,
 	)
-	return r.Client.Status().Update(ctx, instance)
+
+	// Use SSA with ForceOwnership, consistent with reconcileStatus(), to
+	// prevent field manager conflicts that make the NMState CR unrecoverable.
+	instance.SetManagedFields(nil)
+	//nolint:staticcheck // TODO: migrate to SubResource("status").Apply()
+	if err := r.Client.Status().Patch(ctx, instance, client.Apply, nmstateOperatorFieldOwner, client.ForceOwnership); err != nil {
+		// Callers invoke this helper while already handling another error
+		// and ignore its return value, so log the failure here to keep it
+		// visible for troubleshooting.
+		r.Log.Error(err, "failed to set degraded condition on NMState CR status", "reason", reason)
+		return err
+	}
+	return nil
 }
 
 func (r *NMStateReconciler) renderAndApply(
