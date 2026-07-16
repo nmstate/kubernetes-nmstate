@@ -7,6 +7,10 @@ type: application
 version: 0.0.0
 appVersion: latest
 home: https://nmstate.io
+icon: https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/main/docs/static/images/logo/fullcolor.png
+maintainers:
+  - name: nmstate developers
+    url: https://github.com/nmstate/kubernetes-nmstate
 sources:
   - https://github.com/nmstate/kubernetes-nmstate
 keywords:

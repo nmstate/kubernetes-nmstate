@@ -1,0 +1,32 @@
+kubernetes-nmstate has been installed in namespace {{ .Release.Namespace }}.
+
+kubernetes-nmstate is a cluster singleton: install only one release of this
+chart per cluster. The chart creates cluster-scoped resources with fixed
+names (e.g. the nmstate-operator ClusterRole/ClusterRoleBinding), so a second
+release would conflict with this one.
+
+Verify the operator rollout:
+
+  kubectl rollout status -n {{ .Release.Namespace | quote }} deployment/nmstate-operator
+{{ if .Values.nmstate.enabled }}
+An NMState custom resource was created, so the operator will deploy the
+kubernetes-nmstate handler on the nodes. Verify the handler rollout:
+
+  kubectl rollout status -n {{ .Values.handler.namespace | quote }} daemonset/nmstate-handler
+{{- else }}
+No NMState custom resource was created (nmstate.enabled=false). Create one to
+make the operator deploy the kubernetes-nmstate handler:
+
+  kubectl apply -f - <<EOF
+  apiVersion: nmstate.io/v1
+  kind: NMState
+  metadata:
+    name: nmstate
+  EOF
+{{- end }}
+
+Before uninstalling the release, delete the NMState custom resource first so
+the operator can process its finalizer:
+
+  kubectl delete nmstate --all --wait
+  helm uninstall {{ .Release.Name }} --namespace {{ .Release.Namespace | quote }} --wait

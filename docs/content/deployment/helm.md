@@ -7,6 +7,11 @@ type: docs
 kubernetes-nmstate can be installed with [Helm](https://helm.sh) (>= 3.8)
 from an OCI registry.
 
+kubernetes-nmstate is a cluster singleton: only one release of this chart per
+cluster is supported. The chart creates cluster-scoped resources with fixed
+names (such as the `nmstate-operator` ClusterRole and ClusterRoleBinding), so
+installing a second release would conflict with the first one.
+
 ## Install
 
 ```shell
