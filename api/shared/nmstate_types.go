@@ -22,7 +22,8 @@ const (
 	NmstateConditionDegraded    ConditionType = "Degraded"
 	NmstateConditionProgressing ConditionType = "Progressing"
 
-	NmstateInternalError        ConditionReason = "InternalError"
-	NmstateDeploying            ConditionReason = "Deploying"
-	NmstateSuccessfullyDeployed ConditionReason = "SuccessfullyDeployed"
+	NmstateInternalError             ConditionReason = "InternalError"
+	NmstateDeploying                 ConditionReason = "Deploying"
+	NmstateSuccessfullyDeployed      ConditionReason = "SuccessfullyDeployed"
+	NmstateTLSProfileNotFullyHonored ConditionReason = "TLSProfileNotFullyHonored"
 )
