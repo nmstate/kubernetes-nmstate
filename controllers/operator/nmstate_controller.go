@@ -670,7 +670,14 @@ func (r *NMStateReconciler) setDegradedCondition(
 	// prevent field manager conflicts that make the NMState CR unrecoverable.
 	instance.SetManagedFields(nil)
 	//nolint:staticcheck // TODO: migrate to SubResource("status").Apply()
-	return r.Client.Status().Patch(ctx, instance, client.Apply, nmstateOperatorFieldOwner, client.ForceOwnership)
+	if err := r.Client.Status().Patch(ctx, instance, client.Apply, nmstateOperatorFieldOwner, client.ForceOwnership); err != nil {
+		// Callers invoke this helper while already handling another error
+		// and ignore its return value, so log the failure here to keep it
+		// visible for troubleshooting.
+		r.Log.Error(err, "failed to set degraded condition on NMState CR status", "reason", reason)
+		return err
+	}
+	return nil
 }
 
 func (r *NMStateReconciler) renderAndApply(

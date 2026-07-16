@@ -90,6 +90,40 @@ func (s *applyCapableStatusWriter) Patch(
 	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }
 
+// statusPatchRecorder records, for every SSA status patch, whether the
+// ForceOwnership option was supplied.
+type statusPatchRecorder struct {
+	forced []bool
+}
+
+// forceOwnershipSpyClient wraps a client to spy on status SSA patch options.
+type forceOwnershipSpyClient struct {
+	client.Client
+	recorder *statusPatchRecorder
+}
+
+func (c *forceOwnershipSpyClient) Status() client.SubResourceWriter {
+	return &forceOwnershipSpyStatusWriter{SubResourceWriter: c.Client.Status(), recorder: c.recorder}
+}
+
+type forceOwnershipSpyStatusWriter struct {
+	client.SubResourceWriter
+	recorder *statusPatchRecorder
+}
+
+func (s *forceOwnershipSpyStatusWriter) Patch(
+	ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption,
+) error {
+	if patch.Type() == types.ApplyPatchType {
+		patchOpts := &client.SubResourcePatchOptions{}
+		for _, opt := range opts {
+			opt.ApplyToSubResourcePatch(patchOpts)
+		}
+		s.recorder.forced = append(s.recorder.forced, patchOpts.Force != nil && *patchOpts.Force)
+	}
+	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
+}
+
 var _ = Describe("NMState controller reconcile", func() {
 	var (
 		cl                         client.Client
@@ -186,6 +220,30 @@ var _ = Describe("NMState controller reconcile", func() {
 	AfterEach(func() {
 		err := os.RemoveAll(manifestsDir)
 		Expect(err).ToNot(HaveOccurred())
+	})
+
+	Context("when writing NMState CR status", func() {
+		var (
+			recorder *statusPatchRecorder
+			nmstate  *nmstatev1.NMState
+		)
+		BeforeEach(func() {
+			recorder = &statusPatchRecorder{}
+			spyClient := &forceOwnershipSpyClient{Client: cl, recorder: recorder}
+			reconciler.Client = spyClient
+			nmstate = newNMState()
+			Expect(cl.Get(context.Background(), types.NamespacedName{Name: existingNMStateName}, nmstate)).To(Succeed())
+		})
+		It("reconcileStatus should use SSA with ForceOwnership", func() {
+			Expect(reconciler.reconcileStatus(context.Background(), nmstate)).To(Succeed())
+			Expect(recorder.forced).To(Equal([]bool{true}), "status SSA patch must carry ForceOwnership")
+		})
+		It("setDegradedCondition should use SSA with ForceOwnership", func() {
+			Expect(reconciler.setDegradedCondition(
+				context.Background(), nmstate, shared.NmstateInternalError, "test degraded message",
+			)).To(Succeed())
+			Expect(recorder.forced).To(Equal([]bool{true}), "status SSA patch must carry ForceOwnership")
+		})
 	})
 
 	Context("when additional CR is created", func() {
