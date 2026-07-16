@@ -52,11 +52,11 @@ Network interface names vary by provider:
 
 ## Manifests
 
-The operator `operator.yaml` manifest from the `deploy` folder is a template that gets populated with the correct docker image to use.
+The operator `operator.yaml` manifest is rendered from the Helm chart template in `charts/kubernetes-nmstate/templates/` and gets populated with the correct docker image to use.
 
-Every time `cluster-sync` is called, it regenerates the operator yaml with the correct kubernetes-nmstate-handler image and applies it.
+Every time `cluster-sync` is called, it re-renders the chart with the correct kubernetes-nmstate-handler image and applies the result.
 
-Manifests are generated in `build/_output/manifests/` from templates in `deploy/`.
+Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/` (`make manifests` runs `helm template` and flattens the output).
 
 ## Next Steps
 

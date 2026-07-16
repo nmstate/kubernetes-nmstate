@@ -134,6 +134,7 @@ lint:
 
 lint-helm: helm
 	$(HELM) lint charts/kubernetes-nmstate
+	HELM=$(HELM) hack/test-helm-render.sh
 
 OPERATOR_SDK = $(CURDIR)/build/_output/bin/operator-sdk_${OPERATOR_SDK_VERSION}
 operator-sdk: ## Download operator-sdk locally.
@@ -152,14 +153,29 @@ endif
 
 HELM_VERSION ?= v3.16.2
 HELM = $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
-helm: ## Download helm locally.
+HELM_OS = $(shell go env GOOS)
+HELM_ARCH = $(shell go env GOARCH)
+# Published checksums for the pinned helm release, from
+# https://get.helm.sh/helm-<version>-<os>-<arch>.tar.gz.sha256sum
+# (linked from https://github.com/helm/helm/releases/tag/v3.16.2)
+HELM_SHA256_linux-amd64 = 9318379b847e333460d33d291d4c088156299a26cd93d570a7f5d0c36e50b5bb
+HELM_SHA256_linux-arm64 = 1888301aeb7d08a03b6d9f4d2b73dcd09b89c41577e80e3455c113629fc657a4
+HELM_SHA256_darwin-amd64 = 33efd48492f2358a49a231873e8baf41f702b5ab059333ae9c31e5517633c16e
+HELM_SHA256_darwin-arm64 = 56413c7fbb496d2789881039cab61d849727c7b35db00826fae7a2685a403344
+HELM_SHA256 = $(HELM_SHA256_$(HELM_OS)-$(HELM_ARCH))
+helm: ## Download helm locally, verifying its published sha256 checksum.
 ifeq (,$(wildcard $(HELM)))
 	@{ \
 	set -e ;\
+	test -n "$(HELM_SHA256)" || { echo "Error: no pinned sha256 for helm $(HELM_VERSION) on $(HELM_OS)-$(HELM_ARCH); add HELM_SHA256_$(HELM_OS)-$(HELM_ARCH) to the Makefile" >&2; exit 1; } ;\
 	mkdir -p $(dir $(HELM)) ;\
-	curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$$(go env GOOS)-$$(go env GOARCH).tar.gz | tar -xzO $$(go env GOOS)-$$(go env GOARCH)/helm > $(HELM).tmp ;\
-	chmod +x $(HELM).tmp ;\
-	mv $(HELM).tmp $(HELM) ;\
+	tmpdir=$$(mktemp -d $(dir $(HELM))helm.tmp.XXXXXX) ;\
+	trap "rm -rf $$tmpdir" EXIT ;\
+	curl -fsSL https://get.helm.sh/helm-$(HELM_VERSION)-$(HELM_OS)-$(HELM_ARCH).tar.gz -o $$tmpdir/helm.tar.gz ;\
+	echo "$(HELM_SHA256)  $$tmpdir/helm.tar.gz" | { sha256sum -c - || shasum -a 256 -c - ; } >/dev/null ;\
+	tar -xzOf $$tmpdir/helm.tar.gz $(HELM_OS)-$(HELM_ARCH)/helm > $$tmpdir/helm ;\
+	chmod +x $$tmpdir/helm ;\
+	mv $$tmpdir/helm $(HELM) ;\
 	}
 endif
 

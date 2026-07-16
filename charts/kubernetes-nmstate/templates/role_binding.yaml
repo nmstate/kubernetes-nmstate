@@ -5,7 +5,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: nmstate-operator
-  namespace: {{ .Release.Namespace }}
+  namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: nmstate-operator

@@ -21,10 +21,9 @@ monitoring:
 createNamespace: false
 
 nmstate:
-  # Create an NMState custom resource at install time, triggering deployment
-  # of the kubernetes-nmstate handler.
+  # Create an NMState custom resource (named "nmstate") at install time,
+  # triggering deployment of the kubernetes-nmstate handler.
   enabled: true
-  name: nmstate
   # Passthrough for NMState .spec fields (nodeSelector, tolerations,
   # infraNodeSelector, infraTolerations, ...).
   spec: {}
