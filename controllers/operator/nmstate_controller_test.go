@@ -90,6 +90,29 @@ func (s *applyCapableStatusWriter) Patch(
 	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }
 
+// spyStatusWriter is a SubResourceWriter that records the patch type and options of each Patch call.
+type spyStatusWriter struct {
+	client.SubResourceWriter
+	lastPatch     client.Patch
+	lastPatchOpts []client.SubResourcePatchOption
+}
+
+func (s *spyStatusWriter) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+	s.lastPatch = patch
+	s.lastPatchOpts = opts
+	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
+}
+
+// spyStatusClient wraps a client.Client and returns a spyStatusWriter from Status().
+type spyStatusClient struct {
+	client.Client
+	spy *spyStatusWriter
+}
+
+func (c *spyStatusClient) Status() client.SubResourceWriter {
+	return c.spy
+}
+
 var _ = Describe("NMState controller reconcile", func() {
 	var (
 		cl                         client.Client
@@ -830,3 +853,53 @@ func envVariableStringPresent(key, value string, envList []corev1.EnvVar) bool {
 	}
 	return false
 }
+
+var _ = Describe("Status SSA patch options", func() {
+	var (
+		spy        *spyStatusWriter
+		reconciler NMStateReconciler
+		instance   *nmstatev1.NMState
+	)
+
+	BeforeEach(func() {
+		instance = &nmstatev1.NMState{
+			ObjectMeta: metav1.ObjectMeta{Name: "nmstate"},
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1.GroupVersion, &nmstatev1.NMState{}, &nmstatev1.NMStateList{})
+		fakeClient := fake.NewClientBuilder().
+			WithScheme(s).
+			WithRuntimeObjects(instance).
+			WithStatusSubresource(instance).
+			Build()
+		inner := &applyCapableStatusWriter{fakeClient.Status()}
+		spy = &spyStatusWriter{SubResourceWriter: inner}
+		reconciler.Client = &spyStatusClient{
+			Client: &applyCapableFakeClient{fakeClient},
+			spy:    spy,
+		}
+		reconciler.Log = ctrl.Log.WithName("test")
+		reconciler.Scheme = s
+	})
+
+	DescribeTable("uses SSA with ForceOwnership for status patches",
+		func(callFn func() error) {
+			Expect(callFn()).To(Succeed())
+			Expect(spy.lastPatch).ToNot(BeNil())
+			Expect(spy.lastPatch.Type()).To(Equal(types.ApplyPatchType))
+			patchOpts := &client.SubResourcePatchOptions{}
+			patchOpts.ApplyOptions(spy.lastPatchOpts)
+			Expect(patchOpts.Force).ToNot(BeNil(), "ForceOwnership must be set on the status SSA patch")
+			Expect(*patchOpts.Force).To(BeTrue())
+		},
+		Entry("reconcileStatus", func() error {
+			return reconciler.reconcileStatus(context.Background(), instance)
+		}),
+		Entry("setDegradedCondition", func() error {
+			return reconciler.setDegradedCondition(
+				context.Background(), instance,
+				shared.NmstateInternalError, "test error",
+			)
+		}),
+	)
+})
