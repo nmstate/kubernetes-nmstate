@@ -225,11 +225,19 @@ func NewTLSConfigFromProfile(profile TLSProfileSpec) (func(*tls.Config), Unsuppo
 		return nil, unsupported, ErrNoSupportedCurves
 	}
 
+	// tls.Config.CipherSuites only applies to TLS 1.2 and older. When the
+	// profile permits no TLS 1.2 cipher, serve TLS 1.3 only: leaving
+	// CipherSuites nil would fall back to Go's default TLS 1.2 ciphers.
+	tls12CipherSuites := tls12CipherCodes(cipherSuites)
+	if len(profile.Ciphers) > 0 && len(tls12CipherSuites) == 0 && minVersion < tls.VersionTLS13 {
+		minVersion = tls.VersionTLS13
+	}
+
 	return func(tlsConf *tls.Config) {
 		tlsConf.MinVersion = minVersion
 		// TLS 1.3 cipher suites are not configurable in Go.
 		if minVersion != tls.VersionTLS13 {
-			tlsConf.CipherSuites = cipherSuites
+			tlsConf.CipherSuites = tls12CipherSuites
 		}
 		if len(curves) > 0 {
 			tlsConf.CurvePreferences = curves

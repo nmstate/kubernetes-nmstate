@@ -109,12 +109,26 @@ var _ = Describe("NewTLSConfigFromProfile", func() {
 		opts(conf)
 		Expect(conf.MinVersion).To(Equal(uint16(cryptotls.VersionTLS12)))
 		Expect(conf.CipherSuites).To(Equal([]uint16{
-			cryptotls.TLS_AES_128_GCM_SHA256,
-			cryptotls.TLS_AES_256_GCM_SHA384,
-			cryptotls.TLS_CHACHA20_POLY1305_SHA256,
 			cryptotls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-		}))
+		}), "CipherSuites must only carry TLS 1.2 and older suite IDs")
 		Expect(conf.CurvePreferences).To(Equal([]cryptotls.CurveID{cryptotls.X25519MLKEM768, cryptotls.X25519}))
+	})
+
+	It("serves TLS 1.3 only when the profile permits no TLS 1.2 ciphers", func() {
+		opts, unsupported, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS12,
+			Ciphers: []string{
+				"TLS_AES_128_GCM_SHA256",
+				"TLS_AES_256_GCM_SHA384",
+				"TLS_CHACHA20_POLY1305_SHA256",
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(unsupported.IsEmpty()).To(BeTrue())
+		conf := &cryptotls.Config{}
+		opts(conf)
+		Expect(conf.MinVersion).To(Equal(uint16(cryptotls.VersionTLS13)))
+		Expect(conf.CipherSuites).To(BeNil())
 	})
 
 	It("reports TLS 1.3 cipher restrictions Go cannot enforce", func() {
