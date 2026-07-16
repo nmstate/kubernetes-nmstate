@@ -95,16 +95,49 @@ var _ = Describe("NewTLSConfigFromProfile", func() {
 	It("applies min version, ciphers and curves", func() {
 		opts, unsupported, err := NewTLSConfigFromProfile(TLSProfileSpec{
 			MinTLSVersion: VersionTLS12,
-			Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256"},
-			Curves:        []string{"X25519MLKEM768", "X25519"},
+			Ciphers: []string{
+				"TLS_AES_128_GCM_SHA256",
+				"TLS_AES_256_GCM_SHA384",
+				"TLS_CHACHA20_POLY1305_SHA256",
+				"ECDHE-RSA-AES128-GCM-SHA256",
+			},
+			Curves: []string{"X25519MLKEM768", "X25519"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(unsupported.IsEmpty()).To(BeTrue())
 		conf := &cryptotls.Config{}
 		opts(conf)
 		Expect(conf.MinVersion).To(Equal(uint16(cryptotls.VersionTLS12)))
-		Expect(conf.CipherSuites).To(Equal([]uint16{cryptotls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256}))
+		Expect(conf.CipherSuites).To(Equal([]uint16{
+			cryptotls.TLS_AES_128_GCM_SHA256,
+			cryptotls.TLS_AES_256_GCM_SHA384,
+			cryptotls.TLS_CHACHA20_POLY1305_SHA256,
+			cryptotls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+		}))
 		Expect(conf.CurvePreferences).To(Equal([]cryptotls.CurveID{cryptotls.X25519MLKEM768, cryptotls.X25519}))
+	})
+
+	It("reports TLS 1.3 cipher restrictions Go cannot enforce", func() {
+		_, unsupported, err := NewTLSConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS12,
+			Ciphers:       []string{"ECDHE-RSA-AES128-GCM-SHA256", "TLS_AES_128_GCM_SHA256"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(unsupported.IsEmpty()).To(BeFalse())
+		Expect(unsupported.UnenforceableCiphers).To(Equal([]string{
+			"TLS_AES_256_GCM_SHA384",
+			"TLS_CHACHA20_POLY1305_SHA256",
+		}))
+		Expect(unsupported.Message()).To(ContainSubstring("TLS_AES_256_GCM_SHA384"))
+		Expect(unsupported.Message()).To(ContainSubstring("cannot restrict TLS 1.3"))
+	})
+
+	It("does not flag unenforceable ciphers for the predefined profiles", func() {
+		for _, profileType := range []TLSProfileType{TLSProfileOldType, TLSProfileIntermediateType, TLSProfileModernType} {
+			_, unsupported, err := NewTLSConfigFromProfile(*TLSProfiles[profileType])
+			Expect(err).NotTo(HaveOccurred())
+			Expect(unsupported.IsEmpty()).To(BeTrue(), "profile %s should be fully enforceable", profileType)
+		}
 	})
 
 	It("leaves CurvePreferences nil when profile has no curves", func() {

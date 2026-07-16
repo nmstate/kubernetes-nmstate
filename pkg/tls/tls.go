@@ -146,32 +146,70 @@ func GetTLSProfileSpec(profile *tlsSecurityProfile) (TLSProfileSpec, error) {
 	return *profile.customSpec, nil
 }
 
+// tls13CipherSuiteNames are the TLS 1.3 cipher suites Go always enables.
+// They cannot be restricted via tls.Config.CipherSuites.
+var tls13CipherSuiteNames = []string{
+	"TLS_AES_128_GCM_SHA256",
+	"TLS_AES_256_GCM_SHA384",
+	"TLS_CHACHA20_POLY1305_SHA256",
+}
+
 // UnsupportedEntries lists profile entries that Go cannot honor and that
-// were dropped. Dropping entries keeps the served configuration a strict
-// subset of the profile, which is still adherent, but must be reported.
+// were dropped, as well as restrictions that Go cannot enforce. Dropping
+// entries keeps the served configuration a strict subset of the profile,
+// which is still adherent, but must be reported. Unenforceable
+// restrictions mean the served configuration exceeds the profile and must
+// be reported too.
 type UnsupportedEntries struct {
 	Ciphers []string
 	Curves  []string
+	// UnenforceableCiphers lists TLS 1.3 cipher suites that Go always
+	// offers even though the profile excludes them: Go does not allow
+	// restricting TLS 1.3 cipher suites.
+	UnenforceableCiphers []string
 }
 
-// IsEmpty returns true when every profile entry is supported.
+// IsEmpty returns true when every profile entry is supported and enforceable.
 func (u UnsupportedEntries) IsEmpty() bool {
-	return len(u.Ciphers) == 0 && len(u.Curves) == 0
+	return len(u.Ciphers) == 0 && len(u.Curves) == 0 && len(u.UnenforceableCiphers) == 0
 }
 
-// Message returns a human-readable description of the dropped entries.
+// Message returns a human-readable description of the dropped entries and
+// unenforceable restrictions.
 func (u UnsupportedEntries) Message() string {
-	msg := ""
+	parts := []string{}
 	if len(u.Ciphers) > 0 {
-		msg += fmt.Sprintf("unsupported ciphers ignored: %s", strings.Join(u.Ciphers, ", "))
+		parts = append(parts, fmt.Sprintf("unsupported ciphers ignored: %s", strings.Join(u.Ciphers, ", ")))
 	}
 	if len(u.Curves) > 0 {
-		if msg != "" {
-			msg += "; "
-		}
-		msg += fmt.Sprintf("unsupported curves ignored: %s", strings.Join(u.Curves, ", "))
+		parts = append(parts, fmt.Sprintf("unsupported curves ignored: %s", strings.Join(u.Curves, ", ")))
 	}
-	return msg
+	if len(u.UnenforceableCiphers) > 0 {
+		parts = append(parts, fmt.Sprintf(
+			"Go cannot restrict TLS 1.3 cipher suites, these are offered beyond the profile: %s",
+			strings.Join(u.UnenforceableCiphers, ", ")))
+	}
+	return strings.Join(parts, "; ")
+}
+
+// unenforceableTLS13Ciphers returns the TLS 1.3 cipher suites that Go will
+// offer even though the profile's cipher list excludes them.
+func unenforceableTLS13Ciphers(profileCiphers []string) []string {
+	if len(profileCiphers) == 0 {
+		// No cipher restriction requested; Go defaults are within profile.
+		return nil
+	}
+	allowed := map[string]bool{}
+	for _, c := range profileCiphers {
+		allowed[c] = true
+	}
+	unenforceable := []string{}
+	for _, c := range tls13CipherSuiteNames {
+		if !allowed[c] {
+			unenforceable = append(unenforceable, c)
+		}
+	}
+	return unenforceable
 }
 
 // NewTLSConfigFromProfile returns a function that configures a tls.Config
@@ -190,7 +228,11 @@ func NewTLSConfigFromProfile(profile TLSProfileSpec) (func(*tls.Config), Unsuppo
 	}
 	cipherSuites, unsupportedCiphers := cipherCodes(profile.Ciphers)
 	curves, unsupportedCurves := curveCodes(profile.Curves)
-	unsupported := UnsupportedEntries{Ciphers: unsupportedCiphers, Curves: unsupportedCurves}
+	unsupported := UnsupportedEntries{
+		Ciphers:              unsupportedCiphers,
+		Curves:               unsupportedCurves,
+		UnenforceableCiphers: unenforceableTLS13Ciphers(profile.Ciphers),
+	}
 
 	if len(profile.Ciphers) > 0 && len(cipherSuites) == 0 && minVersion < tls.VersionTLS13 {
 		return nil, unsupported, ErrNoSupportedCiphers

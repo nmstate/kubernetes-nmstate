@@ -151,6 +151,9 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	r.deployments = []client.ObjectKey{}
 	r.daemonSets = []client.ObjectKey{}
+	// Request-scoped state, reset together with deployments/daemonSets so a
+	// failed reconcile cannot leak a stale warning into the next run.
+	r.tlsProfileWarning = ""
 
 	if err := r.applyManifests(instance, ctx); err != nil {
 		r.setDegradedCondition(ctx, instance, shared.NmstateInternalError, err.Error())
