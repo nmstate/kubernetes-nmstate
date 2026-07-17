@@ -15,6 +15,9 @@ on:
         type: boolean
         default: true
 
+permissions:
+  contents: read
+
 env:
   OPERATOR_NAME: kubernetes-nmstate-operator
   IMAGE_REGISTRY: quay.io
@@ -25,17 +28,14 @@ env:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
       - name: Checkout kubernetes-nmstate
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: 'go.mod'
 
@@ -115,7 +115,7 @@ jobs:
 
       - name: Checkout OperatorHub repository
         if: ${{ github.event_name == 'release' || github.event.inputs.create_pr == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: k8s-operatorhub/community-operators
           path: operatorhub-repo
@@ -195,7 +195,7 @@ jobs:
           echo "PR_URL=$PR_URL" >> $GITHUB_ENV
 
       - name: Upload bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: operator-bundle-${{ env.VERSION }}
           path: |

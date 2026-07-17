@@ -21,25 +21,50 @@ on:
         - release-0.64
         - release-0.52
         - release-0.47
+
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
     - name: Check out code from ${{ github.event.inputs.baseBranch }}
-      uses: actions/checkout@v2
+      uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       with:
         ref: ${{ github.event.inputs.baseBranch }}
         fetch-depth: 0
-    - name: Retrieve last tag
-      uses: actions-ecosystem/action-get-latest-tag@v1
-      id: get-latest-tag
-    - name: Bump version with level ${{ github.event.inputs.baseBranch }}
-      uses: actions-ecosystem/action-bump-semver@v1
-      id: bump-semver
-      with:
-        current_version: ${{ steps.get-latest-tag.outputs.tag }}
-        level:  ${{ github.event.inputs.versionLevel }}
-    - name: Push the new version
-      uses: actions-ecosystem/action-push-tag@v1
-      with:
-        tag: ${{ steps.bump-semver.outputs.new_version }}
+    - name: Bump version and push tag
+      run: |
+        # Find the latest stable semver tag reachable from HEAD.
+        # Use '|| true' to prevent pipefail from aborting when grep
+        # finds no matches or head closes the pipe early.
+        LATEST_TAG=$(git tag --merged HEAD --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1 || true)
+        if [ -z "$LATEST_TAG" ]; then
+          echo "Error: no stable semver tag (vMAJOR.MINOR.PATCH) found on this branch"
+          exit 1
+        fi
+        echo "Latest tag: $LATEST_TAG"
+
+        VERSION="${LATEST_TAG#v}"
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+        # Validate parsed components are numeric
+        if ! [[ "$MAJOR" =~ ^[0-9]+$ && "$MINOR" =~ ^[0-9]+$ && "$PATCH" =~ ^[0-9]+$ ]]; then
+          echo "Error: failed to parse version components from $LATEST_TAG"
+          exit 1
+        fi
+
+        LEVEL="${{ github.event.inputs.versionLevel }}"
+        case "$LEVEL" in
+          major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH + 1)) ;;
+          *) echo "Unknown level: $LEVEL"; exit 1 ;;
+        esac
+
+        NEW_TAG="v${MAJOR}.${MINOR}.${PATCH}"
+        echo "Bumping $LATEST_TAG -> $NEW_TAG (level: $LEVEL)"
+
+        git tag "$NEW_TAG"
+        git push origin "$NEW_TAG"
