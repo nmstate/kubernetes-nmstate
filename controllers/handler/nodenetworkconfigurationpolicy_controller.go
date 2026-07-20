@@ -231,11 +231,20 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
 		err = r.incrementUnavailableNodeCount(ctx, instance, generationKey)
 		if err != nil {
+			if errors.Is(err, node.InvalidMaxUnavailableError{}) {
+				// Policy status already set to FailedToConfigure in incrementUnavailableNodeCount
+				log.Error(err, "Invalid maxUnavailable configuration, stopping reconciliation")
+				return ctrl.Result{}, nil
+			}
 			if apierrors.IsConflict(err) || errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
 				enactmentConditions.NotifyPending(ctx)
 				log.Info(err.Error())
 				shouldAbortEnactment, err := r.shouldAbortReconcile(ctx, instance)
 				if err != nil {
+					if errors.Is(err, node.InvalidMaxUnavailableError{}) {
+						// Policy status already set, stop reconciliation
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, err
 				}
 				if shouldAbortEnactment {
@@ -579,7 +588,9 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	generationKey string) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
-	return retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
+	return retry.OnError(retry.DefaultRetry, func(err error) bool {
+		return !errors.Is(err, node.InvalidMaxUnavailableError{})
+	}, func() error {
 		err := r.Get(ctx, policyKey, policy)
 		if err != nil {
 			return err
@@ -589,6 +600,21 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 			r.Log.Info(
 				fmt.Sprintf("failed calculating limit of max unavailable nodes, defaulting to %d, err: %s", maxUnavailable, err.Error()),
 			)
+		}
+
+		if maxUnavailable < 1 {
+			errMsg := fmt.Sprintf(
+				"invalid maxUnavailable configuration: computed value is %d. "+
+					"The maxUnavailable field must result in at least 1 node. "+
+					"Either increase the value (e.g., set to 1 or higher) or use a higher percentage (e.g., \"1%%\")",
+				maxUnavailable)
+			r.Log.Error(node.InvalidMaxUnavailableError{}, "Invalid maxUnavailable configuration")
+			policyconditions.SetPolicyFailedToConfigure(&policy.Status.Conditions, errMsg)
+			updateErr := r.Client.Status().Update(ctx, policy)
+			if updateErr != nil {
+				return updateErr
+			}
+			return node.InvalidMaxUnavailableError{}
 		}
 
 		if policy.Status.UnavailableNodeCountMap == nil {
@@ -682,6 +708,22 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldAbortReconcile(
 		logger.Info("Error getting max unavailable count")
 		return false, err
 	}
+
+	if maxUnavailable < 1 {
+		errMsg := fmt.Sprintf(
+			"invalid maxUnavailable configuration: computed value is %d. "+
+				"The maxUnavailable field must result in at least 1 node. "+
+				"Either increase the value (e.g., set to 1 or higher) or use a higher percentage (e.g., \"1%%\")",
+			maxUnavailable)
+		logger.Error(node.InvalidMaxUnavailableError{}, "Invalid maxUnavailable configuration")
+		policyconditions.SetPolicyFailedToConfigure(&instance.Status.Conditions, errMsg)
+		updateErr := r.Client.Status().Update(ctx, instance)
+		if updateErr != nil {
+			return false, updateErr
+		}
+		return false, node.InvalidMaxUnavailableError{}
+	}
+
 	filter := enactmentconditions.LogicalConditionCountFilter{
 		nmstateapi.NodeNetworkConfigurationEnactmentConditionFailing:     corev1.ConditionTrue,
 		nmstateapi.NodeNetworkConfigurationEnactmentConditionProgressing: corev1.ConditionFalse,
