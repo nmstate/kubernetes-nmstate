@@ -101,14 +101,6 @@ func tlsVersion(versionName string) (uint16, error) {
 	return 0, fmt.Errorf("unknown tls version %q", versionName)
 }
 
-func tlsVersionOrDie(versionName string) uint16 {
-	version, err := tlsVersion(versionName)
-	if err != nil {
-		panic(err)
-	}
-	return version
-}
-
 func cipherSuite(cipherName string) (uint16, error) {
 	if cipher, ok := ianaCiphers[cipherName]; ok {
 		return cipher, nil
@@ -154,4 +146,23 @@ func cipherCodes(ciphers []string) (codes []uint16, unsupportedCiphers []string)
 		codes = append(codes, code)
 	}
 	return codes, unsupportedCiphers
+}
+
+// tls13CipherSuiteIDs are the codes of the cipher suites in tls13CipherSuiteNames.
+var tls13CipherSuiteIDs = map[uint16]bool{
+	tls.TLS_AES_128_GCM_SHA256:       true,
+	tls.TLS_AES_256_GCM_SHA384:       true,
+	tls.TLS_CHACHA20_POLY1305_SHA256: true,
+}
+
+// tls12CipherCodes returns only the codes applicable to TLS 1.2 and older;
+// tls.Config.CipherSuites must not contain TLS 1.3 suite IDs.
+func tls12CipherCodes(codes []uint16) []uint16 {
+	tls12Codes := []uint16{}
+	for _, code := range codes {
+		if !tls13CipherSuiteIDs[code] {
+			tls12Codes = append(tls12Codes, code)
+		}
+	}
+	return tls12Codes
 }

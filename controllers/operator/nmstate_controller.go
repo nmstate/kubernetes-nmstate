@@ -69,6 +69,9 @@ type NMStateReconciler struct {
 	IsOpenShift bool
 	deployments []client.ObjectKey
 	daemonSets  []client.ObjectKey
+	// tlsProfileWarning describes cluster TLS profile entries that cannot be
+	// honored; reported as a Degraded condition. Request-scoped.
+	tlsProfileWarning string
 }
 
 // Core resources: services, endpoints, events, configmaps need full CRUD for handler deployment manifests.
@@ -147,6 +150,7 @@ func (r *NMStateReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	r.deployments = []client.ObjectKey{}
 	r.daemonSets = []client.ObjectKey{}
+	r.tlsProfileWarning = ""
 
 	if err := r.applyManifests(instance, ctx); err != nil {
 		r.setDegradedCondition(ctx, instance, shared.NmstateInternalError, err.Error())
@@ -412,6 +416,13 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 		if err != nil {
 			return fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
 		}
+		// Refuse to roll out a profile the components cannot honor; it
+		// would crash-loop the TLS-serving pods.
+		_, unsupported, err := nmstatetls.NewTLSConfigFromProfile(tlsProfileSpec)
+		if err != nil {
+			return fmt.Errorf("cluster TLS profile cannot be honored: %w", err)
+		}
+		r.tlsProfileWarning = unsupported.Message()
 		tlsJSON, err := json.Marshal(tlsProfileSpec)
 		if err != nil {
 			return fmt.Errorf("failed serializing TLS profile: %w", err)
@@ -625,13 +636,22 @@ func (r *NMStateReconciler) reconcileStatus(ctx context.Context, instance *nmsta
 			shared.NmstateSuccessfullyDeployed,
 			"All components are available and ready",
 		)
-		// Clear any previous degraded condition when available
-		instance.Status.Conditions.Set(
-			shared.NmstateConditionDegraded,
-			corev1.ConditionFalse,
-			shared.NmstateSuccessfullyDeployed,
-			"All components are available and ready",
-		)
+		if r.tlsProfileWarning != "" {
+			instance.Status.Conditions.Set(
+				shared.NmstateConditionDegraded,
+				corev1.ConditionTrue,
+				shared.NmstateTLSProfileNotFullyHonored,
+				r.tlsProfileWarning,
+			)
+		} else {
+			// Clear any previous degraded condition when available
+			instance.Status.Conditions.Set(
+				shared.NmstateConditionDegraded,
+				corev1.ConditionFalse,
+				shared.NmstateSuccessfullyDeployed,
+				"All components are available and ready",
+			)
+		}
 	}
 
 	// Clear managed fields before applying server-side apply to status subresource

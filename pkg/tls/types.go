@@ -41,6 +41,9 @@ const (
 type TLSProfileSpec struct {
 	Ciphers       []string           `json:"ciphers"`
 	MinTLSVersion TLSProtocolVersion `json:"minTLSVersion"`
+	// Curves lists the allowed TLS key exchange groups; empty means Go
+	// defaults (post-quantum X25519MLKEM768 included).
+	Curves []string `json:"curves,omitempty"`
 }
 
 // TLSProfiles contains the predefined TLS profile specifications.

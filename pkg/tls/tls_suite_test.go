@@ -15,15 +15,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package shared
+package tls
 
-const (
-	NmstateConditionAvailable   ConditionType = "Available"
-	NmstateConditionDegraded    ConditionType = "Degraded"
-	NmstateConditionProgressing ConditionType = "Progressing"
+import (
+	"testing"
 
-	NmstateInternalError             ConditionReason = "InternalError"
-	NmstateDeploying                 ConditionReason = "Deploying"
-	NmstateSuccessfullyDeployed      ConditionReason = "SuccessfullyDeployed"
-	NmstateTLSProfileNotFullyHonored ConditionReason = "TLSProfileNotFullyHonored"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
+
+func TestUnit(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "TLS Profile Test Suite")
+}
