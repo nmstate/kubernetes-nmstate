@@ -10,6 +10,10 @@ archive=helm-${version}-${os}-${arch}.tar.gz
 url=https://get.helm.sh/${archive}
 tmpdir=
 
+if [[ -x "${destination}" ]] && [[ "$("${destination}" version --template '{{.Version}}' 2>/dev/null)" == "${version}" ]]; then
+    exit 0
+fi
+
 cleanup() {
     rm -rf "${tmpdir}"
 }

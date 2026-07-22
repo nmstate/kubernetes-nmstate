@@ -257,10 +257,10 @@ cluster-sync:
 	./cluster/sync.sh
 
 cluster-sync-operator-manifests:
-	./cluster/sync-operator-manifests.sh
+	./cluster/sync-operator.sh manifests
 
 cluster-sync-operator-helm:
-	./cluster/sync-operator-helm.sh
+	./cluster/sync-operator.sh helm
 
 helm-install: $(HELM)
 	$(HELM) upgrade --install $(HELM_RELEASE_NAME) charts/kubernetes-nmstate \

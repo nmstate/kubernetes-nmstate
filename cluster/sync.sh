@@ -6,7 +6,7 @@ source ./cluster/lima.sh
 lima::ensure_linux
 
 source ./cluster/sync-common.sh
-source ./cluster/sync-operator-manifests.sh
+source ./cluster/sync-operator.sh
 
 kubectl=./cluster/kubectl.sh
 
@@ -24,8 +24,8 @@ function wait_ready_nmstate() {
     $kubectl wait --for=condition=Available nmstate/nmstate --timeout=300s
 }
 
-deploy_operator
-wait_ready_operator
+deploy_operator manifests
+wait_ready_operator manifests
 deploy_handler
 patch_handler_nodeselector
 wait_ready_nmstate
