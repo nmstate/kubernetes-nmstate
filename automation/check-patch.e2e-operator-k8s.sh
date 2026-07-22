@@ -39,15 +39,15 @@ main() {
 
     # Validate the Helm chart deployment method end to end: helm install
     # (the chart-created NMState CR must bring up the handler, verified
-    # inside the sync script) followed by helm uninstall.
+    # inside the sync script) followed by clean-cluster-helm.
     make cluster-sync-operator-helm
-    make helm-uninstall
+    make clean-cluster-helm
     if $kubectl get deployment -n "${operator_namespace}" nmstate-operator >/dev/null 2>&1; then
-        echo "nmstate-operator deployment still exists after helm-uninstall"
+        echo "nmstate-operator deployment still exists after clean-cluster-helm"
         exit 1
     fi
     if $kubectl get ds -n "${handler_namespace}" "${handler_prefix}nmstate-handler" >/dev/null 2>&1; then
-        echo "nmstate-handler daemonset still exists after helm-uninstall"
+        echo "nmstate-handler daemonset still exists after clean-cluster-helm"
         exit 1
     fi
 

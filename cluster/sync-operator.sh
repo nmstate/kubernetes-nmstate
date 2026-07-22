@@ -10,6 +10,26 @@ MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
 RENDERED_MANIFESTS_DIR=${MANIFESTS_DIR}/kubernetes-nmstate/templates
 OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE:-nmstate}
 HANDLER_NAMESPACE=${HANDLER_NAMESPACE:-nmstate}
+HELM_VERSION=${HELM_VERSION:-v3.16.2}
+HELM=${HELM:-./build/_output/bin/helm-${HELM_VERSION}}
+HELM_RELEASE_NAME=${HELM_RELEASE_NAME:-nmstate}
+MONITORING_NAMESPACE=${MONITORING_NAMESPACE:-monitoring}
+IMAGE_REPO=${IMAGE_REPO:-nmstate}
+IMAGE_REGISTRY=${IMAGE_REGISTRY:-quay.io}
+OPERATOR_IMAGE_NAME=${OPERATOR_IMAGE_NAME:-kubernetes-nmstate-operator}
+OPERATOR_IMAGE_TAG=${OPERATOR_IMAGE_TAG:-latest}
+OPERATOR_IMAGE_FULL_NAME=${OPERATOR_IMAGE_FULL_NAME:-${IMAGE_REPO}/${OPERATOR_IMAGE_NAME}:${OPERATOR_IMAGE_TAG}}
+HANDLER_IMAGE_NAME=${HANDLER_IMAGE_NAME:-kubernetes-nmstate-handler}
+HANDLER_IMAGE_TAG=${HANDLER_IMAGE_TAG:-latest}
+HANDLER_IMAGE_FULL_NAME=${HANDLER_IMAGE_FULL_NAME:-${IMAGE_REPO}/${HANDLER_IMAGE_NAME}:${HANDLER_IMAGE_TAG}}
+
+if [[ -t 0 ]]; then
+    OPERATOR_PULL_POLICY=${OPERATOR_PULL_POLICY:-Always}
+    HANDLER_PULL_POLICY=${HANDLER_PULL_POLICY:-Always}
+else
+    OPERATOR_PULL_POLICY=${OPERATOR_PULL_POLICY:-IfNotPresent}
+    HANDLER_PULL_POLICY=${HANDLER_PULL_POLICY:-IfNotPresent}
+fi
 
 source ./cluster/sync-common.sh
 
@@ -24,18 +44,66 @@ function deploy_operator_manifests() {
 }
 
 function deploy_operator_helm() {
+    local operator_image=${IMAGE_REGISTRY}/${OPERATOR_IMAGE_FULL_NAME}
+    local handler_image=${IMAGE_REGISTRY}/${HANDLER_IMAGE_FULL_NAME}
+
     if isExternal; then
-        make IMAGE_REGISTRY=${DEV_IMAGE_REGISTRY} OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} HANDLER_NAMESPACE=${HANDLER_NAMESPACE} helm-install
-    else
-        make OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} HANDLER_NAMESPACE=${HANDLER_NAMESPACE} helm-install
+        operator_image=${DEV_IMAGE_REGISTRY}/${OPERATOR_IMAGE_FULL_NAME}
+        handler_image=${DEV_IMAGE_REGISTRY}/${HANDLER_IMAGE_FULL_NAME}
     fi
+
+    ${HELM} upgrade --install "${HELM_RELEASE_NAME}" charts/kubernetes-nmstate \
+        --kubeconfig "${KUBECONFIG}" \
+        --namespace "${OPERATOR_NAMESPACE}" \
+        --create-namespace \
+        --set nmstate.enabled=true \
+        --set operator.image="${operator_image}" \
+        --set operator.pullPolicy="${OPERATOR_PULL_POLICY}" \
+        --set handler.image="${handler_image}" \
+        --set handler.pullPolicy="${HANDLER_PULL_POLICY}" \
+        --set handler.namespace="${HANDLER_NAMESPACE}" \
+        --set handler.prefix="${HANDLER_PREFIX:-}" \
+        --set monitoring.namespace="${MONITORING_NAMESPACE}" \
+        --wait --timeout 5m
+}
+
+function clean_operator_manifests() {
+    ./cluster/clean.sh
+}
+
+function clean_operator_helm() {
+    ${HELM} uninstall "${HELM_RELEASE_NAME}" \
+        --kubeconfig "${KUBECONFIG}" \
+        --namespace "${OPERATOR_NAMESPACE}" \
+        --ignore-not-found \
+        --wait --timeout 5m
+}
+
+function clean_operator() {
+    local mode=${1:?operator deployment mode is required}
+
+    case "${mode}" in
+    manifests)
+        clean_operator_manifests
+        ;;
+    helm)
+        clean_operator_helm
+        ;;
+    *)
+        echo "Unsupported operator deployment mode: ${mode}" >&2
+        return 1
+        ;;
+    esac
 }
 
 function deploy_operator() {
     local mode=${1:?operator deployment mode is required}
 
     # Cleanup previous deployment, if there is any
-    make cluster-clean
+    if [[ -x "${HELM}" ]]; then
+        clean_operator helm
+    fi
+    clean_operator manifests
 
     # push() builds and pushes images. On kubevirtci providers it also exports
     # IMAGE_REGISTRY / OPERATOR_IMAGE_FULL_NAME / HANDLER_IMAGE_FULL_NAME.
@@ -98,6 +166,17 @@ function wait_ready_operator() {
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    deploy_operator "${1:?operator deployment mode is required}"
-    wait_ready_operator "$1"
+    case "${2:-deploy}" in
+    deploy)
+        deploy_operator "${1:?operator deployment mode is required}"
+        wait_ready_operator "$1"
+        ;;
+    clean)
+        clean_operator "${1:?operator deployment mode is required}"
+        ;;
+    *)
+        echo "Unsupported sync-operator action: ${2}" >&2
+        exit 1
+        ;;
+    esac
 fi

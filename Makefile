@@ -250,8 +250,10 @@ cluster-up:
 cluster-down:
 	./cluster/down.sh
 
-cluster-clean:
-	./cluster/clean.sh
+clean-cluster-manifests:
+	./cluster/sync-operator.sh manifests clean
+
+cluster-clean: clean-cluster-manifests
 
 cluster-sync:
 	./cluster/sync.sh
@@ -259,30 +261,11 @@ cluster-sync:
 cluster-sync-operator-manifests:
 	./cluster/sync-operator.sh manifests
 
-cluster-sync-operator-helm:
-	./cluster/sync-operator.sh helm
+cluster-sync-operator-helm: $(HELM)
+	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) OPERATOR_PULL_POLICY=$(OPERATOR_PULL_POLICY) HANDLER_PULL_POLICY=$(HANDLER_PULL_POLICY) ./cluster/sync-operator.sh helm
 
-helm-install: $(HELM)
-	$(HELM) upgrade --install $(HELM_RELEASE_NAME) charts/kubernetes-nmstate \
-		--kubeconfig $(KUBECONFIG) \
-		--namespace $(OPERATOR_NAMESPACE) \
-		--create-namespace \
-		--set nmstate.enabled=true \
-		--set operator.image=$(OPERATOR_IMAGE) \
-		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
-		--set handler.image=$(HANDLER_IMAGE) \
-		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
-		--set handler.namespace=$(HANDLER_NAMESPACE) \
-		--set handler.prefix=$(HANDLER_PREFIX) \
-		--set monitoring.namespace=$(MONITORING_NAMESPACE) \\
-		--wait --timeout 5m
-
-helm-uninstall: $(HELM)
-	$(HELM) uninstall $(HELM_RELEASE_NAME) \
-		--kubeconfig $(KUBECONFIG) \
-		--namespace $(OPERATOR_NAMESPACE) \
-		--ignore-not-found \
-		--wait --timeout 5m
+clean-cluster-helm: $(HELM)
+	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) ./cluster/sync-operator.sh helm clean
 
 version-patch:
 	./hack/tag-version.sh patch
@@ -349,9 +332,9 @@ olm-push: bundle-push index-push
 	cluster-down \
 	cluster-sync-operator-manifests \
 	cluster-sync-operator-helm \
-	helm-install \
-	helm-uninstall \
 	cluster-sync \
+	clean-cluster-manifests \
+	clean-cluster-helm \
 	cluster-clean \
 	release \
 	vendor \

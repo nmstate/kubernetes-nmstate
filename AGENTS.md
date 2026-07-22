@@ -172,8 +172,8 @@ make cluster-sync-operator-manifests
 # Stop cluster
 make cluster-down
 
-# Clean cluster state
-make cluster-clean
+# Clean manifests-based cluster state
+make clean-cluster-manifests
 ```
 
 Cluster configuration via environment variables:
