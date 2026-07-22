@@ -100,6 +100,8 @@ spec:
               value: {{ .Values.handler.pullPolicy | quote }}
             - name: HANDLER_NAMESPACE
               value: {{ .Values.handler.namespace | quote }}
+            - name: HANDLER_PREFIX
+              value: {{ .Values.handler.prefix | quote }}
             - name: MONITORING_NAMESPACE
               value: {{ .Values.monitoring.namespace | quote }}
             - name: OPERATOR_NAMESPACE

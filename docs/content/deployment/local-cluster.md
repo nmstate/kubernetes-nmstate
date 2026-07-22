@@ -33,7 +33,8 @@ make cluster-down
 
 Build kubernetes-nmstate from local sources and install it on the cluster. This
 command can be executed repeatedly in order to install changed sources to the
-cluster.
+cluster. The default development path upgrades the Helm release; `make manifests`
+still renders raw manifests if you want to deploy from generated YAML instead.
 
 ```shell
 make cluster-sync

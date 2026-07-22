@@ -15,6 +15,7 @@ HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
+HANDLER_PREFIX ?=
 
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
@@ -196,6 +197,7 @@ manifests: $(HELM)
 		--set handler.image=$(HANDLER_IMAGE) \
 		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
 		--set handler.namespace=$(HANDLER_NAMESPACE) \
+		--set handler.prefix=$(HANDLER_PREFIX) \
 		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
 		--output-dir $(MANIFESTS_DIR)
 
@@ -253,7 +255,7 @@ cluster-down:
 clean-cluster-manifests:
 	./cluster/sync-operator.sh manifests clean
 
-cluster-clean: clean-cluster-manifests
+cluster-clean: clean-cluster-helm
 
 cluster-sync:
 	./cluster/sync.sh

@@ -23,14 +23,17 @@ make cluster-up
 # Deploy/update operator and handler to cluster
 make cluster-sync
 
+# Clean the default Helm-based cluster deployment
+make cluster-clean
+
 # Deploy only operator changes from rendered manifests
 make cluster-sync-operator-manifests
 
-# Stop cluster
-make cluster-down
-
 # Clean manifests-based cluster state
 make clean-cluster-manifests
+
+# Stop cluster
+make cluster-down
 ```
 
 ## Cluster Configuration
@@ -54,7 +57,7 @@ Network interface names vary by provider:
 
 The operator `operator.yaml` manifest is rendered from the Helm chart template in `charts/kubernetes-nmstate/templates/` and gets populated with the correct docker image to use.
 
-Every time `cluster-sync` is called, it re-renders the chart with the correct kubernetes-nmstate-handler image and applies the result.
+Every time `cluster-sync` is called, it upgrades the Helm release with the correct kubernetes-nmstate images and then patches the chart-created `NMState` custom resource for the local cluster workflow.
 
 Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/`; the rendered operator manifests live under `build/_output/manifests/kubernetes-nmstate/templates/`.
 
