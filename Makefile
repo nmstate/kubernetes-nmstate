@@ -15,7 +15,6 @@ HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
-HANDLER_PREFIX ?=
 
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
@@ -241,6 +240,11 @@ push: push-handler push-operator
 CHART_VERSION ?=
 CHART_APP_VERSION ?= v$(CHART_VERSION)
 CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+ifneq ($(strip $(XDG_RUNTIME_DIR)),)
+ifneq ($(wildcard $(XDG_RUNTIME_DIR)/containers/auth.json),)
+HELM_REGISTRY_CONFIG ?= $(XDG_RUNTIME_DIR)/containers/auth.json
+endif
+endif
 HELM_REGISTRY_CONFIG ?= $(HOME)/.docker/config.json
 
 push-chart: helm
@@ -309,10 +313,13 @@ helm-install: helm
 helm-uninstall: helm
 	# The NMState CR carries a finalizer processed by the operator, so it
 	# must be fully removed before the operator is uninstalled.
-	$(KUBECTL) --kubeconfig $(KUBECONFIG) delete nmstate --all --ignore-not-found --wait --timeout=5m
+	@if [ -n "$$($(KUBECTL) --kubeconfig $(KUBECONFIG) get crd nmstates.nmstate.io -o name 2>/dev/null)" ]; then \
+		$(KUBECTL) --kubeconfig $(KUBECONFIG) delete nmstate --all --ignore-not-found --wait --timeout=5m; \
+	fi
 	$(HELM) uninstall $(HELM_RELEASE_NAME) \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace $(OPERATOR_NAMESPACE) \
+		--ignore-not-found \
 		--wait --timeout 5m
 
 version-patch:

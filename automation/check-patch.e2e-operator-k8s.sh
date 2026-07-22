@@ -20,6 +20,10 @@ main() {
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
 
+    operator_namespace=${OPERATOR_NAMESPACE:-nmstate}
+    handler_namespace=${HANDLER_NAMESPACE:-nmstate}
+    handler_prefix=${HANDLER_PREFIX:-}
+
     # Let's fail fast if generated files differ or the chart does not lint
     make check-gen
     make lint-helm
@@ -40,8 +44,14 @@ main() {
     # removed before the chart release).
     make cluster-sync-operator-helm
     make helm-uninstall
-    ! $kubectl get deployment -n nmstate nmstate-operator
-    ! $kubectl get ds -n nmstate nmstate-handler
+    if $kubectl get deployment -n "${operator_namespace}" nmstate-operator >/dev/null 2>&1; then
+        echo "nmstate-operator deployment still exists after helm-uninstall"
+        exit 1
+    fi
+    if $kubectl get ds -n "${handler_namespace}" "${handler_prefix}nmstate-handler" >/dev/null 2>&1; then
+        echo "nmstate-handler daemonset still exists after helm-uninstall"
+        exit 1
+    fi
 
     # Hand the cluster to the standard operator e2e suite, which manages
     # its own operator lifecycle from the chart-rendered manifests.

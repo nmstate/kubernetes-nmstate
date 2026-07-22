@@ -15,12 +15,15 @@ function deploy_operator_helm() {
     # Cleanup previous deployment, if there is any
     make cluster-clean
 
-    # push() builds and pushes images to the cluster-local registry and
-    # exports IMAGE_REGISTRY / OPERATOR_IMAGE_FULL_NAME /
-    # HANDLER_IMAGE_FULL_NAME, so make computes the right image references.
+    # push() builds and pushes images. On kubevirtci providers it also exports
+    # IMAGE_REGISTRY / OPERATOR_IMAGE_FULL_NAME / HANDLER_IMAGE_FULL_NAME.
     push
 
-    make OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} HANDLER_NAMESPACE=${HANDLER_NAMESPACE} helm-install
+    if isExternal; then
+        make IMAGE_REGISTRY=${DEV_IMAGE_REGISTRY} OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} HANDLER_NAMESPACE=${HANDLER_NAMESPACE} helm-install
+    else
+        make OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE} HANDLER_NAMESPACE=${HANDLER_NAMESPACE} helm-install
+    fi
 }
 
 function nns_exist() {
@@ -30,7 +33,7 @@ function nns_exist() {
 function wait_ready_handler() {
     # The operator deploys the handler in reaction to the chart-created
     # NMState CR (nmstate.enabled=true)
-    if ! eventually $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds nmstate-handler --timeout=2m; then
+    if ! eventually $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds "${HANDLER_PREFIX:-}nmstate-handler" --timeout=2m; then
         echo "Handler hasn't turned ready within the given timeout"
         return 1
     fi
