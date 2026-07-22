@@ -223,7 +223,7 @@ make bundle
 make check-bundle
 ```
 
-Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/` (`make manifests` runs `helm template` and flattens the output). The chart templates get populated with correct image references during `cluster-sync`.
+Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/`; the rendered operator manifests live under `build/_output/manifests/kubernetes-nmstate/templates/`. The chart templates get populated with correct image references during `cluster-sync`.
 
 ## Vendoring
 

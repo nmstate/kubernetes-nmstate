@@ -23,9 +23,10 @@ function clean() {
     echo 'Cleaning up ...'
 
     MANIFESTS_DIR=build/_output/manifests
+    RENDERED_MANIFESTS_DIR=${MANIFESTS_DIR}/kubernetes-nmstate/templates
     kubectl=./cluster/kubectl.sh
 
-    if [ ! -d $MANIFESTS_DIR ]; then
+    if [ ! -d $RENDERED_MANIFESTS_DIR ]; then
         exit 0
     fi
 
@@ -33,15 +34,15 @@ function clean() {
     if $kubectl get crds nmstates.nmstate.io; then
         $kubectl delete --ignore-not-found -f deploy/examples/nmstate.io_v1_nmstate_cr.yaml
     fi
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/operator.yaml
+    $kubectl delete --ignore-not-found -f $RENDERED_MANIFESTS_DIR/operator.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates.yaml
     $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nmstates.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/namespace.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/service_account.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role_binding.yaml
+    $kubectl delete --ignore-not-found -f $RENDERED_MANIFESTS_DIR/namespace.yaml
+    $kubectl delete --ignore-not-found -f $RENDERED_MANIFESTS_DIR/service_account.yaml
+    $kubectl delete --ignore-not-found -f $RENDERED_MANIFESTS_DIR/role.yaml
+    $kubectl delete --ignore-not-found -f $RENDERED_MANIFESTS_DIR/role_binding.yaml
 }
 
 # Use labels so we don't care about prefixes

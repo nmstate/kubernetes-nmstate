@@ -79,6 +79,7 @@ OPM = hack/opm.sh
 LOCAL_REGISTRY ?= registry:5000
 
 export MANIFESTS_DIR ?= build/_output/manifests
+HELM_RENDERED_MANIFESTS_DIR ?= $(MANIFESTS_DIR)/kubernetes-nmstate/templates
 BUNDLE_DIR ?= ./bundle
 BUNDLE_DOCKERFILE ?= bundle.Dockerfile
 MANIFEST_BASES_DIR ?= deploy/bases
@@ -162,8 +163,9 @@ gen-k8s:
 
 gen-crds:
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
-	mkdir -p charts/kubernetes-nmstate/crds
-	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/nmstate.io_nmstates.yaml
+	rm -rf charts/kubernetes-nmstate/crds
+	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../charts/kubernetes-nmstate/crds
+	find charts/kubernetes-nmstate/crds -maxdepth 1 -type f ! -name 'nmstate.io_nmstates.yaml' -delete
 
 gen-rbac:
 	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
@@ -193,10 +195,7 @@ manifests: helm
 		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
 		--set handler.namespace=$(HANDLER_NAMESPACE) \
 		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
-		--output-dir $(MANIFESTS_DIR)/.helm-render
-	mv $(MANIFESTS_DIR)/.helm-render/kubernetes-nmstate/templates/*.yaml $(MANIFESTS_DIR)/
-	rm -rf $(MANIFESTS_DIR)/.helm-render
-	cp deploy/examples/*.yaml $(MANIFESTS_DIR)/
+		--output-dir $(MANIFESTS_DIR)
 
 require-image-builder:
 	@test -n "$(IMAGE_BUILDER)" || { echo "Error: IMAGE_BUILDER is not set and could not be auto-detected (neither podman nor docker is running/available)." >&2; exit 1; }
@@ -219,17 +218,9 @@ push: push-handler push-operator
 CHART_VERSION ?=
 CHART_APP_VERSION ?= v$(CHART_VERSION)
 CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
-ifneq ($(strip $(XDG_RUNTIME_DIR)),)
-ifneq ($(wildcard $(XDG_RUNTIME_DIR)/containers/auth.json),)
-HELM_REGISTRY_CONFIG ?= $(XDG_RUNTIME_DIR)/containers/auth.json
-endif
-endif
-HELM_REGISTRY_CONFIG ?= $(HOME)/.docker/config.json
 
 push-chart: helm
-	@test -n "$(CHART_VERSION)" || { echo "Error: CHART_VERSION is required (e.g. make CHART_VERSION=0.86.0 push-chart)" >&2; exit 1; }
-	$(HELM) package charts/kubernetes-nmstate --version $(CHART_VERSION) --app-version $(CHART_APP_VERSION) --destination build/_output
-	$(HELM) push build/_output/kubernetes-nmstate-$(CHART_VERSION).tgz $(CHART_OCI_REPO) --registry-config $(HELM_REGISTRY_CONFIG)
+	HELM=$(HELM) CHART_VERSION=$(CHART_VERSION) CHART_APP_VERSION=$(CHART_APP_VERSION) CHART_OCI_REPO=$(CHART_OCI_REPO) hack/push-chart.sh
 
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
@@ -321,9 +312,10 @@ vendor:
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
-	mkdir -p $(MANIFESTS_DIR)/bases
-	cat $(MANIFEST_BASES_DIR)/kubernetes-nmstate-operator.clusterserviceversion.yaml | OPERATOR_IMAGE=$(OPERATOR_IMAGE) envsubst > $(MANIFESTS_DIR)/bases/kubernetes-nmstate-operator.clusterserviceversion.yaml
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
+	mkdir -p $(HELM_RENDERED_MANIFESTS_DIR)/bases
+	cp deploy/examples/*.yaml $(HELM_RENDERED_MANIFESTS_DIR)/
+	cat $(MANIFEST_BASES_DIR)/kubernetes-nmstate-operator.clusterserviceversion.yaml | OPERATOR_IMAGE=$(OPERATOR_IMAGE) envsubst > $(HELM_RENDERED_MANIFESTS_DIR)/bases/kubernetes-nmstate-operator.clusterserviceversion.yaml
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(HELM_RENDERED_MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 
 # Build the bundle image.

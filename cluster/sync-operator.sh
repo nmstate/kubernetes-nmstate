@@ -7,6 +7,7 @@ lima::ensure_linux
 
 kubectl=./cluster/kubectl.sh
 MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
+RENDERED_MANIFESTS_DIR=${MANIFESTS_DIR}/kubernetes-nmstate/templates
 OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE:-nmstate}
 HANDLER_NAMESPACE=${HANDLER_NAMESPACE:-nmstate}
 
@@ -19,12 +20,12 @@ function deploy_operator() {
     push
 
     # Deploy all needed manifests
-    $kubectl apply -f $MANIFESTS_DIR/namespace.yaml
-    $kubectl apply -f $MANIFESTS_DIR/service_account.yaml
-    $kubectl apply -f $MANIFESTS_DIR/role.yaml
-    $kubectl apply -f $MANIFESTS_DIR/role_binding.yaml
+    $kubectl apply -f $RENDERED_MANIFESTS_DIR/namespace.yaml
+    $kubectl apply -f $RENDERED_MANIFESTS_DIR/service_account.yaml
+    $kubectl apply -f $RENDERED_MANIFESTS_DIR/role.yaml
+    $kubectl apply -f $RENDERED_MANIFESTS_DIR/role_binding.yaml
     $kubectl apply -f deploy/crds/nmstate.io_nmstates.yaml
-    $kubectl apply -f $MANIFESTS_DIR/operator.yaml
+    $kubectl apply -f $RENDERED_MANIFESTS_DIR/operator.yaml
 }
 
 function wait_ready_operator() {

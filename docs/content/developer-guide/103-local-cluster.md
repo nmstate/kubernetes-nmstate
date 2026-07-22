@@ -56,7 +56,7 @@ The operator `operator.yaml` manifest is rendered from the Helm chart template i
 
 Every time `cluster-sync` is called, it re-renders the chart with the correct kubernetes-nmstate-handler image and applies the result.
 
-Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/` (`make manifests` runs `helm template` and flattens the output).
+Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/`; the rendered operator manifests live under `build/_output/manifests/kubernetes-nmstate/templates/`.
 
 ## Next Steps
 
