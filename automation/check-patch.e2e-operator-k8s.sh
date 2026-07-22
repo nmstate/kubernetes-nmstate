@@ -39,9 +39,7 @@ main() {
 
     # Validate the Helm chart deployment method end to end: helm install
     # (the chart-created NMState CR must bring up the handler, verified
-    # inside the sync script) followed by the two-step uninstall (the
-    # NMState CR has a finalizer processed by the operator, so it is
-    # removed before the chart release).
+    # inside the sync script) followed by helm uninstall.
     make cluster-sync-operator-helm
     make helm-uninstall
     if $kubectl get deployment -n "${operator_namespace}" nmstate-operator >/dev/null 2>&1; then
@@ -55,7 +53,7 @@ main() {
 
     # Hand the cluster to the standard operator e2e suite, which manages
     # its own operator lifecycle from the chart-rendered manifests.
-    make cluster-sync-operator
+    make cluster-sync-operator-manifests
     make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="--no-color --output-dir=$ARTIFACTS --junit-report=junit.functest.xml" test-e2e-operator
 }
 

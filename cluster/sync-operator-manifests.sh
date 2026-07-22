@@ -39,7 +39,7 @@ function wait_ready_operator() {
     fi
 }
 
-if [ "$(basename -- $0)" == "sync-operator.sh" ]; then
+if [ "$(basename -- $0)" == "sync-operator-manifests.sh" ]; then
     deploy_operator
     wait_ready_operator
 fi

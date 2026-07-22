@@ -166,8 +166,8 @@ make cluster-up
 # Deploy/update operator and handler to cluster
 make cluster-sync
 
-# Deploy only operator changes
-make cluster-sync-operator
+# Deploy only operator changes from rendered manifests
+make cluster-sync-operator-manifests
 
 # Stop cluster
 make cluster-down

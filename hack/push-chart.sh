@@ -3,12 +3,12 @@
 set -euo pipefail
 
 helm_bin=${HELM:-helm}
-chart_version=${CHART_VERSION:-}
-chart_app_version=${CHART_APP_VERSION:-}
-chart_oci_repo=${CHART_OCI_REPO:-}
+chart_version=${HELM_CHART_VERSION:-}
+chart_app_version=${HELM_CHART_APP_VERSION:-}
+chart_oci_repo=${HELM_CHART_OCI_REPO:-}
 
 if [[ -z "${chart_version}" ]]; then
-    echo "Error: CHART_VERSION is required (e.g. make CHART_VERSION=0.86.0 push-chart)" >&2
+    echo "Error: HELM_CHART_VERSION is required (e.g. make HELM_CHART_VERSION=0.86.0 push-chart)" >&2
     exit 1
 fi
 

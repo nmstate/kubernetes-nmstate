@@ -75,6 +75,12 @@ GINKGO_VERSION ?= v2.22.1
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.1
 OPM = hack/opm.sh
+HELM_VERSION ?= v3.16.2
+HELM = $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
+HELM_CHART_VERSION ?=
+HELM_CHART_APP_VERSION ?= $(if $(HELM_CHART_VERSION),v$(HELM_CHART_VERSION),)
+HELM_CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+HELM_RELEASE_NAME ?= nmstate
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -132,7 +138,7 @@ promlint-check:
 lint:
 	hack/lint.sh
 
-lint-helm: helm
+lint-helm: $(HELM)
 	$(HELM) lint charts/kubernetes-nmstate
 	HELM=$(HELM) hack/test-helm-render.sh
 
@@ -145,18 +151,14 @@ ifeq (,$(wildcard $(OPERATOR_SDK)))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPERATOR_SDK)) ;\
-	curl -Lo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v$(OPERATOR_SDK_VERSION)/operator-sdk_$$(go env GOOS)_$$(go env GOARCH) ;\
+	curl -Lo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v$(OPERATOR_SDK_VERSION)/operator-sdk_$$(env GOTOOLCHAIN=local go env GOOS)_$$(env GOTOOLCHAIN=local go env GOARCH) ;\
 	chmod +x $(OPERATOR_SDK) ;\
 	}
 endif
 endif
 
-HELM_VERSION ?= v3.16.2
-HELM = $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
-helm: ## Download helm locally.
-ifeq (,$(wildcard $(HELM)))
+$(HELM): ## Download helm locally.
 	hack/install-helm.sh $(HELM_VERSION) $(HELM)
-endif
 
 gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -182,7 +184,7 @@ check-bundle: bundle
 
 generate: gen-k8s gen-crds gen-rbac
 
-manifests: helm
+manifests: $(HELM)
 	rm -rf $(MANIFESTS_DIR)
 	mkdir -p $(MANIFESTS_DIR)
 	$(HELM) template nmstate charts/kubernetes-nmstate \
@@ -215,12 +217,8 @@ push-operator: require-image-builder
 
 push: push-handler push-operator
 
-CHART_VERSION ?=
-CHART_APP_VERSION ?= v$(CHART_VERSION)
-CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
-
-push-chart: helm
-	HELM=$(HELM) CHART_VERSION=$(CHART_VERSION) CHART_APP_VERSION=$(CHART_APP_VERSION) CHART_OCI_REPO=$(CHART_OCI_REPO) hack/push-chart.sh
+push-chart: $(HELM)
+	HELM=$(HELM) HELM_CHART_VERSION=$(HELM_CHART_VERSION) HELM_CHART_APP_VERSION=$(HELM_CHART_APP_VERSION) HELM_CHART_OCI_REPO=$(HELM_CHART_OCI_REPO) hack/push-chart.sh
 
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
@@ -258,15 +256,13 @@ cluster-clean:
 cluster-sync:
 	./cluster/sync.sh
 
-cluster-sync-operator:
-	./cluster/sync-operator.sh
+cluster-sync-operator-manifests:
+	./cluster/sync-operator-manifests.sh
 
 cluster-sync-operator-helm:
 	./cluster/sync-operator-helm.sh
 
-HELM_RELEASE_NAME ?= nmstate
-
-helm-install: helm
+helm-install: $(HELM)
 	$(HELM) upgrade --install $(HELM_RELEASE_NAME) charts/kubernetes-nmstate \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace $(OPERATOR_NAMESPACE) \
@@ -280,12 +276,7 @@ helm-install: helm
 		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
 		--wait --timeout 5m
 
-helm-uninstall: helm
-	# The NMState CR carries a finalizer processed by the operator, so it
-	# must be fully removed before the operator is uninstalled.
-	@if [ -n "$$($(KUBECTL) --kubeconfig $(KUBECONFIG) get crd nmstates.nmstate.io -o name 2>/dev/null)" ]; then \
-		$(KUBECTL) --kubeconfig $(KUBECONFIG) delete nmstate --all --ignore-not-found --wait --timeout=5m; \
-	fi
+helm-uninstall: $(HELM)
 	$(HELM) uninstall $(HELM_RELEASE_NAME) \
 		--kubeconfig $(KUBECONFIG) \
 		--namespace $(OPERATOR_NAMESPACE) \
@@ -348,7 +339,6 @@ olm-push: bundle-push index-push
 	generate \
 	check-gen \
 	operator-sdk \
-	helm \
 	lint-helm \
 	test-e2e-handler \
 	test-e2e-operator \
@@ -356,7 +346,7 @@ olm-push: bundle-push index-push
 	test-reporter\
 	cluster-up \
 	cluster-down \
-	cluster-sync-operator \
+	cluster-sync-operator-manifests \
 	cluster-sync-operator-helm \
 	helm-install \
 	helm-uninstall \

@@ -68,7 +68,7 @@ make OPERATOR_IMAGE_TAG=$new_version HANDLER_IMAGE_TAG=$new_version \
     push-handler \
     push-operator
 
-make CHART_VERSION=${new_version#v} push-chart
+make HELM_CHART_VERSION=${new_version#v} push-chart
 
 export GOFLAGS=-mod=mod
 create_github_release

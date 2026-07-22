@@ -59,10 +59,6 @@ helm upgrade nmstate oci://quay.io/nmstate/kubernetes-nmstate \
 
 ## Uninstall
 
-The `NMState` custom resource carries a finalizer processed by the operator,
-so remove it before uninstalling the release:
-
 ```shell
-kubectl delete nmstate --all --wait
 helm uninstall nmstate --namespace nmstate --wait
 ```
