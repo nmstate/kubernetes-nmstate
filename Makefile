@@ -252,22 +252,14 @@ cluster-up:
 cluster-down:
 	./cluster/down.sh
 
-clean-cluster-manifests:
-	./cluster/sync-operator.sh manifests clean
-
-cluster-clean: clean-cluster-helm
+cluster-clean: $(HELM)
+	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) ./cluster/sync-operator.sh clean
 
 cluster-sync:
-	./cluster/sync.sh
+	HANDLER_PREFIX=$(HANDLER_PREFIX) ./cluster/sync.sh
 
-cluster-sync-operator-manifests:
-	./cluster/sync-operator.sh manifests
-
-cluster-sync-operator-helm: $(HELM)
-	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) OPERATOR_PULL_POLICY=$(OPERATOR_PULL_POLICY) HANDLER_PULL_POLICY=$(HANDLER_PULL_POLICY) ./cluster/sync-operator.sh helm
-
-clean-cluster-helm: $(HELM)
-	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) ./cluster/sync-operator.sh helm clean
+cluster-sync-operator: $(HELM)
+	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) OPERATOR_PULL_POLICY=$(OPERATOR_PULL_POLICY) HANDLER_PULL_POLICY=$(HANDLER_PULL_POLICY) HANDLER_PREFIX=$(HANDLER_PREFIX) ./cluster/sync-operator.sh
 
 version-patch:
 	./hack/tag-version.sh patch
@@ -332,11 +324,8 @@ olm-push: bundle-push index-push
 	test-reporter\
 	cluster-up \
 	cluster-down \
-	cluster-sync-operator-manifests \
-	cluster-sync-operator-helm \
+	cluster-sync-operator \
 	cluster-sync \
-	clean-cluster-manifests \
-	clean-cluster-helm \
 	cluster-clean \
 	release \
 	vendor \

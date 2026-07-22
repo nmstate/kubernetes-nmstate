@@ -169,11 +169,11 @@ make cluster-sync
 # Clean the default Helm-based cluster deployment
 make cluster-clean
 
-# Deploy only operator changes from rendered manifests
-make cluster-sync-operator-manifests
+# Deploy only the operator with Helm
+make cluster-sync-operator
 
-# Clean manifests-based cluster state
-make clean-cluster-manifests
+# Generate deployment manifests
+make manifests
 
 # Stop cluster
 make cluster-down

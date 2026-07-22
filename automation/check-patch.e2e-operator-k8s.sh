@@ -37,23 +37,23 @@ main() {
 
     kubectl=./cluster/kubectl.sh
 
-    # Validate the Helm chart deployment method end to end: helm install
+    # Validate the default local deployment flow end to end: helm install
     # (the chart-created NMState CR must bring up the handler, verified
-    # inside the sync script) followed by clean-cluster-helm.
-    make cluster-sync-operator-helm
-    make clean-cluster-helm
+    # inside the sync script) followed by cluster-clean.
+    make cluster-sync
+    make cluster-clean
     if $kubectl get deployment -n "${operator_namespace}" nmstate-operator >/dev/null 2>&1; then
-        echo "nmstate-operator deployment still exists after clean-cluster-helm"
+        echo "nmstate-operator deployment still exists after cluster-clean"
         exit 1
     fi
     if $kubectl get ds -n "${handler_namespace}" "${handler_prefix}nmstate-handler" >/dev/null 2>&1; then
-        echo "nmstate-handler daemonset still exists after clean-cluster-helm"
+        echo "nmstate-handler daemonset still exists after cluster-clean"
         exit 1
     fi
 
-    # Hand the cluster to the standard operator e2e suite, which manages
-    # its own operator lifecycle from the chart-rendered manifests.
-    make cluster-sync-operator-manifests
+    # Hand the cluster to the standard operator e2e suite with just the
+    # operator installed; the suite manages NMState lifecycle itself.
+    make cluster-sync-operator
     make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="--no-color --output-dir=$ARTIFACTS --junit-report=junit.functest.xml" test-e2e-operator
 }
 

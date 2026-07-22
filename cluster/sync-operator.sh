@@ -6,8 +6,6 @@ source ./cluster/lima.sh
 lima::ensure_linux
 
 kubectl=./cluster/kubectl.sh
-MANIFESTS_DIR=${MANIFESTS_DIR:-build/_output/manifests}
-RENDERED_MANIFESTS_DIR=${MANIFESTS_DIR}/kubernetes-nmstate/templates
 OPERATOR_NAMESPACE=${OPERATOR_NAMESPACE:-nmstate}
 HANDLER_NAMESPACE=${HANDLER_NAMESPACE:-nmstate}
 HELM_VERSION=${HELM_VERSION:-v3.16.2}
@@ -33,17 +31,8 @@ fi
 
 source ./cluster/sync-common.sh
 
-function deploy_operator_manifests() {
-    # Deploy all needed manifests
-    $kubectl apply -f $RENDERED_MANIFESTS_DIR/namespace.yaml
-    $kubectl apply -f $RENDERED_MANIFESTS_DIR/service_account.yaml
-    $kubectl apply -f $RENDERED_MANIFESTS_DIR/role.yaml
-    $kubectl apply -f $RENDERED_MANIFESTS_DIR/role_binding.yaml
-    $kubectl apply -f deploy/crds/nmstate.io_nmstates.yaml
-    $kubectl apply -f $RENDERED_MANIFESTS_DIR/operator.yaml
-}
-
-function deploy_operator_helm() {
+function deploy_operator() {
+    local nmstate_enabled=${1:-false}
     local operator_image=${IMAGE_REGISTRY}/${OPERATOR_IMAGE_FULL_NAME}
     local handler_image=${IMAGE_REGISTRY}/${HANDLER_IMAGE_FULL_NAME}
 
@@ -56,7 +45,7 @@ function deploy_operator_helm() {
         --kubeconfig "${KUBECONFIG}" \
         --namespace "${OPERATOR_NAMESPACE}" \
         --create-namespace \
-        --set nmstate.enabled=true \
+        --set nmstate.enabled="${nmstate_enabled}" \
         --set operator.image="${operator_image}" \
         --set operator.pullPolicy="${OPERATOR_PULL_POLICY}" \
         --set handler.image="${handler_image}" \
@@ -67,11 +56,7 @@ function deploy_operator_helm() {
         --wait --timeout 5m
 }
 
-function clean_operator_manifests() {
-    ./cluster/clean.sh
-}
-
-function clean_operator_helm() {
+function clean_operator() {
     ${HELM} uninstall "${HELM_RELEASE_NAME}" \
         --kubeconfig "${KUBECONFIG}" \
         --namespace "${OPERATOR_NAMESPACE}" \
@@ -79,55 +64,27 @@ function clean_operator_helm() {
         --wait --timeout 5m
 }
 
-function clean_operator() {
-    local mode=${1:?operator deployment mode is required}
-
-    case "${mode}" in
-    manifests)
-        clean_operator_manifests
-        ;;
-    helm)
-        clean_operator_helm
-        ;;
-    *)
-        echo "Unsupported operator deployment mode: ${mode}" >&2
-        return 1
-        ;;
-    esac
-}
-
-function deploy_operator() {
-    local mode=${1:?operator deployment mode is required}
-
+function sync_operator() {
+    local nmstate_enabled=${1:-false}
     # Cleanup previous deployment, if there is any
     if [[ -x "${HELM}" ]]; then
-        clean_operator helm
+        clean_operator
     fi
-    clean_operator manifests
 
     # push() builds and pushes images. On kubevirtci providers it also exports
     # IMAGE_REGISTRY / OPERATOR_IMAGE_FULL_NAME / HANDLER_IMAGE_FULL_NAME.
     push
 
-    case "${mode}" in
-    manifests)
-        deploy_operator_manifests
-        ;;
-    helm)
-        deploy_operator_helm
-        ;;
-    *)
-        echo "Unsupported operator deployment mode: ${mode}" >&2
-        return 1
-        ;;
-    esac
+    deploy_operator "${nmstate_enabled}"
 }
 
 function nns_exist() {
     [[ -n "$($kubectl get nns -o name 2>/dev/null)" ]]
 }
 
-function wait_ready_operator_manifests() {
+function wait_ready_operator() {
+    local nmstate_enabled=${1:-false}
+
     # Wait a little for resources to be created
     sleep 5
 
@@ -136,9 +93,11 @@ function wait_ready_operator_manifests() {
         echo "Operator haven't turned ready within the given timeout"
         return 1
     fi
-}
 
-function wait_ready_operator_helm() {
+    if [[ "${nmstate_enabled}" != "true" ]]; then
+        return 0
+    fi
+
     # The operator deploys the handler in reaction to the chart-created
     # NMState CR (nmstate.enabled=true)
     if ! eventually $kubectl rollout status -w -n ${HANDLER_NAMESPACE} ds "${HANDLER_PREFIX:-}nmstate-handler" --timeout=2m; then
@@ -148,34 +107,21 @@ function wait_ready_operator_helm() {
     eventually nns_exist
 }
 
-function wait_ready_operator() {
-    local mode=${1:?operator deployment mode is required}
-
-    case "${mode}" in
-    manifests)
-        wait_ready_operator_manifests
-        ;;
-    helm)
-        wait_ready_operator_helm
-        ;;
-    *)
-        echo "Unsupported operator deployment mode: ${mode}" >&2
-        return 1
-        ;;
-    esac
-}
-
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    case "${2:-deploy}" in
+    case "${1:-deploy}" in
     deploy)
-        deploy_operator "${1:?operator deployment mode is required}"
-        wait_ready_operator "$1"
+        sync_operator
+        wait_ready_operator
+        ;;
+    deploy-with-nmstate)
+        sync_operator true
+        wait_ready_operator true
         ;;
     clean)
-        clean_operator "${1:?operator deployment mode is required}"
+        clean_operator
         ;;
     *)
-        echo "Unsupported sync-operator action: ${2}" >&2
+        echo "Unsupported sync-operator action: ${1}" >&2
         exit 1
         ;;
     esac
