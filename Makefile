@@ -273,7 +273,8 @@ helm-install: $(HELM)
 		--set handler.image=$(HANDLER_IMAGE) \
 		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
 		--set handler.namespace=$(HANDLER_NAMESPACE) \
-		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--set handler.prefix=$(HANDLER_PREFIX) \
+		--set monitoring.namespace=$(MONITORING_NAMESPACE) \\
 		--wait --timeout 5m
 
 helm-uninstall: $(HELM)

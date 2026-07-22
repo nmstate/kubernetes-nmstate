@@ -11,6 +11,8 @@ handler:
   pullPolicy: IfNotPresent
   # Namespace the operator deploys the handler into (created by the operator).
   namespace: nmstate
+  # Optional name prefix for the handler resources deployed by the operator.
+  prefix: ""
 
 monitoring:
   namespace: monitoring
