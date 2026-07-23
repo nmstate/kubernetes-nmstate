@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-version=${1:?helm version is required}
-destination=${2:?helm destination is required}
+version=${HELM_VERSION:-${1:?helm version is required}}
+destination=${HELM:-${2:?helm destination is required}}
 os=$(env GOTOOLCHAIN=local go env GOOS)
 arch=$(env GOTOOLCHAIN=local go env GOARCH)
 archive=helm-${version}-${os}-${arch}.tar.gz

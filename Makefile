@@ -15,7 +15,7 @@ HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
-HANDLER_PREFIX ?=
+export HANDLER_PREFIX ?=
 
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
@@ -30,11 +30,11 @@ export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; 
 # "Always" policy must be used only for development, never pushed to the production CSV
 INTERACTIVE:=$(shell [ -t 0 ] && echo 1)
 ifdef INTERACTIVE
-HANDLER_PULL_POLICY ?= Always
-OPERATOR_PULL_POLICY ?= Always
+export HANDLER_PULL_POLICY ?= Always
+export OPERATOR_PULL_POLICY ?= Always
 else
-HANDLER_PULL_POLICY ?= IfNotPresent
-OPERATOR_PULL_POLICY ?= IfNotPresent
+export HANDLER_PULL_POLICY ?= IfNotPresent
+export OPERATOR_PULL_POLICY ?= IfNotPresent
 endif
 
 WHAT ?= ./pkg/... ./controllers/...
@@ -76,12 +76,12 @@ GINKGO_VERSION ?= v2.22.1
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.1
 OPM = hack/opm.sh
-HELM_VERSION ?= v3.16.2
-HELM = $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
-HELM_CHART_VERSION ?=
-HELM_CHART_APP_VERSION ?= $(if $(HELM_CHART_VERSION),v$(HELM_CHART_VERSION),)
-HELM_CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
-HELM_RELEASE_NAME ?= nmstate
+export HELM_VERSION ?= v3.16.2
+export HELM ?= $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
+export HELM_CHART_VERSION ?=
+export HELM_CHART_APP_VERSION ?= $(if $(HELM_CHART_VERSION),v$(HELM_CHART_VERSION),)
+export HELM_CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+export HELM_RELEASE_NAME ?= nmstate
 
 LOCAL_REGISTRY ?= registry:5000
 
@@ -141,7 +141,7 @@ lint:
 
 lint-helm: $(HELM)
 	$(HELM) lint charts/kubernetes-nmstate
-	HELM=$(HELM) hack/test-helm-render.sh
+	hack/test-helm-render.sh
 
 OPERATOR_SDK = $(CURDIR)/build/_output/bin/operator-sdk_${OPERATOR_SDK_VERSION}
 operator-sdk: ## Download operator-sdk locally.
@@ -152,14 +152,14 @@ ifeq (,$(wildcard $(OPERATOR_SDK)))
 	@{ \
 	set -e ;\
 	mkdir -p $(dir $(OPERATOR_SDK)) ;\
-	curl -Lo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v$(OPERATOR_SDK_VERSION)/operator-sdk_$$(env GOTOOLCHAIN=local go env GOOS)_$$(env GOTOOLCHAIN=local go env GOARCH) ;\
+	curl -Lo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/v$(OPERATOR_SDK_VERSION)/operator-sdk_$$(go env GOOS)_$$(go env GOARCH) ;\
 	chmod +x $(OPERATOR_SDK) ;\
 	}
 endif
 endif
 
 $(HELM): ## Download helm locally.
-	hack/install-helm.sh $(HELM_VERSION) $(HELM)
+	hack/install-helm.sh
 
 gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
@@ -167,8 +167,8 @@ gen-k8s:
 gen-crds:
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
 	rm -rf charts/kubernetes-nmstate/crds
-	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../charts/kubernetes-nmstate/crds
-	find charts/kubernetes-nmstate/crds -maxdepth 1 -type f ! -name 'nmstate.io_nmstates.yaml' -delete
+	mkdir -p charts/kubernetes-nmstate/crds
+	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/
 
 gen-rbac:
 	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
@@ -220,7 +220,7 @@ push-operator: require-image-builder
 push: push-handler push-operator
 
 push-chart: $(HELM)
-	HELM=$(HELM) HELM_CHART_VERSION=$(HELM_CHART_VERSION) HELM_CHART_APP_VERSION=$(HELM_CHART_APP_VERSION) HELM_CHART_OCI_REPO=$(HELM_CHART_OCI_REPO) hack/push-chart.sh
+	hack/push-chart.sh
 
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
@@ -253,13 +253,13 @@ cluster-down:
 	./cluster/down.sh
 
 cluster-clean: $(HELM)
-	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) ./cluster/sync-operator.sh clean
+	./cluster/sync-operator.sh clean
 
 cluster-sync: $(HELM)
-	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) HANDLER_PREFIX=$(HANDLER_PREFIX) ./cluster/sync.sh
+	./cluster/sync.sh
 
 cluster-sync-operator: $(HELM)
-	HELM=$(HELM) HELM_RELEASE_NAME=$(HELM_RELEASE_NAME) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) OPERATOR_PULL_POLICY=$(OPERATOR_PULL_POLICY) HANDLER_PULL_POLICY=$(HANDLER_PULL_POLICY) HANDLER_PREFIX=$(HANDLER_PREFIX) ./cluster/sync-operator.sh
+	./cluster/sync-operator.sh
 
 version-patch:
 	./hack/tag-version.sh patch
