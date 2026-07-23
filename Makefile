@@ -167,7 +167,10 @@ gen-k8s:
 gen-crds:
 	mkdir -p charts/kubernetes-nmstate/crds
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../charts/kubernetes-nmstate/crds/
-	find charts/kubernetes-nmstate/crds -maxdepth 1 -type f ! -name 'nmstate.io_nmstates.yaml' -delete
+	rm -f \
+		charts/kubernetes-nmstate/crds/nmstate.io_nodenetworkconfigurationenactments.yaml \
+		charts/kubernetes-nmstate/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml \
+		charts/kubernetes-nmstate/crds/nmstate.io_nodenetworkstates.yaml
 
 gen-rbac:
 	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
