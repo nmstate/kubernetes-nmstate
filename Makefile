@@ -165,11 +165,9 @@ gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-crds:
-	mkdir -p deploy/crds
-	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
-	rm -rf charts/kubernetes-nmstate/crds
 	mkdir -p charts/kubernetes-nmstate/crds
-	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/
+	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../charts/kubernetes-nmstate/crds/
+	find charts/kubernetes-nmstate/crds -maxdepth 1 -type f ! -name 'nmstate.io_nmstates.yaml' -delete
 
 gen-rbac:
 	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
@@ -285,7 +283,7 @@ bundle: operator-sdk gen-crds manifests
 	mkdir -p $(HELM_RENDERED_MANIFESTS_DIR)/bases
 	cp deploy/examples/*.yaml $(HELM_RENDERED_MANIFESTS_DIR)/
 	cat $(MANIFEST_BASES_DIR)/kubernetes-nmstate-operator.clusterserviceversion.yaml | OPERATOR_IMAGE=$(OPERATOR_IMAGE) envsubst > $(HELM_RENDERED_MANIFESTS_DIR)/bases/kubernetes-nmstate-operator.clusterserviceversion.yaml
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(HELM_RENDERED_MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(HELM_RENDERED_MANIFESTS_DIR) --crds-dir charts/kubernetes-nmstate/crds </dev/null
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 
 # Build the bundle image.

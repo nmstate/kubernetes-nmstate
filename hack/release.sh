@@ -49,7 +49,7 @@ function create_github_release() {
 function upload_github_release_artifacts() {
 
     # Upload operator CRDs
-    for manifest in $(ls deploy/crds/nmstate.io_*nmstate*); do
+    for manifest in $(ls charts/kubernetes-nmstate/crds/nmstate.io_*nmstate*); do
         upload $manifest
     done
 
