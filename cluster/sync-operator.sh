@@ -117,9 +117,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
         sync_operator true
         wait_ready_operator true
         ;;
-    clean)
-        clean_operator
-        ;;
     *)
         echo "Unsupported sync-operator action: ${1}" >&2
         exit 1

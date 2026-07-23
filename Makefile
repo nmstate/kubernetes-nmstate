@@ -165,11 +165,11 @@ gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-crds:
-	mkdir -p deploy/crds charts/kubernetes-nmstate/crds
-	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../charts/kubernetes-nmstate/crds
-	rm -f deploy/crds/nmstate.io_*.yaml
-	cp charts/kubernetes-nmstate/crds/*.yaml deploy/crds/
-	find charts/kubernetes-nmstate/crds -maxdepth 1 -type f ! -name 'nmstate.io_nmstates.yaml' -delete
+	mkdir -p deploy/crds
+	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
+	rm -rf charts/kubernetes-nmstate/crds
+	mkdir -p charts/kubernetes-nmstate/crds
+	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/
 
 gen-rbac:
 	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
@@ -254,7 +254,7 @@ cluster-down:
 	./cluster/down.sh
 
 cluster-clean: $(HELM)
-	./cluster/sync-operator.sh clean
+	./cluster/clean.sh
 
 cluster-sync: $(HELM)
 	./cluster/sync.sh
