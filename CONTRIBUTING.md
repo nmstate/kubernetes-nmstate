@@ -41,7 +41,7 @@ Common new contributor PR issues are:
 
 - Missing DCO sign-off:\
   Developer Certificate of Origin (DCO) Sign-off is a requirement for getting
-  patches into the project (see [Developers Certificate of
+  patches into the project (see [Developer Certificate of
   Origin](https://developercertificate.org/)). You can "sign" this certificate
   by including a line in the git commit of "Signed-off-by: Legal Name
   <email-address>". If you forgot to add the sign-off, you can also amend your
@@ -63,7 +63,7 @@ need you to:
 
 - Write clear and meaningful git commit messages.
 - If the PR will *completely* fix a specific issue, include `fixes #123` in the
-  PR body (where `123` is the specific issue number the PR will fix. This will
+  PR body (where `123` is the specific issue number the PR will fix). This will
   automatically close the issue when the PR is merged.
 - Make sure you don't include `@mentions` or `fixes` keywords in your git commit
   messages. These should be included in the PR body instead.
