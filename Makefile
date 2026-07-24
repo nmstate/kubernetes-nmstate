@@ -15,7 +15,7 @@ HANDLER_IMAGE_NAME ?= kubernetes-nmstate-handler
 HANDLER_IMAGE_TAG ?= latest
 HANDLER_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(HANDLER_IMAGE_NAME):$(HANDLER_IMAGE_TAG)
 HANDLER_IMAGE ?= $(IMAGE_REGISTRY)/$(HANDLER_IMAGE_FULL_NAME)
-HANDLER_PREFIX ?=
+export HANDLER_PREFIX ?=
 
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
@@ -30,11 +30,11 @@ export IMAGE_BUILDER ?= $(shell if podman ps >/dev/null 2>&1; then echo podman; 
 # "Always" policy must be used only for development, never pushed to the production CSV
 INTERACTIVE:=$(shell [ -t 0 ] && echo 1)
 ifdef INTERACTIVE
-HANDLER_PULL_POLICY ?= Always
-OPERATOR_PULL_POLICY ?= Always
+export HANDLER_PULL_POLICY ?= Always
+export OPERATOR_PULL_POLICY ?= Always
 else
-HANDLER_PULL_POLICY ?= IfNotPresent
-OPERATOR_PULL_POLICY ?= IfNotPresent
+export HANDLER_PULL_POLICY ?= IfNotPresent
+export OPERATOR_PULL_POLICY ?= IfNotPresent
 endif
 
 WHAT ?= ./pkg/... ./controllers/...
@@ -76,10 +76,17 @@ GINKGO_VERSION ?= v2.22.1
 GINKGO = GOFLAGS=-mod=mod go run github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION)
 CONTROLLER_GEN = GOFLAGS=-mod=mod go run sigs.k8s.io/controller-tools/cmd/controller-gen@v0.17.1
 OPM = hack/opm.sh
+export HELM_VERSION ?= v3.16.2
+export HELM ?= $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
+export HELM_CHART_VERSION ?=
+export HELM_CHART_APP_VERSION ?= $(if $(HELM_CHART_VERSION),v$(HELM_CHART_VERSION),)
+export HELM_CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+export HELM_RELEASE_NAME ?= nmstate
 
 LOCAL_REGISTRY ?= registry:5000
 
 export MANIFESTS_DIR ?= build/_output/manifests
+HELM_RENDERED_MANIFESTS_DIR ?= $(MANIFESTS_DIR)/kubernetes-nmstate/templates
 BUNDLE_DIR ?= ./bundle
 BUNDLE_DOCKERFILE ?= bundle.Dockerfile
 MANIFEST_BASES_DIR ?= deploy/bases
@@ -105,7 +112,7 @@ SKIP_IMAGE_BUILD ?= false
 
 all: check handler operator
 
-check: lint vet whitespace-check gofmt-check promlint-check
+check: lint lint-helm vet whitespace-check gofmt-check promlint-check
 
 format: whitespace-format gofmt
 
@@ -132,6 +139,10 @@ promlint-check:
 lint:
 	hack/lint.sh
 
+lint-helm: $(HELM)
+	$(HELM) lint charts/kubernetes-nmstate
+	hack/test-helm-render.sh
+
 OPERATOR_SDK = $(CURDIR)/build/_output/bin/operator-sdk_${OPERATOR_SDK_VERSION}
 operator-sdk: ## Download operator-sdk locally.
 ifneq (,$(shell operator-sdk version 2>/dev/null | grep "operator-sdk version: \"v$(OPERATOR_SDK_VERSION)\"" ))
@@ -147,28 +158,49 @@ ifeq (,$(wildcard $(OPERATOR_SDK)))
 endif
 endif
 
+$(HELM): ## Download helm locally.
+	hack/install-helm.sh
+
 gen-k8s:
 	cd api && $(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 gen-crds:
+	mkdir -p deploy/crds
+	mkdir -p charts/kubernetes-nmstate/crds
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
+	rm -f charts/kubernetes-nmstate/crds/*.yaml
+	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/
 
 gen-rbac:
-	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=deploy/operator
+	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
 
 check-gen: check-manifests check-bundle
 
 check-manifests: generate
 	git diff --exit-code -s api || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 	git diff --exit-code -s deploy || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
+	git diff --exit-code -s charts || (echo "It seems like you need to run 'make generate'. Please run it and commit the changes" && git diff && exit 1)
 
 check-bundle: bundle
 	git diff --exit-code -I'^    createdAt: ' -s || (echo "It seems like you need to run 'make bundle'. Please run it and commit the changes" && git diff && exit 1)
 
 generate: gen-k8s gen-crds gen-rbac
 
-manifests:
-	GOFLAGS=-mod=mod go run hack/render-manifests.go -handler-prefix=$(HANDLER_PREFIX) -handler-namespace=$(HANDLER_NAMESPACE) -operator-namespace=$(OPERATOR_NAMESPACE) -handler-image=$(HANDLER_IMAGE) -operator-image=$(OPERATOR_IMAGE) -handler-pull-policy=$(HANDLER_PULL_POLICY) -monitoring-namespace=$(MONITORING_NAMESPACE) -operator-pull-policy=$(OPERATOR_PULL_POLICY) -input-dir=deploy/ -output-dir=$(MANIFESTS_DIR)
+manifests: $(HELM)
+	rm -rf $(MANIFESTS_DIR)
+	mkdir -p $(MANIFESTS_DIR)
+	$(HELM) template nmstate charts/kubernetes-nmstate \
+		--namespace $(OPERATOR_NAMESPACE) \
+		--set createNamespace=true \
+		--set nmstate.enabled=false \
+		--set operator.image=$(OPERATOR_IMAGE) \
+		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
+		--set handler.image=$(HANDLER_IMAGE) \
+		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
+		--set handler.namespace=$(HANDLER_NAMESPACE) \
+		--set handler.prefix=$(HANDLER_PREFIX) \
+		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--output-dir $(MANIFESTS_DIR)
 
 require-image-builder:
 	@test -n "$(IMAGE_BUILDER)" || { echo "Error: IMAGE_BUILDER is not set and could not be auto-detected (neither podman nor docker is running/available)." >&2; exit 1; }
@@ -188,6 +220,9 @@ push-operator: require-image-builder
 
 push: push-handler push-operator
 
+push-chart: $(HELM)
+	hack/push-chart.sh
+
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
@@ -201,14 +236,14 @@ test-reporter:
 		go run . --dry-run --fake=stale
 
 test-e2e-handler:
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
+	$(GINKGO) $(e2e_test_args) ./test/e2e/handler ...
 
 test-e2e-operator: manifests
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
+	$(GINKGO) $(e2e_test_args) ./test/e2e/operator ...
 
 test-e2e-upgrade: manifests
 	./hack/prepare-e2e-test-upgrade.sh
-	KUBECONFIG=$(KUBECONFIG) OPERATOR_NAMESPACE=$(OPERATOR_NAMESPACE) MONITORING_NAMESPACE=$(MONITORING_NAMESPACE) $(GINKGO) $(e2e_test_args) ./test/e2e/upgrade ...
+	$(GINKGO) $(e2e_test_args) ./test/e2e/upgrade ...
 
 test-e2e: test-e2e-operator test-e2e-handler
 
@@ -218,13 +253,13 @@ cluster-up:
 cluster-down:
 	./cluster/down.sh
 
-cluster-clean:
+cluster-clean: $(HELM)
 	./cluster/clean.sh
 
-cluster-sync:
+cluster-sync: $(HELM)
 	./cluster/sync.sh
 
-cluster-sync-operator:
+cluster-sync-operator: $(HELM)
 	./cluster/sync-operator.sh
 
 version-patch:
@@ -247,9 +282,10 @@ vendor:
 
 # Generate bundle manifests and metadata, then validate generated files.
 bundle: operator-sdk gen-crds manifests
-	mkdir -p $(MANIFESTS_DIR)/bases
-	cat $(MANIFEST_BASES_DIR)/kubernetes-nmstate-operator.clusterserviceversion.yaml | OPERATOR_IMAGE=$(OPERATOR_IMAGE) envsubst > $(MANIFESTS_DIR)/bases/kubernetes-nmstate-operator.clusterserviceversion.yaml
-	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
+	mkdir -p $(HELM_RENDERED_MANIFESTS_DIR)/bases
+	cp deploy/examples/*.yaml $(HELM_RENDERED_MANIFESTS_DIR)/
+	cat $(MANIFEST_BASES_DIR)/kubernetes-nmstate-operator.clusterserviceversion.yaml | OPERATOR_IMAGE=$(OPERATOR_IMAGE) envsubst > $(HELM_RENDERED_MANIFESTS_DIR)/bases/kubernetes-nmstate-operator.clusterserviceversion.yaml
+	$(OPERATOR_SDK) generate bundle -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS) --deploy-dir $(HELM_RENDERED_MANIFESTS_DIR) --crds-dir deploy/crds </dev/null
 	$(OPERATOR_SDK) bundle validate $(BUNDLE_DIR)
 
 # Build the bundle image.
@@ -276,11 +312,13 @@ olm-push: bundle-push index-push
 	vet \
 	handler \
 	push-handler \
+	push-chart \
 	require-image-builder \
 	test/unit \
 	generate \
 	check-gen \
 	operator-sdk \
+	lint-helm \
 	test-e2e-handler \
 	test-e2e-operator \
 	test-e2e \

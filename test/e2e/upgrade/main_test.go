@@ -41,7 +41,7 @@ import (
 )
 
 const (
-	latestManifestsDir          = "build/_output/manifests/"
+	latestManifestsDir          = "build/_output/manifests/kubernetes-nmstate/templates/"
 	previousReleaseManifestsDir = "test/e2e/upgrade/manifests/"
 	ReadTimeout                 = 180 * time.Second
 	ReadInterval                = 1 * time.Second

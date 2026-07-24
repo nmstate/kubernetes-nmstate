@@ -1,0 +1,31 @@
+operator:
+  # Operator image. When empty, defaults to
+  # quay.io/nmstate/kubernetes-nmstate-operator:<appVersion>.
+  image: ""
+  pullPolicy: IfNotPresent
+
+handler:
+  # Handler image the operator deploys. When empty, defaults to
+  # quay.io/nmstate/kubernetes-nmstate-handler:<appVersion>.
+  image: ""
+  pullPolicy: IfNotPresent
+  # Namespace the operator deploys the handler into (created by the operator).
+  namespace: nmstate
+  # Optional name prefix for the handler resources deployed by the operator.
+  prefix: ""
+
+monitoring:
+  namespace: monitoring
+
+# Emit a Namespace object for the release namespace. Used by the manifest
+# rendering pipeline; helm users should rely on `helm install
+# --create-namespace` instead.
+createNamespace: false
+
+nmstate:
+  # Create an NMState custom resource (named "nmstate") at install time,
+  # triggering deployment of the kubernetes-nmstate handler.
+  enabled: true
+  # Passthrough for NMState .spec fields (nodeSelector, tolerations,
+  # infraNodeSelector, infraTolerations, ...).
+  spec: {}

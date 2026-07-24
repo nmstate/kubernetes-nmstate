@@ -1,0 +1,19 @@
+apiVersion: v2
+name: kubernetes-nmstate
+description: Declarative node network configuration driven through Kubernetes API
+type: application
+# version and appVersion are dev placeholders; real values are injected at
+# publish time by `make push-chart` (see hack/release.sh).
+version: 0.0.0
+appVersion: latest
+home: https://nmstate.io
+icon: https://raw.githubusercontent.com/nmstate/kubernetes-nmstate/main/docs/static/images/logo/fullcolor.png
+maintainers:
+  - name: nmstate developers
+    url: https://github.com/nmstate/kubernetes-nmstate
+sources:
+  - https://github.com/nmstate/kubernetes-nmstate
+keywords:
+  - networking
+  - nmstate
+  - NetworkManager

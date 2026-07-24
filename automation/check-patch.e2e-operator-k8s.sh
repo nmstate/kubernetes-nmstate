@@ -20,8 +20,9 @@ main() {
     source automation/check-patch.setup.sh
     cd ${TMP_PROJECT_PATH}
 
-    # Let's fail fast if generated files differ
+    # Let's fail fast if generated files differ or the chart does not lint
     make check-gen
+    make lint-helm
 
     # Let's fail fast if it's not compiling
     make operator
@@ -29,6 +30,9 @@ main() {
     make cluster-down
     make cluster-up
     trap teardown EXIT SIGINT SIGTERM SIGSTOP
+
+    # Hand the cluster to the standard operator e2e suite with just the
+    # operator installed; the suite manages NMState lifecycle itself.
     make cluster-sync-operator
     make E2E_TEST_TIMEOUT=1h E2E_TEST_ARGS="--no-color --output-dir=$ARTIFACTS --junit-report=junit.functest.xml" test-e2e-operator
 }

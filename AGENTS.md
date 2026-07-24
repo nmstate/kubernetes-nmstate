@@ -166,14 +166,17 @@ make cluster-up
 # Deploy/update operator and handler to cluster
 make cluster-sync
 
-# Deploy only operator changes
+# Clean the default Helm-based cluster deployment
+make cluster-clean
+
+# Deploy only the operator with Helm
 make cluster-sync-operator
+
+# Generate deployment manifests
+make manifests
 
 # Stop cluster
 make cluster-down
-
-# Clean cluster state
-make cluster-clean
 ```
 
 Cluster configuration via environment variables:
@@ -223,7 +226,7 @@ make bundle
 make check-bundle
 ```
 
-Manifests are generated in `build/_output/manifests/` from templates in `deploy/`. The operator.yaml is a template that gets populated with correct image references during `cluster-sync`.
+Manifests are generated in `build/_output/manifests/` by rendering the Helm chart in `charts/kubernetes-nmstate/`; the rendered operator manifests live under `build/_output/manifests/kubernetes-nmstate/templates/`. The chart templates get populated with correct image references during `cluster-sync`, which now upgrades the default local deployment through Helm.
 
 ## Vendoring
 

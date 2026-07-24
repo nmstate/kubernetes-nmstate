@@ -374,6 +374,7 @@ spec:
                   value: IfNotPresent
                 - name: HANDLER_NAMESPACE
                   value: nmstate
+                - name: HANDLER_PREFIX
                 - name: MONITORING_NAMESPACE
                   value: monitoring
                 - name: OPERATOR_NAMESPACE

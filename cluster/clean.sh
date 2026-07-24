@@ -4,6 +4,7 @@ set -ex
 
 source ./cluster/lima.sh
 lima::ensure_linux
+source ./cluster/sync-operator.sh
 
 function eventually {
     timeout=15
@@ -22,26 +23,7 @@ function eventually {
 function clean() {
     echo 'Cleaning up ...'
 
-    MANIFESTS_DIR=build/_output/manifests
-    kubectl=./cluster/kubectl.sh
-
-    if [ ! -d $MANIFESTS_DIR ]; then
-        exit 0
-    fi
-
-    # Delete the CR only if the CRD is installed otherwise it will fail
-    if $kubectl get crds nmstates.nmstate.io; then
-        $kubectl delete --ignore-not-found -f deploy/examples/nmstate.io_v1_nmstate_cr.yaml
-    fi
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/operator.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationenactments.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkconfigurationpolicies.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nodenetworkstates.yaml
-    $kubectl delete --ignore-not-found -f deploy/crds/nmstate.io_nmstates.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/namespace.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/service_account.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role.yaml
-    $kubectl delete --ignore-not-found -f $MANIFESTS_DIR/role_binding.yaml
+    clean_operator
 }
 
 # Use labels so we don't care about prefixes
