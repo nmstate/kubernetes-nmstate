@@ -24,7 +24,7 @@ function wait_ready_nmstate() {
     $kubectl wait --for=condition=Available nmstate/nmstate --timeout=300s
 }
 
-deploy_operator
+sync_operator
 wait_ready_operator
 deploy_handler
 patch_handler_nodeselector

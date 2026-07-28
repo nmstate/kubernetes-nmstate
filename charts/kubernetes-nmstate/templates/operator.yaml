@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: nmstate-operator
-  namespace: {{ .OperatorNamespace }}
+  namespace: {{ .Release.Namespace | quote }}
   labels:
     app: kubernetes-nmstate-operator
 spec:
@@ -45,9 +45,8 @@ spec:
         - name: nmstate-operator
           args:
           - --zap-time-encoding=iso8601
-          # Replace this with the built image name
-          image: {{ .OperatorImage }}
-          imagePullPolicy: {{ .OperatorPullPolicy }}
+          image: {{ include "kubernetes-nmstate.operatorImage" . | quote }}
+          imagePullPolicy: {{ .Values.operator.pullPolicy | quote }}
           command:
           - manager
           securityContext:
@@ -95,13 +94,21 @@ spec:
               value: "6060"
             - name: RUN_OPERATOR
               value: ""
-            - name: RELATED_IMAGE_HANDLER_IMAGE
-              value: {{ .HandlerImage }}
+            - name: {{ .Values.handler.imageEnvVar | default "RELATED_IMAGE_HANDLER_IMAGE" }}
+              value: {{ include "kubernetes-nmstate.handlerImage" . | quote }}
             - name: HANDLER_IMAGE_PULL_POLICY
-              value: {{ .HandlerPullPolicy }}
+              value: {{ .Values.handler.pullPolicy | quote }}
             - name: HANDLER_NAMESPACE
-              value: {{ .HandlerNamespace }}
+              value: {{ .Values.handler.namespace | quote }}
+{{- if .Values.handler.prefix }}
+            - name: HANDLER_PREFIX
+              value: {{ .Values.handler.prefix | quote }}
+{{- end }}
+{{- if .Values.plugin.image }}
+            - name: PLUGIN_IMAGE
+              value: {{ .Values.plugin.image | quote }}
+{{- end }}
             - name: MONITORING_NAMESPACE
-              value: {{ .MonitoringNamespace }}
+              value: {{ .Values.monitoring.namespace | quote }}
             - name: OPERATOR_NAMESPACE
-              value: {{ .OperatorNamespace }}
+              value: {{ .Release.Namespace | quote }}

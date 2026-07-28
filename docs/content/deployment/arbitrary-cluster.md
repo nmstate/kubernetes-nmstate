@@ -48,6 +48,8 @@ Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
 please find the [latest
 release](https://github.com/nmstate/kubernetes-nmstate/releases) and follow the
 Installation guide attached to it.
+Alternatively, install it with Helm following the
+[Helm deployment guide]({{< relref "/deployment/helm" >}}).
 
 You can stop here and play with the cluster on your own or continue with one of
 the [user guides]({{< relref "/user-guide" >}}) that will guide you through

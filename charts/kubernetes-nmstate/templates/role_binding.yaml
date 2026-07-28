@@ -1,13 +1,11 @@
----
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: nmstate-operator
-  namespace: {{ .OperatorNamespace }}
 subjects:
 - kind: ServiceAccount
   name: nmstate-operator
-  namespace: {{ .OperatorNamespace }}
+  namespace: {{ .Release.Namespace | quote }}
 roleRef:
   kind: ClusterRole
   name: nmstate-operator
