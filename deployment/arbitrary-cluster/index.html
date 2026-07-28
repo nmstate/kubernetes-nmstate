@@ -41,7 +41,7 @@ Requirements This guide requires you to have your own Kubernetes/OpenShift clust
 In order to get kubernetes-nmstate running, NetworkManager must be installed on the node.
 NetworkManager From gnome:
 “The NetworkManager daemon attempts to make networking configuration and operation as painless and automatic as possible by managing the primary network connection and other network interfaces, like Ethernet, Wi-Fi, and Mobile Broadband devices. NetworkManager will connect any network device when a connection for that device becomes available, unless that behavior is disabled. Information about networking is exported via a D-Bus interface to any interested application, providing a rich API with which to inspect and control network settings and operation.”">
-  <meta itemprop="wordCount" content="243">
+  <meta itemprop="wordCount" content="253">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Deployment on Arbitrary Cluster">
   <meta name="twitter:description" content="In this guide, we will cover the installation of NetworkManager and kubernetes-nmstate on your arbitrary cluster.
@@ -97,6 +97,8 @@ NetworkManager From gnome:
   <a href="/kubernetes-nmstate/deployment/local-cluster/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentlocal-cluster"><span class="">Deployment on Local Cluster</span></a>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child active-path" id="m-kubernetes-nmstatedeploymentarbitrary-cluster-li">
   <a href="/kubernetes-nmstate/deployment/arbitrary-cluster/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentarbitrary-cluster"><span class="td-sidebar-nav-active-item">Deployment on Arbitrary Cluster</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeploymenthelm-li">
+  <a href="/kubernetes-nmstate/deployment/helm/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymenthelm"><span class="">Deployment with Helm</span></a>
 </li>
   </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-kubernetes-nmstateuser-guide-li">
@@ -213,7 +215,9 @@ to learn about supported versions of NetworkManager.</p>
 <p>Finally, we can install kubernetes-nmstate on our cluster. In order to do that,
 please find the <a href="https://github.com/nmstate/kubernetes-nmstate/releases">latest
 release</a> and follow the
-Installation guide attached to it.</p>
+Installation guide attached to it.
+Alternatively, install it with Helm following the
+<a href="/kubernetes-nmstate/deployment/helm/">Helm deployment guide</a>.</p>
 <p>You can stop here and play with the cluster on your own or continue with one of
 the <a href="/kubernetes-nmstate/user-guide/">user guides</a> that will guide you through
 requesting node network states and configuring the nodes.</p>

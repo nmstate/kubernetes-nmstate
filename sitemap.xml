@@ -18,6 +18,8 @@
   </url><url>
     <loc>https://nmstate.github.io/kubernetes-nmstate/user-guide/</loc>
   </url><url>
+    <loc>https://nmstate.github.io/kubernetes-nmstate/deployment/helm/</loc>
+  </url><url>
     <loc>https://nmstate.github.io/kubernetes-nmstate/developer-guide/</loc>
   </url><url>
     <loc>https://nmstate.github.io/kubernetes-nmstate/examples/</loc>

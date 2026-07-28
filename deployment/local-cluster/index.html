@@ -35,7 +35,7 @@ Start your local cluster. If you want to use OpenShift instead of Kubernetes or 
   <meta itemprop="description" content="Kubernetes-nmstate project allows you to spin up a virtualized Kubernetes/OpenShift cluster thanks to kubevirtci project. In this guide, we will create a local Kubernetes cluster with two nodes and preinstalled node dependencies. Then we will deploy kubernetes-nmstate from local sources.
 If you want to deploy kubernetes-nmstate on your arbitrary cluster, read the deployment on arbitrary cluster guide.
 Start your local cluster. If you want to use OpenShift instead of Kubernetes or a different amount of nodes, check the development guide.">
-  <meta itemprop="wordCount" content="193">
+  <meta itemprop="wordCount" content="216">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Deployment on Local Cluster">
   <meta name="twitter:description" content="Kubernetes-nmstate project allows you to spin up a virtualized Kubernetes/OpenShift cluster thanks to kubevirtci project. In this guide, we will create a local Kubernetes cluster with two nodes and preinstalled node dependencies. Then we will deploy kubernetes-nmstate from local sources.
@@ -89,6 +89,8 @@ Start your local cluster. If you want to use OpenShift instead of Kubernetes or 
   <a href="/kubernetes-nmstate/deployment/local-cluster/" class="align-left ps-0 active td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentlocal-cluster"><span class="td-sidebar-nav-active-item">Deployment on Local Cluster</span></a>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeploymentarbitrary-cluster-li">
   <a href="/kubernetes-nmstate/deployment/arbitrary-cluster/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentarbitrary-cluster"><span class="">Deployment on Arbitrary Cluster</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child" id="m-kubernetes-nmstatedeploymenthelm-li">
+  <a href="/kubernetes-nmstate/deployment/helm/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymenthelm"><span class="">Deployment with Helm</span></a>
 </li>
   </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-kubernetes-nmstateuser-guide-li">
@@ -181,7 +183,8 @@ a different amount of nodes, check the
 </span></span><span style="display:flex;"><span>make cluster-down
 </span></span></code></pre></div><p>Build kubernetes-nmstate from local sources and install it on the cluster. This
 command can be executed repeatedly in order to install changed sources to the
-cluster.</p>
+cluster. The default development path upgrades the Helm release; <code>make manifests</code>
+still renders raw manifests if you want to deploy from generated YAML instead.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>make cluster-sync
 </span></span></code></pre></div><p>You can ssh into the created nodes using <code>cluster/cli.sh ssh</code>.</p>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>cluster/cli.sh ssh node01

@@ -38,7 +38,7 @@ For detailed information about deploying a local virtualized cluster, see the lo
 Overview The kubernetes-nmstate project uses kubevirtci for local cluster development. This guide provides the necessary commands and configuration so you don’t need to learn kubevirtci separately.
 Note: kubevirtci is an external tool maintained by the KubeVirt project. Issues with kubevirtci itself are outside the scope of kubernetes-nmstate support.
 For detailed information about deploying a local virtualized cluster, see the local virtualized cluster guide.">
-  <meta itemprop="wordCount" content="251">
+  <meta itemprop="wordCount" content="287">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Local Development Cluster">
   <meta name="twitter:description" content="This page covers setting up and using a local development cluster for kubernetes-nmstate.
@@ -93,6 +93,8 @@ For detailed information about deploying a local virtualized cluster, see the lo
   <a href="/kubernetes-nmstate/deployment/local-cluster/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentlocal-cluster"><span class="">Deployment on Local Cluster</span></a>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeploymentarbitrary-cluster-li">
   <a href="/kubernetes-nmstate/deployment/arbitrary-cluster/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymentarbitrary-cluster"><span class="">Deployment on Arbitrary Cluster</span></a>
+</li><li class="td-sidebar-nav__section-title td-sidebar-nav__section without-child collapse" id="m-kubernetes-nmstatedeploymenthelm-li">
+  <a href="/kubernetes-nmstate/deployment/helm/" class="align-left ps-0 td-sidebar-link td-sidebar-link__page" id="m-kubernetes-nmstatedeploymenthelm"><span class="">Deployment with Helm</span></a>
 </li>
   </ul>
 </li><li class="td-sidebar-nav__section-title td-sidebar-nav__section with-child" id="m-kubernetes-nmstateuser-guide-li">
@@ -191,14 +193,17 @@ For detailed information about deploying a local virtualized cluster, see the lo
 </span></span><span style="display:flex;"><span><span style="color:#75715e"># Deploy/update operator and handler to cluster</span>
 </span></span><span style="display:flex;"><span>make cluster-sync
 </span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Deploy only operator changes</span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Clean the default Helm-based cluster deployment</span>
+</span></span><span style="display:flex;"><span>make cluster-clean
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Deploy only the operator with Helm</span>
 </span></span><span style="display:flex;"><span>make cluster-sync-operator
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Render manifests from the Helm chart</span>
+</span></span><span style="display:flex;"><span>make manifests
 </span></span><span style="display:flex;"><span>
 </span></span><span style="display:flex;"><span><span style="color:#75715e"># Stop cluster</span>
 </span></span><span style="display:flex;"><span>make cluster-down
-</span></span><span style="display:flex;"><span>
-</span></span><span style="display:flex;"><span><span style="color:#75715e"># Clean cluster state</span>
-</span></span><span style="display:flex;"><span>make cluster-clean
 </span></span></code></pre></div><h2 id="cluster-configuration">Cluster Configuration</h2>
 <p>Configure the local cluster via environment variables:</p>
 <ul>
@@ -216,9 +221,9 @@ For detailed information about deploying a local virtualized cluster, see the lo
 <li>Other providers: ens3, ens8, ens9</li>
 </ul>
 <h2 id="manifests">Manifests</h2>
-<p>The operator <code>operator.yaml</code> manifest from the <code>deploy</code> folder is a template that gets populated with the correct docker image to use.</p>
-<p>Every time <code>cluster-sync</code> is called, it regenerates the operator yaml with the correct kubernetes-nmstate-handler image and applies it.</p>
-<p>Manifests are generated in <code>build/_output/manifests/</code> from templates in <code>deploy/</code>.</p>
+<p>The operator <code>operator.yaml</code> manifest is rendered from the Helm chart template in <code>charts/kubernetes-nmstate/templates/</code> and gets populated with the correct docker image to use.</p>
+<p>Every time <code>cluster-sync</code> is called, it upgrades the Helm release with the correct kubernetes-nmstate images and then patches the chart-created <code>NMState</code> custom resource for the local cluster workflow.</p>
+<p>Manifests are generated in <code>build/_output/manifests/</code> by rendering the Helm chart in <code>charts/kubernetes-nmstate/</code>; the rendered operator manifests live under <code>build/_output/manifests/kubernetes-nmstate/templates/</code>.</p>
 <h2 id="next-steps">Next Steps</h2>
 <p>Learn about code generation workflows: <a href="/kubernetes-nmstate/developer-guide/104-code-generation/">Code Generation</a></p>
 
