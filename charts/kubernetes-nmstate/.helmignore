@@ -1,0 +1,7 @@
+.helmignore
+*.tgz
+*.tmp
+*.bak
+*.orig
+*~
+.git/

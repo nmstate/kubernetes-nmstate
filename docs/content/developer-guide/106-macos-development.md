@@ -59,7 +59,8 @@ Scripts that require kubevirtci (`cluster/up.sh`, `cluster/down.sh`) detect macO
 
 - **Edit code** using your macOS editor or IDE — changes are immediately visible inside the VM via Lima's shared mount
 - **Run `make cluster-sync`** from your macOS terminal to build and deploy
-- **Run `make cluster-clean`** to clean up deployed resources
+- **Run `make cluster-clean`** to clean up the default Helm-based deployment
+- **Run `make manifests`** if you need rendered manifests from the Helm chart
 - **Run unit tests** inside the VM: `limactl shell kubernetes-nmstate` then `make test/unit`
 - **Manage the external cluster** (up/down) directly on the Linux machine
 

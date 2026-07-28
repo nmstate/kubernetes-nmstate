@@ -6,3 +6,4 @@ type: docs
 
 - [Deployment on Local Cluster]({{< relref "/deployment/local-cluster" >}})
 - [Deployment on Arbitrary Cluster]({{< relref "/deployment/arbitrary-cluster" >}})
+- [Deployment with Helm]({{< relref "/deployment/helm" >}})

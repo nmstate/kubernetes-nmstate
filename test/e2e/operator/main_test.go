@@ -37,7 +37,7 @@ import (
 	knmstatereporter "github.com/nmstate/kubernetes-nmstate/test/reporter"
 )
 
-const manifestsDir = "build/_output/manifests/"
+const manifestsDir = "build/_output/manifests/kubernetes-nmstate/templates/"
 
 var (
 	nodes            []string
