@@ -17,3 +17,12 @@ keywords:
   - networking
   - nmstate
   - NetworkManager
+annotations:
+  # Artifact Hub specific metadata, see
+  # https://artifacthub.io/docs/topics/annotations/helm/
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://nmstate.github.io/kubernetes-nmstate/
+    - name: Deployment with Helm
+      url: https://nmstate.github.io/kubernetes-nmstate/deployment/helm
