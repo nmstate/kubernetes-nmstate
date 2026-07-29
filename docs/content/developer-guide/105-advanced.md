@@ -34,6 +34,28 @@ The kubernetes-nmstate project uses the following CI infrastructure:
 - [Prow](https://prow.apps.ovirt.org/) - Main CI system
 - [Flakefinder](https://storage.googleapis.com/kubevirt-prow/reports/flakefinder/nmstate/kubernetes-nmstate/index.html) - Flaky test detection
 
+## Helm chart publishing
+
+The Helm chart is published to `quay.io/nmstate/kubernetes-nmstate` as an OCI
+artifact by `make push-chart`, which the release job runs for every tag.
+
+The chart is also listed on
+[Artifact Hub](https://artifacthub.io/packages/helm/kubernetes-nmstate/kubernetes-nmstate),
+which indexes new chart versions on its own. It reads the repository metadata
+from `hack/artifacthub-repo.yml`, published to the same chart repository under
+the special `artifacthub.io` tag. That file declares the repository owners, so
+it is kept under review here rather than only in the registry. It changes
+rarely and is pushed by hand, from the `hack` directory:
+
+```shell
+oras push quay.io/nmstate/kubernetes-nmstate:artifacthub.io \
+  --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
+  artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
+```
+
+The currently published copy can be retrieved with `oras pull` on the same
+reference, to check it still matches this repository.
+
 ## Code Structure Notes
 
 - Controllers use controller-runtime reconciliation pattern

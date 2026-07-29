@@ -1,14 +1,11 @@
 # Artifact Hub repository metadata file.
 #
-# Artifact Hub reads it from the chart OCI repository under the special
-# "artifacthub.io" tag. It changes rarely, so it is pushed by hand, from this
-# directory, so that the layer is titled "artifacthub-repo.yml":
+# It declares who owns the Artifact Hub repository, so it is kept here under
+# review. Artifact Hub reads it from the chart OCI repository, under the
+# special "artifacthub.io" tag, where it is pushed by hand. See
+# docs/content/developer-guide/105-advanced.md for the publishing command.
 #
-#   oras push quay.io/nmstate/kubernetes-nmstate:artifacthub.io \
-#     --config /dev/null:application/vnd.cncf.artifacthub.config.v1+yaml \
-#     artifacthub-repo.yml:application/vnd.cncf.artifacthub.repository-metadata.layer.v1.yaml
-#
-# See https://artifacthub.io/docs/topics/repositories/helm-charts/#oci-support
+# https://artifacthub.io/docs/topics/repositories/helm-charts/#oci-support
 #
 # The repositoryID is shown on the repository card in the Artifact Hub control
 # panel. Setting it enables the "Verified publisher" flag.
