@@ -20,14 +20,30 @@ if [[ -z "${chart_oci_repo}" ]]; then
     chart_oci_repo="oci://${IMAGE_REGISTRY:-quay.io}/${IMAGE_REPO:-nmstate}"
 fi
 
+# Both podman and docker may have performed the registry login, and each of
+# them stores the credentials at a different location, so look them up at the
+# usual places instead of assuming one of them.
 helm_registry_config=${HELM_REGISTRY_CONFIG:-}
 if [[ -z "${helm_registry_config}" ]]; then
-    if [[ -n "${XDG_RUNTIME_DIR:-}" && -f "${XDG_RUNTIME_DIR}/containers/auth.json" ]]; then
-        helm_registry_config="${XDG_RUNTIME_DIR}/containers/auth.json"
-    else
-        helm_registry_config="${HOME}/.docker/config.json"
-    fi
+    for candidate in \
+        "${REGISTRY_AUTH_FILE:-}" \
+        "${XDG_RUNTIME_DIR:-}/containers/auth.json" \
+        "/run/containers/$(id -u)/auth.json" \
+        "${HOME}/.config/containers/auth.json" \
+        "${DOCKER_CONFIG:-${HOME}/.docker}/config.json"; do
+        if [[ -n "${candidate}" && -f "${candidate}" ]]; then
+            helm_registry_config="${candidate}"
+            break
+        fi
+    done
 fi
+
+if [[ -z "${helm_registry_config}" ]]; then
+    echo "Error: no registry credentials found, log in to ${chart_oci_repo#oci://} or set HELM_REGISTRY_CONFIG" >&2
+    exit 1
+fi
+
+echo "Using registry credentials from ${helm_registry_config}"
 
 "${helm_bin}" package charts/kubernetes-nmstate \
     --version "${chart_version}" \
