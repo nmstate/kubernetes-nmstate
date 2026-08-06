@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -39,30 +40,47 @@ const (
 	separator = "*****"
 )
 
+// deviceStatusCommands are collected before every spec, so they are run
+// concurrently to keep the per spec overhead as low as possible.
+var deviceStatusCommands = []struct {
+	title   string
+	command []string
+}{
+	{title: "Connection status", command: []string{"/usr/bin/nmcli", "c", "s"}},
+	{title: "Device status", command: []string{"/usr/bin/nmcli", "d", "s"}},
+	{title: "Configured ipv4 ips on devices", command: []string{"/usr/sbin/ip", "-4", "-o", "a"}},
+}
+
 func writeDeviceStatus(writer io.Writer, nodes []string) {
 	writeMessage(writer, banner("Start printing device status")+"\n")
 
-	for _, node := range nodes {
-		output, err := runner.RunQuietAtNode(node, "/usr/bin/nmcli", "c", "s")
-		Expect(err).ToNot(HaveOccurred())
+	outputs := make([][]string, len(nodes))
+	wg := sync.WaitGroup{}
+	for nodeIndex := range nodes {
+		outputs[nodeIndex] = make([]string, len(deviceStatusCommands))
+		for commandIndex := range deviceStatusCommands {
+			wg.Add(1)
+			go func(nodeIndex, commandIndex int) {
+				defer GinkgoRecover()
+				defer wg.Done()
+				command := deviceStatusCommands[commandIndex].command
+				output, err := runner.RunQuietAtNode(nodes[nodeIndex], command...)
+				if err != nil {
+					output = fmt.Sprintf("failed running %v at node %s: %v", command, nodes[nodeIndex], err)
+				}
+				outputs[nodeIndex][commandIndex] = output
+			}(nodeIndex, commandIndex)
+		}
+	}
+	wg.Wait()
 
-		writeMessage(writer, banner("Connection status on node %s"), node)
-		writeMessage(writer, "\n %s", output)
-		writeMessage(writer, banner("Done Connection status on node %s "), node)
-
-		output, err = runner.RunQuietAtNode(node, "/usr/bin/nmcli", "d", "s")
-		Expect(err).ToNot(HaveOccurred())
-
-		writeMessage(writer, banner("Device status on node %s"), node)
-		writeMessage(writer, "\n %s", output)
-		writeMessage(writer, banner("Done device status on node %s "), node)
-
-		output, err = runner.RunQuietAtNode(node, "/usr/sbin/ip", "-4", "-o", "a")
-		Expect(err).ToNot(HaveOccurred())
-
-		writeMessage(writer, banner("Configured ipv4 ips on devices on node %s"), node)
-		writeMessage(writer, "\n %s", output)
-		writeMessage(writer, banner("Done ip status on node %s"), node)
+	for nodeIndex, node := range nodes {
+		for commandIndex := range deviceStatusCommands {
+			title := deviceStatusCommands[commandIndex].title
+			writeMessage(writer, banner("%s on node %s"), title, node)
+			writeMessage(writer, "\n %s", outputs[nodeIndex][commandIndex])
+			writeMessage(writer, banner("Done %s on node %s"), title, node)
+		}
 	}
 	writeMessage(writer, "Finished printing device status")
 }
