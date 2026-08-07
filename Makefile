@@ -174,10 +174,7 @@ gen-k8s:
 
 gen-crds:
 	mkdir -p deploy/crds
-	mkdir -p charts/kubernetes-nmstate/crds
 	cd api && $(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=../deploy/crds
-	rm -f charts/kubernetes-nmstate/crds/*.yaml
-	cp deploy/crds/nmstate.io_nmstates.yaml charts/kubernetes-nmstate/crds/
 
 gen-rbac:
 	$(CONTROLLER_GEN) crd rbac:roleName=nmstate-operator paths="./controllers/operator/..." output:rbac:artifacts:config=charts/kubernetes-nmstate/templates
