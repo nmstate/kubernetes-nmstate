@@ -28,7 +28,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -64,11 +63,13 @@ import (
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
+	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/file"
 	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
+	"github.com/nmstate/kubernetes-nmstate/pkg/node"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
 
@@ -305,12 +306,11 @@ func setupWebhookEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) err
 // setupHandlerEnvironment cleans up unavailableNodeCounts after unexpected restart,
 // configures the handler controllers and performs health checks
 func setupHandlerEnvironment(mgr manager.Manager) error {
-	// Clean stale unavailable counts from node before starting controllers
-	// Prevents deadlock after unexpected cluster reboot where nodes were
-	// processing NNCP and left stale counts in etcd.
-	if err := cleanStaleUnavailableCounts(mgr); err != nil {
-		setupLog.Error(err, "Failed to cleanup stale unavailable counts, continuing anyway")
-		// Don't error this is best-effort (NNCP needs manual restart)
+	// Reclaim maxUnavailable slots held by enactments interrupted by an
+	// unexpected handler/cluster restart. Best-effort: the reconciler's
+	// audit-on-block heals the same state if this fails.
+	if err := reclaimInterruptedSlots(mgr); err != nil {
+		setupLog.Error(err, "Failed to reclaim interrupted slots, continuing anyway")
 	}
 
 	if err := setupHandlerControllers(mgr); err != nil {
@@ -333,18 +333,30 @@ func startManager(mgr manager.Manager, ctx context.Context) int {
 	return 0
 }
 
-// cleanStaleUnavailableCounts cleans up stale unavailable node counts that have been
-// left in NNCP status after unexpected handler restarts or cluster reboots.
+// startupListBackoff retries the initial enactment List for ~2 minutes: at
+// handler startup after an ungraceful reboot, the apiserver is frequently
+// not yet ready, and failing silently here would leave ghost slots in
+// place until the audit's staleness threshold elapses.
+var startupListBackoff = wait.Backoff{
+	Duration: 2 * time.Second,
+	Factor:   2.0,
+	Jitter:   0.1,
+	Steps:    7,
+	Cap:      60 * time.Second,
+}
+
+// reclaimInterruptedSlots recovers maxUnavailable slots held by this node's
+// enactments that were Progressing when the handler last died. At handler
+// startup no applies are in progress for this node, so any own enactment
+// still Progressing is provably dead: mark it interrupted (Pending) and
+// audit its policy's unavailable-node counter against live enactments.
 //
-// At handler startup, no applies are in progress for this node. Any enactment that
-// is NOT in Available=True state may have a stale UnavailableNodeCountMap entry from
-// a previous interrupted reconcile. We check !IsAvailable rather than IsProgressing
-// because crashes can leave enactments in various non-progressing states (Failing,
-// Pending, empty conditions) that still have stale counts.
-func cleanStaleUnavailableCounts(mgr manager.Manager) error {
+// This is a fast-path optimization: if it fails, the audit-on-block in the
+// NNCP reconciler heals the same state within one staleness threshold.
+func reclaimInterruptedSlots(mgr manager.Manager) error {
 	ctx := context.Background()
 	nodeName := environment.NodeName()
-	setupLog.Info("Cleaning up stale unavailable counts for node", "node", nodeName)
+	setupLog.Info("Reclaiming interrupted unavailable-node slots", "node", nodeName)
 
 	apiClient, err := client.New(mgr.GetConfig(), client.Options{Scheme: mgr.GetScheme()})
 	if err != nil {
@@ -353,92 +365,40 @@ func cleanStaleUnavailableCounts(mgr manager.Manager) error {
 
 	enactmentList := &nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
 	nodeLabel := client.MatchingLabels{nmstateapi.EnactmentNodeLabel: nodeName}
-	if err := apiClient.List(ctx, enactmentList, nodeLabel); err != nil {
+	if err := retry.OnError(startupListBackoff, func(error) bool { return true }, func() error {
+		return apiClient.List(ctx, enactmentList, nodeLabel)
+	}); err != nil {
 		return err
 	}
 
-	// For each enactment that is not Available (may have a stale count from an interrupted apply)
 	for i := range enactmentList.Items {
 		enactment := &enactmentList.Items[i]
-		if !enactmentstatus.IsAvailable(&enactment.Status.Conditions) {
-			policyName := enactment.Labels[nmstateapi.EnactmentPolicyLabel]
-			if policyName == "" {
-				continue
-			}
-			generationKey := strconv.FormatInt(enactment.Status.PolicyGeneration, 10)
+		if !enactmentstatus.IsProgressing(&enactment.Status.Conditions) {
+			continue
+		}
+		policyName := enactment.Labels[nmstateapi.EnactmentPolicyLabel]
+		if policyName == "" {
+			continue
+		}
+		generationKey := strconv.FormatInt(enactment.Status.PolicyGeneration, 10)
 
-			setupLog.Info("detected stale non-available enactment, cleaning up",
-				"enactment", enactment.Name,
-				"policy", policyName,
-				"generation", generationKey)
+		setupLog.Info("marking interrupted enactment and auditing policy slots",
+			"enactment", enactment.Name, "policy", policyName, "generation", generationKey)
 
-			// Decrement counter for this policy and generation
-			if err := decrementStaleUnavailableCount(ctx, apiClient, policyName, generationKey); err != nil {
-				setupLog.Error(err, "Failed to decrement stale count", "policy", policyName)
-				// no return to continue with other enactments
-			}
+		if err := enactmentconditions.MarkInterrupted(ctx, apiClient,
+			types.NamespacedName{Name: enactment.Name}, generationKey); err != nil {
+			setupLog.Error(err, "failed marking enactment interrupted", "enactment", enactment.Name)
+			continue // audit would still count it live; skip to avoid double-freeing later
+		}
 
-			// Reset retry count for this enactment and generation
-			if err := resetStaleRetryCount(ctx, apiClient, enactment.Name, generationKey); err != nil {
-				setupLog.Error(err, "Failed to reset stale retry count", "enactment", enactment.Name)
-				// no return to continue with other enactments
-			}
+		if _, err := node.AuditUnavailableSlots(ctx, apiClient, apiClient,
+			types.NamespacedName{Name: policyName}, node.StaleEnactmentThreshold()); err != nil {
+			setupLog.Error(err, "failed auditing unavailable slots", "policy", policyName)
 		}
 	}
 
-	setupLog.Info("Finished cleaning up stale unavailable counts", "node", nodeName)
+	setupLog.Info("Finished reclaiming interrupted slots", "node", nodeName)
 	return nil
-}
-
-// decrementStaleUnavailableCount decrements the UnavailableNodeCountMap of a specific
-// policy and generation for startup cleanup.
-func decrementStaleUnavailableCount(ctx context.Context, cli client.Client, policyName, generationKey string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
-		if err := cli.Get(ctx, types.NamespacedName{Name: policyName}, policy); err != nil {
-			if apierrors.IsNotFound(err) {
-				setupLog.Info("Policy not found during stale count cleanup, skipping", "policy", policyName)
-				return nil
-			}
-			return err
-		}
-
-		if policy.Status.UnavailableNodeCountMap == nil {
-			return nil // Nothing to clean up
-		}
-
-		if policy.Status.UnavailableNodeCountMap[generationKey] > 0 {
-			policy.Status.UnavailableNodeCountMap[generationKey]--
-			setupLog.Info("Decremented stale unavailable count",
-				"policy", policyName,
-				"generation", generationKey,
-				"newCount", policy.Status.UnavailableNodeCountMap[generationKey])
-			return cli.Status().Update(ctx, policy)
-		}
-
-		return nil
-	})
-}
-
-// resetStaleRetryCount resets the RetryCount for a specific enactment and generation
-// during startup clean to prevent stale retry counts from previous interrupted reconciles.
-func resetStaleRetryCount(ctx context.Context, cli client.Client, enactmentName, generationKey string) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		enactment := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
-		if err := cli.Get(ctx, types.NamespacedName{Name: enactmentName}, enactment); err != nil {
-			return err
-		}
-
-		if enactment.Status.RetryCount == nil || enactment.Status.RetryCount[generationKey] == 0 {
-			return nil
-		}
-
-		enactment.Status.RetryCount[generationKey] = 0
-		setupLog.Info("Reset stale retry count",
-			"enactment", enactmentName,
-			"generation", generationKey)
-		return cli.Status().Update(ctx, enactment)
-	})
 }
 
 // Handler runs as a daemonset and we want that each handler pod will cache/reconcile only resources that belong the node it runs on.
