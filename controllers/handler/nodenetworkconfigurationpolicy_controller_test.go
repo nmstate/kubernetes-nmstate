@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -111,6 +112,9 @@ var _ = Describe("success path slot release ordering", func() {
 	It("keeps the enactment Progressing when the slot release fails", func() {
 		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
 		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
+		originalSlotReleaseBackoff := slotReleaseBackoff
+		slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
+		defer func() { slotReleaseBackoff = originalSlotReleaseBackoff }()
 
 		failNNCPStatusWrites := true
 		reconciler, cl, policyKey := buildSlotReleaseTestClient(&failNNCPStatusWrites)
@@ -495,6 +499,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 		Context("when status update fails with both cached and non-cached clients", func() {
 			It("should return error", func() {
+				originalSlotReleaseBackoff := slotReleaseBackoff
+				slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
+				defer func() { slotReleaseBackoff = originalSlotReleaseBackoff }()
+
 				// Create a client that will fail status updates
 				clb := fake.ClientBuilder{}
 				clb.WithScheme(s)
