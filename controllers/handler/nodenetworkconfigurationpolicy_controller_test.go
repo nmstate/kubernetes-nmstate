@@ -51,7 +51,9 @@ var _ = Describe("success path slot release ordering", func() {
 	buildSlotReleaseTestClient := func(failNNCPStatusWrites *bool) (
 		*NodeNetworkConfigurationPolicyReconciler, client.Client, types.NamespacedName,
 	) {
+		originalNmstatectlShowFn := nmstatectlShowFn
 		nmstatectlShowFn = func() (string, error) { return "", nil }
+		DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
 		reconciler := &NodeNetworkConfigurationPolicyReconciler{
 			RetriesUntilFail:   5,
 			MaximumTimeBackoff: 30 * time.Second,
@@ -160,6 +162,92 @@ var _ = Describe("success path slot release ordering", func() {
 	})
 })
 
+var _ = Describe("Progressing write failure after slot claim", func() {
+	It("releases the just-claimed slot and requeues after 10s without applying", func() {
+		originalNmstatectlShowFn := nmstatectlShowFn
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		defer func() { nmstatectlShowFn = originalNmstatectlShowFn }()
+		applyCalled := false
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+			applyCalled = true
+			return "ok", nil
+		}
+		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
+
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail:   5,
+			MaximumTimeBackoff: 30 * time.Second,
+			InitialBackoff:     1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		node := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap: map[string]int{},
+			},
+		}
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+		}
+
+		sawSlotClaimed := false
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node)
+		clb.WithStatusSubresource(&nncp, &nnce, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				if updated, isPolicy := obj.(*nmstatev1.NodeNetworkConfigurationPolicy); isPolicy {
+					if updated.Status.UnavailableNodeCountMap["0"] >= 1 {
+						// The increment (slot claim): let it through, remember it.
+						sawSlotClaimed = true
+					}
+				}
+				if updatedNNCE, isNNCE := obj.(*nmstatev1beta1.NodeNetworkConfigurationEnactment); isNNCE {
+					if sawSlotClaimed && enactmentstatus.IsProgressing(&updatedNNCE.Status.Conditions) {
+						// The Progressing marker write after a successful claim: fail it.
+						return apierrors.NewInternalError(context.DeadlineExceeded)
+					}
+				}
+				return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		policyKey := types.NamespacedName{Name: nncp.Name}
+
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(sawSlotClaimed).To(BeTrue(), "the slot claim must have happened before the Progressing write")
+		Expect(res.RequeueAfter).To(Equal(10*time.Second),
+			"a failed Progressing write after a claim must requeue after 10s")
+		Expect(applyCalled).To(BeFalse(),
+			"apply must not run when the Progressing marker could not be persisted")
+
+		updatedNNCP := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, updatedNNCP)).To(Succeed())
+		Expect(updatedNNCP.Status.UnavailableNodeCountMap["0"]).To(Equal(0),
+			"the just-claimed slot must be released when the Progressing write fails")
+	})
+})
+
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
 	type predicateCase struct {
 		GenerationOld   int64
@@ -219,7 +307,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 	}
 	DescribeTable("when claimNodeRunningUpdate is called and",
 		func(c incrementUnavailableNodeCountCase) {
+			originalNmstatectlShowFn := nmstatectlShowFn
 			nmstatectlShowFn = func() (string, error) { return "", nil }
+			defer func() { nmstatectlShowFn = originalNmstatectlShowFn }()
 			// "Proceeds" entries must complete the claim + apply path
 			// deterministically, so stub the apply to succeed; blocked entries
 			// never reach the apply, the stub is irrelevant there.
@@ -673,7 +763,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		)
 
 		BeforeEach(func() {
+			originalNmstatectlShowFn := nmstatectlShowFn
 			nmstatectlShowFn = func() (string, error) { return "", nil }
+			DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
 			reconciler = &NodeNetworkConfigurationPolicyReconciler{
 				RetriesUntilFail:   5,
 				MaximumTimeBackoff: 30 * time.Second,
