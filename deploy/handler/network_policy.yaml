@@ -147,6 +147,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+{{- if .IsOpenShift }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+{{- end }}
   policyTypes:
     - Egress
 ---
@@ -183,6 +194,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+{{- if .IsOpenShift }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+{{- end }}
   policyTypes:
     - Egress
 ---
@@ -201,6 +223,17 @@ spec:
           port: 53
         - protocol: TCP
           port: 53
+{{- if .IsOpenShift }}
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: openshift-dns
+      ports:
+        - protocol: UDP
+          port: 5353
+        - protocol: TCP
+          port: 5353
+{{- end }}
   policyTypes:
     - Egress
 ---
