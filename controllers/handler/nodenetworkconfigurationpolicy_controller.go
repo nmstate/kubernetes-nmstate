@@ -247,6 +247,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	if alreadyHoldsSlot {
 		log.Info("enactment already Progressing for current generation; slot held by an interrupted reconcile, skipping claim")
 	}
+	didClaim := false
 	if !alreadyHoldsSlot && r.shouldIncrementUnavailableNodeCount(previousConditions) {
 		err = r.claimUnavailableSlot(ctx, instance, request.NamespacedName, generationKey)
 		if err != nil {
@@ -272,9 +273,20 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 			}
 			return ctrl.Result{}, err
 		}
+		didClaim = true
 	}
 
-	enactmentConditions.NotifyProgressing(ctx)
+	if err := enactmentConditions.NotifyProgressing(ctx); err != nil {
+		// Without a persisted Progressing marker the audit on other nodes
+		// cannot see this node as a live slot holder. Do not apply: release
+		// the slot claimed in this reconcile (if any) and retry shortly.
+		if didClaim {
+			if releaseErr := r.decrementUnavailableNodeCount(ctx, instance, generationKey); releaseErr != nil {
+				log.Error(releaseErr, "failed releasing just-claimed slot after Progressing write failure")
+			}
+		}
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
 	if policyconditions.IsUnknown(&instance.Status.Conditions) {
 		policyconditions.Update(ctx, r.Client, r.APIClient, request.NamespacedName)
 	}
@@ -659,7 +671,7 @@ var slotReleaseBackoff = wait.Backoff{
 	Duration: 500 * time.Millisecond,
 	Factor:   2.0,
 	Jitter:   0.1,
-	Steps:    7, // ~31.5s cumulative
+	Steps:    6, // 0.5+1+2+4+8+16 = ~31.5s cumulative
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(

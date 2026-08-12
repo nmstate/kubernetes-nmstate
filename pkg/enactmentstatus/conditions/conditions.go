@@ -57,12 +57,13 @@ func (ec *EnactmentConditions) NotifyGenerateFailure(ctx context.Context, err er
 	}
 }
 
-func (ec *EnactmentConditions) NotifyProgressing(ctx context.Context) {
+func (ec *EnactmentConditions) NotifyProgressing(ctx context.Context) error {
 	ec.logger.Info("NotifyProgressing")
 	err := ec.updateEnactmentConditions(ctx, SetProgressing, "Applying desired state")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Progressing")
 	}
+	return err
 }
 
 func (ec *EnactmentConditions) NotifyFailedToConfigure(ctx context.Context, failedErr error) {
