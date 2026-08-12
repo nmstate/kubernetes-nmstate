@@ -293,6 +293,22 @@ func SetProgressing(conditions *nmstate.ConditionList, message string) {
 	)
 }
 
+const interruptedByRestartMessage = "interrupted by handler restart; waiting to be reapplied"
+
+// MarkInterrupted transitions an enactment that was Progressing when the
+// handler died to Pending, so slot audits across the cluster no longer see
+// it as a live maxUnavailable slot holder, and resets its retry count for
+// the given generation so the re-apply is not skipped.
+func MarkInterrupted(ctx context.Context, cli client.Client, enactmentKey types.NamespacedName, generationKey string) error {
+	return enactmentstatus.Update(ctx, cli, enactmentKey,
+		func(status *nmstate.NodeNetworkConfigurationEnactmentStatus) {
+			SetPending(&status.Conditions, interruptedByRestartMessage)
+			if status.RetryCount != nil {
+				status.RetryCount[generationKey] = 0
+			}
+		})
+}
+
 func SetPending(conditions *nmstate.ConditionList, message string) {
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
