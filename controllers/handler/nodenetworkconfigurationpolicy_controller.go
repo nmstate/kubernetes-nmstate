@@ -598,6 +598,8 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 			return node.MaxUnavailableLimitReachedError{}
 		}
 		policy.Status.UnavailableNodeCountMap[generationKey] += 1
+		now := metav1.Now()
+		policy.Status.LastUnavailableNodeCountUpdate = &now
 		return r.Client.Status().Update(ctx, policy)
 	})
 }
@@ -638,6 +640,8 @@ func tryDecrementingUnavailableNodeCount(
 			return nil
 		}
 		instance.Status.UnavailableNodeCountMap[generationKey] -= 1
+		now := metav1.Now()
+		instance.Status.LastUnavailableNodeCountUpdate = &now
 		return statusWriterClient.Status().Update(ctx, instance)
 	})
 	return err

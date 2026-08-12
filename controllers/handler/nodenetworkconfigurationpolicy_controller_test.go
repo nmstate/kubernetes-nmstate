@@ -356,6 +356,23 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				Expect(err).To(BeNil())
 				Expect(updatedNNCP.Status.UnavailableNodeCountMap["gen-1"]).To(Equal(1))
 			})
+
+			It("stamps LastUnavailableNodeCountUpdate on decrement", func() {
+				clb := fake.ClientBuilder{}
+				clb.WithScheme(s)
+				clb.WithRuntimeObjects(nncp)
+				clb.WithStatusSubresource(nncp)
+				cl := clb.Build()
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+
+				Expect(reconciler.decrementUnavailableNodeCount(context.TODO(), nncp, "gen-1")).To(Succeed())
+
+				updated := &nmstatev1.NodeNetworkConfigurationPolicy{}
+				Expect(cl.Get(context.TODO(), types.NamespacedName{Name: "test-policy"}, updated)).To(Succeed())
+				Expect(updated.Status.LastUnavailableNodeCountUpdate).ToNot(BeNil())
+				Expect(updated.Status.LastUnavailableNodeCountUpdate.Time).To(BeTemporally("~", time.Now(), 10*time.Second))
+			})
 		})
 
 		Context("when status update fails with both cached and non-cached clients", func() {
@@ -423,6 +440,56 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				// Should not return error - this is expected when node already processed
 				Expect(err).To(BeNil())
 			})
+		})
+	})
+
+	Describe("incrementUnavailableNodeCount", func() {
+		var (
+			reconciler *NodeNetworkConfigurationPolicyReconciler
+			nncp       *nmstatev1.NodeNetworkConfigurationPolicy
+			s          *runtime.Scheme
+		)
+
+		BeforeEach(func() {
+			reconciler = &NodeNetworkConfigurationPolicyReconciler{
+				RetriesUntilFail:   5,
+				MaximumTimeBackoff: 30 * time.Second,
+				InitialBackoff:     1 * time.Second,
+			}
+			s = scheme.Scheme
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
+				&nmstatev1.NodeNetworkConfigurationPolicyList{},
+			)
+
+			nncp = &nmstatev1.NodeNetworkConfigurationPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-policy",
+				},
+				Status: shared.NodeNetworkConfigurationPolicyStatus{
+					UnavailableNodeCountMap: map[string]int{
+						"gen-1": 0,
+					},
+				},
+			}
+
+			reconciler.Log = ctrl.Log.WithName("test")
+		})
+
+		It("stamps LastUnavailableNodeCountUpdate on increment", func() {
+			clb := fake.ClientBuilder{}
+			clb.WithScheme(s)
+			clb.WithRuntimeObjects(nncp)
+			clb.WithStatusSubresource(nncp)
+			cl := clb.Build()
+			reconciler.Client = cl
+			reconciler.APIClient = cl
+
+			Expect(reconciler.incrementUnavailableNodeCount(context.TODO(), nncp, "gen-1")).To(Succeed())
+
+			updated := &nmstatev1.NodeNetworkConfigurationPolicy{}
+			Expect(cl.Get(context.TODO(), types.NamespacedName{Name: "test-policy"}, updated)).To(Succeed())
+			Expect(updated.Status.LastUnavailableNodeCountUpdate).ToNot(BeNil())
 		})
 	})
 
