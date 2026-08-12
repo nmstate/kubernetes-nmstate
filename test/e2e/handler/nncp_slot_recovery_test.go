@@ -28,6 +28,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	policyconditions "github.com/nmstate/kubernetes-nmstate/test/e2e/policy"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
@@ -61,21 +62,36 @@ var _ = Describe("NNCP unavailable-slot recovery after handler death", func() {
 			By("Create a policy that touches all test nodes")
 			updateDesiredState(linuxBrUp(bridge1))
 
-			By("Waiting for the policy to start progressing on some node")
-			Eventually(func() int {
-				return enactmentsFailingOrProgressing(TestPolicy)
-			}, 15*time.Second, 500*time.Millisecond).Should(BeNumerically(">", 0))
+			By("Waiting for a node whose enactment is Progressing")
+			var progressingNode string
+			Eventually(func() string {
+				for _, node := range nodes {
+					enactment := policyconditions.EnactmentConditionsStatus(node, TestPolicy)
+					condProgressing := enactment.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
+					if condProgressing != nil && condProgressing.Status == corev1.ConditionTrue {
+						progressingNode = node
+						return progressingNode
+					}
+				}
+				return ""
+			}, 15*time.Second, 500*time.Millisecond).ShouldNot(BeEmpty(),
+				"no node reached Progressing for policy %s", TestPolicy)
 
-			By("Killing the handler pod on the first node while the policy progresses")
-			deleteHandlerPodOnNode(nodes[0])
+			By("Killing the handler pod on the progressing node while the policy progresses")
+			deleteHandlerPodOnNode(progressingNode)
 		})
 		AfterEach(func() {
+			// Policy deletion and node reset must run even when the
+			// absent-wait fails (e.g. the policy is stuck), otherwise the
+			// policy leaks into subsequent specs.
+			defer func() {
+				By("Remove the policy")
+				deletePolicy(TestPolicy)
+				By("Reset desired state at all nodes")
+				resetDesiredStateForNodes()
+			}()
 			By("Remove the bridge")
 			updateDesiredStateAndWait(linuxBrAbsent(bridge1))
-			By("Remove the policy")
-			deletePolicy(TestPolicy)
-			By("Reset desired state at all nodes")
-			resetDesiredStateForNodes()
 		})
 		It("should eventually reach Available without recreating the policy", func() {
 			policyconditions.WaitForAvailablePolicy(TestPolicy)
