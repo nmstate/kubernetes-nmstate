@@ -97,7 +97,8 @@ var (
 			return false
 		},
 	}
-	nmstatectlShowFn = nmstatectl.Show
+	nmstatectlShowFn    = nmstatectl.Show
+	applyDesiredStateFn = nmstate.ApplyDesiredState
 )
 
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
@@ -260,7 +261,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 		policyconditions.Update(ctx, r.Client, r.APIClient, request.NamespacedName)
 	}
 
-	nmstateOutput, err := nmstate.ApplyDesiredState(ctx, r.APIClient, enactmentInstance.Status.DesiredState)
+	nmstateOutput, err := applyDesiredStateFn(ctx, r.APIClient, enactmentInstance.Status.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy on node %s at desired state apply: %q,\n %v",
 			nodeName, nmstateOutput, err)
@@ -294,11 +295,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	}
 	log.Info("nmstate", "output", nmstateOutput)
 
-	enactmentConditions.NotifySuccess(ctx)
 	if err := r.decrementUnavailableNodeCount(ctx, instance, generationKey); err != nil {
-		r.Log.Info("Failed to update NNCP status, will retry", "error", err, "requeueAfter", "10s")
+		r.Log.Info("Failed to release unavailable-node slot, will retry without re-applying",
+			"error", err, "requeueAfter", "10s")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
+	enactmentConditions.NotifySuccess(ctx)
 	r.forceNNSRefresh(ctx, nodeName)
 
 	return ctrl.Result{}, nil
@@ -604,15 +606,26 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	})
 }
 
+// slotReleaseBackoff is the retry budget for the authoritative (non-cached)
+// unavailable-slot release attempt. It runs right after the node's own
+// networking was reconfigured, so it deserves a much larger budget (~31.5s
+// cumulative) than the cached fast-path.
+var slotReleaseBackoff = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.1,
+	Steps:    7, // ~31.5s cumulative
+}
+
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(
 	ctx context.Context,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	generationKey string) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
-	err := tryDecrementingUnavailableNodeCount(ctx, r.Client, r.Client, policyKey, generationKey)
+	err := tryDecrementingUnavailableNodeCount(ctx, r.Client, r.Client, policyKey, generationKey, retry.DefaultRetry)
 	if err != nil {
-		r.Log.Error(err, "error decrementing unavailableNodeCount with cached client, trying again with non-cached client.")
-		err = tryDecrementingUnavailableNodeCount(ctx, r.Client, r.APIClient, policyKey, generationKey)
+		r.Log.Error(err, "error decrementing unavailableNodeCount with cached client, retrying with non-cached client and larger budget.")
+		err = tryDecrementingUnavailableNodeCount(ctx, r.Client, r.APIClient, policyKey, generationKey, slotReleaseBackoff)
 		if err != nil {
 			r.Log.Error(err, "error decrementing unavailableNodeCount with non-cached client")
 			return err
@@ -626,9 +639,10 @@ func tryDecrementingUnavailableNodeCount(
 	statusWriterClient client.StatusClient,
 	readerClient client.Reader,
 	policyKey types.NamespacedName,
-	generationKey string) error {
+	generationKey string,
+	backoff wait.Backoff) error {
 	instance := &nmstatev1.NodeNetworkConfigurationPolicy{}
-	err := retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
+	err := retry.OnError(backoff, func(error) bool { return true }, func() error {
 		err := readerClient.Get(ctx, policyKey, instance)
 		if err != nil {
 			return err

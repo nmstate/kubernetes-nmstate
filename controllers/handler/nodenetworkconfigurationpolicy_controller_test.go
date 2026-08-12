@@ -24,19 +24,137 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstate "github.com/nmstate/kubernetes-nmstate/pkg/client"
+	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
+
+var _ = Describe("success path slot release ordering", func() {
+	// buildSlotReleaseTestClient builds a reconciler + fake client where NNCP
+	// status writes that release the maxUnavailable slot (count 1 -> 0) fail
+	// while *failNNCPStatusWrites is true.
+	buildSlotReleaseTestClient := func(failNNCPStatusWrites *bool) (
+		*NodeNetworkConfigurationPolicyReconciler, client.Client, types.NamespacedName,
+	) {
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail:   5,
+			MaximumTimeBackoff: 30 * time.Second,
+			InitialBackoff:     1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		node := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap: map[string]int{},
+			},
+		}
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+		}
+
+		sawSlotClaimed := false
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node)
+		clb.WithStatusSubresource(&nncp, &nnce, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				if updated, isPolicy := obj.(*nmstatev1.NodeNetworkConfigurationPolicy); isPolicy {
+					if updated.Status.UnavailableNodeCountMap["0"] >= 1 {
+						// The increment (slot claim): let it through, remember it.
+						sawSlotClaimed = true
+					} else if *failNNCPStatusWrites && sawSlotClaimed {
+						// The decrement (slot release, 1 -> 0): fail it.
+						return apierrors.NewInternalError(context.DeadlineExceeded)
+					}
+				}
+				return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		return reconciler, cl, types.NamespacedName{Name: nncp.Name}
+	}
+
+	It("keeps the enactment Progressing when the slot release fails", func() {
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
+		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
+
+		failNNCPStatusWrites := true
+		reconciler, cl, policyKey := buildSlotReleaseTestClient(&failNNCPStatusWrites)
+
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(res.RequeueAfter).To(Equal(10 * time.Second))
+
+		// The slot is still held and the enactment must NOT claim success.
+		nnceKey := shared.EnactmentKey(nodeName, policyKey.Name)
+		updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, updatedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeFalse(),
+			"enactment must not be Available while the slot is still held")
+		Expect(enactmentstatus.IsProgressing(&updatedNNCE.Status.Conditions)).To(BeTrue())
+	})
+
+	// Healing convergence requires Task 4's "already holds slot" guard;
+	// flip this to It when Task 4 lands.
+	PIt("converges once NNCP status writes heal", func() {
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
+		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
+
+		failNNCPStatusWrites := true
+		reconciler, cl, policyKey := buildSlotReleaseTestClient(&failNNCPStatusWrites)
+
+		_, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+
+		// Heal: allow NNCP status writes again, reconcile converges.
+		failNNCPStatusWrites = false
+		_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+
+		nnceKey := shared.EnactmentKey(nodeName, policyKey.Name)
+		updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, updatedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeTrue())
+
+		updatedNNCP := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, updatedNNCP)).To(Succeed())
+		Expect(updatedNNCP.Status.UnavailableNodeCountMap["0"]).To(Equal(0))
+	})
+})
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
 	type predicateCase struct {
