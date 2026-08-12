@@ -132,9 +132,9 @@ var _ = Describe("success path slot release ordering", func() {
 		Expect(enactmentstatus.IsProgressing(&updatedNNCE.Status.Conditions)).To(BeTrue())
 	})
 
-	// Healing convergence requires Task 4's "already holds slot" guard;
-	// flip this to It when Task 4 lands.
-	PIt("converges once NNCP status writes heal", func() {
+	// Note: buildSlotReleaseTestClient's interceptor couples sawSlotClaimed with
+	// *failNNCPStatusWrites so only the release (decrement) write fails, never the claim.
+	It("converges once NNCP status writes heal", func() {
 		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
 		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
 
@@ -211,12 +211,20 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 	type incrementUnavailableNodeCountCase struct {
 		currentUnavailableNodeCount int
-		expectedReconcileResult     ctrl.Result
+		lastCountUpdateAge          time.Duration // 0 = nil timestamp
+		otherNodeLiveHolder         bool          // add a fresh Progressing enactment owned by another node
 		previousEnactmentConditions func(*shared.ConditionList, string)
+		expectBlocked               bool
+		expectedReconcileResult     ctrl.Result // only checked when !expectBlocked
 	}
 	DescribeTable("when claimNodeRunningUpdate is called and",
 		func(c incrementUnavailableNodeCountCase) {
 			nmstatectlShowFn = func() (string, error) { return "", nil }
+			// "Proceeds" entries must complete the claim + apply path
+			// deterministically, so stub the apply to succeed; blocked entries
+			// never reach the apply, the stub is irrelevant there.
+			applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
+			defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
 			reconciler := NodeNetworkConfigurationPolicyReconciler{
 				RetriesUntilFail:   5,
 				MaximumTimeBackoff: 30 * time.Second,
@@ -249,12 +257,18 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 					Name: "test",
 				},
 				Status: shared.NodeNetworkConfigurationPolicyStatus{
-					UnavailableNodeCountMap: map[string]int{},
+					UnavailableNodeCountMap: map[string]int{
+						"0": c.currentUnavailableNodeCount, // policy generation is 0
+					},
 				},
+			}
+			if c.lastCountUpdateAge > 0 {
+				nncp.Status.LastUnavailableNodeCountUpdate = &metav1.Time{Time: time.Now().Add(-c.lastCountUpdateAge)}
 			}
 			nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
+					Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+					Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
 				},
 				Status: shared.NodeNetworkConfigurationEnactmentStatus{},
 			}
@@ -263,6 +277,21 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			c.previousEnactmentConditions(&nnce.Status.Conditions, "")
 
 			objs := []runtime.Object{&nncp, &nnce, &nns, &node}
+			if c.otherNodeLiveHolder {
+				otherNNCE := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   shared.EnactmentKey("node02", nncp.Name).Name,
+						Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+					},
+					Status: shared.NodeNetworkConfigurationEnactmentStatus{
+						PolicyGeneration: nncp.Generation,
+					},
+				}
+				// SetProgressing writes the full condition set (shouldAbortReconcile
+				// requires it) with a fresh heartbeat, making node02 a live holder.
+				conditions.SetProgressing(&otherNNCE.Status.Conditions, "applying")
+				objs = append(objs, &otherNNCE)
+			}
 
 			// Create a fake client to mock API calls.
 			clb := fake.ClientBuilder{}
@@ -282,44 +311,62 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			})
 
 			Expect(err).To(BeNil())
-			Expect(res).To(Equal(c.expectedReconcileResult))
+			if c.expectBlocked {
+				Expect(res.RequeueAfter).To(BeNumerically(">=", 90*time.Second))
+				Expect(res.RequeueAfter).To(BeNumerically("<", 120*time.Second))
+			} else {
+				Expect(res).To(Equal(c.expectedReconcileResult))
+			}
 		},
 
-		Entry("No node applying policy with empty enactment, should succeed incrementing UnavailableNodeCount",
+		// "proceeds" entries expect ctrl.Result{}: with applyDesiredStateFn
+		// stubbed to succeed, a successful claim runs apply + slot release +
+		// NotifySuccess and the reconcile completes without requeueing.
+		Entry("count 0, empty enactment -> claims slot and proceeds",
 			incrementUnavailableNodeCountCase{
 				currentUnavailableNodeCount: 0,
 				previousEnactmentConditions: func(*shared.ConditionList, string) {},
-				expectedReconcileResult:     ctrl.Result{Requeue: true},
+				expectBlocked:               false,
+				expectedReconcileResult:     ctrl.Result{},
 			}),
-		Entry("No node applying policy with progressing enactment, should succeed incrementing UnavailableNodeCount",
-			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount: 0,
-				previousEnactmentConditions: conditions.SetProgressing,
-				expectedReconcileResult:     ctrl.Result{Requeue: true},
-			}),
-		Entry("No node applying policy with Pending enactment, should succeed incrementing UnavailableNodeCount",
-			incrementUnavailableNodeCountCase{
-				currentUnavailableNodeCount: 0,
-				previousEnactmentConditions: conditions.SetPending,
-				expectedReconcileResult:     ctrl.Result{Requeue: true},
-			}),
-		Entry("One node applying policy with empty enactment, should conflict incrementing UnavailableNodeCount",
+		Entry("count at cap with fresh live holder on another node -> blocked with bounded requeue",
 			incrementUnavailableNodeCountCase{
 				currentUnavailableNodeCount: 1,
+				lastCountUpdateAge:          5 * time.Minute,
+				otherNodeLiveHolder:         true,
 				previousEnactmentConditions: func(*shared.ConditionList, string) {},
-				expectedReconcileResult:     ctrl.Result{Requeue: true},
+				expectBlocked:               true,
 			}),
-		Entry("One node applying policy with Progressing enactment, should conflict incrementing UnavailableNodeCount",
+		Entry("count at cap, no live holder, stale timestamp -> audit repairs and proceeds",
 			incrementUnavailableNodeCountCase{
 				currentUnavailableNodeCount: 1,
+				lastCountUpdateAge:          5 * time.Minute,
+				previousEnactmentConditions: func(*shared.ConditionList, string) {},
+				expectBlocked:               false,
+				expectedReconcileResult:     ctrl.Result{},
+			}),
+		Entry("count at cap, no live holder, fresh timestamp -> grace defers, blocked",
+			incrementUnavailableNodeCountCase{
+				currentUnavailableNodeCount: 1,
+				lastCountUpdateAge:          5 * time.Second,
+				previousEnactmentConditions: func(*shared.ConditionList, string) {},
+				expectBlocked:               true,
+			}),
+		Entry("own enactment Progressing (interrupted apply) -> already holds slot, proceeds without increment",
+			incrementUnavailableNodeCountCase{
+				currentUnavailableNodeCount: 1,
+				lastCountUpdateAge:          5 * time.Second, // grace would block; guard must bypass
 				previousEnactmentConditions: conditions.SetProgressing,
-				expectedReconcileResult:     ctrl.Result{Requeue: true},
+				expectBlocked:               false,
+				expectedReconcileResult:     ctrl.Result{},
 			}),
-		Entry("One node applying policy with Pending enactment, should conflict incrementing UnavailableNodeCount",
+		Entry("own enactment Pending at cap with live holder -> stays blocked",
 			incrementUnavailableNodeCountCase{
 				currentUnavailableNodeCount: 1,
+				lastCountUpdateAge:          5 * time.Minute,
+				otherNodeLiveHolder:         true,
 				previousEnactmentConditions: conditions.SetPending,
-				expectedReconcileResult:     ctrl.Result{Requeue: true},
+				expectBlocked:               true,
 			}),
 	)
 

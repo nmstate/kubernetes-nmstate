@@ -20,6 +20,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"reflect"
 	"sort"
 	"strconv"
@@ -65,6 +66,19 @@ import (
 const (
 	ReconcileFailed = "ReconcileFailed"
 )
+
+// blockedRequeueBase/Jitter bound recovery when a policy is throttled: the
+// reconcile re-checks within [90s, 120s) even on a quiet cluster instead of
+// waiting for watch events or the multi-hour cache resync.
+const (
+	blockedRequeueBase   = 90 * time.Second
+	blockedRequeueJitter = 30 * time.Second
+)
+
+func blockedRequeueResult() ctrl.Result {
+	//nolint:gosec // jitter is not security-sensitive, math/rand is fine
+	return ctrl.Result{RequeueAfter: blockedRequeueBase + time.Duration(rand.Int63n(int64(blockedRequeueJitter)))}
+}
 
 var (
 	nodeName                                        string
@@ -229,8 +243,12 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 		return ctrl.Result{}, nil
 	}
 
-	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
-		err = r.incrementUnavailableNodeCount(ctx, instance, generationKey)
+	alreadyHoldsSlot := enactmentstatus.IsProgressing(&enactmentInstance.Status.Conditions)
+	if alreadyHoldsSlot {
+		log.Info("enactment already Progressing for current generation; slot held by an interrupted reconcile, skipping claim")
+	}
+	if !alreadyHoldsSlot && r.shouldIncrementUnavailableNodeCount(previousConditions) {
+		err = r.claimUnavailableSlot(ctx, instance, request.NamespacedName, generationKey)
 		if err != nil {
 			if apierrors.IsConflict(err) || errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
 				enactmentConditions.NotifyPending(ctx)
@@ -250,7 +268,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 					enactmentConditions.NotifyAborted(ctx, fmt.Errorf("reconciliation of enactment %q has aborted", enactmentInstance.Name))
 					return ctrl.Result{}, nil
 				}
-				return ctrl.Result{Requeue: true}, nil
+				return blockedRequeueResult(), nil
 			}
 			return ctrl.Result{}, err
 		}
@@ -574,6 +592,33 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNod
 	shouldIncrement := conditions != nil && !enactmentstatus.IsRetrying(conditions)
 	log.Info("shouldIncrementUnavailableNodeCount", "shouldIncrement", shouldIncrement)
 	return shouldIncrement
+}
+
+// claimUnavailableSlot increments the policy's unavailable-node counter. If
+// the counter is at the maxUnavailable cap, it audits the counter against
+// live Progressing enactments (repairing ghost slots left by interrupted
+// applies) and retries the increment once.
+func (r *NodeNetworkConfigurationPolicyReconciler) claimUnavailableSlot(
+	ctx context.Context,
+	policy *nmstatev1.NodeNetworkConfigurationPolicy,
+	policyKey types.NamespacedName,
+	generationKey string,
+) error {
+	err := r.incrementUnavailableNodeCount(ctx, policy, generationKey)
+	if err == nil || !errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
+		return err
+	}
+	repaired, auditErr := node.AuditUnavailableSlots(
+		ctx, r.Client, r.APIClient, policyKey, node.StaleEnactmentThreshold())
+	if auditErr != nil {
+		r.Log.Error(auditErr, "unavailable-slot audit failed", "policy", policyKey.Name)
+		return err
+	}
+	if !repaired {
+		return err
+	}
+	r.Log.Info("unavailable-slot audit repaired ghost slots, retrying claim", "policy", policyKey.Name)
+	return r.incrementUnavailableNodeCount(ctx, policy, generationKey)
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(
