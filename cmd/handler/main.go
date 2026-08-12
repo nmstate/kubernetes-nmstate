@@ -303,7 +303,8 @@ func setupWebhookEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) err
 	return nil
 }
 
-// setupHandlerEnvironment cleans up unavailableNodeCounts after unexpected restart,
+// setupHandlerEnvironment reclaims maxUnavailable slots held by this node's
+// enactments interrupted by an unexpected restart (reclaimInterruptedSlots),
 // configures the handler controllers and performs health checks
 func setupHandlerEnvironment(mgr manager.Manager) error {
 	// Reclaim maxUnavailable slots held by enactments interrupted by an
