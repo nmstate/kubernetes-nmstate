@@ -62,8 +62,11 @@ var _ = Describe("MarkInterrupted", func() {
 		Expect(pendingCondition).ToNot(BeNil())
 		Expect(pendingCondition.Status).To(Equal(corev1.ConditionTrue))
 		Expect(pendingCondition.Message).To(ContainSubstring("interrupted by handler restart"))
+		Expect(pendingCondition.Reason).To(Equal(shared.NodeNetworkConfigurationEnactmentConditionConfigurationInterrupted),
+			"a restart-interrupted enactment must not reuse the MaxUnavailableLimitReached reason")
 		progressingCondition := updated.Status.Conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionProgressing)
 		Expect(progressingCondition.Status).To(Equal(corev1.ConditionFalse))
+		Expect(progressingCondition.Reason).To(Equal(shared.NodeNetworkConfigurationEnactmentConditionConfigurationInterrupted))
 		Expect(updated.Status.RetryCount["3"]).To(Equal(0))
 	})
 })

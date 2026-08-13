@@ -44,6 +44,10 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 )
 
+// stubApplyOutput is the canned nmstate output returned by applyDesiredStateFn
+// stubs in these specs.
+const stubApplyOutput = "ok"
+
 var _ = Describe("success path slot release ordering", func() {
 	// buildSlotReleaseTestClient builds a reconciler + fake client where NNCP
 	// status writes that release the maxUnavailable slot (count 1 -> 0) fail
@@ -112,7 +116,7 @@ var _ = Describe("success path slot release ordering", func() {
 	}
 
 	It("keeps the enactment Progressing when the slot release fails", func() {
-		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return stubApplyOutput, nil }
 		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
 		originalSlotReleaseBackoff := slotReleaseBackoff
 		slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
@@ -137,8 +141,11 @@ var _ = Describe("success path slot release ordering", func() {
 	// Note: buildSlotReleaseTestClient's interceptor couples sawSlotClaimed with
 	// *failNNCPStatusWrites so only the release (decrement) write fails, never the claim.
 	It("converges once NNCP status writes heal", func() {
-		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return stubApplyOutput, nil }
 		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
+		originalSlotReleaseBackoff := slotReleaseBackoff
+		slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
+		defer func() { slotReleaseBackoff = originalSlotReleaseBackoff }()
 
 		failNNCPStatusWrites := true
 		reconciler, cl, policyKey := buildSlotReleaseTestClient(&failNNCPStatusWrites)
@@ -170,7 +177,7 @@ var _ = Describe("Progressing write failure after slot claim", func() {
 		applyCalled := false
 		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
 			applyCalled = true
-			return "ok", nil
+			return stubApplyOutput, nil
 		}
 		defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
 
@@ -248,6 +255,115 @@ var _ = Describe("Progressing write failure after slot claim", func() {
 	})
 })
 
+var _ = Describe("success write failure after apply (finalization phase)", func() {
+	// buildFinalizeTestClient builds a reconciler + fake client where NNCE
+	// status writes that record success (Available=True) fail while
+	// *failSuccessWrites is true. Progressing/Finalizing NNCE writes and all
+	// NNCP writes are allowed.
+	buildFinalizeTestClient := func(failSuccessWrites *bool, applyCalled *bool) (
+		*NodeNetworkConfigurationPolicyReconciler, client.Client, types.NamespacedName,
+	) {
+		originalNmstatectlShowFn := nmstatectlShowFn
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
+		originalApply := applyDesiredStateFn
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+			*applyCalled = true
+			return stubApplyOutput, nil
+		}
+		DeferCleanup(func() { applyDesiredStateFn = originalApply })
+
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail:   5,
+			MaximumTimeBackoff: 30 * time.Second,
+			InitialBackoff:     1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion,
+			&nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		node := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap: map[string]int{},
+			},
+		}
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+		}
+
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node)
+		clb.WithStatusSubresource(&nncp, &nnce, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				if nnceObj, isNNCE := obj.(*nmstatev1beta1.NodeNetworkConfigurationEnactment); isNNCE {
+					if *failSuccessWrites && enactmentstatus.IsAvailable(&nnceObj.Status.Conditions) {
+						return apierrors.NewInternalError(context.DeadlineExceeded)
+					}
+				}
+				return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		return reconciler, cl, types.NamespacedName{Name: nncp.Name}
+	}
+
+	It("requeues on success-write failure, then finalizes without re-applying", func() {
+		failSuccessWrites := true
+		applyCalled := false
+		reconciler, cl, policyKey := buildFinalizeTestClient(&failSuccessWrites, &applyCalled)
+
+		// Reconcile 1: applies, releases the slot, but cannot record success.
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeTrue(), "the first reconcile must apply the desired state")
+		Expect(res.RequeueAfter).To(Equal(10*time.Second),
+			"a failed success write must requeue rather than be swallowed")
+
+		nnceKey := shared.EnactmentKey(nodeName, policyKey.Name)
+		nnce := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, nnce)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&nnce.Status.Conditions)).To(BeFalse())
+		Expect(enactmentstatus.IsFinalizing(&nnce.Status.Conditions)).To(BeTrue(),
+			"the enactment must be parked in the finalizing phase")
+
+		// Heal the success write and reconcile again. The retry must NOT
+		// re-apply the already committed configuration; it only finalizes.
+		failSuccessWrites = false
+		applyCalled = false
+		res, err = reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(res).To(Equal(ctrl.Result{}))
+		Expect(applyCalled).To(BeFalse(),
+			"the finalization retry must not re-apply the desired state")
+
+		Expect(cl.Get(context.TODO(), nnceKey, nnce)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&nnce.Status.Conditions)).To(BeTrue())
+
+		nncp := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, nncp)).To(Succeed())
+		Expect(nncp.Status.UnavailableNodeCountMap["0"]).To(Equal(0),
+			"the slot must be released once finalization completes")
+	})
+})
+
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
 	type predicateCase struct {
 		GenerationOld   int64
@@ -313,7 +429,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			// "Proceeds" entries must complete the claim + apply path
 			// deterministically, so stub the apply to succeed; blocked entries
 			// never reach the apply, the stub is irrelevant there.
-			applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return "ok", nil }
+			applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return stubApplyOutput, nil }
 			defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
 			reconciler := NodeNetworkConfigurationPolicyReconciler{
 				RetriesUntilFail:   5,

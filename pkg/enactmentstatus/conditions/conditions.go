@@ -66,6 +66,20 @@ func (ec *EnactmentConditions) NotifyProgressing(ctx context.Context) error {
 	return err
 }
 
+// NotifyFinalizing records that the desired state has been applied and only the
+// post-apply finalization (releasing the maxUnavailable slot and recording
+// success) remains. The enactment stays Progressing (a live slot holder) but
+// carries the ConfigurationFinalizing reason so a retry can skip the already
+// committed apply. See SetFinalizing.
+func (ec *EnactmentConditions) NotifyFinalizing(ctx context.Context) error {
+	ec.logger.Info("NotifyFinalizing")
+	err := ec.updateEnactmentConditions(ctx, SetFinalizing, "Desired state applied, finalizing")
+	if err != nil {
+		ec.logger.Error(err, "Error notifying state Finalizing")
+	}
+	return err
+}
+
 func (ec *EnactmentConditions) NotifyFailedToConfigure(ctx context.Context, failedErr error) {
 	ec.logger.Info("NotifyFailedToConfigure")
 	err := ec.updateEnactmentConditions(ctx, SetFailedToConfigure, failedErr.Error())
@@ -90,12 +104,13 @@ func (ec *EnactmentConditions) NotifyAborted(ctx context.Context, failedErr erro
 	}
 }
 
-func (ec *EnactmentConditions) NotifySuccess(ctx context.Context) {
+func (ec *EnactmentConditions) NotifySuccess(ctx context.Context) error {
 	ec.logger.Info("NotifySuccess")
 	err := ec.updateEnactmentConditions(ctx, SetSuccess, "successfully reconciled")
 	if err != nil {
 		ec.logger.Error(err, "Error notifying state Success")
 	}
+	return err
 }
 
 func (ec *EnactmentConditions) NotifyPending(ctx context.Context) {
@@ -262,34 +277,54 @@ func SetSuccess(conditions *nmstate.ConditionList, message string) {
 }
 
 func SetProgressing(conditions *nmstate.ConditionList, message string) {
+	setProgressingWithReason(
+		conditions,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		message,
+	)
+}
+
+// SetFinalizing keeps the enactment Progressing (so it still counts as a live
+// maxUnavailable slot holder) but stamps the ConfigurationFinalizing reason,
+// marking that the desired state was already applied and only slot release and
+// success recording remain.
+func SetFinalizing(conditions *nmstate.ConditionList, message string) {
+	setProgressingWithReason(
+		conditions,
+		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationFinalizing,
+		message,
+	)
+}
+
+func setProgressingWithReason(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionTrue,
-		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		reason,
 		message,
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionUnknown,
-		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		reason,
 		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionUnknown,
-		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		reason,
 		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		reason,
 		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationProgressing,
+		reason,
 		"",
 	)
 }
@@ -300,45 +335,66 @@ const interruptedByRestartMessage = "interrupted by handler restart; waiting to 
 // handler died to Pending, so slot audits across the cluster no longer see
 // it as a live maxUnavailable slot holder, and resets its retry count for
 // the given generation so the re-apply is not skipped.
+//
+// The Pending transition carries the ConfigurationInterrupted reason (not
+// MaxUnavailableLimitReached) so consumers can tell a restart-interrupted
+// enactment apart from one throttled by the maxUnavailable cap.
 func MarkInterrupted(ctx context.Context, cli client.Client, enactmentKey types.NamespacedName, generationKey string) error {
 	return enactmentstatus.Update(ctx, cli, enactmentKey,
 		func(status *nmstate.NodeNetworkConfigurationEnactmentStatus) {
-			SetPending(&status.Conditions, interruptedByRestartMessage)
+			SetPendingWithReason(
+				&status.Conditions,
+				nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationInterrupted,
+				interruptedByRestartMessage,
+			)
 			if status.RetryCount != nil {
 				status.RetryCount[generationKey] = 0
 			}
 		})
 }
 
+// SetPending marks the enactment Pending because the maxUnavailable cap
+// refused its slot claim.
 func SetPending(conditions *nmstate.ConditionList, message string) {
+	SetPendingWithReason(
+		conditions,
+		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		message,
+	)
+}
+
+// SetPendingWithReason marks the enactment Pending with an explicit reason so
+// callers can distinguish why the apply is waiting (e.g. throttled by the
+// maxUnavailable cap versus interrupted by a handler restart).
+func SetPendingWithReason(conditions *nmstate.ConditionList, reason nmstate.ConditionReason, message string) {
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionPending,
 		corev1.ConditionTrue,
-		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		reason,
 		message,
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAborted,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		reason,
 		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionProgressing,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		reason,
 		message,
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionFailing,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		reason,
 		"",
 	)
 	conditions.Set(
 		nmstate.NodeNetworkConfigurationEnactmentConditionAvailable,
 		corev1.ConditionFalse,
-		nmstate.NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached,
+		reason,
 		"",
 	)
 }

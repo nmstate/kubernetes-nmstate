@@ -44,7 +44,12 @@ func auditPolicy(generation int64, count int, lastUpdate *metav1.Time) *nmstatev
 	}
 }
 
-func auditEnactment(name string, policyGeneration int64, progressing corev1.ConditionStatus, heartbeatAge time.Duration) *nmstatev1beta1.NodeNetworkConfigurationEnactment {
+func auditEnactment(
+	name string,
+	policyGeneration int64,
+	progressing corev1.ConditionStatus,
+	heartbeatAge time.Duration,
+) *nmstatev1beta1.NodeNetworkConfigurationEnactment {
 	e := &nmstatev1beta1.NodeNetworkConfigurationEnactment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   name,
@@ -118,7 +123,7 @@ var _ = Describe("AuditUnavailableSlots", func() {
 
 	It("repairs when the only Progressing holder is stale", func() {
 		policy := auditPolicy(2, 1, &oldUpdate)
-		dead := auditEnactment("node01.test-policy", 2, corev1.ConditionTrue, 20*time.Minute)
+		dead := auditEnactment("node01.test-policy", 2, corev1.ConditionTrue, DefaultStaleEnactmentThreshold+time.Minute)
 		clb := buildClient()
 		clb.WithRuntimeObjects(policy, dead)
 		clb.WithStatusSubresource(policy)
@@ -202,8 +207,11 @@ var _ = Describe("AuditUnavailableSlots", func() {
 })
 
 var _ = Describe("StaleEnactmentThreshold", func() {
-	It("defaults to 15 minutes", func() {
-		Expect(StaleEnactmentThreshold()).To(Equal(15 * time.Minute))
+	It("defaults to the derived threshold", func() {
+		Expect(StaleEnactmentThreshold()).To(Equal(DefaultStaleEnactmentThreshold))
+	})
+	It("exceeds the worst-case apply cycle so a live applier is never freed", func() {
+		Expect(DefaultStaleEnactmentThreshold).To(BeNumerically(">", worstCaseApplyCycle))
 	})
 	It("honors the env var", func() {
 		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, "5m")
@@ -211,6 +219,6 @@ var _ = Describe("StaleEnactmentThreshold", func() {
 	})
 	It("falls back to default on unparsable value", func() {
 		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, "bogus")
-		Expect(StaleEnactmentThreshold()).To(Equal(15 * time.Minute))
+		Expect(StaleEnactmentThreshold()).To(Equal(DefaultStaleEnactmentThreshold))
 	})
 })
