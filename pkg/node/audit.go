@@ -67,7 +67,11 @@ const (
 	AuditGraceWindow = 30 * time.Second
 )
 
-// StaleEnactmentThreshold returns the configured staleness threshold.
+// StaleEnactmentThreshold returns the configured staleness threshold. An
+// override is honored only if it still exceeds the worst-case apply cycle;
+// a smaller value would let the audit free a slot held by a node that is
+// still legitimately applying and break maxUnavailable, so it is rejected in
+// favor of the safe default.
 func StaleEnactmentThreshold() time.Duration {
 	raw := environment.GetEnvVar(StaleEnactmentThresholdEnvVar, "")
 	if raw == "" {
@@ -75,6 +79,9 @@ func StaleEnactmentThreshold() time.Duration {
 	}
 	parsed, err := time.ParseDuration(raw)
 	if err != nil || parsed <= 0 {
+		return DefaultStaleEnactmentThreshold
+	}
+	if parsed < worstCaseApplyCycle {
 		return DefaultStaleEnactmentThreshold
 	}
 	return parsed

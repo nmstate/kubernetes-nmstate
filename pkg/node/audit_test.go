@@ -213,9 +213,14 @@ var _ = Describe("StaleEnactmentThreshold", func() {
 	It("exceeds the worst-case apply cycle so a live applier is never freed", func() {
 		Expect(DefaultStaleEnactmentThreshold).To(BeNumerically(">", worstCaseApplyCycle))
 	})
-	It("honors the env var", func() {
+	It("honors an env var that still exceeds the worst-case apply cycle", func() {
+		override := worstCaseApplyCycle + 10*time.Minute
+		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, override.String())
+		Expect(StaleEnactmentThreshold()).To(Equal(override))
+	})
+	It("rejects an env var below the worst-case apply cycle, using the default", func() {
 		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, "5m")
-		Expect(StaleEnactmentThreshold()).To(Equal(5 * time.Minute))
+		Expect(StaleEnactmentThreshold()).To(Equal(DefaultStaleEnactmentThreshold))
 	})
 	It("falls back to default on unparsable value", func() {
 		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, "bogus")
