@@ -245,20 +245,26 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 
 	// Already fully reconciled for this generation: a spurious re-reconcile
 	// (informer re-list, node label change) must not re-claim a slot and
-	// re-apply an already committed configuration. The slot was released before
-	// Available was set, so there is nothing left to do.
+	// re-apply an already committed configuration. Release the slot with the
+	// idempotent audit in case an earlier finalize recorded success but could
+	// not release it, then finish.
 	if enactmentstatus.IsAvailable(&enactmentInstance.Status.Conditions) {
-		log.Info("enactment already Available for current generation, nothing to do")
+		log.Info("enactment already Available for current generation, ensuring slot released")
+		if err := r.releaseUnavailableSlotByAudit(ctx, request.NamespacedName); err != nil {
+			log.Info("Available enactment: unavailable-node slot release will be retried",
+				"error", err, "requeueAfter", "10s")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
 		return ctrl.Result{}, nil
 	}
 
 	// Post-apply finalization phase: the desired state was applied in an
 	// earlier reconcile but the slot release or success write did not complete.
-	// Only finalize (release the slot, record success); do NOT re-apply the
+	// Only finalize (record success, release the slot); do NOT re-apply the
 	// already committed configuration.
 	if enactmentstatus.IsFinalizing(&enactmentInstance.Status.Conditions) {
-		log.Info("enactment already applied (finalizing); releasing slot and recording success without re-applying")
-		return r.finalizeApply(ctx, instance, enactmentConditions, generationKey), nil
+		log.Info("enactment already applied (finalizing); recording success and releasing slot without re-applying")
+		return r.finalizeInterruptedApply(ctx, request.NamespacedName, enactmentConditions), nil
 	}
 
 	alreadyHoldsSlot := enactmentstatus.IsProgressing(&enactmentInstance.Status.Conditions)
@@ -357,51 +363,91 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	// stays Progressing (a live slot holder) but is marked Finalizing, so if
 	// the release or success write below fails, the requeue finalizes at the
 	// top of Reconcile instead of re-applying the already committed
-	// configuration.
-	if err := enactmentConditions.NotifyFinalizing(ctx); err != nil {
+	// configuration. The marker write itself gets the authoritative retry
+	// budget because it runs right after the node reconfigured its own
+	// networking, when the API server may be briefly unreachable; only if it
+	// cannot be persisted at all does the reconcile fall back to a (safe,
+	// idempotent) re-apply on the next pass.
+	if err := retry.OnError(slotReleaseBackoff, func(error) bool { return true }, func() error {
+		return enactmentConditions.NotifyFinalizing(ctx)
+	}); err != nil {
 		r.Log.Info("Failed to record finalizing phase, will retry",
 			"error", err, "requeueAfter", "10s")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
-	return r.finalizeApply(ctx, instance, enactmentConditions, generationKey), nil
-}
 
-// finalizeApply performs the post-apply finalization: release the
-// maxUnavailable slot and record enactment success. It never re-applies the
-// desired state, so it is safe to run on the retry path (when a previous
-// reconcile applied the desired state, entered the Finalizing phase, but could
-// not complete the release or success write).
-//
-// Ordering is release-before-success (the invariant introduced in cbd8607):
-// the slot is decremented while the enactment is still Progressing (Finalizing
-// still reports Progressing=True), so a concurrent audit on another node counts
-// this node as a live holder and will not free its slot, making the blind
-// decrement race-free. Success is only recorded after the slot is released, so
-// the poisonous Available+held-slot state remains unreachable.
-func (r *NodeNetworkConfigurationPolicyReconciler) finalizeApply(
-	ctx context.Context,
-	instance *nmstatev1.NodeNetworkConfigurationPolicy,
-	enactmentConditions enactmentconditions.EnactmentConditions,
-	generationKey string,
-) ctrl.Result {
+	// Fast-path release: a blind decrement is safe here because the enactment
+	// is still Progressing (Finalizing reports Progressing=True), so a
+	// concurrent audit on another node counts it as a live holder and will not
+	// free its slot. Success is recorded only after the slot is released, so
+	// the poisonous Available+held-slot state stays unreachable.
 	if err := r.decrementUnavailableNodeCount(ctx, instance, generationKey); err != nil {
 		r.Log.Info("Failed to release unavailable-node slot, will retry",
 			"error", err, "requeueAfter", "10s")
-		return ctrl.Result{RequeueAfter: 10 * time.Second}
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 	if err := enactmentConditions.NotifySuccess(ctx); err != nil {
 		// The slot is released, but success was not persisted. Do not swallow
-		// this: the enactment would stay Progressing and, because this
+		// this: the enactment would stay Finalizing and, because this
 		// controller watches neither NNCE updates nor status-only NNCP
 		// updates, nothing would re-trigger reconciliation and the policy
 		// would stay Progressing forever. Requeue so a later reconcile
 		// finalizes (records success) without re-applying.
 		r.Log.Info("Failed to record enactment success, will retry",
 			"error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+	r.forceNNSRefresh(ctx, nodeName)
+
+	return ctrl.Result{}, nil
+}
+
+// finalizeInterruptedApply completes a reconcile whose apply already committed
+// (the enactment is in the Finalizing phase) but whose slot release or success
+// write did not finish. It never re-applies the desired state.
+//
+// Unlike the happy path, the release here must be idempotent: a previous
+// reconcile may already have decremented the slot before failing to record
+// success, and a second blind decrement could drop another node's slot and
+// break maxUnavailable. Success is therefore recorded first (moving this
+// enactment out of the live-holder set), and the slot is then released with the
+// set-to-truth audit, which repairs the counter to the number of live holders
+// and can never free a slot another node still holds.
+func (r *NodeNetworkConfigurationPolicyReconciler) finalizeInterruptedApply(
+	ctx context.Context,
+	policyKey types.NamespacedName,
+	enactmentConditions enactmentconditions.EnactmentConditions,
+) ctrl.Result {
+	if err := enactmentConditions.NotifySuccess(ctx); err != nil {
+		r.Log.Info("Failed to record enactment success, will retry",
+			"error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}
+	}
+	if err := r.releaseUnavailableSlotByAudit(ctx, policyKey); err != nil {
+		r.Log.Info("Failed to release unavailable-node slot, will retry",
+			"error", err, "requeueAfter", "10s")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}
 	}
 	r.forceNNSRefresh(ctx, nodeName)
 	return ctrl.Result{}
+}
+
+// releaseUnavailableSlotByAudit releases a slot idempotently by repairing the
+// policy counter down to the number of live Progressing holders. The caller
+// must have already moved this enactment out of the live-holder set (it is
+// Available), so the audit drops this node's slot. Being set-to-truth it is
+// idempotent and never frees a slot another node still holds, so it is safe to
+// run repeatedly and concurrently with audits on other nodes. It uses the
+// larger slotReleaseBackoff because it runs right after the node reconfigured
+// its own networking, when the API server may be briefly unreachable.
+func (r *NodeNetworkConfigurationPolicyReconciler) releaseUnavailableSlotByAudit(
+	ctx context.Context,
+	policyKey types.NamespacedName,
+) error {
+	return retry.OnError(slotReleaseBackoff, func(error) bool { return true }, func() error {
+		_, err := node.AuditUnavailableSlots(ctx, r.Client, r.APIClient, policyKey, node.StaleEnactmentThreshold())
+		return err
+	})
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementNNCERetryCount(

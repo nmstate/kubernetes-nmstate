@@ -347,10 +347,18 @@ var startupListBackoff = wait.Backoff{
 }
 
 // reclaimInterruptedSlots recovers maxUnavailable slots held by this node's
-// enactments that were Progressing when the handler last died. At handler
-// startup no applies are in progress for this node, so any own enactment
-// still Progressing is provably dead: mark it interrupted (Pending) and
-// audit its policy's unavailable-node counter against live enactments.
+// enactments that were still Progressing when the handler last died. At
+// handler startup no applies are in progress for this node, so any own
+// enactment still Progressing is provably dead and is recovered by phase:
+//
+//   - Finalizing (ConfigurationFinalizing): the desired state was already
+//     applied and committed before the crash and the node's networking
+//     persists across a handler restart, so it is finalized without
+//     re-applying: record success, then release the slot with the idempotent
+//     set-to-truth audit.
+//   - Progressing (ConfigurationProgressing): the apply was interrupted
+//     mid-flight, so mark it interrupted (Pending, retry count reset) to be
+//     re-applied and audit the policy's unavailable-node counter.
 //
 // This is a fast-path optimization: if it fails, the audit-on-block in the
 // NNCP reconciler heals the same state within one staleness threshold.
@@ -381,19 +389,38 @@ func reclaimInterruptedSlots(mgr manager.Manager) error {
 		if policyName == "" {
 			continue
 		}
+		enactmentKey := types.NamespacedName{Name: enactment.Name}
+		policyKey := types.NamespacedName{Name: policyName}
 		generationKey := strconv.FormatInt(enactment.Status.PolicyGeneration, 10)
+
+		if enactmentstatus.IsFinalizing(&enactment.Status.Conditions) {
+			// Apply already committed before the crash: finalize without
+			// re-applying. Record success (moving it out of the live-holder
+			// set) then release the slot with the idempotent audit.
+			setupLog.Info("finalizing post-apply enactment interrupted by restart",
+				"enactment", enactment.Name, "policy", policyName)
+			ec := enactmentconditions.New(apiClient, enactmentKey)
+			if err := ec.NotifySuccess(ctx); err != nil {
+				setupLog.Error(err, "failed recording success for finalizing enactment", "enactment", enactment.Name)
+				continue // still Finalizing (a live holder); audit-on-block will heal
+			}
+			if _, err := node.AuditUnavailableSlots(ctx, apiClient, apiClient,
+				policyKey, node.StaleEnactmentThreshold()); err != nil {
+				setupLog.Error(err, "failed auditing unavailable slots", "policy", policyName)
+			}
+			continue
+		}
 
 		setupLog.Info("marking interrupted enactment and auditing policy slots",
 			"enactment", enactment.Name, "policy", policyName, "generation", generationKey)
 
-		if err := enactmentconditions.MarkInterrupted(ctx, apiClient,
-			types.NamespacedName{Name: enactment.Name}, generationKey); err != nil {
+		if err := enactmentconditions.MarkInterrupted(ctx, apiClient, enactmentKey, generationKey); err != nil {
 			setupLog.Error(err, "failed marking enactment interrupted", "enactment", enactment.Name)
 			continue // audit would still count it live; skip to avoid double-freeing later
 		}
 
 		if _, err := node.AuditUnavailableSlots(ctx, apiClient, apiClient,
-			types.NamespacedName{Name: policyName}, node.StaleEnactmentThreshold()); err != nil {
+			policyKey, node.StaleEnactmentThreshold()); err != nil {
 			setupLog.Error(err, "failed auditing unavailable slots", "policy", policyName)
 		}
 	}
