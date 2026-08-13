@@ -30,15 +30,32 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstateclient "github.com/nmstate/kubernetes-nmstate/pkg/client"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
+
+// worstCaseApplyCycle bounds how long ApplyDesiredState can legitimately run
+// on the success path. The Progressing heartbeat is stamped once at
+// NotifyProgressing and is not refreshed again until the apply returns, so a
+// live holder's heartbeat can be this old while it is still applying:
+//
+//	probe.Select (sequential pre-apply gw+dns probes) <= ProbesTotalTimeout
+//	nmstatectl.Set                                     <= DesiredStateConfigurationTimeout
+//	probe.Run    (sequential post-apply probes)        <= ProbesTotalTimeout
+//
+// Derived from the source-of-truth timeouts so it tracks any change to them.
+const worstCaseApplyCycle = nmstateclient.DesiredStateConfigurationTimeout + 2*probe.ProbesTotalTimeout
 
 const (
 	// DefaultStaleEnactmentThreshold is how old a Progressing enactment's
 	// heartbeat must be before the audit considers its holder dead. It must
-	// exceed the worst-case apply cycle:
-	// DesiredStateConfigurationTimeout (8 min) + post-apply probes.
-	DefaultStaleEnactmentThreshold = 15 * time.Minute
+	// exceed the worst-case apply cycle (worstCaseApplyCycle) with margin;
+	// otherwise the audit could classify a node that is still legitimately
+	// applying as stale, free its slot, and let more than maxUnavailable
+	// nodes reconfigure concurrently. The extra margin absorbs the gap
+	// between stamping the heartbeat and entering the apply, plus clock skew.
+	DefaultStaleEnactmentThreshold = worstCaseApplyCycle + 5*time.Minute
 
 	// StaleEnactmentThresholdEnvVar overrides DefaultStaleEnactmentThreshold
 	// (time.ParseDuration format, e.g. "20m").
