@@ -282,6 +282,19 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
 		})
 	})
+	Context("when handler namespace events are mapped to reconcile requests", func() {
+		newNamespace := func(name string) *corev1.Namespace {
+			return &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: name}}
+		}
+		It("should enqueue a request for the NMState CR on handler namespace events", func() {
+			requests := reconciler.nmstateRequestsFromHandlerNamespace(context.Background(), newNamespace(handlerNamespace))
+			Expect(requests).To(ConsistOf(ctrl.Request{NamespacedName: types.NamespacedName{Name: existingNMStateName}}))
+		})
+		It("should not enqueue requests for other namespaces", func() {
+			requests := reconciler.nmstateRequestsFromHandlerNamespace(context.Background(), newNamespace("some-other-namespace"))
+			Expect(requests).To(BeEmpty())
+		})
+	})
 	Context("when one of manifest directory is empty", func() {
 		var (
 			request ctrl.Request

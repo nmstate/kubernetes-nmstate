@@ -180,7 +180,13 @@ func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(&nmstatev1.NMState{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&appsv1.DaemonSet{})
+		Owns(&appsv1.DaemonSet{}).
+		// Watch the handler namespace so that externally modified metadata
+		// (e.g. annotations) is restored without waiting for the periodic
+		// resync. The manager cache is restricted to the handler namespace
+		// for Namespace objects, but we filter here too in case that ever
+		// changes.
+		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(r.nmstateRequestsFromHandlerNamespace))
 
 	// On OpenShift, watch APIServer CR changes to detect TLS profile updates.
 	// This triggers a reconcile that updates the TLS ConfigMap and rolls
@@ -204,6 +210,25 @@ func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return builder.Complete(r)
+}
+
+// nmstateRequestsFromHandlerNamespace maps events on the handler namespace to
+// reconcile requests for the deployed NMState CRs so that externally modified
+// namespace metadata (e.g. annotations) is restored.
+func (r *NMStateReconciler) nmstateRequestsFromHandlerNamespace(ctx context.Context, obj client.Object) []ctrl.Request {
+	if obj.GetName() != os.Getenv("HANDLER_NAMESPACE") {
+		return nil
+	}
+	nmstateList := &nmstatev1.NMStateList{}
+	if err := r.List(ctx, nmstateList); err != nil {
+		r.Log.Error(err, "failed listing NMState CRs to enqueue from namespace event")
+		return nil
+	}
+	requests := []ctrl.Request{}
+	for i := range nmstateList.Items {
+		requests = append(requests, ctrl.Request{NamespacedName: types.NamespacedName{Name: nmstateList.Items[i].Name}})
+	}
+	return requests
 }
 
 func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx context.Context) error {
