@@ -640,8 +640,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 			Expect(err).To(BeNil())
 			if c.expectBlocked {
-				Expect(res.RequeueAfter).To(BeNumerically(">=", 90*time.Second))
-				Expect(res.RequeueAfter).To(BeNumerically("<", 120*time.Second))
+				// A refused claim requeues via the controller's per-item
+				// exponential backoff (Requeue: true), not a fixed delay, so
+				// the freed slot is retried within seconds on multi-wave
+				// clusters instead of after ~90-120s.
+				Expect(res).To(Equal(ctrl.Result{Requeue: true}))
 			} else {
 				Expect(res).To(Equal(c.expectedReconcileResult))
 			}
@@ -657,7 +660,7 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				expectBlocked:               false,
 				expectedReconcileResult:     ctrl.Result{},
 			}),
-		Entry("count at cap with fresh live holder on another node -> blocked with bounded requeue",
+		Entry("count at cap with fresh live holder on another node -> blocked, requeued via backoff",
 			incrementUnavailableNodeCountCase{
 				currentUnavailableNodeCount: 1,
 				lastCountUpdateAge:          5 * time.Minute,

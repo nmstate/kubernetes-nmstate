@@ -20,7 +20,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"reflect"
 	"sort"
 	"strconv"
@@ -66,19 +65,6 @@ import (
 const (
 	ReconcileFailed = "ReconcileFailed"
 )
-
-// blockedRequeueBase/Jitter bound recovery when a policy is throttled: the
-// reconcile re-checks within [90s, 120s) even on a quiet cluster instead of
-// waiting for watch events or the multi-hour cache resync.
-const (
-	blockedRequeueBase   = 90 * time.Second
-	blockedRequeueJitter = 30 * time.Second
-)
-
-func blockedRequeueResult() ctrl.Result {
-	//nolint:gosec // jitter is not security-sensitive, math/rand is fine
-	return ctrl.Result{RequeueAfter: blockedRequeueBase + time.Duration(rand.Int63n(int64(blockedRequeueJitter)))}
-}
 
 var (
 	nodeName                                        string
@@ -293,7 +279,15 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 					enactmentConditions.NotifyAborted(ctx, fmt.Errorf("reconciliation of enactment %q has aborted", enactmentInstance.Name))
 					return ctrl.Result{}, nil
 				}
-				return blockedRequeueResult(), nil
+				// The maxUnavailable cap refused the claim. Requeue via the
+				// controller's per-item exponential backoff (InitialBackoff ->
+				// MaximumTimeBackoff) rather than a fixed multi-minute delay:
+				// the slot a peer holds is freed by a status-only NNCP update,
+				// which does not trigger this controller's generation-scoped
+				// watch, so the blocked node must poll. Backing off at seconds
+				// (not ~90-120s) keeps rollouts moving on multi-wave clusters
+				// while the audit-on-block still bounds ghost-slot recovery.
+				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
 		}
