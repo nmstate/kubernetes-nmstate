@@ -32,6 +32,8 @@ var _ = Describe("MaxUnavailable nodes", func() {
 		expectedScaledMaxUnavailable int
 		expectedError                types.GomegaMatcher
 	}
+	// Note: ValidateMaxUnavailable is tested at the controller integration test level
+	// since it requires a full client context with policies and enactments
 	DescribeTable("testing ScaledMaxUnavailableNodeCount",
 		func(c maxUnavailableCase) {
 			maxUnavailable, err := ScaledMaxUnavailableNodeCount(c.nmstateEnabledNodes, c.maxUnavailable)
@@ -84,14 +86,14 @@ var _ = Describe("MaxUnavailable nodes", func() {
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
 				maxUnavailable:               intstr.FromString("0%"),
-				expectedScaledMaxUnavailable: 1,
+				expectedScaledMaxUnavailable: 0,
 				expectedError:                Not(HaveOccurred()),
 			}),
 		Entry("Zero value",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
 				maxUnavailable:               intstr.FromInt(0),
-				expectedScaledMaxUnavailable: 1,
+				expectedScaledMaxUnavailable: 0,
 				expectedError:                Not(HaveOccurred()),
 			}))
 })

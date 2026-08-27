@@ -133,6 +133,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
+					Labels: map[string]string{
+						shared.EnactmentPolicyLabel: nncp.Name,
+					},
 				},
 				Status: shared.NodeNetworkConfigurationEnactmentStatus{},
 			}

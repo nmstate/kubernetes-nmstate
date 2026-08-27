@@ -35,7 +35,7 @@ var _ = Describe("Nodes", func() {
 		})
 		Context("and node network state is deleted", func() {
 			BeforeEach(func() {
-				deleteNodeNeworkStates()
+				deleteNodeNetworkStates()
 			})
 			It("should recreate it with currentState", func() {
 				for _, node := range nodes {
