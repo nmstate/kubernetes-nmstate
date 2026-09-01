@@ -219,7 +219,6 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should be rejected by API validation when maxUnavailable is 0", func() {
 			By("Attempt to apply policy with maxUnavailable: 0")
 			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
-				TestPolicy,
 				linuxBrUp(bridge1),
 				intstr.FromInt(0),
 				map[string]string{"node-role.kubernetes.io/worker": ""},
@@ -231,7 +230,6 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should be rejected by API validation when maxUnavailable is 0%", func() {
 			By("Attempt to apply policy with maxUnavailable: 0%")
 			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
-				TestPolicy,
 				linuxBrUp(bridge1),
 				intstr.FromString("0%"),
 				map[string]string{"node-role.kubernetes.io/worker": ""},
@@ -243,7 +241,6 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should be rejected by API validation for non-positive percentages that scale to zero", func() {
 			By("Attempt to apply policy with maxUnavailable: -5%")
 			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
-				TestPolicy,
 				linuxBrUp(bridge1),
 				intstr.FromString("-5%"),
 				map[string]string{"node-role.kubernetes.io/worker": ""},
@@ -255,7 +252,6 @@ var _ = Describe("EnactmentCondition", func() {
 		It("should be rejected by API validation for percentages greater than 100%", func() {
 			By("Attempt to apply policy with maxUnavailable: 200%")
 			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
-				TestPolicy,
 				linuxBrUp(bridge1),
 				intstr.FromString("200%"),
 				map[string]string{"node-role.kubernetes.io/worker": ""},

@@ -166,14 +166,13 @@ func setDesiredStateWithPolicyAndCapture(name string, desiredState nmstate.State
 }
 
 func setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
-	name string,
 	desiredState nmstate.State,
 	maxUnavailableValue intstr.IntOrString,
 	nodeSelector map[string]string,
 ) error {
 	policy := nmstatev1.NodeNetworkConfigurationPolicy{}
-	policy.Name = name
-	key := types.NamespacedName{Name: name}
+	policy.Name = TestPolicy
+	key := types.NamespacedName{Name: TestPolicy}
 	err := testenv.Client.Get(context.TODO(), key, &policy)
 	policy.Spec.DesiredState = desiredState
 	policy.Spec.NodeSelector = nodeSelector
