@@ -83,6 +83,13 @@ const (
 	NodeNetworkConfigurationEnactmentConditionMaxUnavailableLimitReached ConditionReason = "MaxUnavailableLimitReached"
 	NodeNetworkConfigurationEnactmentConditionConfigurationProgressing   ConditionReason = "ConfigurationProgressing"
 	NodeNetworkConfigurationEnactmentConditionConfigurationAborted       ConditionReason = "ConfigurationAborted"
+	NodeNetworkConfigurationEnactmentConditionConfigurationInterrupted   ConditionReason = "ConfigurationInterrupted"
+	// NodeNetworkConfigurationEnactmentConditionConfigurationFinalizing marks the
+	// post-apply phase: the desired state was applied and only releasing the
+	// maxUnavailable slot and recording success remain. A reconcile that finds
+	// the enactment in this phase must not re-apply the (already committed)
+	// configuration.
+	NodeNetworkConfigurationEnactmentConditionConfigurationFinalizing ConditionReason = "ConfigurationFinalizing"
 )
 
 func EnactmentKey(node, policy string) types.NamespacedName {

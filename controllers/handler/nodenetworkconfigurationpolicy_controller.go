@@ -97,7 +97,8 @@ var (
 			return false
 		},
 	}
-	nmstatectlShowFn = nmstatectl.Show
+	nmstatectlShowFn    = nmstatectl.Show
+	applyDesiredStateFn = nmstate.ApplyDesiredState
 )
 
 // NodeNetworkConfigurationPolicyReconciler reconciles a NodeNetworkConfigurationPolicy object
@@ -228,8 +229,37 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 		return ctrl.Result{}, nil
 	}
 
-	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
-		err = r.incrementUnavailableNodeCount(ctx, instance, generationKey)
+	// Already fully reconciled for this generation: a spurious re-reconcile
+	// (informer re-list, node label change) must not re-claim a slot and
+	// re-apply an already committed configuration. Release the slot with the
+	// idempotent audit in case an earlier finalize recorded success but could
+	// not release it, then finish.
+	if enactmentstatus.IsAvailable(&enactmentInstance.Status.Conditions) {
+		log.Info("enactment already Available for current generation, ensuring slot released")
+		if err := r.releaseUnavailableSlotByAudit(ctx, request.NamespacedName); err != nil {
+			log.Info("Available enactment: unavailable-node slot release will be retried",
+				"error", err, "requeueAfter", "10s")
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// Post-apply finalization phase: the desired state was applied in an
+	// earlier reconcile but the slot release or success write did not complete.
+	// Only finalize (record success, release the slot); do NOT re-apply the
+	// already committed configuration.
+	if enactmentstatus.IsFinalizing(&enactmentInstance.Status.Conditions) {
+		log.Info("enactment already applied (finalizing); recording success and releasing slot without re-applying")
+		return r.finalizeInterruptedApply(ctx, request.NamespacedName, enactmentConditions), nil
+	}
+
+	alreadyHoldsSlot := enactmentstatus.IsProgressing(&enactmentInstance.Status.Conditions)
+	if alreadyHoldsSlot {
+		log.Info("enactment already Progressing for current generation; slot held by an interrupted reconcile, skipping claim")
+	}
+	didClaim := false
+	if !alreadyHoldsSlot && r.shouldIncrementUnavailableNodeCount(previousConditions) {
+		err = r.claimUnavailableSlot(ctx, instance, request.NamespacedName, generationKey)
 		if err != nil {
 			if apierrors.IsConflict(err) || errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
 				enactmentConditions.NotifyPending(ctx)
@@ -249,18 +279,47 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 					enactmentConditions.NotifyAborted(ctx, fmt.Errorf("reconciliation of enactment %q has aborted", enactmentInstance.Name))
 					return ctrl.Result{}, nil
 				}
+				// The maxUnavailable cap refused the claim. Requeue via the
+				// controller's per-item exponential backoff (InitialBackoff ->
+				// MaximumTimeBackoff) rather than a fixed multi-minute delay:
+				// the slot a peer holds is freed by a status-only NNCP update,
+				// which does not trigger this controller's generation-scoped
+				// watch, so the blocked node must poll. Backing off at seconds
+				// (not ~90-120s) keeps rollouts moving on multi-wave clusters
+				// while the audit-on-block still bounds ghost-slot recovery.
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
 		}
+		didClaim = true
 	}
 
-	enactmentConditions.NotifyProgressing(ctx)
+	if err := enactmentConditions.NotifyProgressing(ctx); err != nil {
+		// Without a persisted Progressing marker the audit on other nodes
+		// cannot see this node as a live slot holder. Do not apply: release
+		// the slot claimed in this reconcile (if any) and retry shortly.
+		//
+		// Use a bounded release that stays within node.AuditGraceWindow so it
+		// cannot race the audit: a longer retry could land after the grace
+		// expired and another node had already audited this markerless claim
+		// away and taken the slot, double-freeing it. If the bounded release
+		// fails, the set-to-truth audit reclaims the slot (this enactment is
+		// not Progressing, so it never counts as a live holder).
+		if didClaim {
+			if releaseErr := tryDecrementingUnavailableNodeCount(
+				ctx, r.Client, r.APIClient, request.NamespacedName, generationKey, compensatingReleaseBackoff,
+			); releaseErr != nil {
+				log.Error(releaseErr,
+					"failed releasing just-claimed slot after Progressing write failure; audit will reclaim it")
+			}
+		}
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
 	if policyconditions.IsUnknown(&instance.Status.Conditions) {
 		policyconditions.Update(ctx, r.Client, r.APIClient, request.NamespacedName)
 	}
 
-	nmstateOutput, err := nmstate.ApplyDesiredState(ctx, r.APIClient, enactmentInstance.Status.DesiredState)
+	nmstateOutput, err := applyDesiredStateFn(ctx, r.APIClient, enactmentInstance.Status.DesiredState)
 	if err != nil {
 		errmsg := fmt.Errorf("error reconciling NodeNetworkConfigurationPolicy on node %s at desired state apply: %q,\n %v",
 			nodeName, nmstateOutput, err)
@@ -294,14 +353,95 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	}
 	log.Info("nmstate", "output", nmstateOutput)
 
-	enactmentConditions.NotifySuccess(ctx)
+	// Enter the finalization phase before touching the counter. The enactment
+	// stays Progressing (a live slot holder) but is marked Finalizing, so if
+	// the release or success write below fails, the requeue finalizes at the
+	// top of Reconcile instead of re-applying the already committed
+	// configuration. The marker write itself gets the authoritative retry
+	// budget because it runs right after the node reconfigured its own
+	// networking, when the API server may be briefly unreachable; only if it
+	// cannot be persisted at all does the reconcile fall back to a (safe,
+	// idempotent) re-apply on the next pass.
+	if err := retry.OnError(slotReleaseBackoff, func(error) bool { return true }, func() error {
+		return enactmentConditions.NotifyFinalizing(ctx)
+	}); err != nil {
+		r.Log.Info("Failed to record finalizing phase, will retry",
+			"error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+
+	// Fast-path release: a blind decrement is safe here because the enactment
+	// is still Progressing (Finalizing reports Progressing=True), so a
+	// concurrent audit on another node counts it as a live holder and will not
+	// free its slot. Success is recorded only after the slot is released, so
+	// the poisonous Available+held-slot state stays unreachable.
 	if err := r.decrementUnavailableNodeCount(ctx, instance, generationKey); err != nil {
-		r.Log.Info("Failed to update NNCP status, will retry", "error", err, "requeueAfter", "10s")
+		r.Log.Info("Failed to release unavailable-node slot, will retry",
+			"error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+	}
+	if err := enactmentConditions.NotifySuccess(ctx); err != nil {
+		// The slot is released, but success was not persisted. Do not swallow
+		// this: the enactment would stay Finalizing and, because this
+		// controller watches neither NNCE updates nor status-only NNCP
+		// updates, nothing would re-trigger reconciliation and the policy
+		// would stay Progressing forever. Requeue so a later reconcile
+		// finalizes (records success) without re-applying.
+		r.Log.Info("Failed to record enactment success, will retry",
+			"error", err, "requeueAfter", "10s")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 	r.forceNNSRefresh(ctx, nodeName)
 
 	return ctrl.Result{}, nil
+}
+
+// finalizeInterruptedApply completes a reconcile whose apply already committed
+// (the enactment is in the Finalizing phase) but whose slot release or success
+// write did not finish. It never re-applies the desired state.
+//
+// Unlike the happy path, the release here must be idempotent: a previous
+// reconcile may already have decremented the slot before failing to record
+// success, and a second blind decrement could drop another node's slot and
+// break maxUnavailable. Success is therefore recorded first (moving this
+// enactment out of the live-holder set), and the slot is then released with the
+// set-to-truth audit, which repairs the counter to the number of live holders
+// and can never free a slot another node still holds.
+func (r *NodeNetworkConfigurationPolicyReconciler) finalizeInterruptedApply(
+	ctx context.Context,
+	policyKey types.NamespacedName,
+	enactmentConditions enactmentconditions.EnactmentConditions,
+) ctrl.Result {
+	if err := enactmentConditions.NotifySuccess(ctx); err != nil {
+		r.Log.Info("Failed to record enactment success, will retry",
+			"error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}
+	}
+	if err := r.releaseUnavailableSlotByAudit(ctx, policyKey); err != nil {
+		r.Log.Info("Failed to release unavailable-node slot, will retry",
+			"error", err, "requeueAfter", "10s")
+		return ctrl.Result{RequeueAfter: 10 * time.Second}
+	}
+	r.forceNNSRefresh(ctx, nodeName)
+	return ctrl.Result{}
+}
+
+// releaseUnavailableSlotByAudit releases a slot idempotently by repairing the
+// policy counter down to the number of live Progressing holders. The caller
+// must have already moved this enactment out of the live-holder set (it is
+// Available), so the audit drops this node's slot. Being set-to-truth it is
+// idempotent and never frees a slot another node still holds, so it is safe to
+// run repeatedly and concurrently with audits on other nodes. It uses the
+// larger slotReleaseBackoff because it runs right after the node reconfigured
+// its own networking, when the API server may be briefly unreachable.
+func (r *NodeNetworkConfigurationPolicyReconciler) releaseUnavailableSlotByAudit(
+	ctx context.Context,
+	policyKey types.NamespacedName,
+) error {
+	return retry.OnError(slotReleaseBackoff, func(error) bool { return true }, func() error {
+		_, err := node.AuditUnavailableSlots(ctx, r.Client, r.APIClient, policyKey, node.StaleEnactmentThreshold())
+		return err
+	})
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementNNCERetryCount(
@@ -574,6 +714,33 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNod
 	return shouldIncrement
 }
 
+// claimUnavailableSlot increments the policy's unavailable-node counter. If
+// the counter is at the maxUnavailable cap, it audits the counter against
+// live Progressing enactments (repairing ghost slots left by interrupted
+// applies) and retries the increment once.
+func (r *NodeNetworkConfigurationPolicyReconciler) claimUnavailableSlot(
+	ctx context.Context,
+	policy *nmstatev1.NodeNetworkConfigurationPolicy,
+	policyKey types.NamespacedName,
+	generationKey string,
+) error {
+	err := r.incrementUnavailableNodeCount(ctx, policy, generationKey)
+	if err == nil || !errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
+		return err
+	}
+	repaired, auditErr := node.AuditUnavailableSlots(
+		ctx, r.Client, r.APIClient, policyKey, node.StaleEnactmentThreshold())
+	if auditErr != nil {
+		r.Log.Error(auditErr, "unavailable-slot audit failed", "policy", policyKey.Name)
+		return err
+	}
+	if !repaired {
+		return err
+	}
+	r.Log.Info("unavailable-slot audit repaired ghost slots, retrying claim", "policy", policyKey.Name)
+	return r.incrementUnavailableNodeCount(ctx, policy, generationKey)
+}
+
 func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount(
 	ctx context.Context,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
@@ -598,8 +765,44 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 			return node.MaxUnavailableLimitReachedError{}
 		}
 		policy.Status.UnavailableNodeCountMap[generationKey] += 1
+		now := metav1.Now()
+		policy.Status.LastUnavailableNodeCountUpdate = &now
 		return r.Client.Status().Update(ctx, policy)
 	})
+}
+
+// slotReleaseBackoff is the retry budget for the authoritative (non-cached)
+// unavailable-slot release attempt. It runs right after the node's own
+// networking was reconfigured, so it deserves a much larger budget than the
+// cached fast-path.
+//
+// wait.Backoff.Steps counts attempts, not sleeps: ExponentialBackoff sleeps
+// between attempts but not after the last one, so N steps yield N-1 sleeps.
+// Seven steps therefore sleep 0.5+1+2+4+8+16 = ~31.5s cumulative across six
+// waits. The enactment is still Progressing (a live slot holder) throughout
+// this release, so a concurrent audit on another node counts it as live and
+// will not free its slot, keeping the release safe even past the audit grace.
+var slotReleaseBackoff = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.1,
+	Steps:    7, // 6 sleeps: 0.5+1+2+4+8+16 = ~31.5s cumulative
+}
+
+// compensatingReleaseBackoff bounds the best-effort release of a slot that was
+// claimed in this reconcile but whose Progressing marker could not be
+// persisted. Unlike the success-path release, this one MUST finish within
+// node.AuditGraceWindow: the claim just stamped LastUnavailableNodeCountUpdate,
+// so audits on other nodes defer for that window. Releasing inside it
+// guarantees no other node can audit the (markerless) claim away and take the
+// slot before this release lands, which would turn a late decrement into a
+// double-free. If it still fails, the enactment is not Progressing, so the
+// set-to-truth audit will reclaim the slot safely.
+var compensatingReleaseBackoff = wait.Backoff{
+	Duration: 500 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.1,
+	Steps:    5, // 4 sleeps: 0.5+1+2+4 = ~7.5s cumulative, well under AuditGraceWindow (30s)
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount(
@@ -607,10 +810,10 @@ func (r *NodeNetworkConfigurationPolicyReconciler) decrementUnavailableNodeCount
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	generationKey string) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
-	err := tryDecrementingUnavailableNodeCount(ctx, r.Client, r.Client, policyKey, generationKey)
+	err := tryDecrementingUnavailableNodeCount(ctx, r.Client, r.Client, policyKey, generationKey, retry.DefaultRetry)
 	if err != nil {
-		r.Log.Error(err, "error decrementing unavailableNodeCount with cached client, trying again with non-cached client.")
-		err = tryDecrementingUnavailableNodeCount(ctx, r.Client, r.APIClient, policyKey, generationKey)
+		r.Log.Error(err, "error decrementing unavailableNodeCount with cached client, retrying with non-cached client and larger budget.")
+		err = tryDecrementingUnavailableNodeCount(ctx, r.Client, r.APIClient, policyKey, generationKey, slotReleaseBackoff)
 		if err != nil {
 			r.Log.Error(err, "error decrementing unavailableNodeCount with non-cached client")
 			return err
@@ -624,9 +827,10 @@ func tryDecrementingUnavailableNodeCount(
 	statusWriterClient client.StatusClient,
 	readerClient client.Reader,
 	policyKey types.NamespacedName,
-	generationKey string) error {
+	generationKey string,
+	backoff wait.Backoff) error {
 	instance := &nmstatev1.NodeNetworkConfigurationPolicy{}
-	err := retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
+	err := retry.OnError(backoff, func(error) bool { return true }, func() error {
 		err := readerClient.Get(ctx, policyKey, instance)
 		if err != nil {
 			return err
@@ -638,6 +842,8 @@ func tryDecrementingUnavailableNodeCount(
 			return nil
 		}
 		instance.Status.UnavailableNodeCountMap[generationKey] -= 1
+		now := metav1.Now()
+		instance.Status.LastUnavailableNodeCountUpdate = &now
 		return statusWriterClient.Status().Update(ctx, instance)
 	})
 	return err
