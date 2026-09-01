@@ -20,6 +20,20 @@ mkdir -p test_logs/e2e/upgrade
     mv ./docs/examples/* .
 )
 
+# v0.87.0 published bond.yaml contains "copy-mac-from: eth1", which that
+# release's nmstate rejects with InvalidArgument when eth1 is simultaneously
+# being enslaved into bond0 during policy application.  Strip only that field
+# from the upgrade fixture so that later releases retain normal copy-mac-from
+# upgrade coverage.
+if [ "${previous_minor_version}" = "v0.87.0" ]; then
+    bond_yaml="${test_e2e_updrade_examples_dir}/bond.yaml"
+    if ! grep -q 'copy-mac-from:' "${bond_yaml}"; then
+        echo "ERROR: expected 'copy-mac-from:' in ${bond_yaml} for v0.87.0 compatibility rewrite, but it was not found" >&2
+        exit 1
+    fi
+    sed -i '/^\s*copy-mac-from:/d' "${bond_yaml}"
+fi
+
 # download manifests for deployment
 (
     cd $test_e2e_updrade_manifests_dir
