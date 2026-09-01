@@ -19,6 +19,9 @@ package node
 
 import (
 	"context"
+	"fmt"
+	"strconv"
+	"strings"
 
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactment"
@@ -41,6 +44,19 @@ type MaxUnavailableLimitReachedError struct{}
 
 func (f MaxUnavailableLimitReachedError) Error() string {
 	return "maximal number of nodes are already processing policy configuration"
+}
+
+// InvalidMaxUnavailableError indicates that a policy's maxUnavailable resolves to a
+// non-positive number of nodes. This should normally be rejected at admission time by
+// the CRD CEL rule, but it can still be observed for policies persisted before the CRD
+// was upgraded. It is a terminal validation error: reconciliation must fail the
+// enactment rather than retry, since the value can only be fixed by editing the policy.
+type InvalidMaxUnavailableError struct {
+	value string
+}
+
+func (e InvalidMaxUnavailableError) Error() string {
+	return fmt.Sprintf("maxUnavailable must be a positive integer or a percentage between 1%% and 100%%, got %q", e.value)
 }
 
 func NodesRunningNmstate(ctx context.Context, cli client.Reader, nodeSelector map[string]string) ([]corev1.Node, error) {
@@ -107,24 +123,44 @@ func MaxUnavailableNodeCount(ctx context.Context, cli client.Reader, policy *nms
 	return ScaledMaxUnavailableNodeCount(enactmentsTotal, intOrPercent)
 }
 
+// scaledDefaultMaxUnavailableNodeCount returns the DefaultMaxunavailable percentage
+// scaled to the given number of matching nodes. Used as the fallback count when the
+// configured value cannot be resolved.
+func scaledDefaultMaxUnavailableNodeCount(matchingNodes int) int {
+	defaultMaxUnavailable := intstr.FromString(DefaultMaxunavailable)
+	maxUnavailable, _ := intstr.GetScaledValueFromIntOrPercent(&defaultMaxUnavailable, matchingNodes, true)
+	return maxUnavailable
+}
+
 func ScaledMaxUnavailableNodeCount(matchingNodes int, intOrPercent intstr.IntOrString) (int, error) {
-	correctMaxUnavailable := func(maxUnavailable int) int {
-		if maxUnavailable < 1 {
-			return MinMaxunavailable
+	// GetScaledValueFromIntOrPercent only accepts int values and strings ending in
+	// "%"; it rejects a string that holds a plain integer (e.g. "5"). Treat such a
+	// string as an absolute node count so both "5" and "5%" are accepted. The CRD
+	// CEL rule only admits [1-9][0-9]* for this form, so a parse failure means the
+	// value is either out of int range or bypassed admission (e.g. persisted before
+	// the CRD was upgraded); either way it is terminally invalid rather than a value
+	// that should silently fall back to the default.
+	if intOrPercent.Type == intstr.String && !strings.HasSuffix(intOrPercent.StrVal, "%") {
+		v, convErr := strconv.Atoi(intOrPercent.StrVal)
+		if convErr != nil {
+			return scaledDefaultMaxUnavailableNodeCount(matchingNodes), InvalidMaxUnavailableError{value: intOrPercent.String()}
 		}
-		return maxUnavailable
+		intOrPercent = intstr.FromInt(v)
 	}
 	maxUnavailable, err := intstr.GetScaledValueFromIntOrPercent(&intOrPercent, matchingNodes, true)
 	if err != nil {
-		defaultMaxUnavailable := intstr.FromString(DefaultMaxunavailable)
-		maxUnavailable, _ = intstr.GetScaledValueFromIntOrPercent(
-			&defaultMaxUnavailable,
-			matchingNodes,
-			true,
-		)
-		return correctMaxUnavailable(maxUnavailable), err
+		return scaledDefaultMaxUnavailableNodeCount(matchingNodes), err
 	}
-	return correctMaxUnavailable(maxUnavailable), nil
+	// Defense-in-depth: the CRD CEL rule rejects non-positive maxUnavailable values on
+	// write, but it only runs on create/update and cannot catch policies persisted
+	// before the CRD was upgraded. A value below MinMaxunavailable would make
+	// incrementUnavailableNodeCount treat the limit as reached on the first node and
+	// deadlock the rollout, so fail validation instead. matchingNodes is guarded so a
+	// valid policy that simply matches no nodes is not reported as invalid.
+	if matchingNodes > 0 && maxUnavailable < MinMaxunavailable {
+		return maxUnavailable, InvalidMaxUnavailableError{value: intOrPercent.String()}
+	}
+	return maxUnavailable, nil
 }
 
 // Return true if the event name is the name of

@@ -23,6 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
@@ -206,6 +207,57 @@ var _ = Describe("EnactmentCondition", func() {
 			Eventually(func() nmstate.ConditionList {
 				return policyconditions.Status(TestPolicy)
 			}, 2*time.Second, 100*time.Millisecond).Should(policyconditions.ContainPolicyDegraded(), "policy should be marked as Degraded")
+		})
+	})
+
+	Context("when maxUnavailable configuration is invalid", func() {
+		BeforeEach(func() {
+			By("Ensure policy doesn't exist")
+			deletePolicy(TestPolicy)
+		})
+
+		It("should be rejected by API validation when maxUnavailable is 0", func() {
+			By("Attempt to apply policy with maxUnavailable: 0")
+			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
+				linuxBrUp(bridge1),
+				intstr.FromInt(0),
+				map[string]string{"node-role.kubernetes.io/worker": ""},
+			)
+			Expect(err).To(HaveOccurred(), "API should reject policy with maxUnavailable: 0")
+			Expect(err.Error()).To(ContainSubstring("maxUnavailable must be a positive integer or a percentage"))
+		})
+
+		It("should be rejected by API validation when maxUnavailable is 0%", func() {
+			By("Attempt to apply policy with maxUnavailable: 0%")
+			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
+				linuxBrUp(bridge1),
+				intstr.FromString("0%"),
+				map[string]string{"node-role.kubernetes.io/worker": ""},
+			)
+			Expect(err).To(HaveOccurred(), "API should reject policy with maxUnavailable: 0%")
+			Expect(err.Error()).To(ContainSubstring("maxUnavailable must be a positive integer or a percentage"))
+		})
+
+		It("should be rejected by API validation for non-positive percentages that scale to zero", func() {
+			By("Attempt to apply policy with maxUnavailable: -5%")
+			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
+				linuxBrUp(bridge1),
+				intstr.FromString("-5%"),
+				map[string]string{"node-role.kubernetes.io/worker": ""},
+			)
+			Expect(err).To(HaveOccurred(), "API should reject policy with maxUnavailable: -5%")
+			Expect(err.Error()).To(ContainSubstring("maxUnavailable must be a positive integer or a percentage"))
+		})
+
+		It("should be rejected by API validation for percentages greater than 100%", func() {
+			By("Attempt to apply policy with maxUnavailable: 200%")
+			err := setDesiredStateWithPolicyMaxUnavailableAndNodeSelector(
+				linuxBrUp(bridge1),
+				intstr.FromString("200%"),
+				map[string]string{"node-role.kubernetes.io/worker": ""},
+			)
+			Expect(err).To(HaveOccurred(), "API should reject policy with maxUnavailable: 200%")
+			Expect(err.Error()).To(ContainSubstring("maxUnavailable must be a positive integer or a percentage"))
 		})
 	})
 })

@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -133,6 +134,9 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: shared.EnactmentKey(nodeName, nncp.Name).Name,
+					Labels: map[string]string{
+						shared.EnactmentPolicyLabel: nncp.Name,
+					},
 				},
 				Status: shared.NodeNetworkConfigurationEnactmentStatus{},
 			}
@@ -200,6 +204,83 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				expectedReconcileResult:     ctrl.Result{Requeue: true},
 			}),
 	)
+
+	Describe("when a policy has an invalid maxUnavailable value", func() {
+		// This exercises the defense-in-depth runtime guard: a policy whose
+		// maxUnavailable resolves to a non-positive node count (e.g. one persisted
+		// before the CRD CEL rule was in place) must terminally fail the enactment
+		// rather than requeue and hot-loop the rollout. The CEL rule blocks such a
+		// value at admission, so this path is only reachable via a unit test.
+		It("should fail the enactment terminally without requeuing", func() {
+			nmstatectlShowFn = func() (string, error) { return "", nil }
+			reconciler := NodeNetworkConfigurationPolicyReconciler{
+				RetriesUntilFail:   5,
+				MaximumTimeBackoff: 30 * time.Second,
+				InitialBackoff:     1 * time.Second,
+			}
+			s := scheme.Scheme
+			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+				&nmstatev1beta1.NodeNetworkState{},
+				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+			)
+			s.AddKnownTypes(nmstatev1.GroupVersion,
+				&nmstatev1.NodeNetworkConfigurationPolicy{},
+			)
+
+			node := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+			nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+
+			invalidMaxUnavailable := intstr.FromInt(0)
+			nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+				ObjectMeta: metav1.ObjectMeta{Name: "test"},
+				Spec: shared.NodeNetworkConfigurationPolicySpec{
+					MaxUnavailable: &invalidMaxUnavailable,
+				},
+				Status: shared.NodeNetworkConfigurationPolicyStatus{
+					UnavailableNodeCountMap: map[string]int{},
+				},
+			}
+			// Empty enactment conditions so shouldIncrementUnavailableNodeCount runs
+			// the increment path, and the policy label so it is counted as a match.
+			nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+					Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+				},
+			}
+
+			clb := fake.ClientBuilder{}
+			clb.WithScheme(s)
+			clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node)
+			clb.WithStatusSubresource(&nncp)
+			clb.WithStatusSubresource(&nnce)
+			clb.WithStatusSubresource(&nns)
+			cl := clb.Build()
+
+			reconciler.Client = cl
+			reconciler.APIClient = cl
+			reconciler.Log = ctrl.Log.WithName("controllers").WithName("NodeNetworkConfigurationPolicy")
+
+			res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: nncp.Name},
+			})
+
+			// The invalid value is terminal: no error returned to the manager and
+			// no requeue, so the reconcile does not hot-loop.
+			Expect(err).To(BeNil())
+			Expect(res).To(Equal(ctrl.Result{}))
+
+			// The enactment must be marked FailedToConfigure (Failing=True).
+			updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+			err = cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)
+			Expect(err).To(BeNil())
+			failing := updatedNNCE.Status.Conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionFailing)
+			Expect(failing).ToNot(BeNil(), "Failing condition should be set")
+			Expect(failing.Status).To(Equal(corev1.ConditionTrue))
+			Expect(failing.Reason).To(Equal(shared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure))
+		})
+	})
 
 	Describe("allPolicies function", func() {
 		It("should return policies in alphanumerical order by name", func() {

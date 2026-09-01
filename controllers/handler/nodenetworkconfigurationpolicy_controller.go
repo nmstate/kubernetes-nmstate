@@ -231,6 +231,14 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	if r.shouldIncrementUnavailableNodeCount(previousConditions) {
 		err = r.incrementUnavailableNodeCount(ctx, instance, generationKey)
 		if err != nil {
+			if errors.As(err, &node.InvalidMaxUnavailableError{}) {
+				log.Error(err, "policy has an invalid maxUnavailable value, failing enactment")
+				if r.Recorder != nil {
+					r.Recorder.Event(instance, corev1.EventTypeWarning, ReconcileFailed, err.Error())
+				}
+				enactmentConditions.NotifyFailedToConfigure(ctx, err)
+				return ctrl.Result{}, nil
+			}
 			if apierrors.IsConflict(err) || errors.Is(err, node.MaxUnavailableLimitReachedError{}) {
 				enactmentConditions.NotifyPending(ctx)
 				log.Info(err.Error())
@@ -579,13 +587,19 @@ func (r *NodeNetworkConfigurationPolicyReconciler) incrementUnavailableNodeCount
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
 	generationKey string) error {
 	policyKey := types.NamespacedName{Name: policy.GetName(), Namespace: policy.GetNamespace()}
-	return retry.OnError(retry.DefaultRetry, func(error) bool { return true }, func() error {
+	return retry.OnError(retry.DefaultRetry, func(err error) bool {
+		// An invalid maxUnavailable value is terminal: retrying cannot fix it.
+		return !errors.As(err, &node.InvalidMaxUnavailableError{})
+	}, func() error {
 		err := r.Get(ctx, policyKey, policy)
 		if err != nil {
 			return err
 		}
 		maxUnavailable, err := node.MaxUnavailableNodeCount(ctx, r.APIClient, policy)
 		if err != nil {
+			if errors.As(err, &node.InvalidMaxUnavailableError{}) {
+				return err
+			}
 			r.Log.Info(
 				fmt.Sprintf("failed calculating limit of max unavailable nodes, defaulting to %d, err: %s", maxUnavailable, err.Error()),
 			)

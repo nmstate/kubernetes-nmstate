@@ -18,12 +18,20 @@ limitations under the License.
 package node
 
 import (
+	"errors"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/onsi/gomega/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
+
+func beInvalidMaxUnavailableError() types.GomegaMatcher {
+	return WithTransform(func(err error) bool {
+		return errors.As(err, &InvalidMaxUnavailableError{})
+	}, BeTrue())
+}
 
 var _ = Describe("MaxUnavailable nodes", func() {
 	type maxUnavailableCase struct {
@@ -32,6 +40,11 @@ var _ = Describe("MaxUnavailable nodes", func() {
 		expectedScaledMaxUnavailable int
 		expectedError                types.GomegaMatcher
 	}
+	// Note: rejection of maxUnavailable values of 0 / "0%" is enforced by the CRD CEL
+	// rule and covered by the e2e tests in test/e2e/handler/nnce_conditions_test.go.
+	// As defense-in-depth ScaledMaxUnavailableNodeCount additionally returns an
+	// InvalidMaxUnavailableError for any non-positive computed value (e.g. for policies
+	// persisted before the CRD was upgraded), which the cases below assert.
 	DescribeTable("testing ScaledMaxUnavailableNodeCount",
 		func(c maxUnavailableCase) {
 			maxUnavailable, err := ScaledMaxUnavailableNodeCount(c.nmstateEnabledNodes, c.maxUnavailable)
@@ -66,32 +79,67 @@ var _ = Describe("MaxUnavailable nodes", func() {
 				expectedScaledMaxUnavailable: 3,
 				expectedError:                Not(HaveOccurred()),
 			}),
-		Entry("Wrong string value",
+		Entry("Wrong string value is terminally invalid",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
 				maxUnavailable:               intstr.FromString("asdf"),
 				expectedScaledMaxUnavailable: 3,
-				expectedError:                HaveOccurred(),
+				expectedError:                beInvalidMaxUnavailableError(),
 			}),
-		Entry("Absolute value in string",
+		Entry("Bare integer string above int range is terminally invalid",
+			maxUnavailableCase{
+				nmstateEnabledNodes:          5,
+				maxUnavailable:               intstr.FromString("99999999999999999999"),
+				expectedScaledMaxUnavailable: 3,
+				expectedError:                beInvalidMaxUnavailableError(),
+			}),
+		Entry("Absolute value in string is treated as a node count",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
 				maxUnavailable:               intstr.FromString("42"),
-				expectedScaledMaxUnavailable: 3,
-				expectedError:                HaveOccurred(),
+				expectedScaledMaxUnavailable: 42,
+				expectedError:                Not(HaveOccurred()),
 			}),
 		Entry("Zero percent",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
 				maxUnavailable:               intstr.FromString("0%"),
-				expectedScaledMaxUnavailable: 1,
-				expectedError:                Not(HaveOccurred()),
+				expectedScaledMaxUnavailable: 0,
+				expectedError:                beInvalidMaxUnavailableError(),
 			}),
 		Entry("Zero value",
 			maxUnavailableCase{
 				nmstateEnabledNodes:          5,
 				maxUnavailable:               intstr.FromInt(0),
-				expectedScaledMaxUnavailable: 1,
+				expectedScaledMaxUnavailable: 0,
+				expectedError:                beInvalidMaxUnavailableError(),
+			}),
+		Entry("Zero-equivalent percentage that bypasses CEL validation",
+			maxUnavailableCase{
+				nmstateEnabledNodes:          5,
+				maxUnavailable:               intstr.FromString("00%"),
+				expectedScaledMaxUnavailable: 0,
+				expectedError:                beInvalidMaxUnavailableError(),
+			}),
+		Entry("Negative percentage that bypasses CEL validation",
+			maxUnavailableCase{
+				nmstateEnabledNodes:          5,
+				maxUnavailable:               intstr.FromString("-100%"),
+				expectedScaledMaxUnavailable: -5,
+				expectedError:                beInvalidMaxUnavailableError(),
+			}),
+		Entry("Valid policy that matches no nodes is not reported invalid",
+			maxUnavailableCase{
+				nmstateEnabledNodes:          0,
+				maxUnavailable:               intstr.FromString("50%"),
+				expectedScaledMaxUnavailable: 0,
+				expectedError:                Not(HaveOccurred()),
+			}),
+		Entry("Upper-bound percentage of 100% is valid",
+			maxUnavailableCase{
+				nmstateEnabledNodes:          5,
+				maxUnavailable:               intstr.FromString("100%"),
+				expectedScaledMaxUnavailable: 5,
 				expectedError:                Not(HaveOccurred()),
 			}))
 })
