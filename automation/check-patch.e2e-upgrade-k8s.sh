@@ -22,6 +22,7 @@ teardown() {
     make cluster-down
     # Don't fail if there is no logs
     cp -r ${E2E_LOGS}/operator/* ${ARTIFACTS} || true
+    cp -r ${E2E_LOGS}/handler/* ${ARTIFACTS} || true
 }
 
 main() {

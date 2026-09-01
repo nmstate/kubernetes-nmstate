@@ -28,6 +28,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
@@ -38,13 +39,6 @@ import (
 )
 
 var _ = Describe("Upgrade", func() {
-	interfaceAbsent := func(iface string) nmstate.State {
-		return nmstate.NewState(fmt.Sprintf(`interfaces:
-- name: %s
-  state: absent
-`, iface))
-	}
-
 	previousTagExamplesPath := "test/e2e/upgrade/examples"
 	currentExamplesPath := "docs/examples"
 
@@ -76,23 +70,88 @@ var _ = Describe("Upgrade", func() {
 		By(fmt.Sprintf("Creating policy %s", example.PolicyName))
 		kubectlAndCheck("apply", "-f", examplePath)
 		By("Waiting for policy to be available")
-		kubectlAndCheck("wait", "nncp", example.PolicyName, "--for", "condition=Available", "--timeout", "3m")
+		Expect(waitForPolicyAvailable(example.PolicyName, PolicyAvailableTimeout)).To(Succeed())
 	}
 
-	createUpgradeCaseCleanupPolicy := func(example doc.ExampleSpec) {
-		if example.CleanupState != nil {
-			setDesiredStateWithPolicyEventually(example.PolicyName, *example.CleanupState)
+	// cleanupUpgradeCase restores the node network configuration changed by the
+	// example. It's registered before creating the policy and never gated on the
+	// upgrade succeeding, so leftovers from one example (e.g. bond0 enslaving
+	// eth1/eth2) cannot break the examples running afterwards.
+	cleanupUpgradeCase := func(example doc.ExampleSpec) {
+		exists, err := policyExists(example.PolicyName)
+		if err != nil {
+			AbortSuite(fmt.Sprintf("Cannot check if policy %s has to be cleaned up: %v", example.PolicyName, err))
 		}
-		if len(example.IfaceNames) > 0 {
-			for _, ifaceName := range example.IfaceNames {
-				setDesiredStateWithPolicyEventually(
-					example.PolicyName,
-					interfaceAbsent(ifaceName),
-				)
+		if !exists {
+			return
+		}
+
+		By("Apply cleanup policy configuration")
+		desiredState, err := cleanupDesiredState(example)
+		if err != nil {
+			AbortSuite(fmt.Sprintf("Cannot compose cleanup state for policy %s: %v", example.PolicyName, err))
+		}
+
+		// The enactments that could have applied the example state are captured
+		// before the update, so a partial or transiently empty list afterwards
+		// cannot be mistaken for a converged cleanup.
+		expectedEnactments, err := policyEnactmentNames(example.PolicyName)
+		if err != nil {
+			AbortSuite(fmt.Sprintf("Cannot list the enactments of policy %s: %v", example.PolicyName, err))
+		}
+
+		if len(desiredState.Raw) > 0 {
+			if len(expectedEnactments) == 0 {
+				// Cleanup state is non-empty but no enactments exist. Only allow
+				// the no-op/delete path when the policy's Ignored condition
+				// confirms NoMatchingNode — any other outcome (including a
+				// transient read error, or the condition not yet being set by the
+				// reconciler) is treated as unsafe and aborts the suite to prevent
+				// contaminated node state from reaching later examples.
+				noMatchingNodeErr := retryUntil(APIRetryTimeout, func() error {
+					policy := nmstatev1.NodeNetworkConfigurationPolicy{}
+					if err := testenv.Client.Get(
+						context.TODO(),
+						types.NamespacedName{Name: example.PolicyName},
+						&policy,
+					); err != nil {
+						return err // transient, retry
+					}
+					ignored := policy.Status.Conditions.Find(nmstate.NodeNetworkConfigurationPolicyConditionIgnored)
+					if ignored != nil &&
+						ignored.Status == corev1.ConditionTrue &&
+						ignored.Reason == nmstate.NodeNetworkConfigurationPolicyConditionConfigurationNoMatchingNode {
+						return nil
+					}
+					return fmt.Errorf("policy %s is not yet in Ignored/NoMatchingNode state", example.PolicyName)
+				})
+				if noMatchingNodeErr != nil {
+					AbortSuite(fmt.Sprintf(
+						"Policy %s has cleanup state but no enactments; NoMatchingNode not confirmed: %v",
+						example.PolicyName, noMatchingNodeErr,
+					))
+				}
+			} else {
+				generation, updateErr := updatePolicyDesiredState(example.PolicyName, desiredState)
+				if updateErr != nil {
+					AbortSuite(fmt.Sprintf("Cannot apply cleanup state at policy %s: %v", example.PolicyName, updateErr))
+				}
+
+				By("Waiting for the cleanup configuration to be applied")
+				// The policy is kept with the cleanup desired state if it is not applied,
+				// so the handler can keep on reconciling it, and the suite is aborted to
+				// prevent following examples from running with contaminated nodes.
+				if err := waitForPolicyGenerationApplied(
+					example.PolicyName, generation, expectedEnactments, PolicyAvailableTimeout,
+				); err != nil {
+					AbortSuite(fmt.Sprintf("Cleanup of policy %s was not applied: %v", example.PolicyName, err))
+				}
 			}
 		}
 
-		kubectlAndCheck("wait", "nncp", example.PolicyName, "--for", "condition=Available", "--timeout", "3m")
+		if err := deletePolicy(example.PolicyName); err != nil {
+			AbortSuite(fmt.Sprintf("Cannot delete policy %s: %v", example.PolicyName, err))
+		}
 	}
 
 	BeforeEach(func() {
@@ -106,6 +165,14 @@ var _ = Describe("Upgrade", func() {
 			example := e
 
 			Context(example.Name, func() {
+				// Tracks that the example policy was applied successfully, the
+				// upgrade below is only meaningful (and only possible) in that case.
+				policyApplied := false
+
+				BeforeEach(func() {
+					policyApplied = false
+				})
+
 				It("should succeed applying the policy", func() {
 					//TODO: remove when no longer required
 					for _, policyToSkip := range []string{"vlan", "linux-bridge-vlan", "dns", "enable-lldp-ethernets-up"} {
@@ -113,9 +180,19 @@ var _ = Describe("Upgrade", func() {
 							Skip("Skipping due to malformed example manifest")
 						}
 					}
+					// The cleanup is registered before creating the policy since
+					// applying the manifest can create it and fail afterwards, and it
+					// runs after the AfterEach nodes below even if they fail.
+					DeferCleanup(func() {
+						cleanupUpgradeCase(example)
+					})
 					createUpgradeCasePolicy(example)
+					policyApplied = true
 				})
 				AfterEach(func() {
+					if !policyApplied {
+						return
+					}
 					policiesLastHeartbeatTimestamps := map[string]time.Time{}
 
 					nncps := nmstatev1.NodeNetworkConfigurationPolicyList{}
@@ -154,16 +231,10 @@ var _ = Describe("Upgrade", func() {
 					}
 					Eventually(func() error {
 						return allPoliciesReReconciled()
-					}, ReadTimeout, ReadInterval).Should(Succeed())
+					}, ReReconcileTimeout, ReadInterval).Should(Succeed())
 
 					By("Wait for policy to be Available again")
-					kubectlAndCheck("wait", "nncp", example.PolicyName, "--for", "condition=Available", "--timeout", "3m")
-
-					By("Apply cleanup policy configuration")
-					createUpgradeCaseCleanupPolicy(example)
-
-					By("Delete policy")
-					deletePolicy(example.PolicyName)
+					Expect(waitForPolicyAvailable(example.PolicyName, PolicyAvailableTimeout)).To(Succeed())
 				})
 			})
 		}
