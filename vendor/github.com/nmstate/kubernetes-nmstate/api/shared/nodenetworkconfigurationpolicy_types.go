@@ -46,7 +46,10 @@ type NodeNetworkConfigurationPolicySpec struct {
 
 	// MaxUnavailable specifies percentage or number
 	// of machines that can be updating at a time. Default is "50%".
+	// Must be greater than 0. When set as a percentage, it must be between 1% and 100%.
 	// +optional
+	//nolint:lll
+	// +kubebuilder:validation:XValidation:rule="(type(self) == int && self > 0) || (type(self) == string && self.matches('^([1-9][0-9]*|([1-9]|[1-9][0-9]|100)%)$'))",message="maxUnavailable must be a positive integer or a percentage between 1% and 100%"
 	MaxUnavailable *intstr.IntOrString `json:"maxUnavailable,omitempty"`
 }
 
