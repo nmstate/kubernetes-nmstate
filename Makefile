@@ -343,3 +343,9 @@ olm-push: bundle-push index-push
 	tools \
 	bundle \
 	bundle-build
+
+# Optional project-level overrides. Downstream distributions (for example
+# openshift/kubernetes-nmstate) ship a Makefile.overrides with extra targets
+# and variable overrides so they do not need to patch this file. A missing
+# file is silently ignored (same pattern as istio and cilium).
+-include Makefile.overrides
