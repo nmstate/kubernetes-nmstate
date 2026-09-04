@@ -1,0 +1,102 @@
+name: Copilot review label
+
+# Privileged labeling workflow. Runs in the base repository context with
+# write permissions, so it also works for cross-repository (fork) PRs where
+# the "Copilot review check" workflow only gets a read-only token.
+#
+# Security: no PR code is checked out or executed here. The PR number and
+# head SHA come from an artifact uploaded by the unprivileged workflow, so
+# they are validated (numeric PR number, head SHA cross-checked against the
+# triggering workflow run) before being used.
+on:
+  workflow_run:
+    workflows: ["Copilot review check"]
+    types: [completed]
+  pull_request_target:
+    types: [review_requested]
+
+permissions:
+  actions: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  add-label:
+    name: Add good-for-human label
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download PR information
+        id: download
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          # The check workflow concludes successfully with a skipped job (and
+          # no artifact) for non-clean or non-Copilot reviews; treat a missing
+          # artifact as a no-op instead of failing.
+          if gh run download "${RUN_ID}" \
+            --repo "${{ github.repository }}" \
+            --name copilot-clean-review-pr \
+            --dir pr; then
+            echo "found=true" >> "${GITHUB_OUTPUT}"
+          else
+            echo "No clean Copilot review artifact, nothing to do"
+            echo "found=false" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: Add label
+        if: steps.download.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          pr_number="$(cat pr/number)"
+          head_sha="$(cat pr/head_sha)"
+          if ! [[ "${pr_number}" =~ ^[0-9]+$ ]]; then
+            echo "Invalid PR number in artifact" >&2
+            exit 1
+          fi
+          if [[ "${head_sha}" != "${RUN_HEAD_SHA}" ]]; then
+            echo "Artifact head SHA does not match workflow run head SHA" >&2
+            exit 1
+          fi
+          current_head="$(gh pr view "${pr_number}" \
+            --repo "${{ github.repository }}" \
+            --json headRefOid --jq .headRefOid)"
+          if [[ "${current_head}" != "${head_sha}" ]]; then
+            echo "PR head moved since the review, skipping label" >&2
+            exit 0
+          fi
+          # If a new Copilot review has been requested meanwhile, this clean
+          # verdict is already outdated; do not (re-)add the label.
+          if gh api "repos/${{ github.repository }}/pulls/${pr_number}" \
+            --jq '.requested_reviewers[].login' | \
+            grep -qx 'copilot-pull-request-reviewer\[bot\]'; then
+            echo "Copilot re-review is pending, skipping label" >&2
+            exit 0
+          fi
+          gh pr edit "${pr_number}" \
+            --repo "${{ github.repository }}" \
+            --add-label "good-for-human"
+
+  remove-label-on-copilot-review-request:
+    name: Remove good-for-human label on Copilot re-review request
+    # A new Copilot review has been requested, so the previous clean verdict
+    # no longer reflects the state under review. pull_request_target is used
+    # so the token has write permissions also for fork PRs; it is safe here
+    # since no PR code is checked out or executed.
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.requested_reviewer.login == 'copilot-pull-request-reviewer[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --remove-label "good-for-human"
+
