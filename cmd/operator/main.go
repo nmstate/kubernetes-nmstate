@@ -25,11 +25,13 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -88,6 +90,16 @@ func main() {
 			BindAddress: "0", // disable metrics
 		},
 		HealthProbeBindAddress: ":8081",
+		Cache: cache.Options{
+			// The operator watches the handler namespace to revert external
+			// modifications to its metadata. Restrict the cache to just that
+			// namespace so we do not cache/watch every namespace in the cluster.
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Namespace{}: {
+					Field: fields.OneTermEqualSelector("metadata.name", os.Getenv("HANDLER_NAMESPACE")),
+				},
+			},
+		},
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrlOptions)
