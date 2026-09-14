@@ -71,7 +71,6 @@ endif
 BIN_DIR = $(CURDIR)/build/_output/bin/
 
 export GOFLAGS=-mod=vendor
-export GOPROXY=direct
 
 export KUBECONFIG ?= $(shell ./cluster/kubeconfig.sh)
 export SSH ?= ./cluster/ssh.sh

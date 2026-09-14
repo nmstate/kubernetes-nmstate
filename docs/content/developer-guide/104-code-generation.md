@@ -53,7 +53,7 @@ Manifests are generated in `build/_output/manifests/` by rendering the Helm char
 make vendor
 ```
 
-This tidies both the main module and the `api/` module, then vendors dependencies. Go modules are used with `GOFLAGS=-mod=vendor` and `GOPROXY=direct`.
+This tidies both the main module and the `api/` module, then vendors dependencies. Go modules are used with `GOFLAGS=-mod=vendor`. Dependency downloads honor the environment's `GOPROXY` configuration, defaulting to `https://proxy.golang.org,direct` when no override is configured.
 
 ## Next Steps
 
