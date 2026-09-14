@@ -32,7 +32,7 @@ Code Generation # Generate CRDs from api/ types make gen-crds # Generate Kuberne
   <meta itemprop="name" content="Code Generation">
   <meta itemprop="description" content="This page covers code generation and manifest workflows for kubernetes-nmstate.
 Code Generation # Generate CRDs from api/ types make gen-crds # Generate Kubernetes client code make gen-k8s # Generate RBAC manifests make gen-rbac # Run all generators make generate # Verify generated code is up to date make check-gen Important: Always run make generate after modifying types in api/v1 or api/v1beta1, or after changing controller RBAC markers.">
-  <meta itemprop="wordCount" content="197">
+  <meta itemprop="wordCount" content="210">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Code Generation">
   <meta name="twitter:description" content="This page covers code generation and manifest workflows for kubernetes-nmstate.
@@ -203,7 +203,7 @@ Code Generation # Generate CRDs from api/ types make gen-crds # Generate Kuberne
 <h2 id="vendoring">Vendoring</h2>
 <div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-bash" data-lang="bash"><span style="display:flex;"><span><span style="color:#75715e"># Update vendor directory</span>
 </span></span><span style="display:flex;"><span>make vendor
-</span></span></code></pre></div><p>This tidies both the main module and the <code>api/</code> module, then vendors dependencies. Go modules are used with <code>GOFLAGS=-mod=vendor</code> and <code>GOPROXY=direct</code>.</p>
+</span></span></code></pre></div><p>This tidies both the main module and the <code>api/</code> module, then vendors dependencies. Go modules are used with <code>GOFLAGS=-mod=vendor</code>. Dependency downloads honor the environment&rsquo;s <code>GOPROXY</code> configuration, defaulting to <code>https://proxy.golang.org,direct</code> when no override is configured.</p>
 <h2 id="next-steps">Next Steps</h2>
 <p>For advanced topics, see: <a href="/kubernetes-nmstate/developer-guide/105-advanced/">Advanced Topics</a></p>
 
