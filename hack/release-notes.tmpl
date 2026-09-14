@@ -16,6 +16,24 @@
 
 # Installation
 
+## With Helm
+
+Install the operator and the handler with a single command, using
+[Helm](https://helm.sh) (>= 3.8):
+
+```
+helm install nmstate oci://quay.io/nmstate/kubernetes-nmstate \
+  --version {{ slice .CurrentRevision 1 }} \
+  --namespace nmstate \
+  --create-namespace
+```
+
+This deploys the operator and, by default (`nmstate.enabled=true`), an
+`NMState` custom resource that makes the operator deploy the
+kubernetes-nmstate handler on all nodes.
+
+## With manifests
+
 First, install kubernetes-nmstate operator:
 
 ```
