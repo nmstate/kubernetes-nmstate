@@ -38,6 +38,8 @@ const (
 	finishedURLTemplate = basicProwURL + "/%s/finished.json"
 	jobURLTemplate      = basicProwURL + "/%s/prowjob.json"
 	buildLogURLTemplate = basicProwURL + "/%s/build-log.txt"
+	nmCoprProject       = "NetworkManager-main-debug"
+	nmCoprURL           = "https://copr.fedorainfracloud.org/coprs/networkmanager/" + nmCoprProject + "/"
 
 	// minRegexMatches is the minimum number of regex matches expected (including the full match)
 	minRegexMatches = 2
@@ -322,9 +324,9 @@ func generateStatusMessage(buildStatus finished, jobURL string, vers versions) s
 	}
 
 	// Generate NetworkManager link with build ID if available
-	nmLink := "https://copr.fedorainfracloud.org/coprs/networkmanager/NetworkManager-main/"
+	nmLink := nmCoprURL
 	if vers.NetworkManagerBuildID != "" {
-		nmLink = fmt.Sprintf("https://copr.fedorainfracloud.org/coprs/networkmanager/NetworkManager-main/build/%s/", vers.NetworkManagerBuildID)
+		nmLink = fmt.Sprintf("%sbuild/%s/", nmCoprURL, vers.NetworkManagerBuildID)
 	}
 
 	// Check if the build is older than 24 hours
@@ -487,7 +489,7 @@ func getVersions(buildID string) (versions, error) {
 	if matches := networkManagerVersionRe.FindStringSubmatch(bodyStr); len(matches) >= minRegexMatches {
 		vers.NetworkManager = matches[1]
 		// Try to get copr build ID for this version
-		buildID, err := getCoprBuildID("networkmanager", "NetworkManager-main", "NetworkManager", vers.NetworkManager)
+		buildID, err := getCoprBuildID("networkmanager", nmCoprProject, "NetworkManager", vers.NetworkManager)
 		if err == nil {
 			vers.NetworkManagerBuildID = buildID
 		}

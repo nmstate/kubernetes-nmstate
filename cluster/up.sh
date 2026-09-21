@@ -48,9 +48,10 @@ for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); d
     ./cluster/cli.sh ssh ${node} -- 'printf "[Unit]\nDescription=Unload unused emulated igb NIC (avoids stats-spinlock soft lockups)\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=-/usr/sbin/modprobe -r igb\n\n[Install]\nWantedBy=multi-user.target\n" | sudo tee /etc/systemd/system/disable-igb.service > /dev/null'
     ./cluster/cli.sh ssh ${node} -- 'sudo systemctl enable --now disable-igb.service || true'
     if [[ "$NM_VERSION" == "latest" ]]; then
-        echo "Installing NetworkManager from copr networkmanager/NetworkManager-main"
+        # main-debug provides EL10 builds and enables extra assertions and logging.
+        echo "Installing NetworkManager from copr networkmanager/NetworkManager-main-debug"
         ./cluster/cli.sh ssh ${node} -- sudo dnf install -y dnf-plugins-core
-        ./cluster/cli.sh ssh ${node} -- sudo dnf copr enable -y networkmanager/NetworkManager-main
+        ./cluster/cli.sh ssh ${node} -- sudo dnf copr enable -y networkmanager/NetworkManager-main-debug
     fi
     ./cluster/cli.sh ssh ${node} -- sudo dnf upgrade -y NetworkManager --allowerasing
     ./cluster/cli.sh ssh ${node} -- sudo systemctl daemon-reload
