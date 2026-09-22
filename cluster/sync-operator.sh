@@ -41,6 +41,17 @@ function deploy_operator() {
         handler_image=${DEV_IMAGE_REGISTRY}/${HANDLER_IMAGE_FULL_NAME}
     fi
 
+    # CI injects HANDLER_IMAGE / OPERATOR_IMAGE env vars pointing to the
+    # freshly-built pipeline images. Honour them when present so the
+    # cluster runs the PR image instead of a stale public one.
+    operator_image=${OPERATOR_IMAGE:-${operator_image}}
+    handler_image=${HANDLER_IMAGE:-${handler_image}}
+
+    # The operator env var that carries the handler image. Upstream uses
+    # RELATED_IMAGE_HANDLER_IMAGE; downstream distributions override
+    # HANDLER_IMAGE_ENV_VAR (e.g. to HANDLER_IMAGE).
+    local handler_image_env_var=${HANDLER_IMAGE_ENV_VAR:-RELATED_IMAGE_HANDLER_IMAGE}
+
     ${HELM} upgrade --install "${HELM_RELEASE_NAME}" charts/kubernetes-nmstate \
         --kubeconfig "${KUBECONFIG}" \
         --namespace "${OPERATOR_NAMESPACE}" \
@@ -49,6 +60,7 @@ function deploy_operator() {
         --set operator.image="${operator_image}" \
         --set operator.pullPolicy="${OPERATOR_PULL_POLICY}" \
         --set handler.image="${handler_image}" \
+        --set handler.imageEnvVar="${handler_image_env_var}" \
         --set handler.pullPolicy="${HANDLER_PULL_POLICY}" \
         --set handler.namespace="${HANDLER_NAMESPACE}" \
         --set handler.prefix="${HANDLER_PREFIX:-}" \

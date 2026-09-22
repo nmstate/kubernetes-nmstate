@@ -68,6 +68,9 @@ function lima::ensure_linux() {
     _add_env IMAGE_REPO           "${IMAGE_REPO:-}"
     _add_env OPERATOR_NAMESPACE   "${OPERATOR_NAMESPACE:-}"
     _add_env HANDLER_NAMESPACE    "${HANDLER_NAMESPACE:-}"
+    _add_env HANDLER_IMAGE        "${HANDLER_IMAGE:-}"
+    _add_env OPERATOR_IMAGE       "${OPERATOR_IMAGE:-}"
+    _add_env HANDLER_IMAGE_ENV_VAR "${HANDLER_IMAGE_ENV_VAR:-}"
     _add_env MANIFESTS_DIR        "${MANIFESTS_DIR:-}"
 
     # Escape script path and arguments
