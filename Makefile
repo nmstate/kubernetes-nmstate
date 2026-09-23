@@ -19,7 +19,7 @@ export HANDLER_PREFIX ?=
 # Name of the operator env var carrying the handler image. Downstream
 # distributions like openshift/kubernetes-nmstate override it (HANDLER_IMAGE)
 # to opt out of operator-sdk's RELATED_IMAGE_* handling.
-HANDLER_IMAGE_ENV_VAR ?= RELATED_IMAGE_HANDLER_IMAGE
+export HANDLER_IMAGE_ENV_VAR ?= RELATED_IMAGE_HANDLER_IMAGE
 
 OPERATOR_IMAGE_NAME ?= kubernetes-nmstate-operator
 OPERATOR_IMAGE_TAG ?= latest
