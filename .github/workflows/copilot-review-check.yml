@@ -1,0 +1,34 @@
+name: Copilot review check
+
+# Unprivileged detection workflow. Runs with a read-only token (including on
+# cross-repository/fork PRs) and only records whether Copilot's review came
+# back clean. The privileged "Copilot review label" workflow (workflow_run)
+# picks up the artifact and applies the label with write permissions.
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions: {}
+
+jobs:
+  detect-clean-copilot-review:
+    name: Detect clean Copilot review
+    if: >-
+      github.event.review.user.login == 'copilot-pull-request-reviewer[bot]' &&
+      (contains(github.event.review.body, 'generated no comments') ||
+       contains(github.event.review.body, 'generated no new comments'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record PR information
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          mkdir -p ./pr
+          echo "${PR_NUMBER}" > ./pr/number
+          echo "${HEAD_SHA}" > ./pr/head_sha
+      - name: Upload PR information
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: copilot-clean-review-pr
+          path: pr/
