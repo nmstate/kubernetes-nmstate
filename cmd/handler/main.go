@@ -49,12 +49,9 @@ import (
 
 	// +kubebuilder:scaffold:imports
 
-	"github.com/gofrs/flock"
 	"github.com/kelseyhightower/envconfig"
-	"github.com/pkg/errors"
 	"github.com/qinqon/kube-admission-webhook/pkg/certificate"
 	"github.com/spf13/pflag"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/nmstate/kubernetes-nmstate/api/names"
 	nmstateapi "github.com/nmstate/kubernetes-nmstate/api/shared"
@@ -65,7 +62,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
-	"github.com/nmstate/kubernetes-nmstate/pkg/file"
+	"github.com/nmstate/kubernetes-nmstate/pkg/health"
 	nmstatelog "github.com/nmstate/kubernetes-nmstate/pkg/log"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
@@ -135,15 +132,11 @@ func mainHandler() int {
 		return exitCode
 	}
 
-	handlerLock, err := setupHandlerLockIfNeeded()
-	if err != nil {
-		setupLog.Error(err, "Failed to setup handler lock")
-		return generalExitStatus
-	}
-	if handlerLock != nil {
-		defer handlerLock.Unlock()
-	}
+	ctx := ctrl.SetupSignalHandler()
+	return runManager(ctx)
+}
 
+func runManager(ctx context.Context) int {
 	cfg := ctrl.GetConfigOrDie()
 
 	// Detect OpenShift from env var set by the operator, avoiding an API
@@ -175,9 +168,7 @@ func mainHandler() int {
 		return generalExitStatus
 	}
 
-	ctx := ctrl.SetupSignalHandler()
-
-	if err := setupControllersByEnvironment(mgr, tlsOpts); err != nil {
+	if err := setupControllersByEnvironment(ctx, mgr, tlsOpts); err != nil {
 		return generalExitStatus
 	}
 
@@ -194,20 +185,6 @@ func initializeLogging(logType string, opt *zap.Options) int {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(opt)))
 	return 0
-}
-
-// setupHandlerLockIfNeeded sets up handler lock if running in handler mode
-func setupHandlerLockIfNeeded() (*flock.Flock, error) {
-	if !environment.IsHandler() {
-		return nil, nil
-	}
-
-	handlerLock, err := lockHandler()
-	if err != nil {
-		return nil, err
-	}
-	setupLog.Info("Successfully took nmstate exclusive lock")
-	return handlerLock, nil
 }
 
 // composeTLSOpts returns TLS options for all TLS-enabled servers.
@@ -269,7 +246,7 @@ func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool
 }
 
 // setupControllersByEnvironment configures controllers based on the current environment.
-func setupControllersByEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) error {
+func setupControllersByEnvironment(ctx context.Context, mgr manager.Manager, tlsOpts func(*tls.Config)) error {
 	switch {
 	case environment.IsCertManager():
 		return setupCertManagerEnvironment(mgr)
@@ -278,7 +255,7 @@ func setupControllersByEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config
 	case environment.IsMetricsManager():
 		return setupMetricsManager(mgr)
 	case environment.IsHandler():
-		return setupHandlerEnvironment(mgr)
+		return setupHandlerEnvironment(ctx, mgr)
 	default:
 		return nil
 	}
@@ -304,7 +281,7 @@ func setupWebhookEnvironment(mgr manager.Manager, tlsOpts func(*tls.Config)) err
 
 // setupHandlerEnvironment cleans up unavailableNodeCounts after unexpected restart,
 // configures the handler controllers and performs health checks
-func setupHandlerEnvironment(mgr manager.Manager) error {
+func setupHandlerEnvironment(ctx context.Context, mgr manager.Manager) error {
 	// Clean stale unavailable counts from node before starting controllers
 	// Prevents deadlock after unexpected cluster reboot where nodes were
 	// processing NNCP and left stale counts in etcd.
@@ -313,13 +290,13 @@ func setupHandlerEnvironment(mgr manager.Manager) error {
 		// Don't error this is best-effort (NNCP needs manual restart)
 	}
 
-	if err := setupHandlerControllers(mgr); err != nil {
+	if err := setupHandlerControllers(ctx, mgr); err != nil {
 		return err
 	}
 	if err := checkNmstateIsWorking(); err != nil {
 		return err
 	}
-	return createHealthyFile()
+	return nil
 }
 
 // startManager starts the manager and handles profiler setup
@@ -484,7 +461,7 @@ func restrictCertManagerCache(ctrlOptions *ctrl.Options) error {
 	return nil
 }
 
-func setupHandlerControllers(mgr manager.Manager) error {
+func setupHandlerControllers(ctx context.Context, mgr manager.Manager) error {
 	setupLog.Info("Creating Node controller")
 	if err := (&controllers.NodeReconciler{
 		Client: mgr.GetClient(),
@@ -528,21 +505,16 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		return err
 	}
 
-	return nil
-}
-
-// Handler runs with host networking so opening ports is problematic
-// they will collide with node ports so to ensure that we reach this
-// point (we have the handler lock and nmstatectl show is working) a
-// file is touched and the file is checked at readinessProbe field.
-func createHealthyFile() error {
-	healthyFile := "/tmp/healthy"
-	setupLog.Info("Marking handler as healthy touching healthy file", "healthyFile", healthyFile)
-	err := file.Touch(healthyFile)
+	setupLog.Info("Creating unix socket health server")
+	healthServer, err := health.NewUnixSocketServer(ctx)
 	if err != nil {
-		setupLog.Error(err, "failed marking handler as healthy")
 		return err
 	}
+
+	if err := mgr.Add(healthServer); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -668,26 +640,6 @@ func setProfiler() {
 			}
 		}()
 	}
-}
-
-func lockHandler() (*flock.Flock, error) {
-	lockFilePath, ok := os.LookupEnv("NMSTATE_INSTANCE_NODE_LOCK_FILE")
-	if !ok {
-		return nil, errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
-	}
-	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
-	handlerLock := flock.New(lockFilePath)
-	interval := 5 * time.Second
-	err := wait.PollUntilContextCancel(context.Background(), interval, true, /*immediate*/
-		func(context.Context) (done bool, err error) {
-			locked, err := handlerLock.TryLock()
-			if err != nil {
-				setupLog.Error(err, "retrying to lock handler")
-				return false, nil // Don't return the error here, it will not re-poll if we do
-			}
-			return locked, nil
-		})
-	return handlerLock, err
 }
 
 func dumpMetricFamiliesToStdout() int {
