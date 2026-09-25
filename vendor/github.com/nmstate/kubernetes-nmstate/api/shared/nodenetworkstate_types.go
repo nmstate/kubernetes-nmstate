@@ -42,3 +42,16 @@ const (
 	NodeNetworkStateConditionFailedToConfigure      ConditionReason = "FailedToConfigure"
 	NodeNetworkStateConditionSuccessfullyConfigured ConditionReason = "SuccessfullyConfigured"
 )
+
+const (
+	// NodeNetworkStateConditionQuerySucceeded means the last network state
+	// query on the node succeeded.
+	NodeNetworkStateConditionQuerySucceeded ConditionReason = "QuerySucceeded"
+	// NodeNetworkStateConditionNetworkManagerUnresponsive means the full
+	// network state query failed or timed out while a kernel-only query
+	// succeeded, pointing at NetworkManager or D-Bus.
+	NodeNetworkStateConditionNetworkManagerUnresponsive ConditionReason = "NetworkManagerUnresponsive"
+	// NodeNetworkStateConditionQueryFailed means both the full and the
+	// kernel-only network state queries failed.
+	NodeNetworkStateConditionQueryFailed ConditionReason = "QueryFailed"
+)
