@@ -17,7 +17,7 @@ COPY --from=build /manager /usr/local/bin/manager
 COPY --from=build /build/install-nmstate.${NMSTATE_SOURCE}.sh install-nmstate.sh
 
 RUN ./install-nmstate.sh && \
-    dnf install -b -y iproute iputils && \
+    dnf install -b -y iproute iputils curl-minimal && \
     rm ./install-nmstate.sh && \
     dnf clean all
 

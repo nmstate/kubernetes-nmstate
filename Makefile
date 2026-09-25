@@ -45,7 +45,7 @@ export HANDLER_PULL_POLICY ?= IfNotPresent
 export OPERATOR_PULL_POLICY ?= IfNotPresent
 endif
 
-WHAT ?= ./pkg/... ./controllers/...
+WHAT ?= ./pkg/... ./controllers/... ./cmd/handler/...
 
 LINTER_IMAGE_TAG ?= v0.0.10
 

@@ -51,6 +51,11 @@ const (
 )
 
 var _ = Describe("NMState operator", func() {
+	handlerLivenessCommand := []string{
+		"curl", "--fail", "--silent", "--show-error", "--noproxy", "*",
+		"--max-time", "5", "--unix-socket", "/run/nmstate-health/health.sock", "http://localhost/healthz",
+	}
+
 	type controlPlaneTest struct {
 		withMultiNode bool
 	}
@@ -184,7 +189,7 @@ var _ = Describe("NMState operator", func() {
 					return hasVFlag && hasDebugFlag
 				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset should have verbose arguments")
 
-				By("Check handler daemonset livenessProbe uses verbose flag")
+				By("Check handler daemonset livenessProbe uses the health socket")
 				Eventually(func() bool {
 					daemonSet := appsv1.DaemonSet{}
 					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
@@ -192,14 +197,13 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					// Check livenessProbe command contains verbose flag
 					probe := daemonSet.Spec.Template.Spec.Containers[0].LivenessProbe
 					if probe == nil || probe.Exec == nil {
 						return false
 					}
 
-					return slices.Contains(probe.Exec.Command, "nmstatectl show lo -vv 2>&1")
-				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should use verbose flag")
+					return slices.Equal(probe.Exec.Command, handlerLivenessCommand)
+				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should use the health socket")
 			})
 			AfterEach(func() {
 				UninstallNMStateAndWaitForDeletion(defaultOperator)
@@ -233,7 +237,7 @@ var _ = Describe("NMState operator", func() {
 					return true
 				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler should not have verbose arguments in info mode")
 
-				By("Verify initial info mode livenessProbe does not use verbose flag")
+				By("Verify initial info mode livenessProbe uses the health socket")
 				Eventually(func() bool {
 					daemonSet := appsv1.DaemonSet{}
 					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
@@ -246,16 +250,8 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					for _, cmd := range probe.Exec.Command {
-						if cmd == "nmstatectl show lo -vv 2>&1" {
-							return false // Should not have verbose flag in info mode
-						}
-						if cmd == "nmstatectl show lo  2>&1" {
-							return true // Should have plain nmstatectl show command
-						}
-					}
-					return false
-				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should not use verbose flag in info mode")
+					return slices.Equal(probe.Exec.Command, handlerLivenessCommand)
+				}, 60*time.Second, 1*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should use the health socket in info mode")
 
 				By("Update NMState CR to debug mode")
 				nmstateObj := defaultOperator.Nmstate
@@ -291,7 +287,7 @@ var _ = Describe("NMState operator", func() {
 					return hasVFlag && hasDebugFlag
 				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset should be updated with verbose arguments")
 
-				By("Verify livenessProbe is updated with verbose flag")
+				By("Verify livenessProbe still uses the health socket after changing log level")
 				Eventually(func() bool {
 					daemonSet := appsv1.DaemonSet{}
 					err := testenv.Client.Get(context.TODO(), defaultOperator.HandlerKey, &daemonSet)
@@ -304,8 +300,8 @@ var _ = Describe("NMState operator", func() {
 						return false
 					}
 
-					return slices.Contains(probe.Exec.Command, "nmstatectl show lo -vv 2>&1")
-				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should be updated with verbose flag")
+					return slices.Equal(probe.Exec.Command, handlerLivenessCommand)
+				}, 120*time.Second, 2*time.Second).Should(BeTrue(), "handler daemonset livenessProbe should still use the health socket")
 			})
 			AfterEach(func() {
 				UninstallNMStateAndWaitForDeletion(defaultOperator)

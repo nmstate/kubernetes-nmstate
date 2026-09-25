@@ -479,9 +479,17 @@ spec:
           livenessProbe:
             exec:
               command:
-              - bash
-              - -c
-              - "nmstatectl show lo {{ .HandlerReadinessProbeExtraArg }} 2>&1"
+              - curl
+              - --fail
+              - --silent
+              - --show-error
+              - --noproxy
+              - "*"
+              - --max-time
+              - "5"
+              - --unix-socket
+              - /run/nmstate-health/health.sock
+              - http://localhost/healthz
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10

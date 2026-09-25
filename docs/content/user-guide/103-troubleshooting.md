@@ -9,6 +9,23 @@ does, it can render the whole node unreachable and non-operational. This guide
 will show you how to obtain information about failed configuration and how the
 operator protects the user from breaking the cluster networking.
 
+## Handler health probes
+
+The handler liveness probe uses `curl` to request `/healthz` from the handler
+process over `/run/nmstate-health/health.sock`. This Unix socket lives inside the
+container, so the probe does not reserve a TCP port on the host network or query
+network state. The handler image must include curl with Unix-socket support.
+
+The health server starts before the handler waits for its exclusive node lock
+and initializes its controllers. A handler waiting for another instance stays
+live, but is not ready until it acquires the lock and completes its initial
+`nmstatectl show` check, creating `/tmp/healthy` for the existing readiness probe.
+
+Liveness checks HTTP responsiveness, not reconciliation progress or the health
+of host services such as NetworkManager. Restarting the handler cannot repair
+those services. Use handler logs and policy enactment status to investigate
+configuration failures even when the handler is live.
+
 ## Invalid configuration
 
 If any of the following cases render the configuration faulty, the setup will be

@@ -135,7 +135,15 @@ func mainHandler() int {
 		return exitCode
 	}
 
-	handlerLock, err := setupHandlerLockIfNeeded()
+	ctx := ctrl.SetupSignalHandler()
+	if environment.IsHandler() {
+		return runWithHealthServer(ctx, healthSocket, runManager)
+	}
+	return runManager(ctx)
+}
+
+func runManager(ctx context.Context) int {
+	handlerLock, err := setupHandlerLockIfNeeded(ctx)
 	if err != nil {
 		setupLog.Error(err, "Failed to setup handler lock")
 		return generalExitStatus
@@ -175,8 +183,6 @@ func mainHandler() int {
 		return generalExitStatus
 	}
 
-	ctx := ctrl.SetupSignalHandler()
-
 	if err := setupControllersByEnvironment(mgr, tlsOpts); err != nil {
 		return generalExitStatus
 	}
@@ -197,12 +203,12 @@ func initializeLogging(logType string, opt *zap.Options) int {
 }
 
 // setupHandlerLockIfNeeded sets up handler lock if running in handler mode
-func setupHandlerLockIfNeeded() (*flock.Flock, error) {
+func setupHandlerLockIfNeeded(ctx context.Context) (*flock.Flock, error) {
 	if !environment.IsHandler() {
 		return nil, nil
 	}
 
-	handlerLock, err := lockHandler()
+	handlerLock, err := lockHandler(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -670,7 +676,7 @@ func setProfiler() {
 	}
 }
 
-func lockHandler() (*flock.Flock, error) {
+func lockHandler(ctx context.Context) (*flock.Flock, error) {
 	lockFilePath, ok := os.LookupEnv("NMSTATE_INSTANCE_NODE_LOCK_FILE")
 	if !ok {
 		return nil, errors.New("Failed to find NMSTATE_INSTANCE_NODE_LOCK_FILE ENV var")
@@ -678,7 +684,7 @@ func lockHandler() (*flock.Flock, error) {
 	setupLog.Info(fmt.Sprintf("Try to take exclusive lock on file: %s", lockFilePath))
 	handlerLock := flock.New(lockFilePath)
 	interval := 5 * time.Second
-	err := wait.PollUntilContextCancel(context.Background(), interval, true, /*immediate*/
+	err := wait.PollUntilContextCancel(ctx, interval, true, /*immediate*/
 		func(context.Context) (done bool, err error) {
 			locked, err := handlerLock.TryLock()
 			if err != nil {
