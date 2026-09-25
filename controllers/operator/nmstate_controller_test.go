@@ -912,4 +912,5 @@ func expectNetworkManagerDBusLivenessProbe(ds *appsv1.DaemonSet) {
 	ExpectWithOffset(1, command[2]).To(ContainSubstring("org.freedesktop.NetworkManager Startup"))
 	ExpectWithOffset(1, command[2]).To(ContainSubstring(`test "$result" = "(<false>,)"`))
 	ExpectWithOffset(1, command[2]).ToNot(ContainSubstring("nmstatectl"))
+	ExpectWithOffset(1, probe.TimeoutSeconds).To(BeNumerically(">=", 20))
 }
