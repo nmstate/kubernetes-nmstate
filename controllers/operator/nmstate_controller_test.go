@@ -554,12 +554,11 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).To(ContainElements("--v", "debug"))
 			})
-			It("should use verbose flag in livenessProbe command", func() {
+			It("should use gdbus in livenessProbe command", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo -vv 2>&1"
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(ContainSubstring("gdbus call")))
 			})
 		})
 
@@ -582,12 +581,11 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
 			})
-			It("should not use verbose flag in livenessProbe command", func() {
+			It("should use gdbus in livenessProbe command", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo  2>&1"
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(ContainSubstring("gdbus call")))
 			})
 		})
 
@@ -609,12 +607,11 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
 			})
-			It("should not use verbose flag in livenessProbe command", func() {
+			It("should use gdbus in livenessProbe command", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo  2>&1"
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(ContainSubstring("gdbus call")))
 			})
 		})
 	})
