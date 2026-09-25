@@ -478,10 +478,19 @@ spec:
             timeoutSeconds: 1
           livenessProbe:
             exec:
+              # Constant-time check that NetworkManager answers on D-Bus and
+              # has finished starting up. Unlike `nmstatectl show`, its cost
+              # does not grow with the number of interfaces on the node.
               command:
-              - bash
-              - -c
-              - "nmstatectl show lo {{ .HandlerReadinessProbeExtraArg }} 2>&1"
+              - /bin/sh
+              - -ec
+              - |
+                result=$(gdbus call --system --timeout 5 \
+                  --dest org.freedesktop.NetworkManager \
+                  --object-path /org/freedesktop/NetworkManager \
+                  --method org.freedesktop.DBus.Properties.Get \
+                  org.freedesktop.NetworkManager Startup)
+                test "$result" = "(<false>,)"
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10

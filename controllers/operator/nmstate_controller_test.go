@@ -554,12 +554,11 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).To(ContainElements("--v", "debug"))
 			})
-			It("should use verbose flag in livenessProbe command", func() {
+			It("should use the NetworkManager D-Bus livenessProbe regardless of log level", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo -vv 2>&1"
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+				expectNetworkManagerDBusLivenessProbe(ds)
 			})
 		})
 
@@ -582,12 +581,11 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
 			})
-			It("should not use verbose flag in livenessProbe command", func() {
+			It("should use the NetworkManager D-Bus livenessProbe regardless of log level", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo  2>&1"
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+				expectNetworkManagerDBusLivenessProbe(ds)
 			})
 		})
 
@@ -609,12 +607,11 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
 			})
-			It("should not use verbose flag in livenessProbe command", func() {
+			It("should use the NetworkManager D-Bus livenessProbe regardless of log level", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo  2>&1"
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
+				expectNetworkManagerDBusLivenessProbe(ds)
 			})
 		})
 	})
@@ -902,4 +899,17 @@ func envVariableStringPresent(key, value string, envList []corev1.EnvVar) bool {
 		}
 	}
 	return false
+}
+
+func expectNetworkManagerDBusLivenessProbe(ds *appsv1.DaemonSet) {
+	probe := ds.Spec.Template.Spec.Containers[0].LivenessProbe
+	ExpectWithOffset(1, probe).ToNot(BeNil())
+	ExpectWithOffset(1, probe.Exec).ToNot(BeNil())
+	command := probe.Exec.Command
+	ExpectWithOffset(1, command).To(HaveLen(3))
+	ExpectWithOffset(1, command[:2]).To(Equal([]string{"/bin/sh", "-ec"}))
+	ExpectWithOffset(1, command[2]).To(ContainSubstring("gdbus call --system --timeout 5"))
+	ExpectWithOffset(1, command[2]).To(ContainSubstring("org.freedesktop.NetworkManager Startup"))
+	ExpectWithOffset(1, command[2]).To(ContainSubstring(`test "$result" = "(<false>,)"`))
+	ExpectWithOffset(1, command[2]).ToNot(ContainSubstring("nmstatectl"))
 }
