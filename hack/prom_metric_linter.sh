@@ -23,7 +23,7 @@ set -e
 LINTER_IMAGE_TAG=${LINTER_IMAGE_TAG:-"v0.0.10"}
 
 # Get the metrics list
-metric_families=$(NODE_NAME=node01 go run cmd/handler/main.go --dump-metric-families)
+metric_families=$(NODE_NAME=node01 go run ./cmd/handler --dump-metric-families)
 
 # Run the linter by using the prom-metrics-linter Docker container
 errors=$(podman run -i "quay.io/kubevirt/prom-metrics-linter:$LINTER_IMAGE_TAG" \
