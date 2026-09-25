@@ -478,9 +478,6 @@ spec:
             timeoutSeconds: 1
           livenessProbe:
             exec:
-              # Constant-time check that NetworkManager answers on D-Bus and
-              # has finished starting up. Unlike `nmstatectl show`, its cost
-              # does not grow with the number of interfaces on the node.
               command:
               - /bin/sh
               - -ec
@@ -493,10 +490,6 @@ spec:
                 test "$result" = "(<false>,)"
             initialDelaySeconds: 60
             periodSeconds: 60
-            # gdbus returns ~3s after its own --timeout when NetworkManager
-            # does not answer (~8s in total). Keep the probe timeout well
-            # above that so gdbus always exits on its own and is never left
-            # behind as an orphaned process.
             timeoutSeconds: 20
             successThreshold: 1
             failureThreshold: 5
