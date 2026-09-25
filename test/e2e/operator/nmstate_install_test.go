@@ -38,9 +38,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/test/cmd"
-	"github.com/nmstate/kubernetes-nmstate/test/e2e/daemonset"
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
-	"github.com/nmstate/kubernetes-nmstate/test/environment"
 	"k8s.io/kubectl/pkg/drain"
 )
 
@@ -112,41 +110,6 @@ var _ = Describe("NMState operator", func() {
 			})
 			It("should uninstall handler and webhook", func() {
 				EventuallyOperandIsNotFound(defaultOperator)
-			})
-		})
-		Context("and another handler is installed with different namespace", func() {
-			var (
-				altOperator TestData
-			)
-			BeforeEach(func() {
-				altOperator = NewOperatorTestData(environment.GetVarWithDefault("HANDLER_NAMESPACE", "nmstate")+"-alt", manifestsDir, manifestFiles)
-				By("Wait for operand to be ready")
-				EventuallyOperandIsReady(defaultOperator)
-
-				By("Install other operator at alternative namespace")
-				InstallOperator(altOperator)
-			})
-			AfterEach(func() {
-				UninstallOperator(altOperator)
-				EventuallyOperandIsNotFound(altOperator)
-				UninstallNMStateAndWaitForDeletion(defaultOperator)
-				InstallOperator(defaultOperator)
-			})
-			It("should wait for defaultOperator handler to be deleted before deploying new altOperator handler", func() {
-				By("Check alt handler has being created")
-				Eventually(func() error {
-					daemonSet := appsv1.DaemonSet{}
-					return testenv.Client.Get(context.TODO(), altOperator.HandlerKey, &daemonSet)
-				}, 180*time.Second, 1*time.Second).Should(Succeed())
-
-				By("Checking alt handler is locked")
-				daemonset.GetConsistently(altOperator.HandlerKey).ShouldNot(daemonset.BeReady())
-
-				By("Uninstall default operator")
-				UninstallOperator(defaultOperator)
-
-				By("Checking alt handler is unlocked after deleting default one")
-				daemonset.GetEventually(altOperator.HandlerKey).Should(daemonset.BeReady())
 			})
 		})
 	})

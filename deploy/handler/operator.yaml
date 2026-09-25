@@ -445,8 +445,6 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
-            - name: NMSTATE_INSTANCE_NODE_LOCK_FILE
-              value: "/var/k8s_nmstate/handler_lock"
             - name: PROBE_DNS_HOST
               value: "{{ .ProbeConfiguration.DNS.Host }}"
             - name: NNCP_MAX_RETRIES
@@ -471,23 +469,34 @@ spec:
           readinessProbe:
             exec:
               command:
-              - cat
-              - /tmp/healthy
+              - curl
+              - --fail
+              - --silent
+              - --show-error
+              - --noproxy
+              - "*"
+              - --max-time
+              - "1"
+              - --unix-socket
+              - /run/nmstate-health/health.sock
+              - http://localhost/readyz
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 1
           livenessProbe:
             exec:
               command:
-              - /bin/sh
-              - -ec
-              - |
-                result=$(gdbus call --system --timeout 5 \
-                  --dest org.freedesktop.NetworkManager \
-                  --object-path /org/freedesktop/NetworkManager \
-                  --method org.freedesktop.DBus.Properties.Get \
-                  org.freedesktop.NetworkManager Startup)
-                test "$result" = "(<false>,)"
+              - curl
+              - --fail
+              - --silent
+              - --show-error
+              - --noproxy
+              - "*"
+              - --max-time
+              - "5"
+              - --unix-socket
+              - /run/nmstate-health/health.sock
+              - http://localhost/healthz
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 20
