@@ -19,6 +19,7 @@ package nmstatectl
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -93,6 +94,62 @@ func ShowWithArgumentsAndOutputs(arguments []string, stdout, stderr io.Writer) e
 
 func Show() (string, error) {
 	return nmstatectl([]string{"show"})
+}
+
+// ShowTimeout bounds how long a periodic `nmstatectl show` may run. It is
+// intentionally generous: on nodes with many interfaces a healthy query can
+// legitimately take several seconds, so only a stuck query should hit it.
+const ShowTimeout = 60 * time.Second
+
+// showWaitDelay bounds how long we wait for the output pipes to be closed
+// after the process has been killed on timeout.
+const showWaitDelay = 5 * time.Second
+
+// ErrTimeout is returned (wrapped) when nmstatectl was killed because it did
+// not finish within the given timeout.
+var ErrTimeout = errors.New("timed out")
+
+// execCommandContext is a variable that can be overridden in tests
+var execCommandContext = exec.CommandContext
+
+func nmstatectlWithTimeout(ctx context.Context, timeout time.Duration, arguments []string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	stdout := &bytes.Buffer{}
+	stderr := &bytes.Buffer{}
+	// CommandContext kills the process when the context expires and Wait()
+	// then reaps it, so no orphaned or zombie nmstatectl is left behind.
+	cmd := execCommandContext(ctx, nmstateCommand, arguments...)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.WaitDelay = showWaitDelay
+
+	err := cmd.Run()
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("%s %s %w after %s: %s",
+			nmstateCommand, strings.Join(arguments, " "), ErrTimeout, timeout, stderr.String())
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to execute %s %s: %s, %s: %w",
+			nmstateCommand, strings.Join(arguments, " "), stdout.String(), stderr.String(), err)
+	}
+	return stdout.String(), nil
+}
+
+// ShowWithTimeout returns the full network state. It is killed if it runs
+// longer than ShowTimeout.
+func ShowWithTimeout(ctx context.Context) (string, error) {
+	return nmstatectlWithTimeout(ctx, ShowTimeout, []string{"show"})
+}
+
+// ShowKernelLoopback queries only the kernel (no NetworkManager / D-Bus) for
+// the loopback interface. It is cheap regardless of the interface count and
+// is used to tell NetworkManager problems apart from general nmstate or
+// node problems.
+func ShowKernelLoopback(ctx context.Context) error {
+	_, err := nmstatectlWithTimeout(ctx, ShowTimeout, []string{"show", "-k", "lo"})
+	return err
 }
 
 func Set(desiredState nmstate.State, timeout time.Duration) (string, error) {
