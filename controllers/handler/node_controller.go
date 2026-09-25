@@ -145,9 +145,7 @@ func (r *NodeReconciler) reportQuerySuccess(ctx context.Context, nns *nmstatev1b
 
 // reportQueryFailure diagnoses a failed network state query and records it
 // in the NodeNetworkState conditions, keeping the last successfully retrieved
-// state. The handler is not restarted: restarting it would not fix
-// NetworkManager, so the failure is reported instead and the query is retried
-// at the normal refresh interval.
+// state. The query is retried at the normal refresh interval.
 func (r *NodeReconciler) reportQueryFailure(ctx context.Context, request ctrl.Request, queryErr error) (ctrl.Result, error) {
 	reason := shared.NodeNetworkStateConditionQueryFailed
 	message := fmt.Sprintf("Failed to retrieve network state: %v", queryErr)
