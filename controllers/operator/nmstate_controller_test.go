@@ -558,7 +558,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo -vv 2>&1"
+				expectedCommand := "nmstatectl show -k lo -vv 2>&1"
 				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
 			})
 		})
@@ -586,7 +586,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo  2>&1"
+				expectedCommand := "nmstatectl show -k lo  2>&1"
 				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
 			})
 		})
@@ -613,7 +613,7 @@ var _ = Describe("NMState controller reconcile", func() {
 				ds := &appsv1.DaemonSet{}
 				err := cl.Get(context.Background(), handlerKey, ds)
 				Expect(err).ToNot(HaveOccurred())
-				expectedCommand := "nmstatectl show lo  2>&1"
+				expectedCommand := "nmstatectl show -k lo  2>&1"
 				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(expectedCommand))
 			})
 		})

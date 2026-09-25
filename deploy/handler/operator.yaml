@@ -481,7 +481,7 @@ spec:
               command:
               - bash
               - -c
-              - "nmstatectl show lo {{ .HandlerReadinessProbeExtraArg }} 2>&1"
+              - "nmstatectl show -k lo {{ .HandlerReadinessProbeExtraArg }} 2>&1"
             initialDelaySeconds: 60
             periodSeconds: 60
             timeoutSeconds: 10
