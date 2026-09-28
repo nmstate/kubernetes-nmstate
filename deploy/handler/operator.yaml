@@ -479,12 +479,18 @@ spec:
           livenessProbe:
             exec:
               command:
-              - bash
-              - -c
-              - "nmstatectl show lo {{ .HandlerReadinessProbeExtraArg }} 2>&1"
+              - /bin/sh
+              - -ec
+              - |
+                result=$(gdbus call --system --timeout 5 \
+                  --dest org.freedesktop.NetworkManager \
+                  --object-path /org/freedesktop/NetworkManager \
+                  --method org.freedesktop.DBus.Properties.Get \
+                  org.freedesktop.NetworkManager Startup)
+                test "$result" = "(<false>,)"
             initialDelaySeconds: 60
             periodSeconds: 60
-            timeoutSeconds: 10
+            timeoutSeconds: 20
             successThreshold: 1
             failureThreshold: 5
       volumes:
