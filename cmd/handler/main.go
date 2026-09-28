@@ -105,6 +105,7 @@ func init() {
 	metrics.Registry.MustRegister(monitoring.NetworkRoutes)
 	metrics.Registry.MustRegister(monitoring.PolicyStatus)
 	metrics.Registry.MustRegister(monitoring.EnactmentStatus)
+	metrics.Registry.MustRegister(monitoring.NetworkStateQueryFailing)
 }
 
 func main() {
