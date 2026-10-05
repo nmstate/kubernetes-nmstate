@@ -110,6 +110,8 @@ func linuxBrUpNoPorts(bridgeName string) nmstate.State {
 }
 
 func linuxBrUpWithDisabledVlan(bridgeName string) nmstate.State {
+	// Workers bridge the same two secondary networks, so enable STP to prevent
+	// forwarding loops while testing VLAN filtering with both ports.
 	return nmstate.NewState(fmt.Sprintf(`interfaces:
   - name: %s
     type: linux-bridge
@@ -117,7 +119,7 @@ func linuxBrUpWithDisabledVlan(bridgeName string) nmstate.State {
     bridge:
       options:
         stp:
-          enabled: false
+          enabled: true
       port:
         - name: %s
           vlan: {}
