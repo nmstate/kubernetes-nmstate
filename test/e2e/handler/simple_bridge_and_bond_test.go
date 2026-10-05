@@ -197,28 +197,31 @@ var _ = Describe("NodeNetworkState", func() {
 					hasVlans(node, secondSecondaryNic, 2, 4094).Should(Succeed())
 				}
 			})
-			Context("and vlan field reset at ports", func() {
-				BeforeEach(func() {
-					updateDesiredStateAndWait(linuxBrUpWithDisabledVlan(bridge1))
-				})
-				AfterEach(func() {
-					updateDesiredStateAndWait(linuxBrAbsent(bridge1))
-					for _, node := range nodes {
-						interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
-					}
-					resetDesiredStateForNodes()
-				})
-				It("should have the linux bridge at currentState with vlan_filtering 0 and no default vlan range configured", func() {
-					for _, node := range nodes {
-						interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
-						bridgeDescription(node, bridge1).Should(SatisfyAll(
-							ContainSubstring("vlan_filtering 0"),
-							ContainSubstring("vlan_default_pvid 1"),
-						))
-					}
-				})
+		})
+		Context("with a linux bridge up with a single port and its vlan field reset", func() {
+			BeforeEach(func() {
+				updateDesiredStateAndWait(linuxBrUpWithSingleVlanPort(bridge1))
+				for _, node := range nodes {
+					bridgeDescription(node, bridge1).Should(ContainSubstring("vlan_filtering 1"))
+				}
+				updateDesiredStateAndWait(linuxBrUpWithDisabledVlan(bridge1))
 			})
-
+			AfterEach(func() {
+				updateDesiredStateAndWait(linuxBrAbsent(bridge1))
+				for _, node := range nodes {
+					interfacesNameForNodeEventually(node).ShouldNot(ContainElement(bridge1))
+				}
+				resetDesiredStateForNodes()
+			})
+			It("should have the linux bridge at currentState with vlan_filtering 0 and no default vlan range configured", func() {
+				for _, node := range nodes {
+					interfacesNameForNodeEventually(node).Should(ContainElement(bridge1))
+					bridgeDescription(node, bridge1).Should(SatisfyAll(
+						ContainSubstring("vlan_filtering 0"),
+						ContainSubstring("vlan_default_pvid 1"),
+					))
+				}
+			})
 		})
 		Context("with a active-backup miimon 100 bond interface up", func() {
 			BeforeEach(func() {
