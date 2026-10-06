@@ -1,0 +1,15 @@
+# Artifact Hub repository metadata file.
+#
+# It declares who owns the Artifact Hub repository, so it is kept here under
+# review. Artifact Hub reads it from the chart OCI repository, under the
+# special "artifacthub.io" tag, where it is pushed by hand. See
+# docs/content/developer-guide/105-advanced.md for the publishing command.
+#
+# https://artifacthub.io/docs/topics/repositories/helm-charts/#oci-support
+#
+# The repositoryID is shown on the repository card in the Artifact Hub control
+# panel. Setting it enables the "Verified publisher" flag.
+repositoryID: 51e2f12f-cb13-4ba5-b91d-b4cfe63e49bb
+owners:
+  - name: Enrique Llorente
+    email: ellorent@redhat.com
