@@ -54,11 +54,17 @@ spec:
             capabilities:
               drop:
               - ALL
-          readinessProbe:
+          startupProbe:
             httpGet:
               path: /readyz
               port: healthprobe
             initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 18
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthprobe
             periodSeconds: 10
             timeoutSeconds: 1
             successThreshold: 1
@@ -67,7 +73,6 @@ spec:
             httpGet:
               path: /healthz
               port: healthprobe
-            initialDelaySeconds: 10
             periodSeconds: 10
             timeoutSeconds: 1
             successThreshold: 1
