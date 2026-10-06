@@ -123,7 +123,6 @@ require (
 require (
 	github.com/Masterminds/sprig/v3 v3.2.3
 	github.com/godbus/dbus/v5 v5.0.4
-	github.com/gofrs/flock v0.8.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/nmstate/kubernetes-nmstate/api v0.0.0-00010101000000-000000000000
 	github.com/onsi/ginkgo/v2 v2.28.1
