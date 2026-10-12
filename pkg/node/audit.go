@@ -35,17 +35,22 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
 
-// worstCaseApplyCycle bounds how long ApplyDesiredState can legitimately run
-// on the success path. The Progressing heartbeat is stamped once at
-// NotifyProgressing and is not refreshed again until the apply returns, so a
-// live holder's heartbeat can be this old while it is still applying:
+// worstCaseApplyCycle bounds how long ApplyDesiredState can legitimately run.
+// The Progressing heartbeat is stamped once at NotifyProgressing and is not
+// refreshed again until the apply returns, so a live holder's heartbeat can be
+// this old while it is still applying:
 //
 //	probe.Select (sequential pre-apply gw+dns probes) <= ProbesTotalTimeout
 //	nmstatectl.Set                                     <= DesiredStateConfigurationTimeout
 //	probe.Run    (sequential post-apply probes)        <= ProbesTotalTimeout
+//	probe.Run    (rollback after a failed probe)       <= ProbesTotalTimeout
+//
+// The nmstatectl rollback and commit invocations have no timeout of their
+// own; they normally complete in seconds and are assumed to fit in the margin
+// of DefaultStaleEnactmentThreshold.
 //
 // Derived from the source-of-truth timeouts so it tracks any change to them.
-const worstCaseApplyCycle = nmstateclient.DesiredStateConfigurationTimeout + 2*probe.ProbesTotalTimeout
+const worstCaseApplyCycle = nmstateclient.DesiredStateConfigurationTimeout + 3*probe.ProbesTotalTimeout
 
 const (
 	// DefaultStaleEnactmentThreshold is how old a Progressing enactment's
@@ -58,7 +63,7 @@ const (
 	DefaultStaleEnactmentThreshold = worstCaseApplyCycle + 5*time.Minute
 
 	// StaleEnactmentThresholdEnvVar overrides DefaultStaleEnactmentThreshold
-	// (time.ParseDuration format, e.g. "20m").
+	// (time.ParseDuration format, e.g. "1h").
 	StaleEnactmentThresholdEnvVar = "NMSTATE_ENACTMENT_STALE_THRESHOLD"
 
 	// AuditGraceWindow: if LastUnavailableNodeCountUpdate is younger than
@@ -68,10 +73,11 @@ const (
 )
 
 // StaleEnactmentThreshold returns the configured staleness threshold. An
-// override is honored only if it still exceeds the worst-case apply cycle;
-// a smaller value would let the audit free a slot held by a node that is
-// still legitimately applying and break maxUnavailable, so it is rejected in
-// favor of the safe default.
+// override is honored only if it still exceeds the worst-case apply cycle; an
+// equal or smaller value would let the audit free a slot held by a node that
+// is still legitimately applying (a holder is stale once its heartbeat age
+// reaches the threshold) and break maxUnavailable, so it is rejected in favor
+// of the safe default.
 func StaleEnactmentThreshold() time.Duration {
 	raw := environment.GetEnvVar(StaleEnactmentThresholdEnvVar, "")
 	if raw == "" {
@@ -81,7 +87,7 @@ func StaleEnactmentThreshold() time.Duration {
 	if err != nil || parsed <= 0 {
 		return DefaultStaleEnactmentThreshold
 	}
-	if parsed < worstCaseApplyCycle {
+	if parsed <= worstCaseApplyCycle {
 		return DefaultStaleEnactmentThreshold
 	}
 	return parsed

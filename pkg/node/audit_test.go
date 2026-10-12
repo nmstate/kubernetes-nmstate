@@ -32,6 +32,8 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstateclient "github.com/nmstate/kubernetes-nmstate/pkg/client"
+	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
 
 func auditPolicy(generation int64, count int, lastUpdate *metav1.Time) *nmstatev1.NodeNetworkConfigurationPolicy {
@@ -259,6 +261,12 @@ var _ = Describe("StaleEnactmentThreshold", func() {
 	It("exceeds the worst-case apply cycle so a live applier is never freed", func() {
 		Expect(DefaultStaleEnactmentThreshold).To(BeNumerically(">", worstCaseApplyCycle))
 	})
+	It("covers the rollback probes of a failed apply in the worst-case apply cycle", func() {
+		// pre-apply probes + nmstatectl apply + post-apply probes + the
+		// probes rollback runs after a failed post-apply probe.
+		Expect(worstCaseApplyCycle).To(BeNumerically(">=",
+			nmstateclient.DesiredStateConfigurationTimeout+3*probe.ProbesTotalTimeout))
+	})
 	It("honors an env var that still exceeds the worst-case apply cycle", func() {
 		override := worstCaseApplyCycle + 10*time.Minute
 		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, override.String())
@@ -266,6 +274,10 @@ var _ = Describe("StaleEnactmentThreshold", func() {
 	})
 	It("rejects an env var below the worst-case apply cycle, using the default", func() {
 		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, "5m")
+		Expect(StaleEnactmentThreshold()).To(Equal(DefaultStaleEnactmentThreshold))
+	})
+	It("rejects an env var equal to the worst-case apply cycle, using the default", func() {
+		GinkgoT().Setenv(StaleEnactmentThresholdEnvVar, worstCaseApplyCycle.String())
 		Expect(StaleEnactmentThreshold()).To(Equal(DefaultStaleEnactmentThreshold))
 	})
 	It("falls back to default on unparsable value", func() {
