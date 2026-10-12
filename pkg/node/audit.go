@@ -88,10 +88,8 @@ func StaleEnactmentThreshold() time.Duration {
 }
 
 // AuditUnavailableSlots recomputes UnavailableNodeCountMap[currentGeneration]
-// from live enactments and repairs it downward if it exceeds the number of
-// live holders. A live holder is an enactment of the policy's current
-// generation with Progressing=True and a heartbeat younger than
-// staleThreshold. Returns true if a repair was written.
+// from enactments and repairs it downward if it exceeds the number of slot
+// holders (see countSlotHolders). Returns true if a repair was written.
 //
 // The repair is set-to-truth (never a blind decrement), so concurrent audits
 // from multiple nodes are idempotent. The count is never raised.
@@ -124,15 +122,15 @@ func AuditUnavailableSlots(
 			return nil
 		}
 
-		live, err := countLiveHolders(ctx, apiReader, policy, staleThreshold)
+		holders, err := countSlotHolders(ctx, apiReader, policy, staleThreshold)
 		if err != nil {
 			return err
 		}
-		if live >= stored {
+		if holders >= stored {
 			return nil
 		}
 
-		policy.Status.UnavailableNodeCountMap[generationKey] = live
+		policy.Status.UnavailableNodeCountMap[generationKey] = holders
 		now := metav1.Now()
 		policy.Status.LastUnavailableNodeCountUpdate = &now
 		if err := statusWriter.Status().Update(ctx, policy); err != nil {
@@ -144,7 +142,18 @@ func AuditUnavailableSlots(
 	return repaired, err
 }
 
-func countLiveHolders(
+// countSlotHolders counts the enactments of the policy's current generation
+// that hold an unavailable-node slot:
+//
+//   - live holders: Progressing=True with a heartbeat younger than
+//     staleThreshold;
+//   - terminally failed enactments (Failing=True, Progressing=False): a node
+//     whose apply exhausted its retries keeps its slot for the rest of the
+//     generation, so refused nodes abort (shouldAbortReconcile uses the same
+//     filter) instead of applying a policy that already failed. The failure
+//     is terminal and its heartbeat is never refreshed, so staleness does not
+//     apply.
+func countSlotHolders(
 	ctx context.Context,
 	apiReader client.Reader,
 	policy *nmstatev1.NodeNetworkConfigurationPolicy,
@@ -155,21 +164,29 @@ func countLiveHolders(
 	if err := apiReader.List(ctx, &enactments, policyLabelFilter); err != nil {
 		return 0, err
 	}
-	live := 0
+	holders := 0
 	for i := range enactments.Items {
 		enactment := &enactments.Items[i]
 		if enactment.Status.PolicyGeneration != policy.Generation {
 			continue
 		}
-		progressing := enactment.Status.Conditions.Find(
-			shared.NodeNetworkConfigurationEnactmentConditionProgressing)
-		if progressing == nil || progressing.Status != corev1.ConditionTrue {
-			continue
+		if isLiveHolder(enactment.Status.Conditions, staleThreshold) ||
+			isTerminallyFailed(enactment.Status.Conditions) {
+			holders++
 		}
-		if time.Since(progressing.LastHeartbeatTime.Time) >= staleThreshold {
-			continue
-		}
-		live++
 	}
-	return live, nil
+	return holders, nil
+}
+
+func isLiveHolder(conditions shared.ConditionList, staleThreshold time.Duration) bool {
+	progressing := conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionProgressing)
+	return progressing != nil && progressing.Status == corev1.ConditionTrue &&
+		time.Since(progressing.LastHeartbeatTime.Time) < staleThreshold
+}
+
+func isTerminallyFailed(conditions shared.ConditionList) bool {
+	progressing := conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionProgressing)
+	failing := conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionFailing)
+	return progressing != nil && progressing.Status == corev1.ConditionFalse &&
+		failing != nil && failing.Status == corev1.ConditionTrue
 }

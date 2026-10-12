@@ -539,8 +539,10 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 		currentUnavailableNodeCount int
 		lastCountUpdateAge          time.Duration // 0 = nil timestamp
 		otherNodeLiveHolder         bool          // add a fresh Progressing enactment owned by another node
+		otherNodeFailed             bool          // add a terminally failed enactment owned by another node
 		previousEnactmentConditions func(*shared.ConditionList, string)
 		expectBlocked               bool
+		expectAborted               bool        // enactment Aborted without applying
 		expectedReconcileResult     ctrl.Result // only checked when !expectBlocked
 	}
 	DescribeTable("when claimNodeRunningUpdate is called and",
@@ -551,7 +553,11 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			// "Proceeds" entries must complete the claim + apply path
 			// deterministically, so stub the apply to succeed; blocked entries
 			// never reach the apply, the stub is irrelevant there.
-			applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) { return stubApplyOutput, nil }
+			applied := false
+			applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+				applied = true
+				return stubApplyOutput, nil
+			}
 			defer func() { applyDesiredStateFn = nmstate.ApplyDesiredState }()
 			reconciler := NodeNetworkConfigurationPolicyReconciler{
 				RetriesUntilFail:   5,
@@ -622,6 +628,21 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				conditions.SetProgressing(&otherNNCE.Status.Conditions, "applying")
 				objs = append(objs, &otherNNCE)
 			}
+			if c.otherNodeFailed {
+				failedNNCE := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:   shared.EnactmentKey("node03", nncp.Name).Name,
+						Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+					},
+					Status: shared.NodeNetworkConfigurationEnactmentStatus{
+						PolicyGeneration: nncp.Generation,
+					},
+				}
+				// Retries exhausted: Failing=True, Progressing=False. The failed
+				// node keeps its slot, so refused nodes must abort.
+				conditions.SetFailedToConfigure(&failedNNCE.Status.Conditions, "apply failed")
+				objs = append(objs, &failedNNCE)
+			}
 
 			// Create a fake client to mock API calls.
 			clb := fake.ClientBuilder{}
@@ -641,7 +662,15 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			})
 
 			Expect(err).To(BeNil())
-			if c.expectBlocked {
+			if c.expectAborted {
+				Expect(res).To(Equal(ctrl.Result{}))
+				Expect(applied).To(BeFalse(), "must not apply a policy that already failed on maxUnavailable nodes")
+				updated := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+				Expect(cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updated)).To(Succeed())
+				aborted := updated.Status.Conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionAborted)
+				Expect(aborted).ToNot(BeNil())
+				Expect(aborted.Status).To(Equal(corev1.ConditionTrue))
+			} else if c.expectBlocked {
 				// A refused claim requeues via the controller's per-item
 				// exponential backoff (Requeue: true), not a fixed delay, so
 				// the freed slot is retried within seconds on multi-wave
@@ -700,6 +729,14 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				otherNodeLiveHolder:         true,
 				previousEnactmentConditions: conditions.SetPending,
 				expectBlocked:               true,
+			}),
+		Entry("count at cap held by a failed node on another node -> aborts instead of applying",
+			incrementUnavailableNodeCountCase{
+				currentUnavailableNodeCount: 1,
+				lastCountUpdateAge:          5 * time.Minute, // grace expired; audit runs
+				otherNodeFailed:             true,
+				previousEnactmentConditions: func(*shared.ConditionList, string) {},
+				expectAborted:               true,
 			}),
 	)
 

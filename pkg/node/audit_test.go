@@ -138,6 +138,52 @@ var _ = Describe("AuditUnavailableSlots", func() {
 		Expect(updated.Status.UnavailableNodeCountMap["2"]).To(Equal(0))
 	})
 
+	failedEnactment := func(name string) *nmstatev1beta1.NodeNetworkConfigurationEnactment {
+		// A terminal failure is never refreshed, so its heartbeat can be
+		// arbitrarily old.
+		age := DefaultStaleEnactmentThreshold + time.Minute
+		e := auditEnactment(name, 2, corev1.ConditionFalse, age)
+		e.Status.Conditions = append(e.Status.Conditions, shared.Condition{
+			Type:              shared.NodeNetworkConfigurationEnactmentConditionFailing,
+			Status:            corev1.ConditionTrue,
+			Reason:            shared.NodeNetworkConfigurationEnactmentConditionFailedToConfigure,
+			LastHeartbeatTime: metav1.Time{Time: time.Now().Add(-age)},
+		})
+		return e
+	}
+
+	It("does not repair a slot held by a terminally failed enactment", func() {
+		policy := auditPolicy(2, 1, &oldUpdate)
+		clb := buildClient()
+		clb.WithRuntimeObjects(policy, failedEnactment("node01.test-policy"))
+		clb.WithStatusSubresource(policy)
+		cl := clb.Build()
+
+		repaired, err := AuditUnavailableSlots(context.TODO(), cl, cl, policyKey, DefaultStaleEnactmentThreshold)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(repaired).To(BeFalse(), "a failed node keeps its slot so refused nodes abort instead of applying")
+
+		updated := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, updated)).To(Succeed())
+		Expect(updated.Status.UnavailableNodeCountMap["2"]).To(Equal(1))
+	})
+
+	It("repairs ghost slots beyond those held by terminally failed enactments", func() {
+		policy := auditPolicy(2, 2, &oldUpdate)
+		clb := buildClient()
+		clb.WithRuntimeObjects(policy, failedEnactment("node01.test-policy"))
+		clb.WithStatusSubresource(policy)
+		cl := clb.Build()
+
+		repaired, err := AuditUnavailableSlots(context.TODO(), cl, cl, policyKey, DefaultStaleEnactmentThreshold)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(repaired).To(BeTrue())
+
+		updated := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, updated)).To(Succeed())
+		Expect(updated.Status.UnavailableNodeCountMap["2"]).To(Equal(1))
+	})
+
 	It("defers inside the grace window", func() {
 		recent := metav1.Time{Time: time.Now().Add(-5 * time.Second)}
 		policy := auditPolicy(2, 1, &recent)

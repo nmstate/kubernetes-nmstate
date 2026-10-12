@@ -413,7 +413,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 // success, and a second blind decrement could drop another node's slot and
 // break maxUnavailable. Success is therefore recorded first (moving this
 // enactment out of the live-holder set), and the slot is then released with the
-// set-to-truth audit, which repairs the counter to the number of live holders
+// set-to-truth audit, which repairs the counter to the number of slot holders
 // and can never free a slot another node still holds.
 func (r *NodeNetworkConfigurationPolicyReconciler) finalizeInterruptedApply(
 	ctx context.Context,
@@ -435,13 +435,14 @@ func (r *NodeNetworkConfigurationPolicyReconciler) finalizeInterruptedApply(
 }
 
 // releaseUnavailableSlotByAudit releases a slot idempotently by repairing the
-// policy counter down to the number of live Progressing holders. The caller
-// must have already moved this enactment out of the live-holder set (it is
-// Available), so the audit drops this node's slot. Being set-to-truth it is
-// idempotent and never frees a slot another node still holds, so it is safe to
-// run repeatedly and concurrently with audits on other nodes. It uses the
-// larger slotReleaseBackoff because it runs right after the node reconfigured
-// its own networking, when the API server may be briefly unreachable.
+// policy counter down to the number of slot holders (live Progressing or
+// terminally failed enactments). The caller must have already moved this
+// enactment out of the holder set (it is Available), so the audit drops this
+// node's slot. Being set-to-truth it is idempotent and never frees a slot
+// another node still holds, so it is safe to run repeatedly and concurrently
+// with audits on other nodes. It uses the larger slotReleaseBackoff because it
+// runs right after the node reconfigured its own networking, when the API
+// server may be briefly unreachable.
 func (r *NodeNetworkConfigurationPolicyReconciler) releaseUnavailableSlotByAudit(
 	ctx context.Context,
 	policyKey types.NamespacedName,
@@ -724,7 +725,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) shouldIncrementUnavailableNod
 
 // claimUnavailableSlot increments the policy's unavailable-node counter. If
 // the counter is at the maxUnavailable cap, it audits the counter against
-// live Progressing enactments (repairing ghost slots left by interrupted
+// the current slot holders (repairing ghost slots left by interrupted
 // applies) and retries the increment once.
 func (r *NodeNetworkConfigurationPolicyReconciler) claimUnavailableSlot(
 	ctx context.Context,
