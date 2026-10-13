@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -484,6 +486,235 @@ var _ = Describe("success write failure after apply (finalization phase)", func(
 		Expect(cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)).To(Succeed())
 		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeTrue())
 	})
+
+	It("does not decrement twice when the release write commits but its response is lost", func() {
+		// Regression for the ambiguous-release double free: the slot release
+		// status write lands server-side but the client only sees a timeout
+		// (the release runs right after the node reconfigured its own
+		// networking). Retrying the blind decrement would re-read the already
+		// decremented counter and decrement it again, freeing node02's slot.
+		// The audit never raises the counter, so that undercount would stick.
+		originalNmstatectlShowFn := nmstatectlShowFn
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
+		applyCalled := false
+		originalApply := applyDesiredStateFn
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+			applyCalled = true
+			return stubApplyOutput, nil
+		}
+		DeferCleanup(func() { applyDesiredStateFn = originalApply })
+
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail: 5, MaximumTimeBackoff: 30 * time.Second, InitialBackoff: 1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion, &nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		maxUnavailable := intstr.FromInt(2)
+		node1 := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		oldStamp := metav1.NewTime(time.Now().Add(-2 * node.AuditGraceWindow))
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Spec:       shared.NodeNetworkConfigurationPolicySpec{MaxUnavailable: &maxUnavailable},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap:        map[string]int{"0": 2}, // this node + node02
+				LastUnavailableNodeCountUpdate: &oldStamp,
+			},
+		}
+		// This node already holds its slot (interrupted reconcile), so the
+		// reconcile skips the claim and goes straight to apply + release.
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+			Status: shared.NodeNetworkConfigurationEnactmentStatus{PolicyGeneration: nncp.Generation},
+		}
+		conditions.SetProgressing(&nnce.Status.Conditions, "applying")
+		// node02 is a live Progressing holder of the current generation.
+		otherNNCE := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey("node02", nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+			Status: shared.NodeNetworkConfigurationEnactmentStatus{PolicyGeneration: nncp.Generation},
+		}
+		conditions.SetProgressing(&otherNNCE.Status.Conditions, "applying")
+
+		lostResponsesLeft := 1
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &otherNNCE, &nns, &node1)
+		clb.WithStatusSubresource(&nncp, &nnce, &otherNNCE, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				incoming, isNNCP := obj.(*nmstatev1.NodeNetworkConfigurationPolicy)
+				if !isNNCP || lostResponsesLeft == 0 {
+					return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+				}
+				stored := &nmstatev1.NodeNetworkConfigurationPolicy{}
+				Expect(cl.Get(ctx, client.ObjectKeyFromObject(incoming), stored)).To(Succeed())
+				if incoming.Status.UnavailableNodeCountMap["0"] >= stored.Status.UnavailableNodeCountMap["0"] {
+					return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+				}
+				// The decrement commits, but the response never reaches the client.
+				lostResponsesLeft--
+				Expect(cl.SubResource(subResourceName).Update(ctx, obj, opts...)).To(Succeed())
+				return apierrors.NewTimeoutError("response lost after commit", 0)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		policyKey := types.NamespacedName{Name: nncp.Name}
+
+		// Reconcile 1: apply, release (2->1 commits, response lost). The
+		// release must not be retried blindly; the reconcile parks the
+		// enactment in the finalization phase instead.
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeTrue())
+		Expect(res.RequeueAfter).To(Equal(10*time.Second),
+			"an ambiguous release must requeue into the idempotent finalization path")
+		afterFirst := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, afterFirst)).To(Succeed())
+		Expect(afterFirst.Status.UnavailableNodeCountMap["0"]).To(Equal(1),
+			"the committed release counts once; node02's slot remains")
+		parkedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), parkedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsFinalizing(&parkedNNCE.Status.Conditions)).To(BeTrue())
+
+		// Reconcile 2: finalize via the set-to-truth audit. Must NOT re-apply
+		// and must NOT release node02's slot.
+		applyCalled = false
+		_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeFalse(), "finalization retry must not re-apply")
+
+		finalNNCP := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, finalNNCP)).To(Succeed())
+		Expect(finalNNCP.Status.UnavailableNodeCountMap["0"]).To(Equal(1),
+			"node02's slot must survive the retried release")
+		updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), shared.EnactmentKey(nodeName, nncp.Name), updatedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeTrue())
+	})
+
+	It("does not report a release that failed with a context error as successful", func() {
+		// retry.OnError substitutes its last retriable error for anything that
+		// errors.Is a context error. A non-retried release failure wrapping
+		// context.DeadlineExceeded must still surface as a failure, or the
+		// reconcile would record success with the slot still held.
+		originalNmstatectlShowFn := nmstatectlShowFn
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
+		applyCalled := false
+		originalApply := applyDesiredStateFn
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+			applyCalled = true
+			return stubApplyOutput, nil
+		}
+		DeferCleanup(func() { applyDesiredStateFn = originalApply })
+
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail: 5, MaximumTimeBackoff: 30 * time.Second, InitialBackoff: 1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion, &nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		node1 := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		oldStamp := metav1.NewTime(time.Now().Add(-2 * node.AuditGraceWindow))
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap:        map[string]int{"0": 1},
+				LastUnavailableNodeCountUpdate: &oldStamp,
+			},
+		}
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+			Status: shared.NodeNetworkConfigurationEnactmentStatus{PolicyGeneration: nncp.Generation},
+		}
+		conditions.SetProgressing(&nnce.Status.Conditions, "applying")
+
+		failDecrements := true
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node1)
+		clb.WithStatusSubresource(&nncp, &nnce, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				incoming, isNNCP := obj.(*nmstatev1.NodeNetworkConfigurationPolicy)
+				if !isNNCP || !failDecrements {
+					return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+				}
+				stored := &nmstatev1.NodeNetworkConfigurationPolicy{}
+				Expect(cl.Get(ctx, client.ObjectKeyFromObject(incoming), stored)).To(Succeed())
+				if incoming.Status.UnavailableNodeCountMap["0"] >= stored.Status.UnavailableNodeCountMap["0"] {
+					return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+				}
+				// The write never reaches the server; the client times out.
+				return fmt.Errorf("updating policy status: %w", context.DeadlineExceeded)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		policyKey := types.NamespacedName{Name: nncp.Name}
+		nnceKey := shared.EnactmentKey(nodeName, nncp.Name)
+
+		// Reconcile 1: the release fails; the reconcile must not record
+		// success with the slot still held.
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeTrue())
+		Expect(res.RequeueAfter).To(Equal(10*time.Second),
+			"a failed release must requeue, not be mistaken for success")
+		parkedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, parkedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsFinalizing(&parkedNNCE.Status.Conditions)).To(BeTrue())
+		Expect(enactmentstatus.IsAvailable(&parkedNNCE.Status.Conditions)).To(BeFalse(),
+			"success must not be recorded while the slot is still held")
+		afterFirst := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, afterFirst)).To(Succeed())
+		Expect(afterFirst.Status.UnavailableNodeCountMap["0"]).To(Equal(1))
+
+		// Reconcile 2: the API server is back; finalize via the audit.
+		failDecrements = false
+		applyCalled = false
+		_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeFalse())
+		updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, updatedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeTrue())
+		finalNNCP := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, finalNNCP)).To(Succeed())
+		Expect(finalNNCP.Status.UnavailableNodeCountMap["0"]).To(Equal(0))
+	})
+
 })
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
@@ -991,8 +1222,8 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 			})
 		})
 
-		Context("when status update fails with both cached and non-cached clients", func() {
-			It("should return error", func() {
+		Context("when the status update is rejected for a reason other than a conflict", func() {
+			It("should return the error without retrying through the non-cached client", func() {
 				originalSlotReleaseBackoff := slotReleaseBackoff
 				slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
 				defer func() { slotReleaseBackoff = originalSlotReleaseBackoff }()
@@ -1002,6 +1233,14 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 				clb.WithScheme(s)
 				clb.WithRuntimeObjects(nncp)
 				// Note: NOT adding WithStatusSubresource - this causes status updates to fail
+				apiReads := 0
+				clb.WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey,
+						obj client.Object, opts ...client.GetOption) error {
+						apiReads++
+						return cl.Get(ctx, key, obj, opts...)
+					},
+				})
 				cl := clb.Build()
 
 				reconciler.Client = cl
@@ -1011,6 +1250,42 @@ var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() 
 
 				Expect(err).ToNot(BeNil())
 				Expect(err.Error()).To(ContainSubstring("not found"))
+				Expect(isAmbiguousSlotRelease(err)).To(BeTrue())
+				Expect(apiReads).To(Equal(1), "the write outcome is unknown; a re-read and second decrement must not be attempted")
+			})
+		})
+
+		Context("when the cached client cannot read the policy", func() {
+			It("should release the slot through the non-cached client", func() {
+				clb := fake.ClientBuilder{}
+				clb.WithScheme(s)
+				clb.WithRuntimeObjects(nncp)
+				clb.WithStatusSubresource(nncp)
+				// The cache is not serving yet (e.g. the informer watch broke
+				// during the apply): the first reads fail, later ones succeed.
+				failedReadsLeft := retry.DefaultRetry.Steps
+				clb.WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey,
+						obj client.Object, opts ...client.GetOption) error {
+						if failedReadsLeft > 0 {
+							failedReadsLeft--
+							return apierrors.NewServiceUnavailable("cache not synced")
+						}
+						return cl.Get(ctx, key, obj, opts...)
+					},
+				})
+				cl := clb.Build()
+
+				reconciler.Client = cl
+				reconciler.APIClient = cl
+
+				err := reconciler.decrementUnavailableNodeCount(context.TODO(), nncp, "gen-1")
+
+				Expect(err).To(BeNil())
+				Expect(failedReadsLeft).To(Equal(0), "the cached attempt must exhaust its reads before falling back")
+				updatedNNCP := &nmstatev1.NodeNetworkConfigurationPolicy{}
+				Expect(cl.Get(context.TODO(), types.NamespacedName{Name: nncp.Name}, updatedNNCP)).To(Succeed())
+				Expect(updatedNNCP.Status.UnavailableNodeCountMap["gen-1"]).To(Equal(1))
 			})
 		})
 
