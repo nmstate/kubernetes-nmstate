@@ -23,6 +23,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -119,6 +120,48 @@ type NodeNetworkConfigurationPolicyReconciler struct {
 	// InitialBackoff is the starting backoff duration for the first retry.
 	// Expected range: > 0. Defaults to 1s via NNCP_INITIAL_BACKOFF_SECONDS env var.
 	InitialBackoff time.Duration
+
+	// committedApplies remembers, per policy, the policy object and generation
+	// whose desired state this process applied and committed but could not
+	// mark Finalizing on the enactment (the API server was unreachable right
+	// after the node reconfigured its own networking). A later reconcile in
+	// the same process finalizes such an enactment instead of re-applying.
+	// The record is bound to the policy UID so a policy recreated under the
+	// same name is applied afresh. It does not survive a handler restart: a
+	// restart re-applies, as before.
+	committedApplies   map[string]committedApply
+	committedAppliesMu sync.Mutex
+}
+
+type committedApply struct {
+	policyUID     types.UID
+	generationKey string
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) markApplyCommitted(
+	policy *nmstatev1.NodeNetworkConfigurationPolicy, generationKey string,
+) {
+	r.committedAppliesMu.Lock()
+	defer r.committedAppliesMu.Unlock()
+	if r.committedApplies == nil {
+		r.committedApplies = map[string]committedApply{}
+	}
+	r.committedApplies[policy.Name] = committedApply{policyUID: policy.UID, generationKey: generationKey}
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) hasCommittedApply(
+	policy *nmstatev1.NodeNetworkConfigurationPolicy, generationKey string,
+) bool {
+	r.committedAppliesMu.Lock()
+	defer r.committedAppliesMu.Unlock()
+	committed, found := r.committedApplies[policy.Name]
+	return found && committed.policyUID == policy.UID && committed.generationKey == generationKey
+}
+
+func (r *NodeNetworkConfigurationPolicyReconciler) clearCommittedApply(policyName string) {
+	r.committedAppliesMu.Lock()
+	defer r.committedAppliesMu.Unlock()
+	delete(r.committedApplies, policyName)
 }
 
 func init() {
@@ -236,6 +279,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	// not release it, then finish.
 	if enactmentstatus.IsAvailable(&enactmentInstance.Status.Conditions) {
 		log.Info("enactment already Available for current generation, ensuring slot released")
+		r.clearCommittedApply(instance.Name)
 		if err := r.releaseUnavailableSlotByAudit(ctx, request.NamespacedName); err != nil {
 			log.Info("Available enactment: unavailable-node slot release will be retried",
 				"error", err, "requeueAfter", "10s")
@@ -247,13 +291,19 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	// Post-apply finalization phase: the desired state was applied in an
 	// earlier reconcile but the slot release or success write did not complete.
 	// Only finalize (record success, release the slot); do NOT re-apply the
-	// already committed configuration.
-	if enactmentstatus.IsFinalizing(&enactmentInstance.Status.Conditions) {
+	// already committed configuration. The persisted Finalizing marker is the
+	// durable signal; the in-process committedApplies record covers an apply
+	// whose marker write never landed (API server unreachable after the
+	// node's own reconfiguration) as long as this handler keeps running. The
+	// record is checked against the authoritative (non-cached) policy so a
+	// policy recreated under the same name, or a stale cache, re-applies.
+	alreadyHoldsSlot := enactmentstatus.IsProgressing(&enactmentInstance.Status.Conditions)
+	if enactmentstatus.IsFinalizing(&enactmentInstance.Status.Conditions) ||
+		(alreadyHoldsSlot && r.hasCommittedApply(freshPolicy, generationKey)) {
 		log.Info("enactment already applied (finalizing); recording success and releasing slot without re-applying")
 		return r.finalizeInterruptedApply(ctx, request.NamespacedName, enactmentConditions), nil
 	}
 
-	alreadyHoldsSlot := enactmentstatus.IsProgressing(&enactmentInstance.Status.Conditions)
 	if alreadyHoldsSlot {
 		log.Info("enactment already Progressing for current generation; slot held by an interrupted reconcile, skipping claim")
 	}
@@ -363,15 +413,21 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 	}
 	log.Info("nmstate", "output", nmstateOutput)
 
+	// The desired state is committed on the node from here on; remember it in
+	// this process so that, if the Finalizing marker below cannot be written,
+	// the requeued reconcile still finalizes instead of re-applying.
+	r.markApplyCommitted(instance, generationKey)
+
 	// Enter the finalization phase before touching the counter. The enactment
 	// stays Progressing (a live slot holder) but is marked Finalizing, so if
 	// the release or success write below fails, the requeue finalizes at the
 	// top of Reconcile instead of re-applying the already committed
 	// configuration. The marker write itself gets the authoritative retry
 	// budget because it runs right after the node reconfigured its own
-	// networking, when the API server may be briefly unreachable; only if it
-	// cannot be persisted at all does the reconcile fall back to a (safe,
-	// idempotent) re-apply on the next pass.
+	// networking, when the API server may be briefly unreachable. If it still
+	// cannot be persisted, the in-process committedApplies record keeps the
+	// requeue on the finalization path; only a handler restart in that window
+	// falls back to a (safe, idempotent) re-apply.
 	if err := retry.OnError(slotReleaseBackoff, func(error) bool { return true }, func() error {
 		return enactmentConditions.NotifyFinalizing(ctx)
 	}); err != nil {
@@ -404,14 +460,17 @@ func (r *NodeNetworkConfigurationPolicyReconciler) Reconcile(ctx context.Context
 			"error", err, "requeueAfter", "10s")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
+	r.clearCommittedApply(instance.Name)
 	r.forceNNSRefresh(ctx, nodeName)
 
 	return ctrl.Result{}, nil
 }
 
 // finalizeInterruptedApply completes a reconcile whose apply already committed
-// (the enactment is in the Finalizing phase) but whose slot release or success
-// write did not finish. It never re-applies the desired state.
+// (the enactment is in the Finalizing phase, or this process recorded the
+// commit in committedApplies because the Finalizing write never landed) but
+// whose slot release or success write did not finish. It never re-applies the
+// desired state.
 //
 // Unlike the happy path, the release here must be idempotent: a previous
 // reconcile may already have decremented the slot before failing to record
@@ -430,6 +489,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) finalizeInterruptedApply(
 			"error", err, "requeueAfter", "10s")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}
 	}
+	r.clearCommittedApply(policyKey.Name)
 	if err := r.releaseUnavailableSlotByAudit(ctx, policyKey); err != nil {
 		r.Log.Info("Failed to release unavailable-node slot, will retry",
 			"error", err, "requeueAfter", "10s")
@@ -698,6 +758,7 @@ func (r *NodeNetworkConfigurationPolicyReconciler) waitEnactmentCreated(ctx cont
 }
 
 func (r *NodeNetworkConfigurationPolicyReconciler) deleteEnactmentForPolicy(ctx context.Context, policyName string) error {
+	r.clearCommittedApply(policyName)
 	enactmentKey := nmstateapi.EnactmentKey(nodeName, policyName)
 	log := r.Log.WithName("deleteEnactmentForPolicy").WithValues(
 		"policy", policyName,

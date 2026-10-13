@@ -715,6 +715,213 @@ var _ = Describe("success write failure after apply (finalization phase)", func(
 		Expect(finalNNCP.Status.UnavailableNodeCountMap["0"]).To(Equal(0))
 	})
 
+	It("finalizes without re-applying when the Finalizing marker could not be persisted", func() {
+		// The apply committed, but every attempt to persist the Finalizing
+		// marker failed (API server unreachable right after the node's own
+		// network changed). Within the same process the reconciler must
+		// remember the commit and finalize on the next pass instead of
+		// re-applying the already committed configuration.
+		originalNmstatectlShowFn := nmstatectlShowFn
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
+		applyCalled := false
+		originalApply := applyDesiredStateFn
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+			applyCalled = true
+			return stubApplyOutput, nil
+		}
+		DeferCleanup(func() { applyDesiredStateFn = originalApply })
+		originalSlotReleaseBackoff := slotReleaseBackoff
+		slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
+		DeferCleanup(func() { slotReleaseBackoff = originalSlotReleaseBackoff })
+
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail: 5, MaximumTimeBackoff: 30 * time.Second, InitialBackoff: 1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion, &nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		node1 := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		oldStamp := metav1.NewTime(time.Now().Add(-2 * node.AuditGraceWindow))
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test"},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap:        map[string]int{"0": 1},
+				LastUnavailableNodeCountUpdate: &oldStamp,
+			},
+		}
+		// Already Progressing: the slot is held, so no claim re-stamps the
+		// audit grace window and the finalization release can run.
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+			Status: shared.NodeNetworkConfigurationEnactmentStatus{PolicyGeneration: nncp.Generation},
+		}
+		conditions.SetProgressing(&nnce.Status.Conditions, "applying")
+
+		failFinalizingWrites := true
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node1)
+		clb.WithStatusSubresource(&nncp, &nnce, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				if nnceObj, isNNCE := obj.(*nmstatev1beta1.NodeNetworkConfigurationEnactment); isNNCE {
+					if failFinalizingWrites && enactmentstatus.IsFinalizing(&nnceObj.Status.Conditions) {
+						return apierrors.NewInternalError(context.DeadlineExceeded)
+					}
+				}
+				return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		policyKey := types.NamespacedName{Name: nncp.Name}
+		nnceKey := shared.EnactmentKey(nodeName, nncp.Name)
+
+		// Reconcile 1: applies and commits, cannot persist the marker.
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeTrue())
+		Expect(res.RequeueAfter).To(Equal(10 * time.Second))
+		parkedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, parkedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsFinalizing(&parkedNNCE.Status.Conditions)).To(BeFalse(),
+			"the marker write must have failed for this spec to be meaningful")
+		Expect(enactmentstatus.IsProgressing(&parkedNNCE.Status.Conditions)).To(BeTrue())
+		afterFirst := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, afterFirst)).To(Succeed())
+		Expect(afterFirst.Status.UnavailableNodeCountMap["0"]).To(Equal(1), "the slot is still held")
+
+		// Reconcile 2: the API server is back. Finalize, do not re-apply.
+		failFinalizingWrites = false
+		applyCalled = false
+		res, err = reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(res).To(Equal(ctrl.Result{}))
+		Expect(applyCalled).To(BeFalse(),
+			"a committed apply must not be repeated once the API server is reachable again")
+
+		updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, updatedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeTrue())
+		finalNNCP := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		Expect(cl.Get(context.TODO(), policyKey, finalNNCP)).To(Succeed())
+		Expect(finalNNCP.Status.UnavailableNodeCountMap["0"]).To(Equal(0), "the slot must be released")
+	})
+
+	It("re-applies when the policy was recreated while the Finalizing marker was pending", func() {
+		// The in-process record of a committed apply belongs to one policy
+		// object. If the policy is deleted and recreated under the same name
+		// while the marker write is still failing, the new policy's desired
+		// state has never been applied and must not be finalized from the
+		// old record.
+		originalNmstatectlShowFn := nmstatectlShowFn
+		nmstatectlShowFn = func() (string, error) { return "", nil }
+		DeferCleanup(func() { nmstatectlShowFn = originalNmstatectlShowFn })
+		applyCalled := false
+		originalApply := applyDesiredStateFn
+		applyDesiredStateFn = func(context.Context, client.Client, shared.State) (string, error) {
+			applyCalled = true
+			return stubApplyOutput, nil
+		}
+		DeferCleanup(func() { applyDesiredStateFn = originalApply })
+		originalSlotReleaseBackoff := slotReleaseBackoff
+		slotReleaseBackoff = wait.Backoff{Duration: 1 * time.Millisecond, Steps: 1}
+		DeferCleanup(func() { slotReleaseBackoff = originalSlotReleaseBackoff })
+
+		reconciler := &NodeNetworkConfigurationPolicyReconciler{
+			RetriesUntilFail: 5, MaximumTimeBackoff: 30 * time.Second, InitialBackoff: 1 * time.Second,
+		}
+		s := scheme.Scheme
+		s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+			&nmstatev1beta1.NodeNetworkState{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+			&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{})
+		s.AddKnownTypes(nmstatev1.GroupVersion, &nmstatev1.NodeNetworkConfigurationPolicy{})
+
+		node1 := corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		nns := nmstatev1beta1.NodeNetworkState{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}
+		oldStamp := metav1.NewTime(time.Now().Add(-2 * node.AuditGraceWindow))
+		nncp := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "test", UID: "policy-uid-1"},
+			Status: shared.NodeNetworkConfigurationPolicyStatus{
+				UnavailableNodeCountMap:        map[string]int{"0": 1},
+				LastUnavailableNodeCountUpdate: &oldStamp,
+			},
+		}
+		nnce := nmstatev1beta1.NodeNetworkConfigurationEnactment{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   shared.EnactmentKey(nodeName, nncp.Name).Name,
+				Labels: map[string]string{shared.EnactmentPolicyLabel: nncp.Name},
+			},
+			Status: shared.NodeNetworkConfigurationEnactmentStatus{PolicyGeneration: nncp.Generation},
+		}
+		conditions.SetProgressing(&nnce.Status.Conditions, "applying")
+
+		failFinalizingWrites := true
+		clb := fake.ClientBuilder{}
+		clb.WithScheme(s)
+		clb.WithRuntimeObjects(&nncp, &nnce, &nns, &node1)
+		clb.WithStatusSubresource(&nncp, &nnce, &nns)
+		clb.WithInterceptorFuncs(interceptor.Funcs{
+			SubResourceUpdate: func(
+				ctx context.Context, cl client.Client, subResourceName string,
+				obj client.Object, opts ...client.SubResourceUpdateOption,
+			) error {
+				if nnceObj, isNNCE := obj.(*nmstatev1beta1.NodeNetworkConfigurationEnactment); isNNCE {
+					if failFinalizingWrites && enactmentstatus.IsFinalizing(&nnceObj.Status.Conditions) {
+						return apierrors.NewInternalError(context.DeadlineExceeded)
+					}
+				}
+				return cl.SubResource(subResourceName).Update(ctx, obj, opts...)
+			},
+		})
+		cl := clb.Build()
+		reconciler.Client = cl
+		reconciler.APIClient = cl
+		reconciler.Log = ctrl.Log.WithName("test")
+		policyKey := types.NamespacedName{Name: nncp.Name}
+		nnceKey := shared.EnactmentKey(nodeName, nncp.Name)
+
+		// Reconcile 1: applies and commits for policy-uid-1, cannot persist the marker.
+		res, err := reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeTrue())
+		Expect(res.RequeueAfter).To(Equal(10 * time.Second))
+
+		// The policy is deleted and recreated under the same name (and the
+		// same generation) before the next reconcile; the enactment, owned
+		// by the node, survives and is still Progressing.
+		Expect(cl.Delete(context.TODO(), &nncp)).To(Succeed())
+		recreated := nmstatev1.NodeNetworkConfigurationPolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: nncp.Name, UID: "policy-uid-2"},
+		}
+		Expect(cl.Create(context.TODO(), &recreated)).To(Succeed())
+
+		// Reconcile 2: the recreated policy has never been applied.
+		failFinalizingWrites = false
+		applyCalled = false
+		_, err = reconciler.Reconcile(context.TODO(), ctrl.Request{NamespacedName: policyKey})
+		Expect(err).To(BeNil())
+		Expect(applyCalled).To(BeTrue(),
+			"a committed apply recorded for the deleted policy must not finalize its replacement")
+		updatedNNCE := &nmstatev1beta1.NodeNetworkConfigurationEnactment{}
+		Expect(cl.Get(context.TODO(), nnceKey, updatedNNCE)).To(Succeed())
+		Expect(enactmentstatus.IsAvailable(&updatedNNCE.Status.Conditions)).To(BeTrue())
+	})
 })
 
 var _ = Describe("NodeNetworkConfigurationPolicy controller predicates", func() {
