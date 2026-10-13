@@ -102,7 +102,7 @@ routes:
 `
 
 		var err error
-		filteredOutObservedState, err = state.FilterOut(shared.NewState(observedState))
+		filteredOutObservedState, _, err = state.FilterOut(shared.NewState(observedState), state.DefaultMaxStateSizeBytes)
 		Expect(err).ToNot(HaveOccurred())
 
 		reconciler.nmstatectlShow = func() (string, error) {
@@ -197,9 +197,65 @@ routes:
 				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
 				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
 				Expect(err).ToNot(HaveOccurred())
-				filteredOutExpectedState, err := state.FilterOut(shared.NewState(expectedStateRaw))
+				filteredOutExpectedState, _, err := state.FilterOut(shared.NewState(expectedStateRaw), state.DefaultMaxStateSizeBytes)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(obtainedNNS.Status.CurrentState.String()).To(Equal(filteredOutExpectedState.String()))
+			})
+		})
+		Context("and the observed state exceeds the configured size budget", func() {
+			BeforeEach(func() {
+				By("Set last state")
+				reconciler.lastState = filteredOutObservedState
+
+				By("Configure a size budget that no state can fit in")
+				reconciler.MaxStateSizeBytes = 1
+
+				By("Mock nmstate show so we return a state with a VLAN carrying verbose fields")
+				reconciler.nmstatectlShow = func() (string, error) {
+					return `---
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 00:6B:3D:CE:C4:E6
+  - name: eth1.100
+    type: vlan
+    state: up
+    mac-address: 00:6B:3D:CE:C4:E6
+    mtu: 1500
+    vlan:
+      base-iface: eth1
+      id: 100
+      protocol: 802.1q
+routes:
+  running: []
+  config: []
+`, nil
+				}
+			})
+			It("should store the compacted state in the nodenetworkstate and record the compaction tier", func() {
+				_, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(reconciler.lastCompactionTier).To(Equal(2))
+				obtainedNNS := nmstatev1beta1.NodeNetworkState{}
+				err = cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(obtainedNNS.Status.CurrentState.String()).To(MatchYAML(`
+interfaces:
+  - name: eth1
+    type: ethernet
+    state: up
+    mac-address: 00:6B:3D:CE:C4:E6
+  - name: eth1.100
+    type: vlan
+    state: up
+    vlan:
+      base-iface: eth1
+      id: 100
+routes:
+  running: []
+  config: []
+`))
 			})
 		})
 		Context("and nodenetworkstate is not there", func() {
