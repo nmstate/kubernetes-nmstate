@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/pkg/errors"
@@ -52,16 +53,18 @@ type NmstateUpdater func(
 	nns *nmstatev1beta1.NodeNetworkState,
 	versions *nmstate.DependencyVersions,
 ) error
-type NmstatectlShow func() (string, error)
+type NmstatectlShow func(ctx context.Context) (string, error)
+type NmstatectlShowKernel func(ctx context.Context) error
 
 // NodeReconciler reconciles a Node object
 type NodeReconciler struct {
 	client.Client
-	Log            logr.Logger
-	Scheme         *runtime.Scheme
-	lastState      shared.State
-	nmstateUpdater NmstateUpdater
-	nmstatectlShow NmstatectlShow
+	Log                  logr.Logger
+	Scheme               *runtime.Scheme
+	lastState            shared.State
+	nmstateUpdater       NmstateUpdater
+	nmstatectlShow       NmstatectlShow
+	nmstatectlShowKernel NmstatectlShowKernel
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -70,10 +73,9 @@ type NodeReconciler struct {
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
 func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
-	currentStateRaw, err := r.nmstatectlShow()
+	currentStateRaw, err := r.nmstatectlShow(ctx)
 	if err != nil {
-		// We cannot call nmstatectl show let's reconcile again
-		return ctrl.Result{}, err
+		return r.reportQueryFailure(ctx, request, err)
 	}
 
 	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
@@ -92,6 +94,11 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 	}
 	// Reduce apiserver hits by checking node's network state with last one
 	if nnsInstance != nil && r.lastState.String() == currentState.String() {
+		// The state did not change, but the query may have been failing
+		// before, so make sure the conditions reflect the success.
+		if err := r.reportQuerySuccess(ctx, nnsInstance); err != nil {
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 	} else {
 		r.Log.Info("Creating/updating NodeNetworkState")
@@ -119,6 +126,62 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 	// Cache currentState after successfully storing it at NodeNetworkState
 	r.lastState = currentState
 
+	// nmstateUpdater sets the conditions whenever it writes the state, but it
+	// skips writing when the stored state is already up to date (e.g. after
+	// a handler restart), so make sure the conditions reflect the success.
+	if nnsInstance != nil {
+		if err := r.reportQuerySuccess(ctx, nnsInstance); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
+}
+
+func (r *NodeReconciler) reportQuerySuccess(ctx context.Context, nns *nmstatev1beta1.NodeNetworkState) error {
+	return nmstate.UpdateNodeNetworkStateQueryConditions(ctx, r.Client, nns,
+		shared.NodeNetworkStateConditionQuerySucceeded, nmstate.QuerySucceededMessage)
+}
+
+// reportQueryFailure diagnoses a failed network state query and records it
+// in the NodeNetworkState conditions, keeping the last successfully retrieved
+// state. The query is retried at the normal refresh interval.
+func (r *NodeReconciler) reportQueryFailure(ctx context.Context, request ctrl.Request, queryErr error) (ctrl.Result, error) {
+	reason := shared.NodeNetworkStateConditionQueryFailed
+	message := fmt.Sprintf("Failed to retrieve network state: %v", queryErr)
+	if kernelErr := r.nmstatectlShowKernel(ctx); kernelErr == nil {
+		reason = shared.NodeNetworkStateConditionNetworkManagerUnresponsive
+		message = fmt.Sprintf("Failed to retrieve network state while kernel-only query works, "+
+			"NetworkManager or D-Bus is not responding properly: %v", queryErr)
+	} else {
+		message = fmt.Sprintf("%s; kernel-only query also failed: %v", message, kernelErr)
+	}
+	r.Log.Error(queryErr, "Failed to retrieve network state", "reason", reason)
+
+	nnsInstance := &nmstatev1beta1.NodeNetworkState{}
+	err := r.Get(ctx, request.NamespacedName, nnsInstance)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, errors.Wrap(err, "Failed to get nnstate")
+		}
+		// Create an empty NNS so the failure is visible even if the state
+		// could never be retrieved on this node.
+		nodeInstance := &corev1.Node{}
+		if err = r.Get(ctx, request.NamespacedName, nodeInstance); err != nil {
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, err
+		}
+		nnsInstance, err = nmstate.InitializeNodeNetworkState(ctx, r.Client, nodeInstance)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	if err := nmstate.UpdateNodeNetworkStateQueryConditions(ctx, r.Client, nnsInstance, reason, message); err != nil {
+		return ctrl.Result{}, err
+	}
 	return ctrl.Result{RequeueAfter: node.NetworkStateRefreshWithJitter()}, nil
 }
 
@@ -141,7 +204,8 @@ func (r *NodeReconciler) getDependencyVersions() *nmstate.DependencyVersions {
 
 func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
-	r.nmstatectlShow = nmstatectl.Show
+	r.nmstatectlShow = nmstatectl.ShowWithTimeout
+	r.nmstatectlShowKernel = nmstatectl.ShowKernelLoopback
 
 	// By default all this functors return true so controller watch all events,
 	// but we only want to watch create/delete for current node.

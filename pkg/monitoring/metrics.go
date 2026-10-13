@@ -48,6 +48,11 @@ var (
 		Help: "Number of NodeNetworkConfigurationEnactments labeled by node and status condition",
 	}
 
+	NetworkStateQueryFailingOpts = prometheus.GaugeOpts{
+		Name: "kubernetes_nmstate_network_state_query_failing",
+		Help: "Set to 1 when the network state query on a node is failing, labeled by node and failure reason",
+	}
+
 	AppliedFeatures = prometheus.NewGaugeVec(
 		AppliedFeaturesOpts,
 		[]string{"name"},
@@ -73,12 +78,18 @@ var (
 		[]string{"node", "status"},
 	)
 
+	NetworkStateQueryFailing = prometheus.NewGaugeVec(
+		NetworkStateQueryFailingOpts,
+		[]string{"node", "reason"},
+	)
+
 	gaugeOpts = []prometheus.GaugeOpts{
 		AppliedFeaturesOpts,
 		NetworkInterfacesOpts,
 		NetworkRoutesOpts,
 		PolicyStatusOpts,
 		EnactmentStatusOpts,
+		NetworkStateQueryFailingOpts,
 	}
 )
 
