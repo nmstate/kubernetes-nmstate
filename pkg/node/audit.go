@@ -1,0 +1,198 @@
+/*
+Copyright The Kubernetes NMState Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package node
+
+import (
+	"context"
+	"strconv"
+	"time"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
+	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
+	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstateclient "github.com/nmstate/kubernetes-nmstate/pkg/client"
+	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
+	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
+)
+
+// worstCaseApplyCycle bounds how long ApplyDesiredState can legitimately run.
+// The Progressing heartbeat is stamped once at NotifyProgressing and is not
+// refreshed again until the apply returns, so a live holder's heartbeat can be
+// this old while it is still applying:
+//
+//	probe.Select (sequential pre-apply gw+dns probes) <= ProbesTotalTimeout
+//	nmstatectl.Set                                     <= DesiredStateConfigurationTimeout
+//	probe.Run    (sequential post-apply probes)        <= ProbesTotalTimeout
+//	probe.Run    (rollback after a failed probe)       <= ProbesTotalTimeout
+//
+// The nmstatectl rollback and commit invocations have no timeout of their
+// own; they normally complete in seconds and are assumed to fit in the margin
+// of DefaultStaleEnactmentThreshold.
+//
+// Derived from the source-of-truth timeouts so it tracks any change to them.
+const worstCaseApplyCycle = nmstateclient.DesiredStateConfigurationTimeout + 3*probe.ProbesTotalTimeout
+
+const (
+	// DefaultStaleEnactmentThreshold is how old a Progressing enactment's
+	// heartbeat must be before the audit considers its holder dead. It must
+	// exceed the worst-case apply cycle (worstCaseApplyCycle) with margin;
+	// otherwise the audit could classify a node that is still legitimately
+	// applying as stale, free its slot, and let more than maxUnavailable
+	// nodes reconfigure concurrently. The extra margin absorbs the gap
+	// between stamping the heartbeat and entering the apply, plus clock skew.
+	DefaultStaleEnactmentThreshold = worstCaseApplyCycle + 5*time.Minute
+
+	// StaleEnactmentThresholdEnvVar overrides DefaultStaleEnactmentThreshold
+	// (time.ParseDuration format, e.g. "1h").
+	StaleEnactmentThresholdEnvVar = "NMSTATE_ENACTMENT_STALE_THRESHOLD"
+
+	// AuditGraceWindow: if LastUnavailableNodeCountUpdate is younger than
+	// this, the audit defers. A legitimate incrementer's NotifyProgressing
+	// write may still be in flight; ghost slots are by definition old.
+	AuditGraceWindow = 30 * time.Second
+)
+
+// StaleEnactmentThreshold returns the configured staleness threshold. An
+// override is honored only if it still exceeds the worst-case apply cycle; an
+// equal or smaller value would let the audit free a slot held by a node that
+// is still legitimately applying (a holder is stale once its heartbeat age
+// reaches the threshold) and break maxUnavailable, so it is rejected in favor
+// of the safe default.
+func StaleEnactmentThreshold() time.Duration {
+	raw := environment.GetEnvVar(StaleEnactmentThresholdEnvVar, "")
+	if raw == "" {
+		return DefaultStaleEnactmentThreshold
+	}
+	parsed, err := time.ParseDuration(raw)
+	if err != nil || parsed <= 0 {
+		return DefaultStaleEnactmentThreshold
+	}
+	if parsed <= worstCaseApplyCycle {
+		return DefaultStaleEnactmentThreshold
+	}
+	return parsed
+}
+
+// AuditUnavailableSlots recomputes UnavailableNodeCountMap[currentGeneration]
+// from enactments and repairs it downward if it exceeds the number of slot
+// holders (see countSlotHolders). Returns true if a repair was written.
+//
+// The repair is set-to-truth (never a blind decrement), so concurrent audits
+// from multiple nodes are idempotent. The count is never raised.
+func AuditUnavailableSlots(
+	ctx context.Context,
+	statusWriter client.Client,
+	apiReader client.Reader,
+	policyKey types.NamespacedName,
+	staleThreshold time.Duration,
+) (bool, error) {
+	repaired := false
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		repaired = false
+		policy := &nmstatev1.NodeNetworkConfigurationPolicy{}
+		if err := apiReader.Get(ctx, policyKey, policy); err != nil {
+			return err
+		}
+
+		if policy.Status.LastUnavailableNodeCountUpdate != nil &&
+			time.Since(policy.Status.LastUnavailableNodeCountUpdate.Time) < AuditGraceWindow {
+			return nil
+		}
+
+		generationKey := strconv.FormatInt(policy.Generation, 10)
+		stored := 0
+		if policy.Status.UnavailableNodeCountMap != nil {
+			stored = policy.Status.UnavailableNodeCountMap[generationKey]
+		}
+		if stored == 0 {
+			return nil
+		}
+
+		holders, err := countSlotHolders(ctx, apiReader, policy, staleThreshold)
+		if err != nil {
+			return err
+		}
+		if holders >= stored {
+			return nil
+		}
+
+		policy.Status.UnavailableNodeCountMap[generationKey] = holders
+		now := metav1.Now()
+		policy.Status.LastUnavailableNodeCountUpdate = &now
+		if err := statusWriter.Status().Update(ctx, policy); err != nil {
+			return err
+		}
+		repaired = true
+		return nil
+	})
+	return repaired, err
+}
+
+// countSlotHolders counts the enactments of the policy's current generation
+// that hold an unavailable-node slot:
+//
+//   - live holders: Progressing=True with a heartbeat younger than
+//     staleThreshold;
+//   - terminally failed enactments (Failing=True, Progressing=False): a node
+//     whose apply exhausted its retries keeps its slot for the rest of the
+//     generation, so refused nodes abort (shouldAbortReconcile uses the same
+//     filter) instead of applying a policy that already failed. The failure
+//     is terminal and its heartbeat is never refreshed, so staleness does not
+//     apply.
+func countSlotHolders(
+	ctx context.Context,
+	apiReader client.Reader,
+	policy *nmstatev1.NodeNetworkConfigurationPolicy,
+	staleThreshold time.Duration,
+) (int, error) {
+	enactments := nmstatev1beta1.NodeNetworkConfigurationEnactmentList{}
+	policyLabelFilter := client.MatchingLabels{shared.EnactmentPolicyLabel: policy.Name}
+	if err := apiReader.List(ctx, &enactments, policyLabelFilter); err != nil {
+		return 0, err
+	}
+	holders := 0
+	for i := range enactments.Items {
+		enactment := &enactments.Items[i]
+		if enactment.Status.PolicyGeneration != policy.Generation {
+			continue
+		}
+		if isLiveHolder(enactment.Status.Conditions, staleThreshold) ||
+			isTerminallyFailed(enactment.Status.Conditions) {
+			holders++
+		}
+	}
+	return holders, nil
+}
+
+func isLiveHolder(conditions shared.ConditionList, staleThreshold time.Duration) bool {
+	progressing := conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionProgressing)
+	return progressing != nil && progressing.Status == corev1.ConditionTrue &&
+		time.Since(progressing.LastHeartbeatTime.Time) < staleThreshold
+}
+
+func isTerminallyFailed(conditions shared.ConditionList) bool {
+	progressing := conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionProgressing)
+	failing := conditions.Find(shared.NodeNetworkConfigurationEnactmentConditionFailing)
+	return progressing != nil && progressing.Status == corev1.ConditionFalse &&
+		failing != nil && failing.Status == corev1.ConditionTrue
+}

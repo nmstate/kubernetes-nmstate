@@ -72,6 +72,18 @@ func IsProgressing(conditions *nmstate.ConditionList) bool {
 	return false
 }
 
+// IsFinalizing reports whether the enactment is in the post-apply finalization
+// phase: still Progressing (a live slot holder) but with the
+// ConfigurationFinalizing reason, meaning the desired state was already applied
+// and only slot release and success recording remain. Such an enactment must
+// not be re-applied.
+func IsFinalizing(conditions *nmstate.ConditionList) bool {
+	progressingCondition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionProgressing)
+	return progressingCondition != nil &&
+		progressingCondition.Status == corev1.ConditionTrue &&
+		progressingCondition.Reason == nmstate.NodeNetworkConfigurationEnactmentConditionConfigurationFinalizing
+}
+
 func IsAvailable(conditions *nmstate.ConditionList) bool {
 	availableCondition := conditions.Find(nmstate.NodeNetworkConfigurationEnactmentConditionAvailable)
 	return availableCondition != nil && availableCondition.Status == corev1.ConditionTrue
