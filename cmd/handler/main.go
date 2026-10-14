@@ -70,6 +70,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/nmstatectl"
 	"github.com/nmstate/kubernetes-nmstate/pkg/node"
+	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	"github.com/nmstate/kubernetes-nmstate/pkg/webhook"
 )
 
@@ -475,9 +476,10 @@ func restrictCertManagerCache(ctrlOptions *ctrl.Options) error {
 func setupHandlerControllers(mgr manager.Manager) error {
 	setupLog.Info("Creating Node controller")
 	if err := (&controllers.NodeReconciler{
-		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithName("controllers").WithName("Node"),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Log:               ctrl.Log.WithName("controllers").WithName("Node"),
+		Scheme:            mgr.GetScheme(),
+		MaxStateSizeBytes: environment.GetEnvVarAsInt("NNS_MAX_SIZE_BYTES", state.DefaultMaxStateSizeBytes),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create Node controller", "controller", "NMState")
 		return err
