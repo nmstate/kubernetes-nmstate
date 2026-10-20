@@ -43,7 +43,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
-	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	// +kubebuilder:scaffold:imports
@@ -61,7 +60,6 @@ import (
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/handler"
 	controllersmetrics "github.com/nmstate/kubernetes-nmstate/controllers/metrics"
-	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 	"github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus"
 	enactmentconditions "github.com/nmstate/kubernetes-nmstate/pkg/enactmentstatus/conditions"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
@@ -74,8 +72,7 @@ import (
 )
 
 const (
-	generalExitStatus    int    = 1
-	tlsProfileConfigPath string = "/etc/nmstate/tls/profile.json"
+	generalExitStatus int = 1
 )
 
 const (
@@ -147,30 +144,12 @@ func mainHandler() int {
 
 	cfg := ctrl.GetConfigOrDie()
 
-	// Detect OpenShift from env var set by the operator, avoiding an API
-	// server call that can fail when network connectivity is temporarily
-	// unavailable (e.g. during default interface reconfiguration).
-	isOpenShift := cluster.IsOpenShiftFromEnv()
-
-	var platformTLSOpts func(*tls.Config)
-	// Only load TLS profile on OpenShift for components that serve TLS
-	// (webhook and metrics). The handler DaemonSet uses default TLS.
-	// Read from a ConfigMap-mounted file to avoid API server calls.
-	// TLS profile changes are handled by the operator: it updates the
-	// ConfigMap and rolls the Deployments via a hash annotation.
-	if isOpenShift && !environment.IsHandler() {
-		opts, _, err := cluster.FetchTLSProfileFromFile(tlsProfileConfigPath)
-		if err != nil {
-			setupLog.Error(err, "unable to load TLS configuration from file")
-			return generalExitStatus
-		}
-		platformTLSOpts = opts
+	tlsOpts := func(c *tls.Config) {
+		// Disable HTTP/2 to mitigate CVE-2023-39325.
+		c.NextProtos = []string{"http/1.1"}
 	}
 
-	// Compose the TLS opts applied to all TLS-enabled servers.
-	tlsOpts := composeTLSOpts(platformTLSOpts)
-
-	mgr, err := createManager(cfg, tlsOpts, platformTLSOpts != nil)
+	mgr, err := createManager(cfg, tlsOpts)
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
 		return generalExitStatus
@@ -211,17 +190,6 @@ func setupHandlerLockIfNeeded() (*flock.Flock, error) {
 	return handlerLock, nil
 }
 
-// composeTLSOpts returns TLS options for all TLS-enabled servers.
-// Always disables HTTP/2 (CVE-2023-39325), and adds the platform profile opts if present.
-func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
-	return func(c *tls.Config) {
-		if tlsOpts != nil {
-			tlsOpts(c)
-		}
-		c.NextProtos = []string{"http/1.1"}
-	}
-}
-
 // createManager creates and configures the controller manager.
 //
 // Only the nmstate-metrics Deployment enables the metrics server: it is the
@@ -230,10 +198,8 @@ func composeTLSOpts(tlsOpts func(*tls.Config)) func(*tls.Config) {
 // disable it to avoid exposing unused HTTPS ports.
 //
 // When the metrics server is enabled, it always uses TLS (SecureServing).
-// On non-OpenShift clusters controller-runtime auto-generates a self-signed
-// certificate. When isOpenShift is true, authentication and authorization
-// are enforced on the metrics endpoint via TokenReview/SubjectAccessReview.
-func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool) (manager.Manager, error) {
+// Controller-runtime auto-generates a self-signed certificate.
+func createManager(cfg *rest.Config, tlsOpts func(*tls.Config)) (manager.Manager, error) {
 	var metricsOpts metricsserver.Options
 
 	if environment.IsMetricsManager() {
@@ -242,9 +208,6 @@ func createManager(cfg *rest.Config, tlsOpts func(*tls.Config), isOpenShift bool
 			BindAddress:   metricsBindAddress,
 			SecureServing: true,
 			TLSOpts:       []func(*tls.Config){tlsOpts},
-		}
-		if isOpenShift {
-			metricsOpts.FilterProvider = filters.WithAuthenticationAndAuthorization
 		}
 	} else {
 		metricsOpts = metricsserver.Options{

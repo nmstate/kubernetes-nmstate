@@ -19,11 +19,6 @@ handler:
   # of operator-sdk's RELATED_IMAGE_* handling.
   imageEnvVar: RELATED_IMAGE_HANDLER_IMAGE
 
-plugin:
-  # Console plugin image used by the operator on OpenShift. When empty (the
-  # default), no PLUGIN_IMAGE environment variable is rendered.
-  image: ""
-
 monitoring:
   namespace: monitoring
 

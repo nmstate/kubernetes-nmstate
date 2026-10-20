@@ -9,7 +9,10 @@ and kubernetes-nmstate on your arbitrary cluster.
 
 ## Requirements
 
-This guide requires you to have your own Kubernetes/OpenShift cluster. If you
+For OpenShift, use [openshift/kubernetes-nmstate](https://github.com/openshift/kubernetes-nmstate)
+and its deployment instructions.
+
+This guide requires you to have your own Kubernetes cluster. If you
 don't have one and just want to try kubernetes-nmstate out, please refer to
 the [deployment on local cluster]({{< relref "/deployment/local-cluster" >}}) guide.
 

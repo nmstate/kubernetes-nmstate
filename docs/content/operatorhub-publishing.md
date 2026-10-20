@@ -8,24 +8,22 @@ This document describes how to publish kubernetes-nmstate to OperatorHub using G
 
 ## Overview
 
-The kubernetes-nmstate operator can be published to two OperatorHub repositories:
+The kubernetes-nmstate operator is published to
+[community-operators](https://github.com/k8s-operatorhub/community-operators)
+for upstream Kubernetes clusters (https://operatorhub.io).
 
-1. **community-operators** - For upstream Kubernetes clusters (https://operatorhub.io)
-2. **community-operators-prod** - For OpenShift/OKD clusters (Red Hat Certified)
+OpenShift packaging and deployment belong to the
+[OpenShift fork](https://github.com/openshift/kubernetes-nmstate).
 
-We provide two GitHub Actions workflows for publishing:
-
-- **Manual Publishing**: `publish-operatorhub.yml` - Triggered manually for testing or specific versions
-- **Automatic Publishing**: `publish-operatorhub-on-release.yml` - Triggered automatically when a release is published
+The `publish-operatorhub.yml` workflow runs when a release is published
+or can be triggered manually for testing or specific versions.
 
 ## Prerequisites
 
 ### Required Secrets
 
-The workflows require a GitHub secret named `OPERATORHUB_TOKEN` with permissions to:
-
-1. Fork and create PRs in the k8s-operatorhub/community-operators repository
-2. Fork and create PRs in the redhat-openshift-ecosystem/community-operators-prod repository
+The workflow requires a GitHub secret named `OPERATORHUB_TOKEN` with permissions
+to push to the publishing fork and create PRs in k8s-operatorhub/community-operators.
 
 To set up the token:
 
@@ -74,20 +72,17 @@ The automatic workflow triggers when a GitHub release is published.
    - Extracts the version from the release tag
    - Generates the OLM bundle
    - Creates a PR to `community-operators` (for all releases)
-   - Creates a PR to `community-operators-prod` (for stable releases only, not pre-releases)
 
 ### Workflow Behavior
 
 - **All releases**: Published to `community-operators` (operatorhub.io)
-- **Stable releases only**: Published to `community-operators-prod` (OpenShift)
-  - Pre-releases (e.g., `v0.88.0-rc1`) are NOT published to production
 
 ### Manual Trigger
 
 You can also manually trigger the automatic workflow:
 
 ```bash
-gh workflow run publish-operatorhub-on-release.yml -f tag=v0.88.0
+gh workflow run publish-operatorhub.yml -f tag=v0.88.0
 ```
 
 ## Manual Publishing
@@ -100,10 +95,7 @@ Use the manual workflow for testing or when you need fine-grained control.
 2. **Select** "Publish to OperatorHub" workflow
 3. **Click** "Run workflow"
 4. **Fill in the parameters**:
-   - `version`: Operator version (e.g., `0.88.0` - without the 'v' prefix)
-   - `operator_hub_repo`: Choose the target repository
-     - `community-operators` - For operatorhub.io
-     - `community-operators-prod` - For OpenShift
+   - `tag`: Release tag (e.g., `v0.88.0`)
    - `create_pr`: Enable/disable PR creation (disable for testing)
 
 ### Using GitHub CLI
@@ -111,20 +103,12 @@ Use the manual workflow for testing or when you need fine-grained control.
 ```bash
 # Publish to community-operators
 gh workflow run publish-operatorhub.yml \
-  -f version=0.88.0 \
-  -f operator_hub_repo=community-operators \
-  -f create_pr=true
-
-# Publish to community-operators-prod (OpenShift)
-gh workflow run publish-operatorhub.yml \
-  -f version=0.88.0 \
-  -f operator_hub_repo=community-operators-prod \
+  -f tag=v0.88.0 \
   -f create_pr=true
 
 # Test bundle generation without creating a PR
 gh workflow run publish-operatorhub.yml \
-  -f version=0.88.0 \
-  -f operator_hub_repo=community-operators \
+  -f tag=v0.88.0 \
   -f create_pr=false
 ```
 
@@ -178,7 +162,6 @@ Common CI checks include:
 - Bundle validation
 - Image accessibility checks
 - Operator scorecard tests
-- OpenShift compatibility (for community-operators-prod)
 
 ## Troubleshooting
 
@@ -218,7 +201,8 @@ The workflows expect semantic versioning:
 - Correct: `0.88.0`, `1.0.0`, `0.88.1`
 - Incorrect: `v0.88.0`, `0.88`, `latest`
 
-For release tags, use the `v` prefix (e.g., `v0.88.0`), but for the workflow `version` input, omit it.
+The workflow strips the `v` prefix from the release tag or manual `tag` input
+before validating the version.
 
 ## Testing Locally
 
@@ -247,5 +231,4 @@ cat bundle/manifests/kubernetes-nmstate-operator.clusterserviceversion.yaml
 - [OperatorHub.io](https://operatorhub.io)
 - [Operator Framework Documentation](https://sdk.operatorframework.io/)
 - [community-operators Repository](https://github.com/k8s-operatorhub/community-operators)
-- [community-operators-prod Repository](https://github.com/redhat-openshift-ecosystem/community-operators-prod)
 - [Operator Lifecycle Manager (OLM)](https://olm.operatorframework.io/)

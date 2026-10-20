@@ -26,10 +26,6 @@ OPERATOR_IMAGE_TAG ?= latest
 OPERATOR_IMAGE_FULL_NAME ?= $(IMAGE_REPO)/$(OPERATOR_IMAGE_NAME):$(OPERATOR_IMAGE_TAG)
 OPERATOR_IMAGE ?= $(IMAGE_REGISTRY)/$(OPERATOR_IMAGE_FULL_NAME)
 
-# Optional console plugin image (used by downstream distributions like
-# openshift/kubernetes-nmstate). Empty by default so no PLUGIN_IMAGE env is rendered.
-PLUGIN_IMAGE ?=
-
 export HANDLER_NAMESPACE ?= nmstate
 export OPERATOR_NAMESPACE ?= $(HANDLER_NAMESPACE)
 export MONITORING_NAMESPACE ?= monitoring
@@ -204,7 +200,6 @@ manifests: $(HELM)
 		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
 		--set handler.namespace=$(HANDLER_NAMESPACE) \
 		--set handler.prefix=$(HANDLER_PREFIX) \
-		--set plugin.image=$(PLUGIN_IMAGE) \
 		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
 		--output-dir $(MANIFESTS_DIR)
 

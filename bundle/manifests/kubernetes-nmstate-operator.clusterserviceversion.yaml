@@ -63,7 +63,7 @@ metadata:
     categories: Networking
     certified: "false"
     containerImage: quay.io/nmstate/kubernetes-nmstate-operator:latest
-    createdAt: "2026-05-29T12:19:37Z"
+    createdAt: "2026-10-20T13:53:49Z"
     description: |
       Kubernetes NMState is a declaritive means of configuring NetworkManager.
     operatorframework.io/suggested-namespace: nmstate
@@ -149,15 +149,6 @@ spec:
           - list
           - watch
         - apiGroups:
-          - ""
-          resources:
-          - secrets
-          verbs:
-          - delete
-          - get
-          - list
-          - watch
-        - apiGroups:
           - admissionregistration.k8s.io
           resources:
           - mutatingwebhookconfigurations
@@ -190,26 +181,6 @@ spec:
           - deployments
           - replicasets
           - statefulsets
-          verbs:
-          - create
-          - delete
-          - get
-          - list
-          - patch
-          - update
-          - watch
-        - apiGroups:
-          - config.openshift.io
-          resources:
-          - apiservers
-          verbs:
-          - get
-          - list
-          - watch
-        - apiGroups:
-          - console.openshift.io
-          resources:
-          - consoleplugins
           verbs:
           - create
           - delete
@@ -275,15 +246,6 @@ spec:
           - patch
           - update
         - apiGroups:
-          - operator.openshift.io
-          resources:
-          - consoles
-          verbs:
-          - get
-          - list
-          - update
-          - watch
-        - apiGroups:
           - policy
           resources:
           - poddisruptionbudgets
@@ -336,9 +298,6 @@ spec:
           strategy: {}
           template:
             metadata:
-              annotations:
-                target.workload.openshift.io/management: |
-                  {"effect": "PreferredDuringScheduling"}
               labels:
                 app: kubernetes-nmstate-operator
                 name: kubernetes-nmstate-operator
