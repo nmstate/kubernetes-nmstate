@@ -60,8 +60,8 @@ The workflow adjusts QEMU confinement only on its disposable hosted runner.
 Images are built before the VM starts and pushed through a loopback port-forward
 to OKD's internal registry using a short-lived, namespace-scoped service-account
 token. Installation reuses the standard Helm deployment and readiness helpers.
-The smoke test requires the operator Deployment, handler DaemonSet, NMState
-availability, and a NodeNetworkState report. It deliberately does not run the
+The smoke test requires the operator Deployment, one ready handler pod, NMState
+availability, and a successful NodeNetworkState update. It deliberately does not run the
 multi-node/network-interface e2e suites on CRC's single-node cluster.
 
 Cluster diagnostics and component logs are uploaded as `okd-installation`

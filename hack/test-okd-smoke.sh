@@ -19,6 +19,7 @@ oc() {
         "create token"*) echo test-token ;;
         "get nns -o name"*) echo nodenetworkstate/crc ;;
         "wait --for=condition=Available"*) return "${readiness_status:-0}" ;;
+        *lastSuccessfulUpdateTime*) return "${report_status:-0}" ;;
     esac
 }
 
@@ -61,10 +62,16 @@ grep -q -- '--set nmstate.enabled=true' "${test_dir}/commands"
 grep -q 'rollout status -w -n nmstate deployment nmstate-operator' "${test_dir}/commands"
 grep -q 'rollout status -w -n nmstate ds nmstate-handler' "${test_dir}/commands"
 grep -q 'get nns -o name' "${test_dir}/commands"
+grep -Fq 'wait --for=jsonpath={.status.numberReady}=1' "${test_dir}/commands"
+grep -Fq 'wait --for=jsonpath={.status.lastSuccessfulUpdateTime}' "${test_dir}/commands"
 
 # Failure must propagate; diagnostic collection must not turn a failed lane green.
 if readiness_status=1 bash -c 'source ./automation/check-patch.okd.sh; install_operator'; then
     echo "Expected failed NMState readiness to fail installation" >&2
+    exit 1
+fi
+if report_status=1 bash -c 'source ./automation/check-patch.okd.sh; install_operator'; then
+    echo "Expected missing node state to fail installation" >&2
     exit 1
 fi
 (

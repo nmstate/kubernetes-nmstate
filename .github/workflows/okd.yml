@@ -62,7 +62,10 @@ jobs:
           crc config set preset okd
           crc config set network-mode user
           sudo -su "$USER" crc setup
-          sudo -su "$USER" crc start --output json > "$RUNNER_TEMP/crc-start.json"
+          umask 077
+          {
+            sudo -su "$USER" crc start --output json
+          } > "$RUNNER_TEMP/crc-start.json"
           echo "$HOME/.crc/bin/oc" >> "$GITHUB_PATH"
           echo "KUBECONFIG=$HOME/.crc/machines/crc/kubeconfig" >> "$GITHUB_ENV"
       - name: Install and verify upstream operator and handler

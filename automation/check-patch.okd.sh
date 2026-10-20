@@ -64,6 +64,8 @@ install_operator() {
     deploy_operator true
     wait_ready_operator true
     oc wait --for=condition=Available nmstate/nmstate --timeout=5m
+    oc wait --for=jsonpath='{.status.numberReady}'=1 -n nmstate ds/nmstate-handler --timeout=5m
+    oc wait --for=jsonpath='{.status.lastSuccessfulUpdateTime}' nns --all --timeout=5m
 }
 
 main() {
