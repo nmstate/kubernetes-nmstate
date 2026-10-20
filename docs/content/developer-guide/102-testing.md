@@ -42,6 +42,37 @@ make test-e2e E2E_TEST_ARGS='--ginkgo.skip="Simple\ OVS*"'
 
 E2E tests are located in `test/e2e/` and require a Kubernetes cluster with the operator deployed.
 
+### OKD installation CI
+
+The `OKD upstream operator` GitHub Actions workflow runs on pull requests, pushes
+to `main`, and manual dispatch. It provisions a single-node OKD cluster using
+[CRC's OKD preset](https://crc.dev/docs/), then installs the upstream operator and
+handler built from the checkout. CRC is pinned in `.github/workflows/okd.yml`;
+its release selects the matching OKD bundle. No Red Hat pull secret or external
+image registry credentials are required.
+
+CRC is used because the pinned kubevirtci release no longer ships OKD/OCP
+providers. CRC also [tests its OKD preset on GitHub-hosted Linux runners](https://github.com/crc-org/crc/blob/v2.64.0/.github/workflows/test-okd-bundle.yml).
+The runner needs x86_64 Linux, KVM, libvirt, four CPUs, at least 16 GiB of host
+memory (CRC uses 10.5 GiB), and sufficient free disk for the VM and image builds.
+The workflow adjusts QEMU confinement only on its disposable hosted runner.
+
+Images are built before the VM starts and pushed through a loopback port-forward
+to OKD's internal registry using a short-lived, namespace-scoped service-account
+token. Installation reuses the standard Helm deployment and readiness helpers.
+The smoke test requires the operator Deployment, handler DaemonSet, NMState
+availability, and a NodeNetworkState report. It deliberately does not run the
+multi-node/network-interface e2e suites on CRC's single-node cluster.
+
+Cluster diagnostics and component logs are uploaded as `okd-installation`
+artifacts, and the VM is deleted even on failure. Credentials and CRC startup
+output are not uploaded. To run the deployment-helper regression checks without
+a cluster:
+
+```bash
+bash hack/test-okd-smoke.sh
+```
+
 ## Static Checks
 
 ```bash

@@ -1,0 +1,82 @@
+name: OKD upstream operator
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: okd-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    env:
+      CRC_VERSION: 2.64.0
+      IMAGE_BUILDER: podman
+      IMAGE_REGISTRY: localhost:5000
+      IMAGE_REPO: nmstate
+      HANDLER_IMAGE_TAG: ci
+      OPERATOR_IMAGE_TAG: ci
+      ARTIFACTS: ${{ github.workspace }}/test_logs/okd
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Validate the lane and deployment chart
+        run: |
+          bash hack/test-okd-smoke.sh
+          make lint-helm
+      - name: Prepare virtualization
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-utils libvirt-daemon-system virtiofsd podman
+          # Match CRC's OKD CI: the hosted runner's AppArmor policy blocks QEMU.
+          echo 'security_driver = "none"' | sudo tee -a /etc/libvirt/qemu.conf
+          sudo systemctl restart libvirtd
+          sudo usermod -a -G libvirt "$USER"
+          sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet
+      - name: Install pinned CRC
+        run: |
+          curl --fail --location --retry 3 \
+            "https://developers.redhat.com/content-gateway/rest/mirror/pub/cgw/crc/${CRC_VERSION}/crc-linux-amd64.tar.xz" \
+            --output "$RUNNER_TEMP/crc.tar.xz"
+          tar -xJf "$RUNNER_TEMP/crc.tar.xz" -C "$RUNNER_TEMP" "crc-linux-${CRC_VERSION}-amd64/crc"
+          sudo install "$RUNNER_TEMP/crc-linux-${CRC_VERSION}-amd64/crc" /usr/local/bin/crc
+          rm -rf "$RUNNER_TEMP/crc.tar.xz" "$RUNNER_TEMP/crc-linux-${CRC_VERSION}-amd64"
+      - name: Build upstream images before starting the VM
+        run: make handler operator
+      - name: Provision OKD
+        run: |
+          crc config set consent-telemetry no
+          crc config set preset okd
+          crc config set network-mode user
+          sudo -su "$USER" crc setup
+          sudo -su "$USER" crc start --output json > "$RUNNER_TEMP/crc-start.json"
+          echo "$HOME/.crc/bin/oc" >> "$GITHUB_PATH"
+          echo "KUBECONFIG=$HOME/.crc/machines/crc/kubeconfig" >> "$GITHUB_ENV"
+      - name: Install and verify upstream operator and handler
+        run: bash automation/check-patch.okd.sh
+      - name: Collect CRC status
+        if: always()
+        run: |
+          mkdir -p "$ARTIFACTS"
+          crc status > "$ARTIFACTS/crc-status.txt" 2>&1 || true
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: okd-installation
+          path: test_logs/okd
+      - name: Delete OKD cluster
+        if: always()
+        run: crc delete --force
