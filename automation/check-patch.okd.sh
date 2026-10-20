@@ -35,10 +35,10 @@ push_images() {
     oc port-forward -n openshift-image-registry service/image-registry 5000:5000 \
         --address=127.0.0.1 > "${ARTIFACTS}/registry.log" 2>&1 &
     registry_pid=$!
-    timeout 60 bash -c 'until curl --fail --silent http://127.0.0.1:5000/healthz; do sleep 1; done'
+    timeout 60 bash -c 'until curl --fail --silent --insecure https://127.0.0.1:5000/healthz; do sleep 1; done'
 
     # Keep the short-lived, namespace-scoped registry credential out of logs/artifacts.
-    # Plain HTTP is confined to loopback; oc tunnels it through the Kubernetes API.
+    # Skip TLS hostname verification only on loopback, inside the authenticated API tunnel.
     oc create token ci-image-builder -n nmstate --duration=15m |
         podman login --authfile "${auth_dir}/auth.json" --tls-verify=false \
             --username serviceaccount --password-stdin localhost:5000

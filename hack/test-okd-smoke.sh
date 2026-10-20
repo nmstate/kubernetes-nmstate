@@ -29,7 +29,9 @@ test_helm() {
 
 sleep() { :; }
 
-timeout() { :; }
+timeout() {
+    echo "timeout $*" >> "${test_dir}/commands"
+}
 
 podman() {
     echo "podman $*" >> "${test_dir}/commands"
@@ -45,6 +47,7 @@ export -f oc test_helm sleep timeout podman
 
 # Push only the locally built images, with a temporary scoped credential.
 bash -c 'source ./automation/check-patch.okd.sh; push_images'
+grep -Fq 'curl --fail --silent --insecure https://127.0.0.1:5000/healthz' "${test_dir}/commands"
 grep -q 'create token ci-image-builder -n nmstate --duration=15m' "${test_dir}/commands"
 for component in handler operator; do
     grep -q "docker://localhost:5000/nmstate/kubernetes-nmstate-${component}:ci" "${test_dir}/commands"

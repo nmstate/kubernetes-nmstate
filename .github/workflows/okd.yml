@@ -74,7 +74,7 @@ jobs:
         if: always()
         run: |
           mkdir -p "$ARTIFACTS"
-          crc status > "$ARTIFACTS/crc-status.txt" 2>&1 || true
+          { sudo -su "$USER" crc status; } > "$ARTIFACTS/crc-status.txt" 2>&1 || true
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: always()
         with:
@@ -82,4 +82,4 @@ jobs:
           path: test_logs/okd
       - name: Delete OKD cluster
         if: always()
-        run: crc delete --force
+        run: sudo -su "$USER" crc delete --force
