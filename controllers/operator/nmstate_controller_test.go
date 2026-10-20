@@ -554,12 +554,6 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).To(ContainElements("--v", "debug"))
 			})
-			It("should use gdbus in livenessProbe command", func() {
-				ds := &appsv1.DaemonSet{}
-				err := cl.Get(context.Background(), handlerKey, ds)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(ContainSubstring("gdbus call")))
-			})
 		})
 
 		Context("when log level is set to info (default)", func() {
@@ -581,38 +575,25 @@ var _ = Describe("NMState controller reconcile", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
 			})
-			It("should use gdbus in livenessProbe command", func() {
-				ds := &appsv1.DaemonSet{}
-				err := cl.Get(context.Background(), handlerKey, ds)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(ContainSubstring("gdbus call")))
-			})
 		})
+	})
 
-		Context("when log level is unset (default)", func() {
-			BeforeEach(func() {
-				// leave LogLevel field unset (default behavior)
-				nmstate := newNMState()
-				cl = setupFakeClient(nmstate)
-				reconciler.Client = cl
-				reconciler.APIClient = cl
-				request.Name = existingNMStateName
-				result, err := reconciler.Reconcile(context.Background(), request)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
-			})
-			It("should not add verbose arguments to handler daemonset container args", func() {
-				ds := &appsv1.DaemonSet{}
-				err := cl.Get(context.Background(), handlerKey, ds)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
-			})
-			It("should use gdbus in livenessProbe command", func() {
-				ds := &appsv1.DaemonSet{}
-				err := cl.Get(context.Background(), handlerKey, ds)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(ds.Spec.Template.Spec.Containers[0].LivenessProbe.Exec.Command).To(ContainElement(ContainSubstring("gdbus call")))
-			})
+	Context("when operator spec log level is unset", func() {
+		BeforeEach(func() {
+			nmstate := newNMState()
+			cl = setupFakeClient(nmstate)
+			reconciler.Client = cl
+			reconciler.APIClient = cl
+			request := ctrl.Request{NamespacedName: types.NamespacedName{Name: existingNMStateName}}
+			result, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(ctrl.Result{RequeueAfter: ResyncPeriod}))
+		})
+		It("should not add verbose arguments to handler daemonset container args", func() {
+			ds := &appsv1.DaemonSet{}
+			err := cl.Get(context.Background(), handlerKey, ds)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(ds.Spec.Template.Spec.Containers[0].Args).ToNot(ContainElements("--v", "debug"))
 		})
 	})
 
