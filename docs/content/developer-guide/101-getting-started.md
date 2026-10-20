@@ -69,7 +69,7 @@ systemctl reboot
 
 ## External Cluster Development
 
-To develop against an external OCP cluster using a custom container registry:
+To develop against an external Kubernetes cluster using a custom container registry:
 
 Set the environment variables `KUBEVIRT_PROVIDER=external` and `KUBECONFIG` pointing to the k8s cluster config.
 

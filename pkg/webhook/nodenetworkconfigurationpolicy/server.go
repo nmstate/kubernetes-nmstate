@@ -26,8 +26,7 @@ import (
 )
 
 // Add registers webhook handlers with the manager. tlsOpts configures TLS
-// for the webhook server (includes HTTP/2 mitigation and OpenShift profile
-// when applicable).
+// for the webhook server (includes HTTP/2 mitigation).
 func Add(mgr manager.Manager, tlsOpts func(*tls.Config)) error {
 	server := webhook.NewServer(webhook.Options{
 		TLSOpts: []func(*tls.Config){tlsOpts},

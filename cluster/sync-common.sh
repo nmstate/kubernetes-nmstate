@@ -33,10 +33,6 @@ function isExternal {
     [[ "${KUBEVIRT_PROVIDER}" == external ]]
 }
 
-function isOpenshift {
-    $kubectl get co openshift-apiserver
-}
-
 function digest {
     local registry=${1}
     local image=${2}
@@ -54,11 +50,7 @@ function push() {
     fi
     # Fetch registry port that can be used to upload images to the local kubevirtci cluster
     registry_port=$(./cluster/cli.sh ports registry | tr -d '\r')
-    if [[ "${KUBEVIRT_PROVIDER}" =~ ^(okd|ocp)-.*$ ]]; then \
-            registry=localhost:$(./cluster/cli.sh ports --container-name=cluster registry | tr -d '\r')
-    else
-        registry=localhost:$(./cluster/cli.sh ports registry | tr -d '\r')
-    fi
+    registry=localhost:${registry_port}
 
     # Build new handler and operator image from local sources and push it to the kubevirtci cluster
     IMAGE_REGISTRY=${registry} make push

@@ -30,9 +30,24 @@ echo "${rendered}" | grep -q 'value: "yes"' \
 echo "${rendered}" | grep -q 'value: "123"' \
     || fail 'expected MONITORING_NAMESPACE env value to render as the string "123"'
 
+if echo "${rendered}" | grep -E 'openshift[.]io|PLUGIN_IMAGE|IS_OPENSHIFT'; then
+    fail 'found platform-specific configuration in the upstream chart'
+fi
+
 # No string-valued field may render one of the ambiguous inputs unquoted
 if echo "${rendered}" | grep -E '^[[:space:]]*(name|namespace|value):[[:space:]]*(null|yes|123)[[:space:]]*$'; then
     fail 'found unquoted YAML-ambiguous value in rendered output'
 fi
+
+rendered=$(${HELM} template nmstate "${CHART_DIR}" \
+    --set handler.imageEnvVar=HANDLER_IMAGE \
+    --set handler.image=example.com/nmstate/handler:test \
+    --set handler.prefix=test)
+echo "${rendered}" | grep -q 'name: HANDLER_IMAGE$' \
+    || fail 'expected the configurable handler image environment variable'
+echo "${rendered}" | grep -q 'value: "example.com/nmstate/handler:test"' \
+    || fail 'expected the configured handler image'
+echo "${rendered}" | grep -q 'value: "test"' \
+    || fail 'expected the configured handler prefix'
 
 echo "helm render test passed"

@@ -22,10 +22,6 @@ kubevirtci::install
 
 $(kubevirtci::path)/cluster-up/up.sh
 
-if [[ "$KUBEVIRT_PROVIDER" =~ ^(okd|ocp)-.*$$ ]]; then \
-		while ! $(KUBECTL) get securitycontextconstraints; do sleep 1; done; \
-fi
-
 echo 'Upgrading NetworkManager and enabling and starting up openvswitch'
 for node in $(./cluster/kubectl.sh get nodes --no-headers | awk '{print $1}'); do
     # Unload the unused emulated igb NIC. kubevirtci VMs ship an emulated
