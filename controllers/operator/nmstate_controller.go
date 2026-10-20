@@ -516,10 +516,14 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error {
 	// We are no longer using cert-manager at openshift, let's remove it
 	if r.IsOpenShift {
+		prefix := environment.GetEnvVar("HANDLER_PREFIX", "")
+		if prefix != "" {
+			prefix += "-"
+		}
 		err := r.Delete(ctx, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: environment.GetEnvVar("HANDLER_NAMESPACE", ""),
-				Name:      environment.GetEnvVar("HANDLER_PREFIX", "") + "nmstate-cert-manager",
+				Name:      prefix + "nmstate-cert-manager",
 			},
 		})
 		if err != nil && !apierrors.IsNotFound(err) {
@@ -530,7 +534,7 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 		err = r.Delete(ctx, &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: environment.GetEnvVar("HANDLER_NAMESPACE", ""),
-				Name:      environment.GetEnvVar("HANDLER_PREFIX", "") + "nmstate-webhook",
+				Name:      prefix + "nmstate-webhook",
 			},
 		})
 		if err != nil && !apierrors.IsNotFound(err) {

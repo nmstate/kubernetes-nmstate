@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/discovery"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -133,10 +134,15 @@ func setupOperatorController(mgr manager.Manager) error {
 		return fmt.Errorf("failed creating non cached client: %w", err)
 	}
 
-	isOpenShift, err := cluster.IsOpenShift(apiClient)
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(mgr.GetConfig())
 	if err != nil {
-		setupLog.Info("Warning: could not determine if running on OpenShift, assuming not")
+		return fmt.Errorf("failed creating discovery client: %w", err)
 	}
+	isOpenShift, err := cluster.IsOpenShift(discoveryClient)
+	if err != nil {
+		return fmt.Errorf("failed detecting cluster platform: %w", err)
+	}
+	setupLog.Info("Detected cluster platform", "isOpenShift", isOpenShift)
 
 	if err = (&controllers.NMStateReconciler{
 		Client:      mgr.GetClient(),

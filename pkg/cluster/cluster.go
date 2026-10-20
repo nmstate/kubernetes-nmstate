@@ -23,9 +23,8 @@ import (
 	"fmt"
 	"os"
 
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/discovery"
 
 	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -34,19 +33,24 @@ import (
 var log = logf.Log.WithName("cluster")
 
 // IsOpenShift returns true if the current cluster is an OpenShift/OKD cluster.
-func IsOpenShift(kclient client.Client) (bool, error) {
-	// if the cluster has the securityContextConstraint resource of the group security.openshift.io, then it is most likely an OCP/OKD cluster
-	sccGVR := schema.GroupVersion{Group: "security.openshift.io", Version: "v1"}.WithResource("securitycontextconstraints")
-	_, err := kclient.RESTMapper().ResourcesFor(sccGVR)
-
+// Discovery failures are returned to the caller rather than treated as Kubernetes.
+func IsOpenShift(discoveryClient discovery.ServerResourcesInterface) (bool, error) {
+	// Query the group directly: the REST mapper can turn stale aggregated
+	// discovery into a NoMatch error, incorrectly identifying OpenShift as Kubernetes.
+	resources, err := discoveryClient.ServerResourcesForGroupVersion("security.openshift.io/v1")
 	if err != nil {
-		if apimeta.IsNoMatchError(err) {
+		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
 		return false, fmt.Errorf("could not determine if running on OCP/OKD: %w", err)
 	}
 
-	return true, nil
+	for i := range resources.APIResources {
+		if resources.APIResources[i].Name == "securitycontextconstraints" {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // IsOpenShiftFromEnv returns true if the IS_OPENSHIFT environment variable

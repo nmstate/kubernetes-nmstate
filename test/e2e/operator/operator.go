@@ -125,6 +125,7 @@ func EventuallyOperandIsReady(testData TestData) {
 		By("Wait deployment cert-manager is ready")
 		deployment.GetEventually(testData.CertManagerKey).Should(deployment.BeReady(), "should start cert-manager deployment")
 	} else {
+		EventuallyIsNotFound(testData.CertManagerKey, &appsv1.Deployment{}, "should not run cert-manager on OpenShift")
 		By("Wait deployment console-plugin is ready")
 		deployment.GetEventually(testData.ConsolePluginKey).Should(deployment.BeReady(), "should start console-plugin deployment")
 	}
@@ -200,7 +201,7 @@ func UninstallOperator(operator TestData) {
 
 func IsOpenShift() bool {
 	GinkgoHelper()
-	isOpenShift, err := cluster.IsOpenShift(testenv.Client)
+	isOpenShift, err := cluster.IsOpenShift(testenv.KubeClient.Discovery())
 	Expect(err).ToNot(HaveOccurred())
 	return isOpenShift
 }

@@ -124,6 +124,44 @@ func (s *forceOwnershipSpyStatusWriter) Patch(
 	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }
 
+var _ = Describe("obsolete certificate resources", func() {
+	DescribeTable("cleanup", func(prefix string, isOpenShift bool) {
+		GinkgoT().Setenv("HANDLER_NAMESPACE", "nmstate")
+		GinkgoT().Setenv("HANDLER_PREFIX", prefix)
+		if prefix != "" {
+			prefix += "-"
+		}
+		certManager := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nmstate", Name: prefix + "nmstate-cert-manager",
+		}}
+		legacySecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nmstate", Name: prefix + "nmstate-webhook",
+		}}
+		serviceCASecret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+			Namespace: "nmstate", Name: prefix + "openshift-nmstate-webhook",
+		}}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Scheme).WithObjects(certManager, legacySecret, serviceCASecret).Build()
+		reconciler := NMStateReconciler{Client: cl, IsOpenShift: isOpenShift}
+		ctx := context.Background()
+		Expect(reconciler.cleanupObsoleteResources(ctx)).To(Succeed())
+		for _, obj := range []client.Object{certManager, legacySecret} {
+			err := cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)
+			if isOpenShift {
+				Expect(apierrors.IsNotFound(err)).To(BeTrue(), "obsolete resource %s must be removed", obj.GetName())
+			} else {
+				Expect(err).ToNot(HaveOccurred())
+			}
+		}
+		Expect(cl.Get(ctx, client.ObjectKeyFromObject(serviceCASecret), serviceCASecret)).To(Succeed())
+		Expect(reconciler.cleanupObsoleteResources(ctx)).To(Succeed(), "cleanup must be idempotent")
+	},
+		Entry("OpenShift", "", true),
+		Entry("OpenShift with a handler prefix", "custom", true),
+		Entry("Kubernetes", "", false),
+		Entry("Kubernetes with a handler prefix", "custom", false),
+	)
+})
+
 var _ = Describe("NMState controller reconcile", func() {
 	var (
 		cl                         client.Client
