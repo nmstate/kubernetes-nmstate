@@ -59,15 +59,17 @@ The workflow adjusts QEMU confinement only on its disposable hosted runner.
 
 Images are built before the VM starts and pushed through a loopback port-forward
 to OKD's internal registry using a short-lived, namespace-scoped service-account
-token. Installation reuses the standard Helm deployment and readiness helpers.
+token. The operator and handler service accounts are created first, so OpenShift
+attaches their internal-registry pull secrets before any pod uses them.
+Installation reuses the standard Helm deployment and readiness helpers.
 The smoke test requires the operator Deployment, one ready handler pod, NMState
 availability, and a successful NodeNetworkState update. It deliberately does not run the
 multi-node/network-interface e2e suites on CRC's single-node cluster.
 
 Cluster diagnostics and component logs are uploaded as `okd-installation`
-artifacts, and the VM is deleted even on failure. Credentials and CRC startup
-output are not uploaded. To run the deployment-helper regression checks without
-a cluster:
+artifacts, and the VM is deleted even on failure. CRC's startup banner, which
+contains generated credentials, is discarded, and no credentials are uploaded.
+To run the deployment-helper regression checks without a cluster:
 
 ```bash
 bash hack/test-okd-smoke.sh

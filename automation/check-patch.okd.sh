@@ -50,6 +50,30 @@ push_images() {
     done
 }
 
+create_service_accounts() {
+    # OpenShift attaches internal-registry pull secrets to new service accounts
+    # asynchronously, and pods admitted before that never get them. Pre-create
+    # the accounts that Helm and the operator adopt, then wait for the secrets.
+    oc create -n nmstate -f - <<EOF
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nmstate-operator
+  labels:
+    app.kubernetes.io/managed-by: Helm
+  annotations:
+    meta.helm.sh/release-name: ${HELM_RELEASE_NAME}
+    meta.helm.sh/release-namespace: nmstate
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nmstate-handler
+EOF
+    oc wait -n nmstate --for=jsonpath='{.imagePullSecrets[0].name}' \
+        serviceaccount/nmstate-operator serviceaccount/nmstate-handler --timeout=2m
+}
+
 install_operator() {
     export KUBEVIRT_PROVIDER=external
     export KUBEVIRT_NUM_NODES=1
@@ -60,6 +84,7 @@ install_operator() {
     source ./cluster/sync-operator.sh
     export kubectl=oc
 
+    create_service_accounts
     # Reuse the Helm installation/readiness helpers, without kubevirtci or rebuilding.
     deploy_operator true
     wait_ready_operator true

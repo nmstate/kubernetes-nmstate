@@ -17,6 +17,7 @@ oc() {
     echo "oc $*" >> "${test_dir}/commands"
     case "$*" in
         "create token"*) echo test-token ;;
+        "create -n nmstate -f -") cat >> "${test_dir}/commands" ;;
         "get nns -o name"*) echo nodenetworkstate/crc ;;
         "wait --for=condition=Available"*) return "${readiness_status:-0}" ;;
         *lastSuccessfulUpdateTime*) return "${report_status:-0}" ;;
@@ -59,6 +60,17 @@ fi
 
 # Exercise the real shared deployment helpers with a mocked cluster.
 bash -c 'source ./automation/check-patch.okd.sh; install_operator'
+# Helm must adopt the pre-created operator account, and no pod may start before
+# both accounts can pull from the internal registry.
+for metadata in 'app.kubernetes.io/managed-by: Helm' 'meta.helm.sh/release-name: nmstate' \
+    'meta.helm.sh/release-namespace: nmstate'; do
+    grep -Fq "${metadata}" "${test_dir}/commands"
+done
+pull_secrets=$(grep -n -m1 -F \
+    'wait -n nmstate --for=jsonpath={.imagePullSecrets[0].name} serviceaccount/nmstate-operator serviceaccount/nmstate-handler' \
+    "${test_dir}/commands" | cut -d: -f1)
+helm_install=$(grep -n -m1 '^helm upgrade --install' "${test_dir}/commands" | cut -d: -f1)
+test "${pull_secrets}" -lt "${helm_install}"
 grep -q -- '--set operator.image=image-registry.openshift-image-registry.svc:5000/nmstate/kubernetes-nmstate-operator:ci' "${test_dir}/commands"
 grep -q -- '--set handler.image=image-registry.openshift-image-registry.svc:5000/nmstate/kubernetes-nmstate-handler:ci' "${test_dir}/commands"
 grep -q -- '--set nmstate.enabled=true' "${test_dir}/commands"
