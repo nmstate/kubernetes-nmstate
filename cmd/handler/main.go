@@ -498,9 +498,9 @@ func setupHandlerControllers(mgr manager.Manager) error {
 		Scheme:    mgr.GetScheme(),
 		//nolint:staticcheck // TODO: migrate to GetEventRecorder
 		Recorder:           mgr.GetEventRecorderFor(fmt.Sprintf("%s.nmstate-handler", environment.NodeName())),
-		RetriesUntilFail:   environment.GetEnvVarAsInt("NNCP_MAX_RETRIES", defaultRetriesUntilFail),
-		MaximumTimeBackoff: environment.GetEnvVarAsDuration("NNCP_MAX_BACKOFF_SECONDS", defaultMaxBackoff),
-		InitialBackoff:     environment.GetEnvVarAsDuration("NNCP_INITIAL_BACKOFF_SECONDS", defaultInitialBackoff),
+		RetriesUntilFail:   environment.GetEnvVarAsPositiveInt("NNCP_MAX_RETRIES", defaultRetriesUntilFail),
+		MaximumTimeBackoff: environment.GetEnvVarAsPositiveDuration("NNCP_MAX_BACKOFF_SECONDS", defaultMaxBackoff),
+		InitialBackoff:     environment.GetEnvVarAsPositiveDuration("NNCP_INITIAL_BACKOFF_SECONDS", defaultInitialBackoff),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create NodeNetworkConfigurationPolicy controller", "controller", "NMState")
 		return err

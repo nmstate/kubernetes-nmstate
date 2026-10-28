@@ -23,7 +23,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
+
+var log = logf.Log.WithName("environment")
 
 // IsOperator returns true when RUN_OPERATOR env var is present
 func IsOperator() bool {
@@ -80,24 +83,39 @@ func GetEnvVar(key, fallback string) string {
 	return fallback
 }
 
-// GetEnvVarAsInt reads an integer from an environment variable, returning
-// defaultVal if the variable is unset or not a valid integer.
-func GetEnvVarAsInt(key string, defaultVal int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		}
+// lookupPositiveInt reads an environment variable as a positive integer. It
+// returns false if the variable is unset or its value is not an integer
+// greater than zero, logging the latter so a misconfiguration does not go
+// unnoticed.
+func lookupPositiveInt(key string) (int, bool) {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return 0, false
+	}
+	intVal, err := strconv.Atoi(value)
+	if err != nil || intVal <= 0 {
+		log.Info("environment variable must be a positive integer, ignoring it", "key", key, "value", value)
+		return 0, false
+	}
+	return intVal, true
+}
+
+// GetEnvVarAsPositiveInt reads a positive integer from an environment variable,
+// returning defaultVal if the variable is unset, not a valid integer or not
+// greater than zero.
+func GetEnvVarAsPositiveInt(key string, defaultVal int) int {
+	if intVal, ok := lookupPositiveInt(key); ok {
+		return intVal
 	}
 	return defaultVal
 }
 
-// GetEnvVarAsDuration reads a seconds value from an environment variable and
-// returns it as a time.Duration, falling back to defaultVal if unset or invalid.
-func GetEnvVarAsDuration(key string, defaultVal time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return time.Duration(intVal) * time.Second
-		}
+// GetEnvVarAsPositiveDuration reads a positive seconds value from an environment
+// variable and returns it as a time.Duration, falling back to defaultVal if the
+// variable is unset, not a valid integer or not greater than zero.
+func GetEnvVarAsPositiveDuration(key string, defaultVal time.Duration) time.Duration {
+	if seconds, ok := lookupPositiveInt(key); ok {
+		return time.Duration(seconds) * time.Second
 	}
 	return defaultVal
 }
