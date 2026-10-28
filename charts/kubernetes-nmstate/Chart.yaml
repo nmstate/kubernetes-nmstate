@@ -1,6 +1,6 @@
 apiVersion: v2
 name: kubernetes-nmstate
-description: Declarative node network configuration driven through Kubernetes API
+description: Kubernetes operator for declarative node network configuration using nmstate and NetworkManager
 type: application
 # version and appVersion are dev placeholders; real values are injected at
 # publish time by `make push-chart` (see hack/release.sh).
@@ -17,3 +17,18 @@ keywords:
   - networking
   - nmstate
   - NetworkManager
+  - operator
+  - node-networking
+annotations:
+  artifacthub.io/alternativeName: nmstate
+  artifacthub.io/category: networking
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://nmstate.github.io/kubernetes-nmstate/
+    - name: Helm deployment guide
+      url: https://nmstate.github.io/kubernetes-nmstate/deployment/helm/
+    - name: support
+      url: https://github.com/nmstate/kubernetes-nmstate/issues
+  artifacthub.io/operator: "true"
+  artifacthub.io/operatorCapabilities: Basic Install
