@@ -80,24 +80,33 @@ func GetEnvVar(key, fallback string) string {
 	return fallback
 }
 
-// GetEnvVarAsInt reads an integer from an environment variable, returning
-// defaultVal if the variable is unset or not a valid integer.
-func GetEnvVarAsInt(key string, defaultVal int) int {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return intVal
-		}
+// GetEnvVarAsInt reads a positive integer from an environment variable. It
+// returns defaultVal when the variable is unset, and an error when the variable
+// is set but is not a valid integer greater than zero.
+func GetEnvVarAsInt(key string, defaultVal int) (int, error) {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return defaultVal, nil
 	}
-	return defaultVal
+	intVal, err := strconv.Atoi(value)
+	if err != nil || intVal <= 0 {
+		return 0, errors.Errorf("%s must be a positive integer, got %q", key, value)
+	}
+	return intVal, nil
 }
 
-// GetEnvVarAsDuration reads a seconds value from an environment variable and
-// returns it as a time.Duration, falling back to defaultVal if unset or invalid.
-func GetEnvVarAsDuration(key string, defaultVal time.Duration) time.Duration {
-	if value, exists := os.LookupEnv(key); exists {
-		if intVal, err := strconv.Atoi(value); err == nil {
-			return time.Duration(intVal) * time.Second
-		}
+// GetEnvVarAsDuration reads a positive number of seconds from an environment
+// variable and returns it as a time.Duration. It returns defaultVal when the
+// variable is unset, and an error when the variable is set but is not a valid
+// integer greater than zero.
+func GetEnvVarAsDuration(key string, defaultVal time.Duration) (time.Duration, error) {
+	value, exists := os.LookupEnv(key)
+	if !exists {
+		return defaultVal, nil
 	}
-	return defaultVal
+	intVal, err := strconv.Atoi(value)
+	if err != nil || intVal <= 0 {
+		return 0, errors.Errorf("%s must be a positive integer number of seconds, got %q", key, value)
+	}
+	return time.Duration(intVal) * time.Second, nil
 }
