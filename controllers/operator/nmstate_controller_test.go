@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -52,11 +53,13 @@ import (
 // applyCapableFakeClient wraps a fake client and handles Apply patches by converting them to Create/Update
 type applyCapableFakeClient struct {
 	client.Client
+	applied []client.Object
 }
 
 func (c *applyCapableFakeClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
 	// If this is a server-side apply patch, convert it to create/update
 	if patch.Type() == types.ApplyPatchType {
+		c.applied = append(c.applied, obj.DeepCopyObject().(client.Object))
 		err := c.Create(ctx, obj)
 		if err != nil {
 			if apierrors.IsAlreadyExists(err) {
@@ -220,6 +223,77 @@ var _ = Describe("NMState controller reconcile", func() {
 	AfterEach(func() {
 		err := os.RemoveAll(manifestsDir)
 		Expect(err).ToNot(HaveOccurred())
+	})
+
+	Context("when deploying on Kubernetes without platform APIs", func() {
+		BeforeEach(func() {
+			request := ctrl.Request{NamespacedName: types.NamespacedName{Name: existingNMStateName}}
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("should render no platform APIs, annotations, or TLS profile mounts", func() {
+			for _, obj := range cl.(*applyCapableFakeClient).applied {
+				data, err := json.Marshal(obj)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(data)).ToNot(ContainSubstring("openshift"))
+				Expect(string(data)).ToNot(ContainSubstring("IS_OPENSHIFT"))
+				Expect(string(data)).ToNot(ContainSubstring("/etc/nmstate/tls"))
+			}
+		})
+
+		It("should keep certificate management and the webhook serving secret", func() {
+			certManager := &appsv1.Deployment{}
+			key := types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-cert-manager"}
+			Expect(cl.Get(context.Background(), key, certManager)).To(Succeed())
+			Expect(envVariableStringPresent("RUN_CERT_MANAGER", "", certManager.Spec.Template.Spec.Containers[0].Env)).To(BeTrue())
+
+			webhook := &appsv1.Deployment{}
+			Expect(cl.Get(context.Background(), webhookKey, webhook)).To(Succeed())
+			Expect(webhook.Spec.Template.Spec.Volumes).To(ContainElement(corev1.Volume{
+				Name: "tls-key-pair",
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{SecretName: webhookKey.Name},
+				},
+			}))
+		})
+
+		It("should retain Kubernetes Pod Security labels", func() {
+			namespace := &corev1.Namespace{}
+			Expect(cl.Get(context.Background(), types.NamespacedName{Name: handlerNamespace}, namespace)).To(Succeed())
+			Expect(namespace.Labels).To(HaveKeyWithValue("pod-security.kubernetes.io/enforce", "privileged"))
+		})
+
+		It("should retain HTTPS monitoring and generic recording rules", func() {
+			kinds := []string{}
+			for _, obj := range cl.(*applyCapableFakeClient).applied {
+				kind := obj.GetObjectKind().GroupVersionKind().Kind
+				kinds = append(kinds, kind)
+				if kind == "ServiceMonitor" {
+					data, err := json.Marshal(obj)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(data)).To(ContainSubstring(`"scheme":"https"`))
+					Expect(string(data)).To(ContainSubstring(`"insecureSkipVerify":true`))
+				}
+			}
+			Expect(kinds).To(ContainElements("ServiceMonitor", "PrometheusRule"))
+		})
+
+		It("should retain certificate-manager API access and standard DNS egress", func() {
+			netpol := &networkingv1.NetworkPolicy{}
+			key := types.NamespacedName{Namespace: handlerNamespace, Name: "allow-cert-manager-egress-api-6443"}
+			Expect(cl.Get(context.Background(), key, netpol)).To(Succeed())
+			Expect(netpol.Spec.Egress[0].Ports[0].Port.IntVal).To(Equal(int32(6443)))
+			for _, component := range []string{"operator", "webhook", "metrics"} {
+				key.Name = "allow-" + component + "-egress-dns"
+				Expect(cl.Get(context.Background(), key, netpol)).To(Succeed())
+				Expect(netpol.Spec.Egress).To(HaveLen(1))
+				Expect(netpol.Spec.Egress[0].Ports).To(HaveLen(2))
+				for _, port := range netpol.Spec.Egress[0].Ports {
+					Expect(port.Port.IntVal).To(Equal(int32(53)))
+				}
+			}
+		})
 	})
 
 	Context("when writing NMState CR status", func() {

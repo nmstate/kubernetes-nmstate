@@ -23,38 +23,11 @@ import (
 	"fmt"
 	"os"
 
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 var log = logf.Log.WithName("cluster")
-
-// IsOpenShift returns true if the current cluster is an OpenShift/OKD cluster.
-func IsOpenShift(kclient client.Client) (bool, error) {
-	// if the cluster has the securityContextConstraint resource of the group security.openshift.io, then it is most likely an OCP/OKD cluster
-	sccGVR := schema.GroupVersion{Group: "security.openshift.io", Version: "v1"}.WithResource("securitycontextconstraints")
-	_, err := kclient.RESTMapper().ResourcesFor(sccGVR)
-
-	if err != nil {
-		if apimeta.IsNoMatchError(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("could not determine if running on OCP/OKD: %w", err)
-	}
-
-	return true, nil
-}
-
-// IsOpenShiftFromEnv returns true if the IS_OPENSHIFT environment variable
-// is set to "true". The operator sets this variable on all handler-deployed
-// pods so they can skip the API server discovery call at startup.
-func IsOpenShiftFromEnv() bool {
-	return os.Getenv("IS_OPENSHIFT") == "true"
-}
 
 // FetchTLSProfileFromFile reads a TLS profile spec from a JSON file (mounted
 // from a ConfigMap) and returns the TLS options function and the raw spec.

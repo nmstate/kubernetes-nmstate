@@ -193,25 +193,12 @@ Network interface names vary by provider:
 
 ## OpenShift Development
 
-For OpenShift-specific development, see `developing-on-ocp.md`. Key commands:
-
-```bash
-# Build and deploy operator via OLM bundle
-IMAGE_REPO=<quay-username> KUBECONFIG=<path> make ocp-build-and-deploy-bundle
-
-# Update OCP bundle manifests
-make ocp-update-bundle-manifests
-
-# Verify OCP bundle is up to date
-make check-ocp-bundle
-
-# Uninstall OCP bundle
-make ocp-uninstall-bundle
-
-# Run OCP e2e tests
-make test-e2e-handler-ocp
-make test-e2e-operator-ocp
-```
+OpenShift-specific runtime integrations, build targets, and tests belong in
+[openshift/kubernetes-nmstate](https://github.com/openshift/kubernetes-nmstate).
+Use the fork's [development guide](https://github.com/openshift/kubernetes-nmstate/blob/main/developing-on-ocp.md).
+The relocation is tracked in [upstream #1602](https://github.com/nmstate/kubernetes-nmstate/issues/1602)
+and [downstream #823](https://github.com/openshift/kubernetes-nmstate/issues/823);
+upstream removal does not complete downstream integration and validation.
 
 ## Manifests and Deployment
 

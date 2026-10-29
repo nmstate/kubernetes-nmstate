@@ -46,7 +46,6 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	controllers "github.com/nmstate/kubernetes-nmstate/controllers/operator"
-	"github.com/nmstate/kubernetes-nmstate/pkg/cluster"
 )
 
 type ProfilerConfig struct {
@@ -133,17 +132,11 @@ func setupOperatorController(mgr manager.Manager) error {
 		return fmt.Errorf("failed creating non cached client: %w", err)
 	}
 
-	isOpenShift, err := cluster.IsOpenShift(apiClient)
-	if err != nil {
-		setupLog.Info("Warning: could not determine if running on OpenShift, assuming not")
-	}
-
 	if err = (&controllers.NMStateReconciler{
-		Client:      mgr.GetClient(),
-		APIClient:   apiClient,
-		Log:         ctrl.Log.WithName("controllers").WithName("NMState"),
-		Scheme:      mgr.GetScheme(),
-		IsOpenShift: isOpenShift,
+		Client:    mgr.GetClient(),
+		APIClient: apiClient,
+		Log:       ctrl.Log.WithName("controllers").WithName("NMState"),
+		Scheme:    mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("failed creating NMState CR controller: %w", err)
 	}

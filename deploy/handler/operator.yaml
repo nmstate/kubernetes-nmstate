@@ -25,11 +25,6 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-metrics
       annotations:
         description: kubernetes-nmstate-metrics dump nmstate metrics
-        target.workload.openshift.io/management: |
-          {"effect": "PreferredDuringScheduling"}
-{{- if .IsOpenShift }}
-        nmstate.io/tls-profile-hash: "{{ .TLSProfileHash }}"
-{{- end }}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -81,8 +76,6 @@ spec:
               value: "6060"
             - name: METRICS_BIND_ADDRESS
               value: ":8443"
-            - name: IS_OPENSHIFT
-              value: "{{ .IsOpenShift }}"
           ports:
           - containerPort: 8443
             name: metrics
@@ -104,22 +97,6 @@ spec:
             timeoutSeconds: 1
             successThreshold: 1
             failureThreshold: 3
-{{- if .IsOpenShift }}
-          volumeMounts:
-          - name: metrics-tls
-            readOnly: true
-            mountPath: /tmp/k8s-metrics-server/serving-certs
-          - name: tls-config
-            readOnly: true
-            mountPath: /etc/nmstate/tls
-      volumes:
-        - name: metrics-tls
-          secret:
-            secretName: {{template "handlerPrefix" .}}openshift-nmstate-metrics
-        - name: tls-config
-          configMap:
-            name: {{template "handlerPrefix" .}}nmstate-tls-config
-{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -144,11 +121,6 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-webhook
       annotations:
         description: kubernetes-nmstate-webhook resets NNCP status
-        target.workload.openshift.io/management: |
-          {"effect": "PreferredDuringScheduling"}
-{{- if .IsOpenShift }}
-        nmstate.io/tls-profile-hash: "{{ .TLSProfileHash }}"
-{{- end }}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -198,8 +170,6 @@ spec:
               value: "False"
             - name: PROFILER_PORT
               value: "6060"
-            - name: IS_OPENSHIFT
-              value: "{{ .IsOpenShift }}"
           ports:
           - containerPort: 9443
             name: webhook-server
@@ -235,25 +205,10 @@ spec:
           - name: tls-key-pair
             readOnly: true
             mountPath: /tmp/k8s-webhook-server/serving-certs/
-{{- if .IsOpenShift }}
-          - name: tls-config
-            readOnly: true
-            mountPath: /etc/nmstate/tls
-{{- end }}
       volumes:
         - name: tls-key-pair
           secret:
-{{- if not .IsOpenShift }}
             secretName: {{template "handlerPrefix" .}}nmstate-webhook
-{{- else }}
-            secretName: {{template "handlerPrefix" .}}openshift-nmstate-webhook
-{{- end }}
-{{- if .IsOpenShift }}
-        - name: tls-config
-          configMap:
-            name: {{template "handlerPrefix" .}}nmstate-tls-config
-{{- end }}
-{{- if not .IsOpenShift }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -278,8 +233,6 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-cert-manager
       annotations:
         description: kubernetes-nmstate-webhook rotate webhook certs
-        target.workload.openshift.io/management: |
-          {"effect": "PreferredDuringScheduling"}
     spec:
       serviceAccountName: {{template "handlerPrefix" .}}nmstate-handler
       nodeSelector: {{ toYaml .InfraNodeSelector | nindent 8 }}
@@ -346,7 +299,6 @@ spec:
               value: {{ .SelfSignConfiguration.CertRotateInterval }}
             - name: CERT_OVERLAP_INTERVAL
               value: {{ .SelfSignConfiguration.CertOverlapInterval }}
-{{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -372,8 +324,6 @@ spec:
         name: {{template "handlerPrefix" .}}nmstate-handler
       annotations:
         description: kubernetes-nmstate-handler configures and presents node networking, reconciling declerative NNCP and reports with NNS and NNCE
-        target.workload.openshift.io/management: |
-          {"effect": "PreferredDuringScheduling"}
     spec:
       # Needed to force vlan filtering config with iproute commands until
       # latest nmstate/NM is in place.
@@ -455,8 +405,6 @@ spec:
               value: "{{ .NNCPMaxBackoffSeconds }}"
             - name: NNCP_INITIAL_BACKOFF_SECONDS
               value: "{{ .NNCPInitialBackoffSeconds }}"
-            - name: IS_OPENSHIFT
-              value: "{{ .IsOpenShift }}"
           volumeMounts:
             - name: dbus-socket
               mountPath: /run/dbus/system_bus_socket
@@ -514,8 +462,6 @@ kind: Service
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-webhook
   namespace: {{ .HandlerNamespace }}
-  annotations:
-    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}openshift-nmstate-webhook
   labels:
     app: kubernetes-nmstate
 spec:
@@ -531,10 +477,6 @@ kind: Service
 metadata:
   name: {{template "handlerPrefix" .}}nmstate-monitor
   namespace: {{ .HandlerNamespace }}
-{{- if .IsOpenShift }}
-  annotations:
-    service.beta.openshift.io/serving-cert-secret-name: {{template "handlerPrefix" .}}openshift-nmstate-metrics
-{{- end }}
   labels:
     prometheus.nmstate.io: "true"
 spec:
@@ -552,8 +494,6 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: {{template "handlerPrefix" .}}nmstate
-  annotations:
-    service.beta.openshift.io/inject-cabundle: "true"
   labels:
     app: kubernetes-nmstate
 webhooks:
@@ -672,7 +612,6 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   labels:
-    openshift.io/cluster-monitoring: ""
     prometheus.nmstate.io: "true"
   name: controller-manager-metrics-monitor
   namespace: {{ .HandlerNamespace }}
@@ -682,12 +621,7 @@ spec:
     port: metrics
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
     tlsConfig:
-{{- if .IsOpenShift }}
-      caFile: /etc/prometheus/configmaps/serving-certs-ca-bundle/service-ca.crt
-      serverName: {{template "handlerPrefix" .}}nmstate-monitor.{{ .HandlerNamespace }}.svc
-{{- else }}
       insecureSkipVerify: true
-{{- end }}
     metricRelabelings:
       - action: labeldrop
         regex: instance
@@ -737,13 +671,11 @@ subjects:
   - kind: ServiceAccount
     name: prometheus-k8s
     namespace: {{ .MonitoringNamespace }}
-{{- if .IsOpenShift }}
 ---
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   labels:
-    openshift.io/cluster-monitoring: ""
     prometheus.nmstate.io: "true"
   name: kubernetes-nmstate-prometheus-rules
   namespace: {{ .HandlerNamespace }}
@@ -757,4 +689,3 @@ spec:
           record: cluster:kubernetes_nmstate_network_interfaces:sum
         - expr: sum(kubernetes_nmstate_routes) by (ip_stack, type)
           record: cluster:kubernetes_nmstate_routes:sum
-{{- end }}

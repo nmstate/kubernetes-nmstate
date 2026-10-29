@@ -13,9 +13,6 @@ spec:
       name: kubernetes-nmstate-operator
   template:
     metadata:
-      annotations:
-        target.workload.openshift.io/management: |
-          {"effect": "PreferredDuringScheduling"}
       labels:
         app: kubernetes-nmstate-operator
         name: kubernetes-nmstate-operator
@@ -103,10 +100,6 @@ spec:
 {{- if .Values.handler.prefix }}
             - name: HANDLER_PREFIX
               value: {{ .Values.handler.prefix | quote }}
-{{- end }}
-{{- if .Values.plugin.image }}
-            - name: PLUGIN_IMAGE
-              value: {{ .Values.plugin.image | quote }}
 {{- end }}
             - name: MONITORING_NAMESPACE
               value: {{ .Values.monitoring.namespace | quote }}

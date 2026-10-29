@@ -18,129 +18,19 @@ limitations under the License.
 package tls
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"strings"
-
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-const (
-	apiServerName = "cluster"
 )
 
 var (
-	// ErrCustomProfileNil is returned when a custom TLS profile is specified but the Custom field is nil.
-	ErrCustomProfileNil = errors.New("custom TLS profile specified but Custom field is nil")
-
-	// ErrUnknownProfileType is returned when the profile type is not recognized.
-	ErrUnknownProfileType = errors.New("unknown TLS profile type")
-
 	// ErrNoSupportedCiphers is returned when none of the profile ciphers is supported.
 	ErrNoSupportedCiphers = errors.New("TLS profile specifies ciphers but none are supported")
 
 	// ErrNoSupportedCurves is returned when none of the profile curves is supported.
 	ErrNoSupportedCurves = errors.New("TLS profile specifies curves but none are supported")
-
-	apiServerGVK = schema.GroupVersionKind{
-		Group:   "config.openshift.io",
-		Version: "v1",
-		Kind:    "APIServer",
-	}
 )
-
-// FetchAPIServerTLSProfile fetches the TLS profile spec from the cluster's APIServer resource.
-func FetchAPIServerTLSProfile(ctx context.Context, k8sClient client.Client) (TLSProfileSpec, error) {
-	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(apiServerGVK)
-
-	key := client.ObjectKey{Name: apiServerName}
-	if err := k8sClient.Get(ctx, key, obj); err != nil {
-		return TLSProfileSpec{}, fmt.Errorf("failed to get APIServer %q: %w", key.String(), err)
-	}
-
-	profile, err := parseTLSSecurityProfile(obj.Object)
-	if err != nil {
-		return TLSProfileSpec{}, fmt.Errorf("failed to parse TLS profile from APIServer %q: %w", key.String(), err)
-	}
-
-	spec, err := GetTLSProfileSpec(profile)
-	if err != nil {
-		return TLSProfileSpec{}, fmt.Errorf("failed to get TLS profile from APIServer %q: %w", key.String(), err)
-	}
-
-	return spec, nil
-}
-
-// parseTLSSecurityProfile extracts the TLS profile type and custom spec from an unstructured APIServer object.
-func parseTLSSecurityProfile(obj map[string]any) (*tlsSecurityProfile, error) {
-	profileMap, found, err := unstructured.NestedMap(obj, "spec", "tlsSecurityProfile")
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract spec.tlsSecurityProfile: %w", err)
-	}
-	if !found || profileMap == nil {
-		return nil, nil
-	}
-
-	profileType, _, _ := unstructured.NestedString(profileMap, "type")
-
-	profile := &tlsSecurityProfile{
-		profileType: TLSProfileType(profileType),
-	}
-
-	if profile.profileType == TLSProfileCustomType {
-		customMap, found, _ := unstructured.NestedMap(profileMap, "custom")
-		if !found || customMap == nil {
-			return profile, nil
-		}
-
-		minVersion, _, _ := unstructured.NestedString(customMap, "minTLSVersion")
-
-		ciphersRaw, _, _ := unstructured.NestedStringSlice(customMap, "ciphers")
-
-		curvesRaw, _, _ := unstructured.NestedStringSlice(customMap, "curves")
-
-		profile.customSpec = &TLSProfileSpec{
-			Ciphers:       ciphersRaw,
-			MinTLSVersion: TLSProtocolVersion(minVersion),
-			Curves:        curvesRaw,
-		}
-	}
-
-	return profile, nil
-}
-
-// tlsSecurityProfile holds the parsed TLS profile data from the APIServer resource.
-type tlsSecurityProfile struct {
-	profileType TLSProfileType
-	customSpec  *TLSProfileSpec
-}
-
-// GetTLSProfileSpec returns a TLSProfileSpec for the given profile.
-// If no profile is configured, the default Intermediate profile is returned;
-// unknown profile types are an error.
-func GetTLSProfileSpec(profile *tlsSecurityProfile) (TLSProfileSpec, error) {
-	if profile == nil || profile.profileType == "" {
-		return *TLSProfiles[TLSProfileIntermediateType], nil
-	}
-
-	if profile.profileType != TLSProfileCustomType {
-		if tlsConfig, ok := TLSProfiles[profile.profileType]; ok {
-			return *tlsConfig, nil
-		}
-		return TLSProfileSpec{}, fmt.Errorf("%w: %q", ErrUnknownProfileType, profile.profileType)
-	}
-
-	if profile.customSpec == nil {
-		return TLSProfileSpec{}, ErrCustomProfileNil
-	}
-
-	return *profile.customSpec, nil
-}
 
 // tls13CipherSuiteNames are the TLS 1.3 cipher suites Go always enables;
 // they cannot be restricted via tls.Config.CipherSuites.
