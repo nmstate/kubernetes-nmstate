@@ -161,6 +161,34 @@ periodically and won't get updated while the node is not reachable (e.g. during
 reconfiguration of networking), this value can be used to evaluate whether the
 observed state is fresh enough.
 
+## Query health conditions
+
+The handler reports whether it can currently retrieve the network state of the
+node using the `Available` and `Failing` conditions in `status.conditions`:
+
+```yaml
+status:
+  conditions:
+  - type: Available
+    status: "False"
+    reason: NetworkManagerUnresponsive
+    message: "Failed to retrieve network state while kernel-only query works, ..."
+  - type: Failing
+    status: "True"
+    reason: NetworkManagerUnresponsive
+    message: "Failed to retrieve network state while kernel-only query works, ..."
+```
+
+| Reason | Meaning |
+|---|---|
+| `QuerySucceeded` | The last query succeeded. |
+| `NetworkManagerUnresponsive` | The full query failed or did not finish within 60 seconds, while a kernel-only query succeeded. NetworkManager or D-Bus on the node is not responding properly. |
+| `QueryFailed` | Both the full and the kernel-only queries failed. |
+
+While the query is failing, `status.currentState` keeps the last successfully
+retrieved state. The same information is exposed as the
+`kubernetes_nmstate_network_state_query_failing` metric.
+
 ## Configure refresh interval
 
 The reported state is updated every 5 seconds.
