@@ -41,8 +41,8 @@ Enabling the Profiler Enable profiler in operator.yaml by changing value of ENAB
   <meta name="twitter:description" content="This page covers advanced development topics including profiling and CI infrastructure.
 Profiling Golang pprof profiler can be enabled for debugging and performance analysis.
 Enabling the Profiler Enable profiler in operator.yaml by changing value of ENABLE_PROFILER to True You can change profiler port by editing PROFILER_PORT - default is 6060 Deploy new code to cluster - example: make cluster-sync Find nmstate-handler pod name - kubectl get pods -n nmstate Create port forwarding to pod - example: kubectl port-forward pod pod_name 6060:6060 -n nmstate Use go tool pprof ... to gather relevant metrics Profiling Examples Open in browser http://localhost:6060/debug/pprof/ Download memory graph go tool pprof -png http://localhost:6060/debug/pprof/heap &gt; out.png Open CLI for cpu 30s sample data go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30 More examples: https://golang.org/pkg/net/http/pprof/">
-<link rel="preload" href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" as="style" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
-<link href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" rel="stylesheet" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
+<link rel="preload" href="/kubernetes-nmstate/scss/main.min.8419ba65e07fae14207a1083b3638be81af10e40c1e74f7b5421ed850c914cc9.css" as="style" integrity="sha256-hBm6ZeB/rhQgehCDs2OL6BrxDkDB5097VCHthQyRTMk=" crossorigin="anonymous">
+<link href="/kubernetes-nmstate/scss/main.min.8419ba65e07fae14207a1083b3638be81af10e40c1e74f7b5421ed850c914cc9.css" rel="stylesheet" integrity="sha256-hBm6ZeB/rhQgehCDs2OL6BrxDkDB5097VCHthQyRTMk=" crossorigin="anonymous">
 <script
   src="https://code.jquery.com/jquery-3.7.1.min.js"
   integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="

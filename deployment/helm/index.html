@@ -18,31 +18,27 @@
 <link rel="icon" type="image/png" href="/kubernetes-nmstate/favicons/android-192x192.png" sizes="192x192">
 
 <title>Deployment with Helm | The Kubernetes NMState project</title>
-<meta name="description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry.
-kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.
-Install helm install nmstate oci://quay.io/nmstate/kubernetes-nmstate \ --version &lt;version&gt; \ --namespace nmstate \ --create-namespace This deploys the operator and, by default (nmstate.enabled=true), an NMState custom resource that makes the operator deploy the kubernetes-nmstate handler on all nodes. NetworkManager must be running on the nodes (see the arbitrary cluster guide).">
+<meta name="description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry. Published chart versions and package details are available on Artifact Hub. Use a chart version without a leading v for &lt;version&gt; in the commands below.
+kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.">
 <meta property="og:url" content="https://nmstate.github.io/kubernetes-nmstate/deployment/helm/">
   <meta property="og:site_name" content="The Kubernetes NMState project">
   <meta property="og:title" content="Deployment with Helm">
-  <meta property="og:description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry.
-kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.
-Install helm install nmstate oci://quay.io/nmstate/kubernetes-nmstate \ --version &lt;version&gt; \ --namespace nmstate \ --create-namespace This deploys the operator and, by default (nmstate.enabled=true), an NMState custom resource that makes the operator deploy the kubernetes-nmstate handler on all nodes. NetworkManager must be running on the nodes (see the arbitrary cluster guide).">
+  <meta property="og:description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry. Published chart versions and package details are available on Artifact Hub. Use a chart version without a leading v for &lt;version&gt; in the commands below.
+kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.">
   <meta property="og:locale" content="en">
   <meta property="og:type" content="article">
     <meta property="article:section" content="deployment">
 
   <meta itemprop="name" content="Deployment with Helm">
-  <meta itemprop="description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry.
-kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.
-Install helm install nmstate oci://quay.io/nmstate/kubernetes-nmstate \ --version &lt;version&gt; \ --namespace nmstate \ --create-namespace This deploys the operator and, by default (nmstate.enabled=true), an NMState custom resource that makes the operator deploy the kubernetes-nmstate handler on all nodes. NetworkManager must be running on the nodes (see the arbitrary cluster guide).">
-  <meta itemprop="wordCount" content="297">
+  <meta itemprop="description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry. Published chart versions and package details are available on Artifact Hub. Use a chart version without a leading v for &lt;version&gt; in the commands below.
+kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.">
+  <meta itemprop="wordCount" content="333">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Deployment with Helm">
-  <meta name="twitter:description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry.
-kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.
-Install helm install nmstate oci://quay.io/nmstate/kubernetes-nmstate \ --version &lt;version&gt; \ --namespace nmstate \ --create-namespace This deploys the operator and, by default (nmstate.enabled=true), an NMState custom resource that makes the operator deploy the kubernetes-nmstate handler on all nodes. NetworkManager must be running on the nodes (see the arbitrary cluster guide).">
-<link rel="preload" href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" as="style" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
-<link href="/kubernetes-nmstate/scss/main.min.c152cbea41dc16540fff237c6c4888103f4fd937db3890ddfc84fb56649c3de9.css" rel="stylesheet" integrity="sha256-wVLL6kHcFlQP/yN8bEiIED9P2TfbOJDd/IT7VmScPek=" crossorigin="anonymous">
+  <meta name="twitter:description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry. Published chart versions and package details are available on Artifact Hub. Use a chart version without a leading v for &lt;version&gt; in the commands below.
+kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.">
+<link rel="preload" href="/kubernetes-nmstate/scss/main.min.8419ba65e07fae14207a1083b3638be81af10e40c1e74f7b5421ed850c914cc9.css" as="style" integrity="sha256-hBm6ZeB/rhQgehCDs2OL6BrxDkDB5097VCHthQyRTMk=" crossorigin="anonymous">
+<link href="/kubernetes-nmstate/scss/main.min.8419ba65e07fae14207a1083b3638be81af10e40c1e74f7b5421ed850c914cc9.css" rel="stylesheet" integrity="sha256-hBm6ZeB/rhQgehCDs2OL6BrxDkDB5097VCHthQyRTMk=" crossorigin="anonymous">
 <script
   src="https://code.jquery.com/jquery-3.7.1.min.js"
   integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
@@ -176,7 +172,10 @@ Install helm install nmstate oci://quay.io/nmstate/kubernetes-nmstate \ --versio
 		
 </header>
 	<p>kubernetes-nmstate can be installed with <a href="https://helm.sh">Helm</a> (&gt;= 3.8)
-from an OCI registry.</p>
+from an OCI registry. Published chart versions and package details are
+available on
+<a href="https://artifacthub.io/packages/helm/kubernetes-nmstate/kubernetes-nmstate">Artifact Hub</a>.
+Use a chart version without a leading <code>v</code> for <code>&lt;version&gt;</code> in the commands below.</p>
 <p>kubernetes-nmstate is a cluster singleton: only one release of this chart per
 cluster is supported. The chart creates cluster-scoped resources with fixed
 names (such as the <code>nmstate-operator</code> ClusterRole and ClusterRoleBinding), so
@@ -268,8 +267,9 @@ for privileged workloads automatically.</p>
 </table>
 <h2 id="upgrade">Upgrade</h2>
 <p>Helm does not modify custom resource definitions shipped in the chart&rsquo;s
-<code>crds/</code> directory on upgrade. Apply the NMState CRD manually first:</p>
-<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/&lt;version&gt;/nmstate.io_nmstates.yaml
+<code>crds/</code> directory on upgrade. Apply the NMState CRD manually first. GitHub
+release tags use a leading <code>v</code>, unlike Helm chart versions:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-shell" data-lang="shell"><span style="display:flex;"><span>kubectl apply -f https://github.com/nmstate/kubernetes-nmstate/releases/download/v&lt;version&gt;/nmstate.io_nmstates.yaml
 </span></span><span style="display:flex;"><span>helm upgrade nmstate oci://quay.io/nmstate/kubernetes-nmstate <span style="color:#ae81ff">\
 </span></span></span><span style="display:flex;"><span>  --version &lt;version&gt; <span style="color:#ae81ff">\
 </span></span></span><span style="display:flex;"><span>  --namespace nmstate
