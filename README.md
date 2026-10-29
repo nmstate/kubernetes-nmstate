@@ -1,5 +1,6 @@
 # kubernetes-nmstate
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnmstate%2Fkubernetes-nmstate?ref=badge_shield)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/kubernetes-nmstate)](https://artifacthub.io/packages/helm/kubernetes-nmstate/kubernetes-nmstate)
 
 
 <img src="logo/fullcolor.png" alt="project logo" />
