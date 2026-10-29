@@ -57,11 +57,16 @@ type NmstatectlShow func() (string, error)
 // NodeReconciler reconciles a Node object
 type NodeReconciler struct {
 	client.Client
-	Log            logr.Logger
-	Scheme         *runtime.Scheme
-	lastState      shared.State
-	nmstateUpdater NmstateUpdater
-	nmstatectlShow NmstatectlShow
+	Log    logr.Logger
+	Scheme *runtime.Scheme
+	// MaxStateSizeBytes is the budget for the serialized NodeNetworkState
+	// currentState, above which VLAN interfaces are compacted.
+	// Expected range: > 0. Defaults to 1 MiB via NNS_MAX_SIZE_BYTES env var.
+	MaxStateSizeBytes  int
+	lastState          shared.State
+	lastCompactionTier int
+	nmstateUpdater     NmstateUpdater
+	nmstatectlShow     NmstatectlShow
 }
 
 // Reconcile reads that state of the cluster for a Node object and makes changes based on the state read
@@ -76,9 +81,14 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, request ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	currentState, err := state.FilterOut(shared.NewState(currentStateRaw))
+	currentState, compactionTier, err := state.FilterOut(shared.NewState(currentStateRaw), r.MaxStateSizeBytes)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if compactionTier != r.lastCompactionTier {
+		r.Log.Info("NodeNetworkState VLAN compaction changed",
+			"tier", compactionTier, "previousTier", r.lastCompactionTier, "maxStateSizeBytes", r.MaxStateSizeBytes)
+		r.lastCompactionTier = compactionTier
 	}
 
 	nnsInstance := &nmstatev1beta1.NodeNetworkState{}

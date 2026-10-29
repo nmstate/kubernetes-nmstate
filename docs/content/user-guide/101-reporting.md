@@ -170,6 +170,29 @@ The reported state is updated every 5 seconds.
 All unmanaged `veth` interfaces are omitted from the report in order to not
 clutter the output with all Pod connections.
 
+## Node Network State size budget
+
+The report is stored in a single Kubernetes object, which cannot exceed the
+request size limit of etcd (1.5 MiB). On nodes with a very large number of
+interfaces, typically VLANs configured in the thousands, the full `nmstatectl`
+output does not fit in that limit and the report could not be updated at all.
+
+To keep the report updatable, the handler measures the serialized size of the
+state and, only when it exceeds a budget (1 MiB by default), reduces the VLAN
+interfaces in two steps until it fits:
+
+1. Only `name`, `type`, `state`, `ipv4`, `ipv6` and `vlan` are kept. Fields
+   such as `mac-address`, `mtu`, `ethtool` or `lldp` are dropped.
+2. Additionally `ipv4` and `ipv6` are reduced to `enabled`, `dhcp`, `autoconf`
+   and `address`, and `vlan` to `base-iface` and `id`.
+
+Interfaces of other types are always reported in full. States that fit within
+the budget are not modified. The handler logs a message whenever the applied
+reduction changes.
+
+The budget can be tuned with the `NNS_MAX_SIZE_BYTES` environment variable on
+the operator deployment, which passes it down to the handler.
+
 ## Continue reading
 
 The following tutorial will guide you through the configuration of node

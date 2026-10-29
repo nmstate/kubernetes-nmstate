@@ -396,6 +396,37 @@ func createDummyConnectionAtAllNodes(dummyName string) []error {
 	return createDummyConnection(allNodes, dummyName)
 }
 
+// createVlanConnection creates a NetworkManager managed VLAN on top of
+// baseIface with a static IPv4 address, so it is reported with state "up"
+// in the NodeNetworkState. The connection and interface are both named
+// "<baseIface>.<vlanID>".
+func createVlanConnection(nodesToModify []string, baseIface string, vlanID int, ipv4Address string) []error {
+	vlanName := fmt.Sprintf("%s.%d", baseIface, vlanID)
+	Byf("Creating VLAN %s", vlanName)
+	_, errs := runner.RunAtNodes(
+		nodesToModify,
+		"sudo",
+		"nmcli",
+		"con",
+		"add",
+		"type",
+		"vlan",
+		"con-name",
+		vlanName,
+		"ifname",
+		vlanName,
+		"dev",
+		baseIface,
+		"id",
+		strconv.Itoa(vlanID),
+		"ip4",
+		ipv4Address,
+	)
+	_, upErrs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "up", vlanName)
+	errs = append(errs, upErrs...)
+	return errs
+}
+
 func deleteConnection(nodesToModify []string, name string) []error {
 	Byf("Delete connection %s", name)
 	_, errs := runner.RunAtNodes(nodesToModify, "sudo", "nmcli", "con", "delete", name)
