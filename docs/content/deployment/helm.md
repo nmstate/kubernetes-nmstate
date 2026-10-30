@@ -36,6 +36,11 @@ for privileged workloads automatically.
 
 ## Values
 
+Helm validates chart values against the packaged `values.schema.json` schema.
+Use `--set-string` when a string value looks like a number or boolean, such as
+a numeric namespace name. Fields inside `nmstate.spec` are validated by the
+NMState CRD.
+
 | Key | Default | Description |
 |-----|---------|-------------|
 | `operator.image` | `""` | Operator image; empty means `quay.io/nmstate/kubernetes-nmstate-operator:<appVersion>` |

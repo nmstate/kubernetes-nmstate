@@ -57,14 +57,14 @@ function deploy_operator() {
         --namespace "${OPERATOR_NAMESPACE}" \
         --create-namespace \
         --set nmstate.enabled="${nmstate_enabled}" \
-        --set operator.image="${operator_image}" \
-        --set operator.pullPolicy="${OPERATOR_PULL_POLICY}" \
-        --set handler.image="${handler_image}" \
-        --set handler.imageEnvVar="${handler_image_env_var}" \
-        --set handler.pullPolicy="${HANDLER_PULL_POLICY}" \
-        --set handler.namespace="${HANDLER_NAMESPACE}" \
-        --set handler.prefix="${HANDLER_PREFIX:-}" \
-        --set monitoring.namespace="${MONITORING_NAMESPACE}" \
+        --set-string operator.image="${operator_image}" \
+        --set-string operator.pullPolicy="${OPERATOR_PULL_POLICY}" \
+        --set-string handler.image="${handler_image}" \
+        --set-string handler.imageEnvVar="${handler_image_env_var}" \
+        --set-string handler.pullPolicy="${HANDLER_PULL_POLICY}" \
+        --set-string handler.namespace="${HANDLER_NAMESPACE}" \
+        --set-string handler.prefix="${HANDLER_PREFIX:-}" \
+        --set-string monitoring.namespace="${MONITORING_NAMESPACE}" \
         --wait --timeout 5m
 }
 

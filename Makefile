@@ -197,15 +197,15 @@ manifests: $(HELM)
 		--namespace $(OPERATOR_NAMESPACE) \
 		--set createNamespace=true \
 		--set nmstate.enabled=false \
-		--set operator.image=$(OPERATOR_IMAGE) \
-		--set operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
-		--set handler.image=$(HANDLER_IMAGE) \
-		--set handler.imageEnvVar=$(HANDLER_IMAGE_ENV_VAR) \
-		--set handler.pullPolicy=$(HANDLER_PULL_POLICY) \
-		--set handler.namespace=$(HANDLER_NAMESPACE) \
-		--set handler.prefix=$(HANDLER_PREFIX) \
-		--set plugin.image=$(PLUGIN_IMAGE) \
-		--set monitoring.namespace=$(MONITORING_NAMESPACE) \
+		--set-string operator.image=$(OPERATOR_IMAGE) \
+		--set-string operator.pullPolicy=$(OPERATOR_PULL_POLICY) \
+		--set-string handler.image=$(HANDLER_IMAGE) \
+		--set-string handler.imageEnvVar=$(HANDLER_IMAGE_ENV_VAR) \
+		--set-string handler.pullPolicy=$(HANDLER_PULL_POLICY) \
+		--set-string handler.namespace=$(HANDLER_NAMESPACE) \
+		--set-string handler.prefix=$(HANDLER_PREFIX) \
+		--set-string plugin.image=$(PLUGIN_IMAGE) \
+		--set-string monitoring.namespace=$(MONITORING_NAMESPACE) \
 		--output-dir $(MANIFESTS_DIR)
 
 require-image-builder:

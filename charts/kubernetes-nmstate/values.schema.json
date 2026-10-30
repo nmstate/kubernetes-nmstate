@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kubernetes-nmstate Helm chart values",
+  "type": "object",
+  "properties": {
+    "operator": {
+      "type": "object",
+      "description": "Configuration for the kubernetes-nmstate operator.",
+      "properties": {
+        "image": {
+          "type": "string",
+          "default": "",
+          "description": "Operator image. When empty, uses quay.io/nmstate/kubernetes-nmstate-operator:<appVersion>."
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "default": "IfNotPresent",
+          "description": "Operator image pull policy."
+        }
+      }
+    },
+    "handler": {
+      "type": "object",
+      "description": "Configuration for the handler deployed by the operator.",
+      "properties": {
+        "image": {
+          "type": "string",
+          "default": "",
+          "description": "Handler image. When empty, uses quay.io/nmstate/kubernetes-nmstate-handler:<appVersion>."
+        },
+        "pullPolicy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"],
+          "default": "IfNotPresent",
+          "description": "Handler image pull policy."
+        },
+        "namespace": {
+          "type": "string",
+          "default": "nmstate",
+          "description": "Namespace the operator creates and deploys the handler into."
+        },
+        "prefix": {
+          "type": "string",
+          "default": "",
+          "description": "Optional name prefix for handler resources. When empty, the HANDLER_PREFIX environment variable is omitted."
+        },
+        "imageEnvVar": {
+          "type": "string",
+          "default": "RELATED_IMAGE_HANDLER_IMAGE",
+          "description": "Operator environment variable carrying the handler image. Downstream distributions can override it, for example with HANDLER_IMAGE. An empty value uses RELATED_IMAGE_HANDLER_IMAGE."
+        }
+      }
+    },
+    "plugin": {
+      "type": "object",
+      "description": "Console plugin configuration for OpenShift distributions.",
+      "properties": {
+        "image": {
+          "type": "string",
+          "default": "",
+          "description": "Console plugin image. When empty, the PLUGIN_IMAGE environment variable is omitted."
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Cluster monitoring configuration.",
+      "properties": {
+        "namespace": {
+          "type": "string",
+          "default": "monitoring",
+          "description": "Cluster monitoring namespace."
+        }
+      }
+    },
+    "createNamespace": {
+      "type": "boolean",
+      "default": false,
+      "description": "Emit a Namespace object for the release namespace. Used by the manifest rendering pipeline; Helm users should use --create-namespace instead."
+    },
+    "nmstate": {
+      "type": "object",
+      "description": "NMState custom resource configuration.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Create an NMState custom resource named nmstate to trigger handler deployment."
+        },
+        "spec": {
+          "type": "object",
+          "additionalProperties": true,
+          "default": {},
+          "description": "Passthrough for NMState spec fields, including nodeSelector, tolerations, infraNodeSelector, and infraTolerations. These fields are validated by the NMState CRD."
+        }
+      }
+    }
+  }
+}
