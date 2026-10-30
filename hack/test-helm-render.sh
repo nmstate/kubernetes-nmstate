@@ -14,8 +14,8 @@ CHART_DIR=${CHART_DIR:-charts/kubernetes-nmstate}
 rendered=$(${HELM} template nmstate "${CHART_DIR}" \
     --namespace null \
     --set createNamespace=true \
-    --set handler.namespace=yes \
-    --set monitoring.namespace=123)
+    --set-string handler.namespace=yes \
+    --set-string monitoring.namespace=123)
 
 fail() {
     echo "helm render test failed: $1" >&2
