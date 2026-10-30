@@ -88,6 +88,9 @@ export HELM ?= $(CURDIR)/build/_output/bin/helm-$(HELM_VERSION)
 export HELM_CHART_VERSION ?=
 export HELM_CHART_APP_VERSION ?= $(if $(HELM_CHART_VERSION),v$(HELM_CHART_VERSION),)
 export HELM_CHART_OCI_REPO ?= oci://$(IMAGE_REGISTRY)/$(IMAGE_REPO)
+export HELM_CHART_SIGN_KEY ?=
+export HELM_CHART_SIGN_KEYRING ?=
+export HELM_CHART_SIGN_PASSPHRASE_FILE ?=
 export HELM_RELEASE_NAME ?= nmstate
 
 LOCAL_REGISTRY ?= registry:5000
@@ -229,6 +232,9 @@ push: push-handler push-operator
 push-chart: $(HELM)
 	hack/push-chart.sh
 
+test/helm-signing: $(HELM)
+	bash hack/test-push-chart.sh
+
 test/unit/api:
 	cd api && $(GINKGO) --junit-report=junit-api-unit-test.xml $(unit_test_args) ./...
 
@@ -320,6 +326,7 @@ olm-push: bundle-push index-push
 	push-handler \
 	push-chart \
 	require-image-builder \
+	test/helm-signing \
 	test/unit \
 	generate \
 	check-gen \
