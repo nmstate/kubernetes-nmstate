@@ -38,6 +38,20 @@ If your cluster enforces Pod Security admission and the handler namespace
 equals the release namespace, the operator labels the namespace for
 privileged workloads automatically.
 
+### Verify a signed release
+
+For signed chart versions, download the public key linked in the package's
+signing information on Artifact Hub as `nmstate-helm-signing.asc`. Convert
+it to a binary keyring and verify the chart when downloading it:
+
+```shell
+gpg --dearmor --output nmstate-helm-keyring.gpg nmstate-helm-signing.asc
+helm pull oci://quay.io/nmstate/kubernetes-nmstate \
+  --version <version> \
+  --verify \
+  --keyring ./nmstate-helm-keyring.gpg
+```
+
 ## Values
 
 | Key | Default | Description |
