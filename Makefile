@@ -282,7 +282,7 @@ release:
 	hack/release.sh
 
 vendor:
-	cd api && go mod tidy
+	cd api && go mod tidy && go mod vendor
 	go mod tidy
 	go mod vendor
 
