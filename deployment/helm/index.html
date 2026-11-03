@@ -32,7 +32,7 @@ kubernetes-nmstate is a cluster singleton: only one release of this chart per cl
   <meta itemprop="name" content="Deployment with Helm">
   <meta itemprop="description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry. Published chart versions and package details are available on Artifact Hub. Use a chart version without a leading v for &lt;version&gt; in the commands below.
 kubernetes-nmstate is a cluster singleton: only one release of this chart per cluster is supported. The chart creates cluster-scoped resources with fixed names (such as the nmstate-operator ClusterRole and ClusterRoleBinding), so installing a second release would conflict with the first one.">
-  <meta itemprop="wordCount" content="333">
+  <meta itemprop="wordCount" content="369">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="Deployment with Helm">
   <meta name="twitter:description" content="kubernetes-nmstate can be installed with Helm (&gt;= 3.8) from an OCI registry. Published chart versions and package details are available on Artifact Hub. Use a chart version without a leading v for &lt;version&gt; in the commands below.
@@ -194,6 +194,10 @@ the nodes (see the
 namespace equals the release namespace, the operator labels the namespace
 for privileged workloads automatically.</p>
 <h2 id="values">Values</h2>
+<p>Helm validates chart values against the packaged <code>values.schema.json</code> schema.
+Use <code>--set-string</code> when a string value looks like a number or boolean, such as
+a numeric namespace name. Fields inside <code>nmstate.spec</code> are validated by the
+NMState CRD.</p>
 <table>
   <thead>
       <tr>
