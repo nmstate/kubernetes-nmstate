@@ -1,5 +1,5 @@
 FROM --platform=$BUILDPLATFORM registry.access.redhat.com/ubi9/ubi AS build
-ARG GO_VERSION=1.25
+ARG GO_VERSION=1.26.10
 ARG TARGETARCH
 
 COPY . .
