@@ -508,6 +508,35 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 	})
 
+	Context("when configuring the NodeNetworkState size budget", func() {
+		var (
+			request ctrl.Request
+		)
+		BeforeEach(func() {
+			request.Name = existingNMStateName
+		})
+		AfterEach(func() {
+			os.Unsetenv("NNS_MAX_SIZE_BYTES")
+		})
+		It("should pass the default budget to the handler daemonset", func() {
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+
+			ds := &appsv1.DaemonSet{}
+			Expect(cl.Get(context.Background(), handlerKey, ds)).To(Succeed())
+			Expect(envVariableStringPresent("NNS_MAX_SIZE_BYTES", "1048576", ds.Spec.Template.Spec.Containers[0].Env)).To(BeTrue())
+		})
+		It("should pass the operator NNS_MAX_SIZE_BYTES to the handler daemonset", func() {
+			os.Setenv("NNS_MAX_SIZE_BYTES", "4096")
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+
+			ds := &appsv1.DaemonSet{}
+			Expect(cl.Get(context.Background(), handlerKey, ds)).To(Succeed())
+			Expect(envVariableStringPresent("NNS_MAX_SIZE_BYTES", "4096", ds.Spec.Template.Spec.Containers[0].Env)).To(BeTrue())
+		})
+	})
+
 	Context("when network policies need to be deployed", func() {
 		var (
 			request ctrl.Request

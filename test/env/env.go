@@ -80,22 +80,23 @@ func Start() {
 }
 
 // PatchHandlerRetryConfig sets lower NNCP retry values for faster E2E tests.
-// It patches the operator Deployment's env vars so that the operator re-renders
-// the handler DaemonSet template with the new values, then waits for the
-// handler pods to come up with the updated configuration.
-// If the operator Deployment does not exist, the patching is skipped.
 func PatchHandlerRetryConfig() {
-	ctx := context.Background()
-
-	// Patch the operator Deployment so it passes the lower retry values
-	// to the handler DaemonSet template on its next reconciliation.
-	// Use RetryOnConflict to handle optimistic concurrency conflicts (HTTP 409).
-	desiredEnvVars := map[string]string{
+	PatchOperatorEnv(map[string]string{
 		"NNCP_MAX_RETRIES":             "2",
 		"NNCP_MAX_BACKOFF_SECONDS":     "5",
 		"NNCP_INITIAL_BACKOFF_SECONDS": "1",
-	}
+	})
+}
 
+// PatchOperatorEnv sets the given environment variables on the operator
+// Deployment so that the operator re-renders the handler DaemonSet template
+// with the new values, then waits for the handler pods to come up with the
+// updated configuration.
+// If the operator Deployment does not exist, the patching is skipped.
+func PatchOperatorEnv(desiredEnvVars map[string]string) {
+	ctx := context.Background()
+
+	// Use RetryOnConflict to handle optimistic concurrency conflicts (HTTP 409).
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		operatorDeploy := &appsv1.Deployment{}
 		if err := Client.Get(ctx, client.ObjectKey{
@@ -126,7 +127,7 @@ func PatchHandlerRetryConfig() {
 		return Client.Update(ctx, operatorDeploy)
 	})
 	if apierrors.IsNotFound(err) {
-		fmt.Println("nmstate-operator Deployment not found, skipping retry config patching")
+		fmt.Println("nmstate-operator Deployment not found, skipping operator env patching")
 		return
 	}
 	Expect(err).ToNot(HaveOccurred())
@@ -154,17 +155,12 @@ func PatchHandlerRetryConfig() {
 		}, freshDS)
 		g.Expect(err).ToNot(HaveOccurred())
 
-		// Verify the DaemonSet template has the updated env var.
+		// Verify the DaemonSet template has the updated env vars.
 		// Containers[0] is the handler container, which is always first.
-		hasCorrectRetries := false
-		expectedRetries := desiredEnvVars["NNCP_MAX_RETRIES"]
-		for _, env := range freshDS.Spec.Template.Spec.Containers[0].Env {
-			if env.Name == "NNCP_MAX_RETRIES" && env.Value == expectedRetries {
-				hasCorrectRetries = true
-				break
-			}
+		for name, value := range desiredEnvVars {
+			g.Expect(hasEnvVar(freshDS.Spec.Template.Spec.Containers[0].Env, name, value)).To(BeTrue(),
+				"DaemonSet should have %s=%s", name, value)
 		}
-		g.Expect(hasCorrectRetries).To(BeTrue(), "DaemonSet should have NNCP_MAX_RETRIES=%s", expectedRetries)
 
 		// Verify all handler pods are ready with the new config
 		podList := corev1.PodList{}
@@ -183,14 +179,19 @@ func PatchHandlerRetryConfig() {
 			g.Expect(podReady).To(BeTrue(), "Pod %s should be ready", pod.Name)
 
 			// Containers[0] is the handler container, which is always first.
-			hasRetries := false
-			for _, env := range pod.Spec.Containers[0].Env {
-				if env.Name == "NNCP_MAX_RETRIES" && env.Value == expectedRetries {
-					hasRetries = true
-					break
-				}
+			for name, value := range desiredEnvVars {
+				g.Expect(hasEnvVar(pod.Spec.Containers[0].Env, name, value)).To(BeTrue(),
+					"Pod %s should have %s=%s", pod.Name, name, value)
 			}
-			g.Expect(hasRetries).To(BeTrue(), "Pod %s should have NNCP_MAX_RETRIES=%s", pod.Name, expectedRetries)
 		}
 	}, 5*time.Minute, 5*time.Second).Should(Succeed())
+}
+
+func hasEnvVar(envVars []corev1.EnvVar, name, value string) bool {
+	for _, env := range envVars {
+		if env.Name == name && env.Value == value {
+			return true
+		}
+	}
+	return false
 }

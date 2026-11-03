@@ -18,16 +18,26 @@ limitations under the License.
 package state
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	yaml "sigs.k8s.io/yaml"
 )
 
+var log = logf.Log.WithName("state")
+
 const (
 	InterfaceFilter = "interface_filter"
+
+	// DefaultMaxStateSizeBytes is the default budget, in bytes, for the
+	// serialized NodeNetworkState currentState. It leaves headroom under
+	// the etcd request size limit (1.5 MiB) for object metadata and the
+	// remaining status fields.
+	DefaultMaxStateSizeBytes = 1 << 20
 )
 
 func init() {
@@ -36,8 +46,13 @@ func init() {
 	}
 }
 
-func FilterOut(currentState shared.State) (shared.State, error) {
-	return filterOut(currentState)
+// FilterOut removes transient or unmanaged entries from the observed state
+// and compacts VLAN interfaces when the serialized state exceeds
+// maxSizeBytes. It returns the filtered state and the compaction tier that
+// was applied to VLAN interfaces, 0 when the state fit without compaction.
+// A non-positive maxSizeBytes selects DefaultMaxStateSizeBytes.
+func FilterOut(currentState shared.State, maxSizeBytes int) (shared.State, int, error) {
+	return filterOut(currentState, maxSizeBytes)
 }
 
 // CountInterfacesByType parses the state and returns a map of interface type to count.
@@ -220,10 +235,102 @@ func isUnmanaged(ifaceData map[string]any) bool {
 	return ifaceData["state"] == "ignore"
 }
 
-func filterOut(currentState shared.State) (shared.State, error) {
+const vlanInterfaceType = "vlan"
+
+// keepSet describes the fields preserved on an interface when it is
+// compacted. A nil value keeps the whole subtree under that key, a non-nil
+// value prunes the subtree recursively.
+type keepSet map[string]keepSet
+
+// vlanCompactionTiers lists, from least to most aggressive, the fields kept
+// on VLAN interfaces when the serialized state exceeds the size budget.
+// VLANs are the interface type that scales into the thousands on a node.
+// The dropped fields default to the base interface values (mac-address,
+// mtu) or are static defaults (ethtool, lldp, wait-ip, ...), and the
+// per-VLAN configuration stays visible in the policy that applied it.
+var vlanCompactionTiers = []keepSet{
+	{"name": nil, "type": nil, "state": nil, "ipv4": nil, "ipv6": nil, "vlan": nil},
+	{
+		"name":  nil,
+		"type":  nil,
+		"state": nil,
+		"ipv4":  {"enabled": nil, "dhcp": nil, "address": nil},
+		"ipv6":  {"enabled": nil, "dhcp": nil, "autoconf": nil, "address": nil},
+		"vlan":  {"base-iface": nil, "id": nil},
+	},
+}
+
+// compactToFit applies the VLAN compaction tiers in order until the
+// serialized state fits within maxSizeBytes and returns the applied tier,
+// 0 when no compaction was needed. If no tier is sufficient the most
+// compact result is kept so the update is still attempted.
+func compactToFit(state *rootState, maxSizeBytes int) (int, error) {
+	if maxSizeBytes <= 0 {
+		maxSizeBytes = DefaultMaxStateSizeBytes
+	}
+	size, err := serializedSize(state)
+	if err != nil {
+		return 0, err
+	}
+	if size <= maxSizeBytes {
+		return 0, nil
+	}
+	tier := 0
+	for _, keep := range vlanCompactionTiers {
+		tier++
+		compactVlanInterfaces(state.Interfaces, keep)
+		size, err = serializedSize(state)
+		if err != nil {
+			return tier, err
+		}
+		if size <= maxSizeBytes {
+			return tier, nil
+		}
+	}
+	log.Info("State exceeds the size budget even after compacting VLAN interfaces, the NodeNetworkState update may be rejected",
+		"sizeBytes", size, "maxSizeBytes", maxSizeBytes)
+	return tier, nil
+}
+
+// serializedSize returns the size of the state as stored in the
+// NodeNetworkState, which is JSON (see shared.State.MarshalJSON).
+func serializedSize(state *rootState) (int, error) {
+	serialized, err := json.Marshal(state)
+	if err != nil {
+		return 0, err
+	}
+	return len(serialized), nil
+}
+
+func compactVlanInterfaces(interfaces []interfaceState, keep keepSet) {
+	for i := range interfaces {
+		if interfaces[i].Type != vlanInterfaceType {
+			continue
+		}
+		pruneToKeepSet(interfaces[i].Data, keep)
+	}
+}
+
+func pruneToKeepSet(data map[string]any, keep keepSet) {
+	for key, value := range data {
+		nestedKeep, found := keep[key]
+		if !found {
+			delete(data, key)
+			continue
+		}
+		if nestedKeep == nil {
+			continue
+		}
+		if nested, isMap := value.(map[string]any); isMap {
+			pruneToKeepSet(nested, nestedKeep)
+		}
+	}
+}
+
+func filterOut(currentState shared.State, maxSizeBytes int) (shared.State, int, error) {
 	var state rootState
 	if err := yaml.Unmarshal(currentState.Raw, &state); err != nil {
-		return currentState, err
+		return currentState, 0, err
 	}
 
 	state.Interfaces = filterOutInterfaces(state.Interfaces)
@@ -232,10 +339,15 @@ func filterOut(currentState shared.State) (shared.State, error) {
 		state.Routes.Config = filterOutRoutes(state.Routes.Config, state.Interfaces)
 	}
 
-	filteredState, err := yaml.Marshal(state)
+	tier, err := compactToFit(&state, maxSizeBytes)
 	if err != nil {
-		return currentState, err
+		return currentState, 0, err
 	}
 
-	return shared.NewState(string(filteredState)), nil
+	filteredState, err := yaml.Marshal(state)
+	if err != nil {
+		return currentState, 0, err
+	}
+
+	return shared.NewState(string(filteredState)), tier, nil
 }
