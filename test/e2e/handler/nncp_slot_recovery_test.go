@@ -33,8 +33,10 @@ import (
 	testenv "github.com/nmstate/kubernetes-nmstate/test/env"
 )
 
-// deleteHandlerPodOnNode deletes the nmstate-handler pod running on the given
-// node, simulating a handler death mid-apply. The DaemonSet recreates it.
+// deleteHandlerPodOnNode kills the nmstate-handler pod running on the given
+// node, simulating a handler death mid-apply. The pod is deleted with a zero
+// grace period so the kill lands while the apply is still in flight rather
+// than after a graceful shutdown let it finish. The DaemonSet recreates it.
 func deleteHandlerPodOnNode(node string) {
 	Byf("Deleting nmstate-handler pod on node %s", node)
 	podList := corev1.PodList{}
@@ -45,7 +47,7 @@ func deleteHandlerPodOnNode(node string) {
 	for i := range podList.Items {
 		pod := &podList.Items[i]
 		if pod.Spec.NodeName == node {
-			ExpectWithOffset(1, testenv.Client.Delete(context.TODO(), pod)).To(Succeed())
+			ExpectWithOffset(1, testenv.Client.Delete(context.TODO(), pod, client.GracePeriodSeconds(0))).To(Succeed())
 			deleted = true
 		}
 	}
