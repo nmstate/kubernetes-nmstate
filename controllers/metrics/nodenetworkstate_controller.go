@@ -24,6 +24,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/monitoring"
 	"github.com/nmstate/kubernetes-nmstate/pkg/state"
@@ -87,6 +89,8 @@ func (r *NodeNetworkStateReconciler) Reconcile(ctx context.Context, request ctrl
 	// Update route metrics for this node
 	r.updateNodeRouteMetrics(nodeName, routeCounts)
 
+	updateNodeQueryFailingMetric(nodeName, nnsInstance.Status.Conditions)
+
 	return ctrl.Result{}, nil
 }
 
@@ -111,8 +115,9 @@ func (r *NodeNetworkStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return false
 			}
 
-			// Reconcile if the current state has changed
-			return oldNNS.Status.CurrentState.String() != newNNS.Status.CurrentState.String()
+			// Reconcile if the current state or the query failure has changed
+			return oldNNS.Status.CurrentState.String() != newNNS.Status.CurrentState.String() ||
+				!equalFailingCondition(oldNNS.Status.Conditions, newNNS.Status.Conditions)
 		},
 		GenericFunc: func(event.GenericEvent) bool {
 			return false
@@ -191,7 +196,31 @@ func (r *NodeNetworkStateReconciler) updateNodeRouteMetrics(nodeName string, cou
 }
 
 // deleteNodeMetrics removes all interface and route count metrics for a specific node
+// updateNodeQueryFailingMetric exposes the NNS Failing condition as a metric
+// so it can be alerted on.
+func updateNodeQueryFailingMetric(nodeName string, conditions shared.ConditionList) {
+	monitoring.NetworkStateQueryFailing.DeletePartialMatch(prometheus.Labels{"node": nodeName})
+	failing := conditions.Find(shared.NodeNetworkStateConditionFailing)
+	if failing != nil && failing.Status == corev1.ConditionTrue {
+		monitoring.NetworkStateQueryFailing.With(prometheus.Labels{
+			"node":   nodeName,
+			"reason": string(failing.Reason),
+		}).Set(1)
+	}
+}
+
+func equalFailingCondition(oldConditions, newConditions shared.ConditionList) bool {
+	oldFailing := oldConditions.Find(shared.NodeNetworkStateConditionFailing)
+	newFailing := newConditions.Find(shared.NodeNetworkStateConditionFailing)
+	if oldFailing == nil || newFailing == nil {
+		return oldFailing == newFailing
+	}
+	return oldFailing.Status == newFailing.Status && oldFailing.Reason == newFailing.Reason
+}
+
 func (r *NodeNetworkStateReconciler) deleteNodeMetrics(nodeName string) {
+	monitoring.NetworkStateQueryFailing.DeletePartialMatch(prometheus.Labels{"node": nodeName})
+
 	// Delete interface metrics
 	if oldTypes, ok := r.oldInterfaceTypes[nodeName]; ok {
 		for ifaceType := range oldTypes {

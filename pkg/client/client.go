@@ -109,6 +109,8 @@ func UpdateCurrentState(
 
 	nodeNetworkState.Status.CurrentState = observedState
 	nodeNetworkState.Status.LastSuccessfulUpdateTime = metav1.Time{Time: time.Now()}
+	SetNodeNetworkStateQueryConditions(&nodeNetworkState.Status.Conditions,
+		shared.NodeNetworkStateConditionQuerySucceeded, QuerySucceededMessage)
 
 	err := cli.Status().Update(ctx, nodeNetworkState)
 	if err != nil {
