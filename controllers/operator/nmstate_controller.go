@@ -85,7 +85,8 @@ type NMStateReconciler struct {
 // +kubebuilder:rbac:groups="",resources=services;endpoints;events;configmaps,verbs=get;list;watch;create;update;patch;delete
 // Pods are created indirectly via Deployments/DaemonSets — operator only needs read access.
 // +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch
-// Secrets: operator only deletes one obsolete webhook secret during cleanup; cert-manager (handler SA) handles creation.
+// Secrets: operator deletes one obsolete webhook secret during cleanup and, on OpenShift, reads/watches the console
+// plugin serving cert secret (cache restricted to that name and namespace); cert-manager (handler SA) handles creation.
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;delete
 // ServiceAccounts: operator creates handler SA.
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update;patch;delete
@@ -207,6 +208,18 @@ func (r *NMStateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				},
 			),
 		))
+
+		// On OpenShift, watch the console plugin serving certificate Secret
+		// that service-ca populates. A rotation changes the certificate
+		// digest on the plugin pod template, which rolls the Deployment so
+		// nginx loads the new certificate. The manager cache only holds this
+		// Secret (see PluginServingCertCacheByObject).
+		builder = builder.WatchesRawSource(source.Kind(
+			mgr.GetCache(),
+			&corev1.Secret{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.nmstateRequestsFromPluginServingCert),
+			pluginServingCertPredicate(),
+		))
 	}
 
 	return builder.Complete(r)
@@ -219,9 +232,15 @@ func (r *NMStateReconciler) nmstateRequestsFromHandlerNamespace(ctx context.Cont
 	if obj.GetName() != os.Getenv("HANDLER_NAMESPACE") {
 		return nil
 	}
+	return r.nmstateRequests(ctx, "namespace")
+}
+
+// nmstateRequests returns a reconcile request for every NMState CR. trigger
+// names the watched object kind in the error log.
+func (r *NMStateReconciler) nmstateRequests(ctx context.Context, trigger string) []ctrl.Request {
 	nmstateList := &nmstatev1.NMStateList{}
 	if err := r.List(ctx, nmstateList); err != nil {
-		r.Log.Error(err, "failed listing NMState CRs to enqueue from namespace event")
+		r.Log.Error(err, "failed listing NMState CRs to enqueue", "trigger", trigger)
 		return nil
 	}
 	requests := []ctrl.Request{}
@@ -467,8 +486,8 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance *nmstatev1.NMState) error {
 	data := render.MakeRenderData()
 	data.Funcs["toYaml"] = render.ToYaml
-	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "openshift-nmstate")
-	data.Data["PluginName"] = environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
+	data.Data["PluginNamespace"] = pluginNamespace()
+	data.Data["PluginName"] = pluginName()
 	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")
 	data.Data["PluginPort"] = environment.GetEnvVar("PLUGIN_PORT", "9443")
 
@@ -477,12 +496,19 @@ func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance
 	data.Data["InfraTolerations"] = instance.Spec.InfraTolerations
 	data.Data["InfraAffinity"] = instance.Spec.InfraAffinity
 
+	data.Data["PluginServingCertSecretName"] = pluginServingCertSecretName
+	certHash, err := r.pluginServingCertHashForRender(ctx)
+	if err != nil {
+		return err
+	}
+	data.Data["PluginServingCertHash"] = certHash
+
 	return r.renderAndApply(ctx, instance, data, filepath.Join("openshift", "ui-plugin"), true)
 }
 
 func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) error {
 	// Enable console plugin for nmstate-console if not already enabled
-	pluginName := environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
+	name := pluginName()
 
 	consoleObj := &unstructured.Unstructured{}
 	consoleObj.SetGroupVersionKind(schema.GroupVersionKind{
@@ -498,9 +524,9 @@ func (r *NMStateReconciler) patchOpenshiftConsolePlugin(ctx context.Context) err
 	}
 
 	plugins, _, _ := unstructured.NestedStringSlice(consoleObj.Object, "spec", "plugins")
-	if !stringInSlice(pluginName, plugins) {
+	if !stringInSlice(name, plugins) {
 		r.Log.Info("Enabling kubevirt plugin in Console")
-		plugins = append(plugins, pluginName)
+		plugins = append(plugins, name)
 		if err := unstructured.SetNestedStringSlice(consoleObj.Object, plugins, "spec", "plugins"); err != nil {
 			return fmt.Errorf("could not set spec.plugins: %w", err)
 		}

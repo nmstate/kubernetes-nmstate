@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -60,7 +61,7 @@ func (c *applyCapableFakeClient) Patch(ctx context.Context, obj client.Object, p
 		err := c.Create(ctx, obj)
 		if err != nil {
 			if apierrors.IsAlreadyExists(err) {
-				return c.Update(ctx, obj)
+				return c.replace(ctx, obj)
 			}
 			return err
 		}
@@ -68,6 +69,23 @@ func (c *applyCapableFakeClient) Patch(ctx context.Context, obj client.Object, p
 	}
 	// For other patch types, use the underlying client
 	return c.Client.Patch(ctx, obj, patch, opts...)
+}
+
+// replace overwrites the stored object with obj, like SSA with ForceOwnership
+// when one field manager owns every field. Field ownership is not modeled. The
+// stored resourceVersion is carried over because the fake client only allows
+// unconditional updates for built-in types, not for unstructured objects such
+// as ConsolePlugin.
+func (c *applyCapableFakeClient) replace(ctx context.Context, obj client.Object) error {
+	existing, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		return fmt.Errorf("unexpected object type %T", obj)
+	}
+	if err := c.Get(ctx, client.ObjectKeyFromObject(obj), existing); err != nil {
+		return err
+	}
+	obj.SetResourceVersion(existing.GetResourceVersion())
+	return c.Update(ctx, obj)
 }
 
 func (c *applyCapableFakeClient) Status() client.SubResourceWriter {
@@ -124,6 +142,50 @@ func (s *forceOwnershipSpyStatusWriter) Patch(
 	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
 }
 
+// secretReadSpyClient counts Secret reads (Get and List) made through it.
+type secretReadSpyClient struct {
+	client.Client
+	secretReads int
+}
+
+func (c *secretReadSpyClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	if _, ok := obj.(*corev1.Secret); ok {
+		c.secretReads++
+	}
+	return c.Client.Get(ctx, key, obj, opts...)
+}
+
+func (c *secretReadSpyClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if _, ok := list.(*corev1.SecretList); ok {
+		c.secretReads++
+	}
+	return c.Client.List(ctx, list, opts...)
+}
+
+// testScheme registers the nmstate and CRD types the operator applies.
+func testScheme() *runtime.Scheme {
+	s := scheme.Scheme
+	s.AddKnownTypes(nmstatev1.GroupVersion,
+		&nmstatev1.NMState{},
+		&nmstatev1.NMStateList{},
+	)
+	// Add v1beta1 types for server-side apply to work with CRDs
+	s.AddKnownTypes(nmstatev1beta1.GroupVersion,
+		&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
+		&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
+		&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
+		&nmstatev1beta1.NodeNetworkConfigurationPolicyList{},
+		&nmstatev1beta1.NodeNetworkState{},
+		&nmstatev1beta1.NodeNetworkStateList{},
+	)
+	// Add CRD types
+	s.AddKnownTypes(apiextv1.SchemeGroupVersion,
+		&apiextv1.CustomResourceDefinition{},
+		&apiextv1.CustomResourceDefinitionList{},
+	)
+	return s
+}
+
 var _ = Describe("NMState controller reconcile", func() {
 	var (
 		cl                         client.Client
@@ -168,25 +230,7 @@ var _ = Describe("NMState controller reconcile", func() {
 			return []runtime.Object{}
 		}
 		setupFakeClient = func(nmstateObj *nmstatev1.NMState, extraObjs ...runtime.Object) client.Client {
-			s := scheme.Scheme
-			s.AddKnownTypes(nmstatev1.GroupVersion,
-				&nmstatev1.NMState{},
-				&nmstatev1.NMStateList{},
-			)
-			// Add v1beta1 types for server-side apply to work with CRDs
-			s.AddKnownTypes(nmstatev1beta1.GroupVersion,
-				&nmstatev1beta1.NodeNetworkConfigurationEnactment{},
-				&nmstatev1beta1.NodeNetworkConfigurationEnactmentList{},
-				&nmstatev1beta1.NodeNetworkConfigurationPolicy{},
-				&nmstatev1beta1.NodeNetworkConfigurationPolicyList{},
-				&nmstatev1beta1.NodeNetworkState{},
-				&nmstatev1beta1.NodeNetworkStateList{},
-			)
-			// Add CRD types
-			s.AddKnownTypes(apiextv1.SchemeGroupVersion,
-				&apiextv1.CustomResourceDefinition{},
-				&apiextv1.CustomResourceDefinitionList{},
-			)
+			s := testScheme()
 
 			objs := []runtime.Object{nmstateObj}
 			objs = append(objs, createTestCRDs()...)
@@ -293,6 +337,34 @@ var _ = Describe("NMState controller reconcile", func() {
 		It("should not enqueue requests for other namespaces", func() {
 			requests := reconciler.nmstateRequestsFromHandlerNamespace(context.Background(), newNamespace("some-other-namespace"))
 			Expect(requests).To(BeEmpty())
+		})
+	})
+	Context("when running on a non-OpenShift cluster with the console plugin manifests present", func() {
+		var spy *secretReadSpyClient
+		BeforeEach(func() {
+			// The operator image always ships the plugin templates.
+			Expect(copyUIPluginManifests(manifestsDir)).To(Succeed())
+			secret := servingCertSecret(handlerNamespace, pluginServingCertSecretName, certChain(testLeafV1), testKeyV1)
+			cl = setupFakeClient(newNMState(), secret)
+			spy = &secretReadSpyClient{Client: cl}
+			reconciler.Client = spy
+			reconciler.APIClient = spy
+			reconciler.IsOpenShift = false
+		})
+		It("should never read Secrets and should not deploy the console plugin", func() {
+			_, err := reconciler.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: existingNMStateName}})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(spy.secretReads).To(BeZero())
+
+			err = cl.Get(context.Background(), types.NamespacedName{Namespace: handlerNamespace, Name: defaultPluginName}, &appsv1.Deployment{})
+			Expect(err).To(Satisfy(apierrors.IsNotFound), "the console plugin must not be deployed on non-OpenShift clusters")
+
+			deployments := &appsv1.DeploymentList{}
+			Expect(cl.List(context.Background(), deployments)).To(Succeed())
+			Expect(deployments.Items).ToNot(BeEmpty())
+			for i := range deployments.Items {
+				Expect(deployments.Items[i].Spec.Template.Annotations).ToNot(HaveKey(pluginServingCertHashAnnotation))
+			}
 		})
 	})
 	Context("when one of manifest directory is empty", func() {
