@@ -27,6 +27,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -245,6 +246,60 @@ var _ = Describe("NMState controller reconcile", func() {
 			)).To(Succeed())
 			Expect(recorder.forced).NotTo(BeEmpty(), "expected at least one SSA status patch")
 			Expect(recorder.forced).NotTo(ContainElement(false), "every status SSA patch must carry ForceOwnership")
+		})
+	})
+
+	Context("when the webhook configuration has obsolete validating webhooks", func() {
+		var (
+			webhookConfigurationKey = types.NamespacedName{Name: handlerPrefix + "-nmstate"}
+			newWebhook              = func(name string) admissionregistrationv1.MutatingWebhook {
+				sideEffects := admissionregistrationv1.SideEffectClassNone
+				path := "/" + name
+				return admissionregistrationv1.MutatingWebhook{
+					Name:                    name + ".nmstate.io",
+					AdmissionReviewVersions: []string{"v1"},
+					SideEffects:             &sideEffects,
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						Service: &admissionregistrationv1.ServiceReference{
+							Namespace: handlerNamespace,
+							Name:      webhookKey.Name,
+							Path:      &path,
+						},
+					},
+				}
+			}
+			webhookNames = func() []string {
+				webhookConfiguration := &admissionregistrationv1.MutatingWebhookConfiguration{}
+				Expect(cl.Get(context.Background(), webhookConfigurationKey, webhookConfiguration)).To(Succeed())
+				webhookNames := []string{}
+				for i := range webhookConfiguration.Webhooks {
+					webhookNames = append(webhookNames, webhookConfiguration.Webhooks[i].Name)
+				}
+				return webhookNames
+			}
+		)
+		BeforeEach(func() {
+			// Simulates a cluster upgraded from a version where the operator
+			// created the webhooks without server-side apply, so removing
+			// them from the applied manifest does not prune them.
+			Expect(cl.Create(context.Background(), &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: webhookConfigurationKey.Name},
+				Webhooks: []admissionregistrationv1.MutatingWebhook{
+					newWebhook("nodenetworkconfigurationpolicies-mutate"),
+					newWebhook("nodenetworkconfigurationpolicies-update-validate"),
+					newWebhook("nodenetworkconfigurationpolicies-create-validate"),
+				},
+			})).To(Succeed())
+		})
+		It("should remove only the obsolete webhooks", func() {
+			Expect(reconciler.cleanupObsoleteResources(context.Background())).To(Succeed())
+			Expect(webhookNames()).To(ConsistOf("nodenetworkconfigurationpolicies-mutate.nmstate.io"))
+		})
+		It("should succeed when the webhook configuration does not exist", func() {
+			Expect(cl.Delete(context.Background(), &admissionregistrationv1.MutatingWebhookConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Name: webhookConfigurationKey.Name},
+			})).To(Succeed())
+			Expect(reconciler.cleanupObsoleteResources(context.Background())).To(Succeed())
 		})
 	})
 
