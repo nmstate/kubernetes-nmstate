@@ -18,8 +18,12 @@ limitations under the License.
 package state
 
 import (
+	"fmt"
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 
 	nmstate "github.com/nmstate/kubernetes-nmstate/api/shared"
 )
@@ -123,7 +127,7 @@ routes:
 `)
 		})
 		It("should remove dynamic attributes from linux-bridge interface", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -164,7 +168,7 @@ routes:
 		})
 
 		It("should keep managed veth interface", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -195,7 +199,7 @@ routes:
 		})
 
 		It("should filter unmanaged veth interface", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -291,7 +295,7 @@ routes:
 `)
 		})
 		It("should filter out all unmanaged veth interfaces", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -320,7 +324,7 @@ dns-resolver:
 		})
 
 		It("Should keep the DNS Resolver intact", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(state))
 		})
@@ -384,12 +388,308 @@ routes:
 `)
 		})
 		It("should remove preferred-life-time and valid-life-time from address entries", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
 	})
+
+	Context("when the serialized state fits within the size budget", func() {
+		BeforeEach(func() {
+			state = stateWithVlans(3)
+		})
+		It("should keep VLAN interfaces intact and report no compaction", func() {
+			returnedState, tier, err := filterOut(state, DefaultMaxStateSizeBytes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tier).To(Equal(0))
+			Expect(returnedState).To(MatchYAML(state))
+		})
+	})
+
+	Context("when the serialized state exceeds the size budget", func() {
+		// Enough for the ethernet interface plus three VLANs stripped of
+		// their verbose fields, but not for three full VLANs.
+		const maxSizeBytes = 4000
+
+		BeforeEach(func() {
+			state = stateWithVlans(3)
+			filteredState = stateWithVlansRendered(3, compactVlanInterface)
+		})
+		It("should strip verbose fields from VLAN interfaces and keep other interfaces intact", func() {
+			returnedState, tier, err := filterOut(state, maxSizeBytes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tier).To(Equal(1))
+			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(serializedSizeOf(returnedState)).To(BeNumerically("<=", maxSizeBytes))
+		})
+	})
+
+	Context("when stripping verbose VLAN fields is not enough to fit the size budget", func() {
+		// Enough for the ethernet interface plus three VLANs reduced to
+		// their identity and addresses, but not for three VLANs that only
+		// had their verbose fields stripped.
+		const maxSizeBytes = 2400
+
+		BeforeEach(func() {
+			state = stateWithVlans(3)
+			filteredState = stateWithVlansRendered(3, minimalVlanInterface)
+		})
+		It("should reduce VLAN interfaces to their identity and addresses", func() {
+			returnedState, tier, err := filterOut(state, maxSizeBytes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tier).To(Equal(2))
+			Expect(returnedState).To(MatchYAML(filteredState))
+			Expect(serializedSizeOf(returnedState)).To(BeNumerically("<=", maxSizeBytes))
+		})
+	})
+
+	Context("when no compaction is enough to fit the size budget", func() {
+		const maxSizeBytes = 1
+
+		BeforeEach(func() {
+			state = stateWithVlans(3)
+			filteredState = stateWithVlansRendered(3, minimalVlanInterface)
+		})
+		It("should return the most compact state without dropping interfaces", func() {
+			returnedState, tier, err := filterOut(state, maxSizeBytes)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tier).To(Equal(2))
+			Expect(returnedState).To(MatchYAML(filteredState))
+		})
+	})
+
+	Context("when the size budget is not positive", func() {
+		BeforeEach(func() {
+			state = stateWithVlans(3)
+		})
+		It("should fall back to the default size budget and keep a small state intact", func() {
+			returnedState, tier, err := filterOut(state, 0)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(tier).To(Equal(0))
+			Expect(returnedState).To(MatchYAML(state))
+		})
+	})
 })
+
+// serializedSizeOf returns the size of the state as stored in the
+// NodeNetworkState, which is JSON (see shared.State.MarshalJSON).
+func serializedSizeOf(state nmstate.State) int {
+	jsonState, err := yaml.YAMLToJSON(state.Raw)
+	ExpectWithOffset(1, err).ToNot(HaveOccurred())
+	return len(jsonState)
+}
+
+// realisticEthernetInterface mirrors `nmstatectl show` output for a
+// NetworkManager-managed ethernet interface on RHCOS (nmstate 2.2.60).
+func realisticEthernetInterface(name string) string {
+	return fmt.Sprintf(`- name: %s
+  type: ethernet
+  profile-name: %s
+  driver: virtio_net
+  state: up
+  identifier: name
+  mac-address: 00:6B:3D:CE:C4:E6
+  permanent-mac-address: 00:6B:3D:CE:C4:E6
+  mtu: 1500
+  min-mtu: 68
+  max-mtu: 65535
+  ipv4:
+    enabled: false
+    forwarding: true
+  ipv6:
+    enabled: false
+  accept-all-mac-addresses: false
+  lldp:
+    enabled: false
+  ethtool:
+    feature:
+      rx-gro: true
+      rx-gro-hw: true
+      rx-gro-list: false
+      rx-udp-gro-forwarding: true
+      tx-checksum-ip-generic: true
+      tx-generic-segmentation: true
+      tx-nocache-copy: false
+      tx-tcp-ecn-segmentation: true
+      tx-tcp-mangleid-segmentation: false
+      tx-tcp-segmentation: true
+      tx-tcp6-segmentation: true
+    coalesce:
+      adaptive-rx: false
+      rx-frames: 1
+      rx-usecs: 0
+      tx-frames: 1
+      tx-usecs: 0
+    ring:
+      rx: 256
+      rx-max: 256
+      tx: 256
+      tx-max: 256
+  alt-names:
+  - name: enx006b3dcec4e6
+  ethernet:
+    auto-negotiation: false
+`, name, name)
+}
+
+// realisticVlanInterface mirrors `nmstatectl show` output for a
+// NetworkManager-managed VLAN with a static IPv4 address and IPv6
+// autoconf on RHCOS (nmstate 2.2.60).
+func realisticVlanInterface(baseIface string, id int) string {
+	name := fmt.Sprintf("%s.%d", baseIface, id)
+	return fmt.Sprintf(`- name: %[1]s
+  profile-name: %[1]s
+  type: vlan
+  state: up
+  identifier: name
+  mac-address: 00:6B:3D:CE:C4:E6
+  mtu: 1500
+  max-mtu: 65535
+  wait-ip: any
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.%[3]d.%[4]d
+      prefix-length: 24
+    auto-route-metric: -1
+    forwarding: true
+    prefix-route-metric: -1
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    address:
+    - ip: fe80::4f9a:1ed2:3812:8e49
+      prefix-length: 64
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+    auto-route-metric: -1
+    addr-gen-mode: stable-privacy
+    dhcp-send-hostname: true
+  mptcp:
+    address-flags: []
+  accept-all-mac-addresses: false
+  lldp:
+    enabled: false
+  ethtool:
+    feature:
+      highdma: true
+      rx-gro: true
+      rx-gro-list: false
+      rx-udp-gro-forwarding: false
+      tx-checksum-fcoe-crc: false
+      tx-checksum-ip-generic: true
+      tx-checksum-sctp: false
+      tx-fcoe-segmentation: false
+      tx-generic-segmentation: true
+      tx-gre-csum-segmentation: false
+      tx-gre-segmentation: false
+      tx-gso-list: true
+      tx-ipxip4-segmentation: false
+      tx-ipxip6-segmentation: false
+      tx-nocache-copy: false
+      tx-scatter-gather-fraglist: false
+      tx-sctp-segmentation: true
+      tx-tcp-ecn-segmentation: true
+      tx-tcp-mangleid-segmentation: true
+      tx-tcp-segmentation: true
+      tx-tcp6-segmentation: true
+      tx-udp-segmentation: true
+      tx-udp_tnl-csum-segmentation: false
+      tx-udp_tnl-segmentation: false
+  vlan:
+    base-iface: %[2]s
+    id: %[5]d
+    protocol: 802.1q
+    registration-protocol: none
+    reorder-headers: true
+    loose-binding: false
+`, name, baseIface, id/256, id%256, id)
+}
+
+// compactVlanInterface is realisticVlanInterface reduced to the fields kept
+// when the state exceeds the size budget.
+func compactVlanInterface(baseIface string, id int) string {
+	return fmt.Sprintf(`- name: %[1]s.%[4]d
+  type: vlan
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.%[2]d.%[3]d
+      prefix-length: 24
+    auto-route-metric: -1
+    forwarding: true
+    prefix-route-metric: -1
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    address:
+    - ip: fe80::4f9a:1ed2:3812:8e49
+      prefix-length: 64
+    auto-dns: true
+    auto-gateway: true
+    auto-routes: true
+    auto-route-table-id: 0
+    auto-route-metric: -1
+    addr-gen-mode: stable-privacy
+    dhcp-send-hostname: true
+  vlan:
+    base-iface: %[1]s
+    id: %[4]d
+    protocol: 802.1q
+    registration-protocol: none
+    reorder-headers: true
+    loose-binding: false
+`, baseIface, id/256, id%256, id)
+}
+
+// minimalVlanInterface is realisticVlanInterface reduced to the fields kept
+// when stripping verbose fields is not enough to fit the size budget.
+func minimalVlanInterface(baseIface string, id int) string {
+	return fmt.Sprintf(`- name: %[1]s.%[4]d
+  type: vlan
+  state: up
+  ipv4:
+    enabled: true
+    dhcp: false
+    address:
+    - ip: 192.0.%[2]d.%[3]d
+      prefix-length: 24
+  ipv6:
+    enabled: true
+    dhcp: true
+    autoconf: true
+    address:
+    - ip: fe80::4f9a:1ed2:3812:8e49
+      prefix-length: 64
+  vlan:
+    base-iface: %[1]s
+    id: %[4]d
+`, baseIface, id/256, id%256, id)
+}
+
+// stateWithVlans builds a state with one ethernet interface and the given
+// number of VLAN interfaces on top of it.
+func stateWithVlans(count int) nmstate.State {
+	return stateWithVlansRendered(count, realisticVlanInterface)
+}
+
+func stateWithVlansRendered(count int, renderVlan func(baseIface string, id int) string) nmstate.State {
+	var sb strings.Builder
+	sb.WriteString("interfaces:\n")
+	sb.WriteString(realisticEthernetInterface("eth0"))
+	for id := 1000; id < 1000+count; id++ {
+		sb.WriteString(renderVlan("eth0", id))
+	}
+	sb.WriteString("routes:\n  config: []\n  running: []\n")
+	return nmstate.NewState(sb.String())
+}
 
 var _ = Describe("CountRoutes", func() {
 	Context("when there are no routes", func() {
