@@ -18,7 +18,9 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -26,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
@@ -34,6 +37,8 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/probe"
 )
+
+var log = logf.Log.WithName("node")
 
 // worstCaseApplyCycle bounds how long ApplyDesiredState can legitimately run.
 // The Progressing heartbeat is stamped once at NotifyProgressing and is not
@@ -77,20 +82,43 @@ const (
 // equal or smaller value would let the audit free a slot held by a node that
 // is still legitimately applying (a holder is stale once its heartbeat age
 // reaches the threshold) and break maxUnavailable, so it is rejected in favor
-// of the safe default.
+// of the safe default. A rejected override is logged once per process.
 func StaleEnactmentThreshold() time.Duration {
 	raw := environment.GetEnvVar(StaleEnactmentThresholdEnvVar, "")
+	threshold, rejectedReason := resolveStaleEnactmentThreshold(raw)
+	if rejectedReason != "" {
+		rejectedOverrideLogOnce.Do(func() {
+			log.Info("ignoring stale-enactment threshold override, using the default",
+				"envVar", StaleEnactmentThresholdEnvVar,
+				"value", raw,
+				"reason", rejectedReason,
+				"default", threshold.String())
+		})
+	}
+	return threshold
+}
+
+var rejectedOverrideLogOnce sync.Once
+
+// resolveStaleEnactmentThreshold parses a raw override. It returns the
+// threshold to use and, when the override was rejected, the reason; an empty
+// reason means the value was accepted or unset.
+func resolveStaleEnactmentThreshold(raw string) (threshold time.Duration, rejectedReason string) {
 	if raw == "" {
-		return DefaultStaleEnactmentThreshold
+		return DefaultStaleEnactmentThreshold, ""
 	}
 	parsed, err := time.ParseDuration(raw)
-	if err != nil || parsed <= 0 {
-		return DefaultStaleEnactmentThreshold
+	if err != nil {
+		return DefaultStaleEnactmentThreshold, "not a valid duration"
+	}
+	if parsed <= 0 {
+		return DefaultStaleEnactmentThreshold, "must be positive"
 	}
 	if parsed <= worstCaseApplyCycle {
-		return DefaultStaleEnactmentThreshold
+		return DefaultStaleEnactmentThreshold,
+			fmt.Sprintf("must exceed the worst-case apply cycle (%s)", worstCaseApplyCycle)
 	}
-	return parsed
+	return parsed, ""
 }
 
 // AuditUnavailableSlots recomputes UnavailableNodeCountMap[currentGeneration]
