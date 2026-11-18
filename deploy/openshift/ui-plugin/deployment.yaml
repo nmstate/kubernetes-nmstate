@@ -19,6 +19,9 @@ spec:
       annotations:
         target.workload.openshift.io/management: |
           {"effect": "PreferredDuringScheduling"}
+        {{- if .PluginServingCertHash }}
+        nmstate.io/plugin-serving-cert-hash: "{{ .PluginServingCertHash }}"
+        {{- end }}
       labels:
         app: {{ .PluginName }}
     spec:
@@ -71,7 +74,7 @@ spec:
       volumes:
         - name: plugin-serving-cert
           secret:
-            secretName: plugin-serving-cert
+            secretName: {{ .PluginServingCertSecretName }}
             defaultMode: 420
         - name: nginx-conf
           configMap:

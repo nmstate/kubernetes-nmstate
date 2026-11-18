@@ -98,6 +98,12 @@ func main() {
 				&corev1.Namespace{}: {
 					Field: fields.OneTermEqualSelector("metadata.name", os.Getenv("HANDLER_NAMESPACE")),
 				},
+				// On OpenShift the operator watches the console plugin
+				// serving certificate Secret to roll the plugin when
+				// service-ca rotates it. Restrict the cache to that Secret
+				// (namespace and name) so no other Secret is listed or
+				// cached.
+				&corev1.Secret{}: controllers.PluginServingCertCacheByObject(),
 			},
 		},
 	}
