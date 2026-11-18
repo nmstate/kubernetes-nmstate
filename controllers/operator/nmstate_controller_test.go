@@ -585,6 +585,35 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 	})
 
+	Context("when the OpenShift console plugin is rendered", func() {
+		It("should reference the serving certificate and key through a constant map variable", func() {
+			pluginManifests, err := filepath.Glob("../../deploy/openshift/ui-plugin/*.yaml")
+			Expect(err).ToNot(HaveOccurred())
+			for _, manifest := range pluginManifests {
+				Expect(copyManifest(manifest, filepath.Join(manifestsDir, "kubernetes-nmstate", "openshift", "ui-plugin"))).To(Succeed())
+			}
+			nmstate := &nmstatev1.NMState{}
+			Expect(cl.Get(context.Background(), types.NamespacedName{Name: existingNMStateName}, nmstate)).To(Succeed())
+			Expect(reconciler.applyOpenshiftUIPlugin(context.Background(), nmstate)).To(Succeed())
+
+			configMap := &corev1.ConfigMap{}
+			configMapKey := types.NamespacedName{Namespace: handlerNamespace, Name: "nginx-conf"}
+			Expect(cl.Get(context.Background(), configMapKey, configMap)).To(Succeed())
+			nginxConf := configMap.Data["nginx.conf"]
+
+			// nginx accepts map only in the http context. Allowing only lines
+			// without braces between "http {" and the map keeps it out of the top
+			// level and of nested blocks such as server. Anchoring directives at
+			// the line start keeps commented-out lines from matching, and no
+			// active certificate or key directive may use a literal path.
+			Expect(nginxConf).To(MatchRegexp(
+				`(?m)^http \{\n(?:[^{}\n]*\n)*\s*map "" \$plugin_certificate_dir \{\s*default /var/serving-cert;\s*\}`))
+			Expect(nginxConf).To(MatchRegexp(`(?m)^\s*ssl_certificate\s+\$plugin_certificate_dir/tls\.crt;`))
+			Expect(nginxConf).To(MatchRegexp(`(?m)^\s*ssl_certificate_key\s+\$plugin_certificate_dir/tls\.key;`))
+			Expect(nginxConf).NotTo(MatchRegexp(`(?m)^\s*ssl_certificate(_key)?\s+[^$\s]`))
+		})
+	})
+
 	Context("when operator spec has log level configured", func() {
 		var (
 			request ctrl.Request

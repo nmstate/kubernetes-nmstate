@@ -15,10 +15,18 @@ data:
       include            /etc/nginx/mime.types;
       default_type       application/octet-stream;
       keepalive_timeout  65;
+      # Certificate paths containing a variable are loaded on each full TLS
+      # handshake, so a rotated serving certificate in the mounted secret is
+      # used without restarting or reloading nginx, at the cost of extra CPU
+      # per full handshake. The map input is a constant empty string, so the
+      # directory never depends on client-supplied values such as SNI.
+      map "" $plugin_certificate_dir {
+        default /var/serving-cert;
+      }
       server {
         listen              [::]:{{ .PluginPort }} ipv6only=off ssl;
-        ssl_certificate     /var/serving-cert/tls.crt;
-        ssl_certificate_key /var/serving-cert/tls.key;
+        ssl_certificate     $plugin_certificate_dir/tls.crt;
+        ssl_certificate_key $plugin_certificate_dir/tls.key;
         root                /opt/app-root/src;
       }
     }
