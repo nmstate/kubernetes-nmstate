@@ -19,9 +19,14 @@ package controllers
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +36,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -45,6 +51,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -61,6 +68,12 @@ func (c *applyCapableFakeClient) Patch(ctx context.Context, obj client.Object, p
 		err := c.Create(ctx, obj)
 		if err != nil {
 			if apierrors.IsAlreadyExists(err) {
+				// Server-side apply is not subject to optimistic locking.
+				existing := obj.DeepCopyObject().(client.Object)
+				if err := c.Get(ctx, client.ObjectKeyFromObject(obj), existing); err != nil {
+					return err
+				}
+				obj.SetResourceVersion(existing.GetResourceVersion())
 				return c.Update(ctx, obj)
 			}
 			return err
@@ -89,6 +102,22 @@ func (s *applyCapableStatusWriter) Patch(
 	}
 	// For other patch types, use the underlying status writer
 	return s.SubResourceWriter.Patch(ctx, obj, patch, opts...)
+}
+
+// applyInterceptorClient calls beforeApply ahead of every server-side apply
+// patch; a returned error fails the patch without touching the stored object.
+type applyInterceptorClient struct {
+	client.Client
+	beforeApply func(obj client.Object) error
+}
+
+func (c *applyInterceptorClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+	if patch.Type() == types.ApplyPatchType && c.beforeApply != nil {
+		if err := c.beforeApply(obj); err != nil {
+			return err
+		}
+	}
+	return c.Client.Patch(ctx, obj, patch, opts...)
 }
 
 // statusPatchRecorder records, for every SSA status patch, whether the
@@ -585,6 +614,163 @@ var _ = Describe("NMState controller reconcile", func() {
 		})
 	})
 
+	Context("when the OpenShift cluster TLS profile changes", func() {
+		const tlsProfileHashAnnotation = "nmstate.io/tls-profile-hash"
+		var (
+			request          ctrl.Request
+			interceptor      *applyInterceptorClient
+			intermediateHash string
+			tlsConfigKey     = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-tls-config"}
+			metricsKey       = types.NamespacedName{Namespace: handlerNamespace, Name: handlerPrefix + "-nmstate-metrics"}
+			tlsDeploymentKey = []types.NamespacedName{metricsKey, webhookKey}
+
+			deliveredProfile = func() string {
+				configMap := &corev1.ConfigMap{}
+				ExpectWithOffset(1, cl.Get(context.Background(), tlsConfigKey, configMap)).To(Succeed())
+				return configMap.Data["profile.json"]
+			}
+			deliveredProfileHash = func() string {
+				return fmt.Sprintf("%x", sha256.Sum256([]byte(deliveredProfile())))
+			}
+			publishedProfileHash = func(key types.NamespacedName) string {
+				deployment := &appsv1.Deployment{}
+				ExpectWithOffset(1, cl.Get(context.Background(), key, deployment)).To(Succeed())
+				return deployment.Spec.Template.Annotations[tlsProfileHashAnnotation]
+			}
+			isTLSDeployment = func(obj client.Object) bool {
+				return obj.GetObjectKind().GroupVersionKind().Kind == "Deployment" &&
+					slices.Contains(tlsDeploymentKey, client.ObjectKeyFromObject(obj))
+			}
+			// expectProfileDelivered fails when a webhook or metrics pod
+			// template is about to be published with the hash of a profile
+			// the mounted ConfigMap does not hold yet.
+			expectProfileDelivered = func(obj client.Object) {
+				if !isTLSDeployment(obj) {
+					return
+				}
+				hash, _, err := unstructured.NestedString(obj.(*unstructured.Unstructured).Object,
+					"spec", "template", "metadata", "annotations", tlsProfileHashAnnotation)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(hash).ToNot(BeEmpty())
+				Expect(hash).To(Equal(deliveredProfileHash()),
+					"%s must not be published before the TLS profile it references is delivered", obj.GetName())
+			}
+			setClusterTLSProfile = func(profileType nmstatetls.TLSProfileType) {
+				apiServer := &unstructured.Unstructured{}
+				apiServer.SetAPIVersion("config.openshift.io/v1")
+				apiServer.SetKind("APIServer")
+				Expect(cl.Get(context.Background(), types.NamespacedName{Name: "cluster"}, apiServer)).To(Succeed())
+				Expect(unstructured.SetNestedField(apiServer.Object, string(profileType), "spec", "tlsSecurityProfile", "type")).To(Succeed())
+				Expect(cl.Update(context.Background(), apiServer)).To(Succeed())
+			}
+		)
+		BeforeEach(func() {
+			apiServer := &unstructured.Unstructured{Object: map[string]any{
+				"apiVersion": "config.openshift.io/v1",
+				"kind":       "APIServer",
+				"metadata":   map[string]any{"name": "cluster"},
+				"spec": map[string]any{
+					"tlsSecurityProfile": map[string]any{"type": string(nmstatetls.TLSProfileIntermediateType)},
+				},
+			}}
+			interceptor = &applyInterceptorClient{Client: setupFakeClient(newNMState(), apiServer)}
+			interceptor.beforeApply = func(obj client.Object) error {
+				expectProfileDelivered(obj)
+				return nil
+			}
+			cl = interceptor
+			reconciler.Client = cl
+			reconciler.APIClient = cl
+			reconciler.IsOpenShift = true
+			request.Name = existingNMStateName
+
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+			intermediateHash = deliveredProfileHash()
+			for _, key := range tlsDeploymentKey {
+				Expect(publishedProfileHash(key)).To(Equal(intermediateHash))
+			}
+
+			setClusterTLSProfile(nmstatetls.TLSProfileModernType)
+		})
+		AfterEach(func() {
+			reconciler.IsOpenShift = false
+		})
+
+		expectConvergedToModern := func() {
+			profile := nmstatetls.TLSProfileSpec{}
+			ExpectWithOffset(1, json.Unmarshal([]byte(deliveredProfile()), &profile)).To(Succeed())
+			ExpectWithOffset(1, profile).To(Equal(*nmstatetls.TLSProfiles[nmstatetls.TLSProfileModernType]))
+			modernHash := deliveredProfileHash()
+			ExpectWithOffset(1, modernHash).ToNot(Equal(intermediateHash))
+			for _, key := range tlsDeploymentKey {
+				// The changed pod template is what restarts the pods on the
+				// delivered profile.
+				ExpectWithOffset(1, publishedProfileHash(key)).To(Equal(modernHash), key.Name)
+			}
+		}
+
+		It("should deliver the TLS profile before publishing the pod templates referencing it", func() {
+			published := []types.NamespacedName{}
+			interceptor.beforeApply = func(obj client.Object) error {
+				expectProfileDelivered(obj)
+				if isTLSDeployment(obj) {
+					published = append(published, client.ObjectKeyFromObject(obj))
+				}
+				return nil
+			}
+
+			_, err := reconciler.Reconcile(context.Background(), request)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(published).To(ConsistOf(metricsKey, webhookKey))
+			expectConvergedToModern()
+		})
+
+		DescribeTable("should not leave pods on the previous TLS profile when applying is interrupted at the",
+			func(failingKey types.NamespacedName) {
+				outage := errors.New("injected apply outage")
+				failing := true
+				interceptor.beforeApply = func(obj client.Object) error {
+					isFailingObject := client.ObjectKeyFromObject(obj) == failingKey &&
+						(failingKey == tlsConfigKey || isTLSDeployment(obj))
+					if failing && isFailingObject {
+						return outage
+					}
+					expectProfileDelivered(obj)
+					return nil
+				}
+
+				_, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).To(MatchError(outage))
+
+				nmstateInstance := &nmstatev1.NMState{}
+				Expect(cl.Get(context.Background(), types.NamespacedName{Name: existingNMStateName}, nmstateInstance)).To(Succeed())
+				degradedCondition := nmstateInstance.Status.Conditions.Find(shared.NmstateConditionDegraded)
+				Expect(degradedCondition).ToNot(BeNil())
+				Expect(degradedCondition.Status).To(Equal(corev1.ConditionTrue))
+				Expect(degradedCondition.Message).To(ContainSubstring(outage.Error()))
+
+				// A pod template either still awaits the restart triggering
+				// hash change, or references the already delivered profile.
+				for _, key := range tlsDeploymentKey {
+					Expect(publishedProfileHash(key)).To(Or(Equal(intermediateHash), Equal(deliveredProfileHash())), key.Name)
+				}
+				if failingKey == tlsConfigKey {
+					Expect(deliveredProfileHash()).To(Equal(intermediateHash))
+				}
+
+				failing = false
+				_, err = reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				expectConvergedToModern()
+			},
+			Entry("TLS profile ConfigMap", tlsConfigKey),
+			Entry("metrics Deployment", metricsKey),
+			Entry("webhook Deployment", webhookKey),
+		)
+	})
+
 	Context("when the OpenShift console plugin is rendered", func() {
 		It("should reference the serving certificate and key through a constant map variable", func() {
 			pluginManifests, err := filepath.Glob("../../deploy/openshift/ui-plugin/*.yaml")
@@ -884,6 +1070,7 @@ func copyManifests(manifestsDir string) error {
 		"../../deploy/handler/namespace.yaml":                                  "kubernetes-nmstate/namespace/",
 		"../../deploy/handler/network_policy.yaml":                             "kubernetes-nmstate/netpol/handler.yaml",
 		"../../deploy/handler/operator.yaml":                                   "kubernetes-nmstate/handler/handler.yaml",
+		"../../deploy/handler/tls_config.yaml":                                 "kubernetes-nmstate/handler/tls_config.yaml",
 		"../../deploy/handler/service_account.yaml":                            "kubernetes-nmstate/rbac/",
 		"../../deploy/handler/role.yaml":                                       "kubernetes-nmstate/rbac/",
 		"../../deploy/handler/role_binding.yaml":                               "kubernetes-nmstate/rbac/",
