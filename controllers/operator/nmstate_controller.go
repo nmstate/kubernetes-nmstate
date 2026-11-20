@@ -854,6 +854,16 @@ func (r *NMStateReconciler) renderAndApply(
 		return fmt.Errorf("no manifests rendered from %s", sourceFullDirectory)
 	}
 
+	// Deliver the configuration mounted by pods before the workloads
+	// referencing it, independently of the manifest file names. Pods read it
+	// only once at startup, e.g. the TLS profile whose hash annotates the
+	// webhook and metrics pod templates: publishing a template with the new
+	// hash while the ConfigMap still holds the old profile would restart the
+	// pods on stale data and leave nothing to restart them again later.
+	sort.SliceStable(objs, func(i, j int) bool {
+		return isPodConfiguration(objs[i]) && !isPodConfiguration(objs[j])
+	})
+
 	for _, obj := range objs {
 		// RenderDir seems to add an extra null entry to the list. It appears to be because of the
 		// nested templates. This just makes sure we don't try to apply an empty obj.
@@ -885,6 +895,13 @@ func (r *NMStateReconciler) renderAndApply(
 		}
 	}
 	return nil
+}
+
+// isPodConfiguration returns true for the core API objects pods mount their
+// configuration from.
+func isPodConfiguration(obj *unstructured.Unstructured) bool {
+	gvk := obj.GroupVersionKind()
+	return gvk.Group == "" && (gvk.Kind == "ConfigMap" || gvk.Kind == "Secret")
 }
 
 func setClusterReaderExist(ctx context.Context, c client.Client, data render.RenderData) error {
