@@ -39,5 +39,4 @@ The kubernetes-nmstate project uses the following CI infrastructure:
 - Controllers use controller-runtime reconciliation pattern
 - Handler filters events to only its node using labels.SelectorFromSet
 - NetworkManager compatibility: >= 1.22 for versions > 0.15.0
-- The handler requires a file lock (`pkg/file/lock.go`) to prevent concurrent nmstatectl operations
 - Profiling can be enabled via ENABLE_PROFILER env var (default port 6060)
