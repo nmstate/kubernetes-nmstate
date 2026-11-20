@@ -65,7 +65,8 @@ const (
 	// We will re-run the reconciliation logic, even if the NMState
 	// configuration hasn't changed. This ensures that externally
 	// modified resources (e.g. namespace annotations) are restored.
-	ResyncPeriod = 5 * time.Minute
+	ResyncPeriod          = 5 * time.Minute
+	pluginNginxConfigName = "nginx-conf"
 )
 
 var obsoleteWebhooks = []string{
@@ -254,13 +255,17 @@ func (r *NMStateReconciler) applyManifests(instance *nmstatev1.NMState, ctx cont
 		return errors.Wrap(err, "failed applying network policies")
 	}
 
-	if err := r.applyHandler(ctx, instance); err != nil {
+	tlsProfile, err := r.resolveTLSProfile(ctx)
+	if err != nil {
+		return err
+	}
+	if err := r.applyHandler(ctx, instance, tlsProfile); err != nil {
 		return errors.Wrap(err, "failed applying Handler")
 	}
 
 	_, errUIPluginPathExists := os.Stat(filepath.Join(names.ManifestDir, "kubernetes-nmstate", "openshift", "ui-plugin"))
 	if r.IsOpenShift && errUIPluginPathExists == nil {
-		if err := r.applyOpenshiftUIPlugin(ctx, instance); err != nil {
+		if err := r.applyOpenshiftUIPlugin(ctx, instance, tlsProfile); err != nil {
 			return errors.Wrap(err, "failed applying UI Plugin")
 		}
 		if err := r.patchOpenshiftConsolePlugin(ctx); err != nil {
@@ -312,7 +317,7 @@ func (r *NMStateReconciler) applyRBAC(ctx context.Context, instance *nmstatev1.N
 }
 
 // nolint: funlen
-func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev1.NMState) error {
+func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev1.NMState, tlsProfile *operandTLSProfile) error {
 	data := render.MakeRenderData()
 	// Register ToYaml template method
 	data.Funcs["toYaml"] = render.ToYaml
@@ -443,46 +448,107 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["NNCPMaxBackoffSeconds"] = environment.GetEnvVar("NNCP_MAX_BACKOFF_SECONDS", "30")
 	data.Data["NNCPInitialBackoffSeconds"] = environment.GetEnvVar("NNCP_INITIAL_BACKOFF_SECONDS", "1")
 
-	// On OpenShift, fetch and serialize the TLS profile so handler-deployed
-	// pods can read it from a ConfigMap instead of calling the API server.
-	// A hash annotation on the pod templates triggers a rolling restart
-	// when the TLS profile changes.
-	if r.IsOpenShift {
-		tlsProfileSpec, err := nmstatetls.FetchAPIServerTLSProfile(ctx, r.APIClient)
-		if err != nil {
-			return fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
-		}
-		// Refuse to roll out a profile the components cannot honor; it
-		// would crash-loop the TLS-serving pods.
-		_, unsupported, err := nmstatetls.NewTLSConfigFromProfile(tlsProfileSpec)
-		if err != nil {
-			return fmt.Errorf("cluster TLS profile cannot be honored: %w", err)
-		}
-		r.tlsProfileWarning = unsupported.Message()
-		tlsJSON, err := json.Marshal(tlsProfileSpec)
-		if err != nil {
-			return fmt.Errorf("failed serializing TLS profile: %w", err)
-		}
-		data.Data["TLSProfileJSON"] = string(tlsJSON)
-		data.Data["TLSProfileHash"] = fmt.Sprintf("%x", sha256.Sum256(tlsJSON))
+	if tlsProfile != nil {
+		data.Data["TLSProfileJSON"] = tlsProfile.json
+		data.Data["TLSProfileHash"] = tlsProfile.hash
 	}
 
 	return r.renderAndApply(ctx, instance, data, "handler", true)
 }
 
-func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance *nmstatev1.NMState) error {
+// operandTLSProfile is resolved once per reconcile so every TLS-serving operand
+// uses the same cluster configuration, even if the APIServer changes mid-reconcile.
+type operandTLSProfile struct {
+	spec nmstatetls.TLSProfileSpec
+	json string
+	hash string
+}
+
+func (r *NMStateReconciler) resolveTLSProfile(ctx context.Context) (*operandTLSProfile, error) {
+	if !r.IsOpenShift {
+		return nil, nil
+	}
+	profile, err := nmstatetls.FetchAPIServerTLSProfile(ctx, r.APIClient)
+	if err != nil {
+		return nil, fmt.Errorf("failed fetching TLS profile for ConfigMap: %w", err)
+	}
+	_, unsupported, err := nmstatetls.NewTLSConfigFromProfile(profile)
+	if err != nil {
+		return nil, fmt.Errorf("cluster TLS profile cannot be honored: %w", err)
+	}
+	r.tlsProfileWarning = unsupported.Message()
+	tlsJSON, err := json.Marshal(profile)
+	if err != nil {
+		return nil, fmt.Errorf("failed serializing TLS profile: %w", err)
+	}
+	return &operandTLSProfile{
+		spec: profile,
+		json: string(tlsJSON),
+		hash: fmt.Sprintf("%x", sha256.Sum256(tlsJSON)),
+	}, nil
+}
+
+func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance *nmstatev1.NMState, tlsProfile *operandTLSProfile) error {
+	if tlsProfile == nil {
+		return fmt.Errorf("console plugin requires an OpenShift TLS profile")
+	}
+	nginxTLS, unsupported, err := nmstatetls.NewNginxConfigFromProfile(tlsProfile.spec)
+	if err != nil {
+		return fmt.Errorf("console plugin TLS profile cannot be honored: %w", err)
+	}
+	if !unsupported.IsEmpty() {
+		if r.tlsProfileWarning != "" {
+			r.tlsProfileWarning += "; "
+		}
+		r.tlsProfileWarning += "console plugin: " + unsupported.Message()
+	}
 	data := render.MakeRenderData()
 	data.Funcs["toYaml"] = render.ToYaml
 	data.Data["PluginNamespace"] = environment.GetEnvVar("HANDLER_NAMESPACE", "openshift-nmstate")
 	data.Data["PluginName"] = environment.GetEnvVar("PLUGIN_NAME", "nmstate-console-plugin")
 	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")
 	data.Data["PluginPort"] = environment.GetEnvVar("PLUGIN_PORT", "9443")
+	data.Data["NginxTLS"] = nginxTLS
+	// Use the legacy name only while rendering the content to hash. The
+	// applied ConfigMap and Deployment reference use the revision name below.
+	data.Data["PluginConfigMapName"] = pluginNginxConfigName
 
 	// if not set in the NMState CR, these entries are nil
 	data.Data["InfraNodeSelector"] = instance.Spec.InfraNodeSelector
 	data.Data["InfraTolerations"] = instance.Spec.InfraTolerations
 	data.Data["InfraAffinity"] = instance.Spec.InfraAffinity
 
+	// Hash the rendered configuration, not certificate contents. The pod must
+	// load new TLS policy and other nginx configuration after an update, while
+	// serving-certificate rotation remains handled by nginx's variable paths.
+	configPath := filepath.Join(names.ManifestDir, "kubernetes-nmstate", "openshift", "ui-plugin", "configmap.yaml")
+	configMaps, err := render.RenderTemplate(configPath, &data)
+	if err != nil {
+		return fmt.Errorf("failed rendering console plugin configuration: %w", err)
+	}
+	var nginxConfig string
+	for _, configMap := range configMaps {
+		if configMap.GetKind() == "ConfigMap" && configMap.GetName() == pluginNginxConfigName {
+			nginxConfig, _, err = unstructured.NestedString(configMap.Object, "data", "nginx.conf")
+			if err != nil {
+				return fmt.Errorf("failed reading rendered nginx configuration: %w", err)
+			}
+		}
+	}
+	if nginxConfig == "" {
+		return fmt.Errorf("rendered console plugin configuration has no nginx.conf")
+	}
+	// nginx.conf is this ConfigMap's only data entry. If more data or
+	// binaryData entries are added, include them in the revision digest too.
+	configHash := fmt.Sprintf("%x", sha256.Sum256([]byte(nginxConfig)))
+	data.Data["TLSProfileHash"] = configHash
+	data.Data["PluginConfigMapName"] = pluginNginxConfigName + "-" + configHash
+	// Each pod template references immutable content. An interrupted update
+	// or rollback cannot change the configuration mounted by an older template.
+	// Retain prior revisions for existing pods/ReplicaSets; their NMState owner
+	// reference provides garbage collection when the NMState CR is deleted.
+	// RenderDir orders configmap.yaml before deployment.yaml. A failed
+	// configuration apply therefore cannot publish the new pod-template hash.
 	return r.renderAndApply(ctx, instance, data, filepath.Join("openshift", "ui-plugin"), true)
 }
 

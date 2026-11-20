@@ -38,6 +38,52 @@ func apiServerObj(tlsSecurityProfile map[string]any) map[string]any {
 }
 
 var _ = Describe("parseTLSSecurityProfile", func() {
+	It("parses OpenShift custom groups into the internal curve list", func() {
+		profile, err := parseTLSSecurityProfile(apiServerObj(map[string]any{
+			"type": "Custom",
+			"custom": map[string]any{
+				"minTLSVersion": "VersionTLS12",
+				"ciphers":       []any{"ECDHE-RSA-AES128-GCM-SHA256"},
+				"groups":        []any{"secp256r1", "X25519"},
+			},
+		}))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(profile.customSpec.Curves).To(Equal([]string{"secp256r1", "X25519"}))
+	})
+
+	It("gives the API groups field precedence over legacy curves", func() {
+		profile, err := parseTLSSecurityProfile(apiServerObj(map[string]any{
+			"type": "Custom",
+			"custom": map[string]any{
+				"groups": []any{"secp256r1"},
+				"curves": []any{"X25519"},
+			},
+		}))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(profile.customSpec.Curves).To(Equal([]string{"secp256r1"}))
+	})
+
+	It("rejects malformed groups instead of silently using defaults", func() {
+		_, err := parseTLSSecurityProfile(apiServerObj(map[string]any{
+			"type": "Custom",
+			"custom": map[string]any{
+				"groups": "secp256r1",
+				"curves": []any{"X25519"},
+			},
+		}))
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("rejects malformed legacy curves when groups is absent", func() {
+		_, err := parseTLSSecurityProfile(apiServerObj(map[string]any{
+			"type": "Custom",
+			"custom": map[string]any{
+				"curves": "X25519",
+			},
+		}))
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("parses custom profile curves", func() {
 		profile, err := parseTLSSecurityProfile(apiServerObj(map[string]any{
 			"type": "Custom",

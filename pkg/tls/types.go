@@ -43,6 +43,8 @@ type TLSProfileSpec struct {
 	MinTLSVersion TLSProtocolVersion `json:"minTLSVersion"`
 	// Curves lists the allowed TLS key exchange groups; empty means Go
 	// defaults (post-quantum X25519MLKEM768 included).
+	// APIServer custom.groups is normalized into this field. Keep the
+	// existing JSON name for compatibility with mounted operand profiles.
 	Curves []string `json:"curves,omitempty"`
 }
 

@@ -17,6 +17,7 @@ spec:
   template:
     metadata:
       annotations:
+        nmstate.io/tls-profile-hash: "{{ .TLSProfileHash }}"
         target.workload.openshift.io/management: |
           {"effect": "PreferredDuringScheduling"}
       labels:
@@ -75,7 +76,7 @@ spec:
             defaultMode: 420
         - name: nginx-conf
           configMap:
-            name: nginx-conf
+            name: {{ .PluginConfigMapName }}
             defaultMode: 420
       restartPolicy: Always
       dnsPolicy: ClusterFirst
