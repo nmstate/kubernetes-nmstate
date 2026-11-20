@@ -47,7 +47,7 @@ routes:
 		})
 
 		It("the OVN bridge mappings are not shown on the node network state", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -73,7 +73,7 @@ ovn: {}
 		})
 
 		It("the OVN subtree is reported, but mappings are not shown", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -106,7 +106,7 @@ ovn:
 		})
 
 		It("the OVN bridge mappings are listed in the node network state", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})
@@ -132,7 +132,7 @@ ovn: {}
 		})
 
 		It("the OVN subtree (without mappings) is shown", func() {
-			returnedState, err := filterOut(state)
+			returnedState, _, err := filterOut(state, DefaultMaxStateSizeBytes)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(returnedState).To(MatchYAML(filteredState))
 		})

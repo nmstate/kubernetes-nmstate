@@ -455,6 +455,8 @@ spec:
               value: "{{ .NNCPMaxBackoffSeconds }}"
             - name: NNCP_INITIAL_BACKOFF_SECONDS
               value: "{{ .NNCPInitialBackoffSeconds }}"
+            - name: NNS_MAX_SIZE_BYTES
+              value: "{{ .NNSMaxSizeBytes }}"
             - name: IS_OPENSHIFT
               value: "{{ .IsOpenShift }}"
           volumeMounts:
