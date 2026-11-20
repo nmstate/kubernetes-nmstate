@@ -76,7 +76,7 @@ spec:
             defaultMode: 420
         - name: nginx-conf
           configMap:
-            name: nginx-conf
+            name: {{ .PluginConfigMapName }}
             defaultMode: 420
       restartPolicy: Always
       dnsPolicy: ClusterFirst

@@ -19,6 +19,7 @@ package tls
 import (
 	"crypto/tls"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -61,7 +62,9 @@ func NewNginxConfigFromProfile(profile TLSProfileSpec) (NginxConfig, Unsupported
 			unsupported.Curves = append(unsupported.Curves, curve)
 			continue
 		}
-		curves = append(curves, name)
+		if !slices.Contains(curves, name) {
+			curves = append(curves, name)
+		}
 	}
 	if len(profile.Curves) > 0 && len(curves) == 0 {
 		return NginxConfig{}, unsupported, ErrNoSupportedCurves

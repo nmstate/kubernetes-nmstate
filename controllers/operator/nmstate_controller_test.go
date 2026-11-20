@@ -599,7 +599,16 @@ var _ = Describe("NMState controller reconcile", func() {
 			Expect(reconciler.applyOpenshiftUIPlugin(context.Background(), nmstate, profile)).To(Succeed())
 
 			configMap := &corev1.ConfigMap{}
-			configMapKey := types.NamespacedName{Namespace: handlerNamespace, Name: "nginx-conf"}
+			deployment := &appsv1.Deployment{}
+			Expect(cl.Get(context.Background(),
+				types.NamespacedName{Namespace: handlerNamespace, Name: "nmstate-console-plugin"}, deployment)).To(Succeed())
+			configMapKey := types.NamespacedName{Namespace: handlerNamespace}
+			for _, volume := range deployment.Spec.Template.Spec.Volumes {
+				if volume.Name == pluginNginxConfigName && volume.ConfigMap != nil {
+					configMapKey.Name = volume.ConfigMap.Name
+				}
+			}
+			Expect(configMapKey.Name).NotTo(BeEmpty())
 			Expect(cl.Get(context.Background(), configMapKey, configMap)).To(Succeed())
 			nginxConf := configMap.Data["nginx.conf"]
 

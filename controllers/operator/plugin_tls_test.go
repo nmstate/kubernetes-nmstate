@@ -45,6 +45,37 @@ import (
 )
 
 var _ = Describe("Console plugin TLS policy", func() {
+	It("renders API groups and rolls out a group-only change", func() { testPluginTLSGroupChange(GinkgoTB()) })
+	It("pins configuration through a failed Deployment update and rollback", func() { testPluginTLSFailedDeploymentRollback(GinkgoTB()) })
+	It("migrates the legacy configuration without changing content used by existing pods", func() {
+		t := GinkgoTB()
+		r, instance, cl, _ := setupPluginTLS(t, map[string]any{"type": "Modern"})
+		legacy := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: pluginNginxConfigName, Namespace: "nmstate"},
+			Data:       map[string]string{"nginx.conf": "legacy nginx configuration"},
+		}
+		if err := cl.Create(context.Background(), legacy); err != nil {
+			t.Fatal(err)
+		}
+		if err := r.applyManifests(instance, context.Background()); err != nil {
+			t.Fatal(err)
+		}
+		current, _ := pluginTLSObjects(t, cl)
+		if current.Name == legacy.Name || current.Immutable == nil || !*current.Immutable {
+			t.Fatal("plugin was not migrated to an immutable configuration revision")
+		}
+		owner := metav1.GetControllerOf(current)
+		if owner == nil || owner.UID != instance.UID || owner.Name != instance.Name {
+			t.Fatal("configuration revision does not retain NMState ownership for garbage collection")
+		}
+		stored := &corev1.ConfigMap{}
+		if err := cl.Get(context.Background(), client.ObjectKeyFromObject(legacy), stored); err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(stored.Data, legacy.Data) || stored.Immutable != nil {
+			t.Fatal("legacy configuration was modified during migration")
+		}
+	})
 	It("renders cluster profiles and binds the plugin template to the config", func() { testPluginTLSProfilesRendered(GinkgoTB()) })
 	It("rolls out changed configuration only after a successful config write", func() { testPluginTLSConfigRollout(GinkgoTB()) })
 	It("reports partial profile support", func() { testPluginTLSPartialProfileReportsWarning(GinkgoTB()) })
@@ -70,8 +101,9 @@ func newPluginTLSScheme(t testing.TB) *runtime.Scheme {
 // resources via Create/Update, retaining resource versions across reconciles.
 type pluginTLSClient struct {
 	client.Client
-	failConfig   bool
-	profileReads int
+	failConfig     bool
+	failDeployment bool
+	profileReads   int
 }
 
 func (c *pluginTLSClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -85,8 +117,12 @@ func (c *pluginTLSClient) Patch(ctx context.Context, obj client.Object, patch cl
 	if patch.Type() != types.ApplyPatchType {
 		return c.Client.Patch(ctx, obj, patch, opts...)
 	}
-	if c.failConfig && obj.GetObjectKind().GroupVersionKind().Kind == "ConfigMap" && obj.GetName() == "nginx-conf" {
+	if c.failConfig && obj.GetObjectKind().GroupVersionKind().Kind == "ConfigMap" &&
+		strings.HasPrefix(obj.GetName(), pluginNginxConfigName) {
 		return fmt.Errorf("injected plugin configuration failure")
+	}
+	if c.failDeployment && obj.GetObjectKind().GroupVersionKind().Kind == "Deployment" && obj.GetName() == "nmstate-console-plugin" {
+		return fmt.Errorf("injected plugin deployment failure")
 	}
 	if err := c.Create(ctx, obj); !apierrors.IsAlreadyExists(err) {
 		return err
@@ -97,6 +133,112 @@ func (c *pluginTLSClient) Patch(ctx context.Context, obj client.Object, patch cl
 	}
 	obj.SetResourceVersion(stored.GetResourceVersion())
 	return c.Update(ctx, obj)
+}
+
+func testPluginTLSGroupChange(t testing.TB) {
+	r, instance, cl, _ := setupPluginTLS(t, map[string]any{
+		"type": "Custom",
+		"custom": map[string]any{
+			"minTLSVersion": "VersionTLS13",
+			"ciphers":       []any{"TLS_AES_128_GCM_SHA256"},
+			"groups":        []any{"secp256r1"},
+		},
+	})
+	ctx := context.Background()
+	if err := r.applyManifests(instance, ctx); err != nil {
+		t.Fatal(err)
+	}
+	beforeConfig, beforeDeployment := pluginTLSObjects(t, cl)
+	if !strings.Contains(beforeConfig.Data["nginx.conf"], "ssl_ecdh_curve      prime256v1;") {
+		t.Fatal("API custom.groups restriction was not rendered")
+	}
+	api := &unstructured.Unstructured{}
+	api.SetAPIVersion("config.openshift.io/v1")
+	api.SetKind("APIServer")
+	if err := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, api); err != nil {
+		t.Fatal(err)
+	}
+	if err := unstructured.SetNestedStringSlice(api.Object, []string{"X25519"}, "spec", "tlsSecurityProfile", "custom", "groups"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cl.Update(ctx, api); err != nil {
+		t.Fatal(err)
+	}
+	if err := r.applyManifests(instance, ctx); err != nil {
+		t.Fatal(err)
+	}
+	afterConfig, afterDeployment := pluginTLSObjects(t, cl)
+	if !strings.Contains(afterConfig.Data["nginx.conf"], "ssl_ecdh_curve      X25519;") ||
+		reflect.DeepEqual(beforeDeployment.Spec.Template, afterDeployment.Spec.Template) {
+		t.Fatal("group-only update did not change the plugin configuration and template")
+	}
+}
+
+func testPluginTLSFailedDeploymentRollback(t testing.TB) {
+	r, instance, cl, _ := setupPluginTLS(t, map[string]any{"type": "Intermediate"})
+	ctx := context.Background()
+	if err := r.applyManifests(instance, ctx); err != nil {
+		t.Fatal(err)
+	}
+	configA, deploymentA := pluginTLSObjects(t, cl)
+	api := &unstructured.Unstructured{}
+	api.SetAPIVersion("config.openshift.io/v1")
+	api.SetKind("APIServer")
+	if err := cl.Get(ctx, client.ObjectKey{Name: "cluster"}, api); err != nil {
+		t.Fatal(err)
+	}
+	setProfile := func(name string) {
+		t.Helper()
+		if err := unstructured.SetNestedField(api.Object, name, "spec", "tlsSecurityProfile", "type"); err != nil {
+			t.Fatal(err)
+		}
+		if err := cl.Update(ctx, api); err != nil {
+			t.Fatal(err)
+		}
+	}
+	setProfile("Modern")
+	cl.failDeployment = true
+	err := r.applyManifests(instance, ctx)
+	if err == nil || !strings.Contains(err.Error(), "injected plugin deployment failure") {
+		t.Fatalf("did not reach injected deployment failure: %v", err)
+	}
+	stillA, templateAfterFailure := pluginTLSObjects(t, cl)
+	if !reflect.DeepEqual(templateAfterFailure.Spec.Template, deploymentA.Spec.Template) {
+		t.Fatal("failed Deployment publication changed its template")
+	}
+	// A replacement created by the old ReplicaSet would use exactly this
+	// template. Its referenced ConfigMap must still hold A, not the pending B.
+	if !reflect.DeepEqual(stillA.Data, configA.Data) {
+		t.Fatal("replacement under template A would mount configuration B")
+	}
+	if stillA.Immutable == nil || !*stillA.Immutable {
+		t.Fatal("pinned configuration must be immutable")
+	}
+	setProfile("Intermediate")
+	cl.failDeployment = false
+	if err := r.applyManifests(instance, ctx); err != nil {
+		t.Fatal(err)
+	}
+	rolledBack, templateAfterRollback := pluginTLSObjects(t, cl)
+	if !reflect.DeepEqual(rolledBack.Data, configA.Data) ||
+		!reflect.DeepEqual(templateAfterRollback.Spec.Template, deploymentA.Spec.Template) {
+		t.Fatal("rollback did not restore the original configuration identity")
+	}
+	setProfile("Modern")
+	if err := r.applyManifests(instance, ctx); err != nil {
+		t.Fatal(err)
+	}
+	configB, deploymentB := pluginTLSObjects(t, cl)
+	if configB.Name == configA.Name || reflect.DeepEqual(deploymentB.Spec.Template, deploymentA.Spec.Template) {
+		t.Fatal("successful publication did not reference a new configuration revision")
+	}
+	preservedA := &corev1.ConfigMap{}
+	if err := cl.Get(ctx, client.ObjectKeyFromObject(configA), preservedA); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(preservedA.Data, configA.Data) {
+		t.Fatal("publishing B mutated A's pinned configuration")
+	}
 }
 
 func setupPluginTLS(t testing.TB, profile map[string]any) (*NMStateReconciler, *nmstatev1.NMState, *pluginTLSClient, string) {
@@ -149,10 +291,20 @@ func setupPluginTLS(t testing.TB, profile map[string]any) (*NMStateReconciler, *
 func pluginTLSObjects(t testing.TB, cl client.Client) (*corev1.ConfigMap, *appsv1.Deployment) {
 	t.Helper()
 	cm, deployment := &corev1.ConfigMap{}, &appsv1.Deployment{}
-	for name, obj := range map[string]client.Object{"nginx-conf": cm, "nmstate-console-plugin": deployment} {
-		if err := cl.Get(context.Background(), client.ObjectKey{Namespace: "nmstate", Name: name}, obj); err != nil {
-			t.Fatal(err)
+	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: "nmstate", Name: "nmstate-console-plugin"}, deployment); err != nil {
+		t.Fatal(err)
+	}
+	var configName string
+	for _, volume := range deployment.Spec.Template.Spec.Volumes {
+		if volume.Name == pluginNginxConfigName && volume.ConfigMap != nil {
+			configName = volume.ConfigMap.Name
 		}
+	}
+	if configName == "" {
+		t.Fatal("plugin template does not reference nginx configuration")
+	}
+	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: "nmstate", Name: configName}, cm); err != nil {
+		t.Fatal(err)
 	}
 	return cm, deployment
 }
@@ -169,7 +321,7 @@ func testPluginTLSProfilesRendered(t testing.TB) {
 		{"custom", map[string]any{"type": "Custom", "custom": map[string]any{
 			"minTLSVersion": "VersionTLS12",
 			"ciphers":       []any{"ECDHE-RSA-AES256-GCM-SHA384", "TLS_AES_256_GCM_SHA384"},
-			"curves":        []any{"P-256"},
+			"groups":        []any{"secp256r1"},
 		}}, "TLSv1.2 TLSv1.3", "ECDHE-RSA-AES256-GCM-SHA384"},
 	} {
 		By(tc.name)
@@ -269,7 +421,7 @@ func testPluginTLSPartialProfileReportsWarning(t testing.TB) {
 		"custom": map[string]any{
 			"minTLSVersion": "VersionTLS12",
 			"ciphers":       []any{"ECDHE-RSA-AES128-GCM-SHA256", "DHE-RSA-AES128-GCM-SHA256"},
-			"curves":        []any{"X25519", "unknown-group"},
+			"groups":        []any{"X25519", "unknown-group"},
 		},
 	})
 	if err := r.applyManifests(instance, context.Background()); err != nil {
@@ -299,8 +451,13 @@ func testPluginTLSInvalidProfileDoesNotApplyPlugin(t testing.TB) {
 	if err == nil || !strings.Contains(err.Error(), "console plugin TLS profile cannot be honored") {
 		t.Fatalf("expected explicit rejection of incompatible TLS version/ciphers: %v", err)
 	}
-	cm := &corev1.ConfigMap{}
-	if err := cl.Get(context.Background(), client.ObjectKey{Namespace: "nmstate", Name: "nginx-conf"}, cm); !apierrors.IsNotFound(err) {
-		t.Fatalf("invalid profile was applied to plugin: %v", err)
+	configMaps := &corev1.ConfigMapList{}
+	if err := cl.List(context.Background(), configMaps, client.InNamespace("nmstate")); err != nil {
+		t.Fatal(err)
+	}
+	for _, cm := range configMaps.Items {
+		if strings.HasPrefix(cm.Name, pluginNginxConfigName) {
+			t.Fatalf("invalid profile was applied to plugin as ConfigMap %s", cm.Name)
+		}
 	}
 }

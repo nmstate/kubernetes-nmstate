@@ -102,7 +102,19 @@ func parseTLSSecurityProfile(obj map[string]any) (*tlsSecurityProfile, error) {
 
 		ciphersRaw, _, _ := unstructured.NestedStringSlice(customMap, "ciphers")
 
-		curvesRaw, _, _ := unstructured.NestedStringSlice(customMap, "curves")
+		// OpenShift exposes supported groups as custom.groups. Keep the
+		// internal Curves representation (including the mounted JSON format)
+		// and accept the older custom.curves input when groups is absent.
+		curvesRaw, groupsFound, err := unstructured.NestedStringSlice(customMap, "groups")
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse custom.groups: %w", err)
+		}
+		if !groupsFound {
+			curvesRaw, _, err = unstructured.NestedStringSlice(customMap, "curves")
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse custom.curves: %w", err)
+			}
+		}
 
 		profile.customSpec = &TLSProfileSpec{
 			Ciphers:       ciphersRaw,

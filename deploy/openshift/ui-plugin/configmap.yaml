@@ -1,11 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-conf
+  name: {{ .PluginConfigMapName }}
   namespace: {{ .PluginNamespace }}
   labels:
     app: {{ .PluginName }}
     app.kubernetes.io/part-of: {{ .PluginName }}
+immutable: true
 data:
   nginx.conf: |
     error_log /dev/stdout info;

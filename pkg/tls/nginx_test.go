@@ -24,6 +24,18 @@ import (
 )
 
 var _ = Describe("Nginx TLS profile conversion", func() {
+	It("deduplicates group aliases without changing the first preference order", func() {
+		got, unsupported, err := NewNginxConfigFromProfile(TLSProfileSpec{
+			MinTLSVersion: VersionTLS13,
+			Curves:        []string{"P-256", "X25519", "secp256r1", "prime256v1", "x25519", "P-384", "secp384r1"},
+		})
+		if err != nil || !unsupported.IsEmpty() {
+			GinkgoT().Fatalf("unexpected conversion error: %v, unsupported=%#v", err, unsupported)
+		}
+		if got.Curves != "prime256v1:X25519:secp384r1" {
+			GinkgoT().Fatalf("duplicate canonical groups or changed order: %s", got.Curves)
+		}
+	})
 	It("translates supported profiles and protocol families", func() { testNginxTLSProfiles(GinkgoTB()) })
 	It("keeps legacy and modern cipher families separate", func() { testNginxOldTLSProfile(GinkgoTB()) })
 	It("rejects unrepresentable and injection-bearing profiles", func() { testNginxRejectsUnrepresentableProfiles(GinkgoTB()) })

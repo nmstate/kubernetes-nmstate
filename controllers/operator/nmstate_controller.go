@@ -65,7 +65,8 @@ const (
 	// We will re-run the reconciliation logic, even if the NMState
 	// configuration hasn't changed. This ensures that externally
 	// modified resources (e.g. namespace annotations) are restored.
-	ResyncPeriod = 5 * time.Minute
+	ResyncPeriod          = 5 * time.Minute
+	pluginNginxConfigName = "nginx-conf"
 )
 
 var obsoleteWebhooks = []string{
@@ -508,6 +509,9 @@ func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance
 	data.Data["PluginImage"] = environment.GetEnvVar("PLUGIN_IMAGE", "quay.io/nmstate/nmstate-console-plugin:release-1.0.0")
 	data.Data["PluginPort"] = environment.GetEnvVar("PLUGIN_PORT", "9443")
 	data.Data["NginxTLS"] = nginxTLS
+	// Use the legacy name only while rendering the content to hash. The
+	// applied ConfigMap and Deployment reference use the revision name below.
+	data.Data["PluginConfigMapName"] = pluginNginxConfigName
 
 	// if not set in the NMState CR, these entries are nil
 	data.Data["InfraNodeSelector"] = instance.Spec.InfraNodeSelector
@@ -524,7 +528,7 @@ func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance
 	}
 	var nginxConfig string
 	for _, configMap := range configMaps {
-		if configMap.GetKind() == "ConfigMap" && configMap.GetName() == "nginx-conf" {
+		if configMap.GetKind() == "ConfigMap" && configMap.GetName() == pluginNginxConfigName {
 			nginxConfig, _, err = unstructured.NestedString(configMap.Object, "data", "nginx.conf")
 			if err != nil {
 				return fmt.Errorf("failed reading rendered nginx configuration: %w", err)
@@ -534,7 +538,15 @@ func (r *NMStateReconciler) applyOpenshiftUIPlugin(ctx context.Context, instance
 	if nginxConfig == "" {
 		return fmt.Errorf("rendered console plugin configuration has no nginx.conf")
 	}
-	data.Data["TLSProfileHash"] = fmt.Sprintf("%x", sha256.Sum256([]byte(nginxConfig)))
+	// nginx.conf is this ConfigMap's only data entry. If more data or
+	// binaryData entries are added, include them in the revision digest too.
+	configHash := fmt.Sprintf("%x", sha256.Sum256([]byte(nginxConfig)))
+	data.Data["TLSProfileHash"] = configHash
+	data.Data["PluginConfigMapName"] = pluginNginxConfigName + "-" + configHash
+	// Each pod template references immutable content. An interrupted update
+	// or rollback cannot change the configuration mounted by an older template.
+	// Retain prior revisions for existing pods/ReplicaSets; their NMState owner
+	// reference provides garbage collection when the NMState CR is deleted.
 	// RenderDir orders configmap.yaml before deployment.yaml. A failed
 	// configuration apply therefore cannot publish the new pod-template hash.
 	return r.renderAndApply(ctx, instance, data, filepath.Join("openshift", "ui-plugin"), true)
