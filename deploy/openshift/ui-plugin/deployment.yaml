@@ -17,6 +17,7 @@ spec:
   template:
     metadata:
       annotations:
+        nmstate.io/tls-profile-hash: "{{ .TLSProfileHash }}"
         target.workload.openshift.io/management: |
           {"effect": "PreferredDuringScheduling"}
       labels:

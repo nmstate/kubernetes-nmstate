@@ -45,6 +45,7 @@ import (
 	"github.com/nmstate/kubernetes-nmstate/api/shared"
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	nmstatev1beta1 "github.com/nmstate/kubernetes-nmstate/api/v1beta1"
+	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -594,7 +595,8 @@ var _ = Describe("NMState controller reconcile", func() {
 			}
 			nmstate := &nmstatev1.NMState{}
 			Expect(cl.Get(context.Background(), types.NamespacedName{Name: existingNMStateName}, nmstate)).To(Succeed())
-			Expect(reconciler.applyOpenshiftUIPlugin(context.Background(), nmstate)).To(Succeed())
+			profile := &operandTLSProfile{spec: *nmstatetls.TLSProfiles[nmstatetls.TLSProfileIntermediateType]}
+			Expect(reconciler.applyOpenshiftUIPlugin(context.Background(), nmstate, profile)).To(Succeed())
 
 			configMap := &corev1.ConfigMap{}
 			configMapKey := types.NamespacedName{Namespace: handlerNamespace, Name: "nginx-conf"}

@@ -27,6 +27,16 @@ data:
         listen              [::]:{{ .PluginPort }} ipv6only=off ssl;
         ssl_certificate     $plugin_certificate_dir/tls.crt;
         ssl_certificate_key $plugin_certificate_dir/tls.key;
+        ssl_protocols       {{ .NginxTLS.Protocols }};
+        {{- if .NginxTLS.Ciphers }}
+        ssl_ciphers         {{ .NginxTLS.Ciphers }};
+        {{- end }}
+        {{- if .NginxTLS.CipherSuites }}
+        ssl_conf_command    Ciphersuites {{ .NginxTLS.CipherSuites }};
+        {{- end }}
+        {{- if .NginxTLS.Curves }}
+        ssl_ecdh_curve      {{ .NginxTLS.Curves }};
+        {{- end }}
         root                /opt/app-root/src;
       }
     }
