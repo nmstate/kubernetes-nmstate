@@ -19,6 +19,7 @@ package nmstatectl
 
 import (
 	"context"
+	"errors"
 	"os/exec"
 	"reflect"
 	"testing"
@@ -84,5 +85,71 @@ func TestSetCommandAndDebugMode(t *testing.T) {
 				t.Errorf("Arguments = %v, want %v", capturedArgs, tt.expectedArgs)
 			}
 		})
+	}
+}
+
+func TestNmstatectlWithTimeout(t *testing.T) {
+	originalExecCommandContext := execCommandContext
+	defer func() { execCommandContext = originalExecCommandContext }()
+
+	t.Run("returns output on success", func(t *testing.T) {
+		execCommandContext = func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+			return exec.CommandContext(ctx, "echo", "state")
+		}
+		out, err := nmstatectlWithTimeout(context.Background(), time.Second, []string{"show"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out != "state\n" {
+			t.Errorf("unexpected output %q", out)
+		}
+	})
+
+	t.Run("returns ErrTimeout and reaps the process when it hangs", func(t *testing.T) {
+		var cmd *exec.Cmd
+		execCommandContext = func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+			cmd = exec.CommandContext(ctx, "sleep", "30")
+			return cmd
+		}
+		start := time.Now()
+		_, err := nmstatectlWithTimeout(context.Background(), 200*time.Millisecond, []string{"show"})
+		if !errors.Is(err, ErrTimeout) {
+			t.Fatalf("expected ErrTimeout, got %v", err)
+		}
+		if elapsed := time.Since(start); elapsed > 5*time.Second {
+			t.Errorf("timeout not honored, took %s", elapsed)
+		}
+		// ProcessState is only set once Wait() has reaped the process, so no
+		// zombie is left behind.
+		if cmd.ProcessState == nil {
+			t.Error("process was not reaped")
+		}
+	})
+
+	t.Run("returns a non-timeout error on failure", func(t *testing.T) {
+		execCommandContext = func(ctx context.Context, _ string, _ ...string) *exec.Cmd {
+			return exec.CommandContext(ctx, "false")
+		}
+		_, err := nmstatectlWithTimeout(context.Background(), time.Second, []string{"show"})
+		if err == nil || errors.Is(err, ErrTimeout) {
+			t.Fatalf("expected non-timeout error, got %v", err)
+		}
+	})
+}
+
+func TestShowKernelLoopbackArguments(t *testing.T) {
+	originalExecCommandContext := execCommandContext
+	defer func() { execCommandContext = originalExecCommandContext }()
+
+	var capturedArgs []string
+	execCommandContext = func(ctx context.Context, _ string, args ...string) *exec.Cmd {
+		capturedArgs = args
+		return exec.CommandContext(ctx, "true")
+	}
+	if err := ShowKernelLoopback(context.Background()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !reflect.DeepEqual(capturedArgs, []string{"show", "-k", "lo"}) {
+		t.Errorf("unexpected arguments %v", capturedArgs)
 	}
 }
