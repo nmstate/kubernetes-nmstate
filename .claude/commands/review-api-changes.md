@@ -10,7 +10,7 @@ Review API changes in the kubernetes-nmstate repository for compatibility and be
    - Check `api/v1/*.go` (stable v1 API)
    - Check `api/v1beta1/*.go` (beta API)
    - Check `api/shared/*.go` (shared types)
-   - Use `git diff main` to see what changed (main is the default branch)
+   - Compare the PR with its target branch, which may be a release branch
 
 2. **Check for Breaking Changes**
 
@@ -21,11 +21,15 @@ Review API changes in the kubernetes-nmstate repository for compatibility and be
    - Removed enum values
    - Tightened validation rules
 
-   Safe changes:
+   Generally compatible changes:
    - New optional fields
    - New enum values
    - Relaxed validation
    - Documentation updates
+
+   Apply the [in-place upgrade guidance](../../AGENTS.md#in-place-upgrades) to stored CRs.
+   For example, if a new field is optional, trace how the new controller handles an old CR
+   that omits it and whether the webhook still admits updates to that CR.
 
 3. **Verify CRD Regeneration**
    - Run `make check-manifests` to verify CRDs are up to date
@@ -65,6 +69,9 @@ Structure your review as:
 
 ### Breaking Changes
 ✅ None detected OR ❌ [List with severity]
+
+### In-place Upgrade Impact
+[Describe what happens to an existing CR and the evidence for that conclusion, or explain why it is unaffected.]
 
 ### CRD Generation Status
 ✅ Up to date OR ❌ Needs regeneration

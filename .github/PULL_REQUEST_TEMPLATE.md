@@ -19,6 +19,10 @@ and cause suffering of future generations.
 
 **What this PR does / why we need it**:
 
+**In-place upgrade impact**:
+<!-- What state can an existing installation start with, what happens when it upgrades,
+and how did you verify that? If upgrades are unaffected, briefly explain why. -->
+
 **Special notes for your reviewer**:
 
 **Release note**:
