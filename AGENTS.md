@@ -2,6 +2,16 @@
 
 This file provides guidance to AI coding assistants (such as Claude Code, GitHub Copilot, Google Gemini, etc.) when working with code in this repository.
 
+## In-place upgrades
+
+For every change you implement or review, ask: **what happens when the new code first reconciles an existing installation?** A successful fresh install does not answer that question.
+
+- **Start from released state.** Inspect the relevant manifests, API defaults, and controller behavior from the release users upgrade from. Existing CRs, node network configuration, and operator-managed workloads survive the upgrade. Their fields and ownership may date from an even earlier release.
+- **Trace the transition.** Check that existing policies still work while old and new components coexist, and that repeated reconciliation preserves user configuration. If a resource or field is renamed or removed, identify what cleans up the old one. For example, omitting an obsolete sidecar from a server-side apply manifest can leave it in the pod template if an earlier writer still owns that entry.
+- **Verify the outcome.** Prefer the smallest check that exercises the transition. For example, reconcile an object created the old way and assert that obsolete operator-managed fields are gone and user settings survive. Use a real API server when field ownership matters. For workload changes, verify the new revision finishes rolling out; an old Ready replica can mask a failure.
+
+In the PR description, state the relevant starting state, expected result, and what you verified. If there is no upgrade impact, briefly say why. During review, flag any plausible starting state the change overlooks and explain how the upgrade could fail.
+
 ## Project Overview
 
 kubernetes-nmstate is a Kubernetes operator that provides declarative node network configuration driven through Kubernetes API. It uses [nmstate](https://nmstate.io/) to perform state-driven network configuration on cluster nodes and report their current state. The only external dependency is NetworkManager running on nodes.

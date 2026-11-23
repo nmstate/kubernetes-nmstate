@@ -49,6 +49,12 @@ Common new contributor PR issues are:
 
 ## Code Review
 
+Authors and reviewers should assess [in-place upgrades](AGENTS.md#in-place-upgrades)
+for every PR. Describe how an existing installation reaches the intended state
+and how you checked it, or briefly explain why it is unaffected. Reviewers should
+call out any case that would require users to delete and recreate resources to
+recover.
+
 To make it easier for your PR to receive reviews, consider the reviewers will
 need you to:
 
