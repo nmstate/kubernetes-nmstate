@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -55,6 +56,7 @@ import (
 	nmstatev1 "github.com/nmstate/kubernetes-nmstate/api/v1"
 	"github.com/nmstate/kubernetes-nmstate/pkg/environment"
 	"github.com/nmstate/kubernetes-nmstate/pkg/render"
+	"github.com/nmstate/kubernetes-nmstate/pkg/state"
 	nmstatetls "github.com/nmstate/kubernetes-nmstate/pkg/tls"
 )
 
@@ -447,6 +449,7 @@ func (r *NMStateReconciler) applyHandler(ctx context.Context, instance *nmstatev
 	data.Data["NNCPMaxRetries"] = environment.GetEnvVar("NNCP_MAX_RETRIES", "5")
 	data.Data["NNCPMaxBackoffSeconds"] = environment.GetEnvVar("NNCP_MAX_BACKOFF_SECONDS", "30")
 	data.Data["NNCPInitialBackoffSeconds"] = environment.GetEnvVar("NNCP_INITIAL_BACKOFF_SECONDS", "1")
+	data.Data["NNSMaxSizeBytes"] = environment.GetEnvVar("NNS_MAX_SIZE_BYTES", strconv.Itoa(state.DefaultMaxStateSizeBytes))
 
 	if tlsProfile != nil {
 		data.Data["TLSProfileJSON"] = tlsProfile.json
