@@ -612,6 +612,28 @@ func (r *NMStateReconciler) cleanupObsoleteResources(ctx context.Context) error 
 	return r.cleanupObsoleteWebhooks(ctx)
 }
 
+// Before applying the single-container metrics template, remove the proxy
+// left by pre-SSA operators. Omitting it from an apply can retain the proxy
+// (also binding :8443) or leave it without an image, failing validation.
+func (r *NMStateReconciler) removeLegacyMetricsProxy(ctx context.Context, owner *nmstatev1.NMState, key client.ObjectKey) error {
+	deployment := &appsv1.Deployment{}
+	if err := r.APIClient.Get(ctx, key, deployment); err != nil {
+		return client.IgnoreNotFound(err)
+	}
+	if !metav1.IsControlledBy(deployment, owner) {
+		return nil
+	}
+	containers := deployment.Spec.Template.Spec.Containers
+	for i := range containers {
+		if containers[i].Name == "kube-rbac-proxy" {
+			patch := client.StrategicMergeFrom(deployment.DeepCopy(), client.MergeFromWithOptimisticLock{})
+			deployment.Spec.Template.Spec.Containers = slices.Delete(containers, i, i+1)
+			return r.APIClient.Patch(ctx, deployment, patch)
+		}
+	}
+	return nil
+}
+
 // cleanupObsoleteWebhooks removes the validating webhooks that were replaced
 // by CRD CEL rules and a ValidatingAdmissionPolicy. Dropping them from the
 // manifest is not enough: on clusters where they were created before the
@@ -867,7 +889,13 @@ func (r *NMStateReconciler) renderAndApply(
 				return errors.Wrap(err, "failed to set owner reference")
 			}
 			if obj.GetKind() == "Deployment" {
-				r.deployments = append(r.deployments, client.ObjectKeyFromObject(obj))
+				key := client.ObjectKeyFromObject(obj)
+				if obj.GetLabels()["component"] == "kubernetes-nmstate-metrics" {
+					if err := r.removeLegacyMetricsProxy(ctx, instance, key); err != nil {
+						return fmt.Errorf("removing obsolete metrics proxy from %s: %w", key, err)
+					}
+				}
+				r.deployments = append(r.deployments, key)
 			} else if obj.GetKind() == "DaemonSet" {
 				r.daemonSets = append(r.daemonSets, client.ObjectKeyFromObject(obj))
 			}
