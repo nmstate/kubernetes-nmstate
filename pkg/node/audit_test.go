@@ -285,3 +285,25 @@ var _ = Describe("StaleEnactmentThreshold", func() {
 		Expect(StaleEnactmentThreshold()).To(Equal(DefaultStaleEnactmentThreshold))
 	})
 })
+
+var _ = Describe("resolveStaleEnactmentThreshold", func() {
+	DescribeTable("resolves the override and names the reason when it is rejected",
+		func(raw string, expected time.Duration, reasonSubstring string) {
+			threshold, reason := resolveStaleEnactmentThreshold(raw)
+			Expect(threshold).To(Equal(expected))
+			if reasonSubstring == "" {
+				Expect(reason).To(BeEmpty())
+			} else {
+				Expect(reason).To(ContainSubstring(reasonSubstring))
+			}
+		},
+		Entry("unset -> default, accepted", "", DefaultStaleEnactmentThreshold, ""),
+		Entry("above the worst-case apply cycle -> honored", "1h", time.Hour, ""),
+		Entry("below the worst-case apply cycle -> rejected", "5m", DefaultStaleEnactmentThreshold, "exceed"),
+		Entry("equal to the worst-case apply cycle -> rejected",
+			worstCaseApplyCycle.String(), DefaultStaleEnactmentThreshold, "exceed"),
+		Entry("unparsable -> rejected", "bogus", DefaultStaleEnactmentThreshold, "duration"),
+		Entry("negative -> rejected", "-5m", DefaultStaleEnactmentThreshold, "positive"),
+		Entry("zero -> rejected", "0", DefaultStaleEnactmentThreshold, "positive"),
+	)
+})
