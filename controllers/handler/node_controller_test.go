@@ -88,7 +88,8 @@ var _ = Describe("Node controller reconcile", func() {
 		reconciler.Log = ctrl.Log.WithName("controllers").WithName("Node")
 		reconciler.Scheme = s
 		reconciler.nmstateUpdater = nmstate.CreateOrUpdateNodeNetworkState
-		reconciler.nmstatectlShow = nmstatectl.Show
+		reconciler.nmstatectlShow = nmstatectl.ShowWithTimeout
+		reconciler.nmstatectlShowKernel = func(context.Context) error { return nil }
 		reconciler.lastState = shared.NewState("lastState")
 		observedState = `
 ---
@@ -105,7 +106,7 @@ routes:
 		filteredOutObservedState, err = state.FilterOut(shared.NewState(observedState))
 		Expect(err).ToNot(HaveOccurred())
 
-		reconciler.nmstatectlShow = func() (string, error) {
+		reconciler.nmstatectlShow = func(context.Context) (string, error) {
 			return observedState, nil
 		}
 	})
@@ -113,14 +114,105 @@ routes:
 		var (
 			request reconcile.Request
 		)
+		getNNS := func() nmstatev1beta1.NodeNetworkState {
+			obtainedNNS := nmstatev1beta1.NodeNetworkState{}
+			ExpectWithOffset(1, cl.Get(context.TODO(), types.NamespacedName{Name: existingNodeName}, &obtainedNNS)).To(Succeed())
+			return obtainedNNS
+		}
+		expectConditions := func(nns nmstatev1beta1.NodeNetworkState, available, failing corev1.ConditionStatus,
+			reason shared.ConditionReason) {
+			availableCondition := nns.Status.Conditions.Find(shared.NodeNetworkStateConditionAvailable)
+			ExpectWithOffset(1, availableCondition).ToNot(BeNil())
+			ExpectWithOffset(1, availableCondition.Status).To(Equal(available))
+			ExpectWithOffset(1, availableCondition.Reason).To(Equal(reason))
+			failingCondition := nns.Status.Conditions.Find(shared.NodeNetworkStateConditionFailing)
+			ExpectWithOffset(1, failingCondition).ToNot(BeNil())
+			ExpectWithOffset(1, failingCondition.Status).To(Equal(failing))
+			ExpectWithOffset(1, failingCondition.Reason).To(Equal(reason))
+		}
 		BeforeEach(func() {
-			reconciler.nmstatectlShow = func() (string, error) {
+			request.Name = existingNodeName
+			reconciler.nmstatectlShow = func(context.Context) (string, error) {
 				return "", fmt.Errorf("forced failure at unit test")
 			}
 		})
-		It("should return the error from nmstatectl", func() {
-			_, err := reconciler.Reconcile(context.Background(), request)
-			Expect(err).To(MatchError("forced failure at unit test"))
+		Context("and kernel-only query works", func() {
+			It("should report NetworkManagerUnresponsive and requeue at the refresh interval", func() {
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				expectRequeueAfterIsSetWithNetworkStateRefresh(result)
+				nns := getNNS()
+				expectConditions(nns, corev1.ConditionFalse, corev1.ConditionTrue,
+					shared.NodeNetworkStateConditionNetworkManagerUnresponsive)
+				Expect(nns.Status.Conditions.Find(shared.NodeNetworkStateConditionFailing).Message).
+					To(ContainSubstring("forced failure at unit test"))
+			})
+		})
+		Context("and kernel-only query fails too", func() {
+			BeforeEach(func() {
+				reconciler.nmstatectlShowKernel = func(context.Context) error {
+					return fmt.Errorf("forced kernel failure at unit test")
+				}
+			})
+			It("should report QueryFailed with both errors", func() {
+				_, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				nns := getNNS()
+				expectConditions(nns, corev1.ConditionFalse, corev1.ConditionTrue,
+					shared.NodeNetworkStateConditionQueryFailed)
+				message := nns.Status.Conditions.Find(shared.NodeNetworkStateConditionFailing).Message
+				Expect(message).To(ContainSubstring("forced failure at unit test"))
+				Expect(message).To(ContainSubstring("forced kernel failure at unit test"))
+			})
+		})
+		Context("and there is a previously stored state", func() {
+			BeforeEach(func() {
+				nns := getNNS()
+				nns.Status.CurrentState = filteredOutObservedState
+				Expect(cl.Status().Update(context.TODO(), &nns)).To(Succeed())
+			})
+			It("should keep the last good state", func() {
+				_, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(getNNS().Status.CurrentState.String()).To(Equal(filteredOutObservedState.String()))
+			})
+			It("should report success again once the query recovers", func() {
+				_, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				expectConditions(getNNS(), corev1.ConditionFalse, corev1.ConditionTrue,
+					shared.NodeNetworkStateConditionNetworkManagerUnresponsive)
+
+				By("Recover nmstatectl show with the same state as stored")
+				reconciler.lastState = filteredOutObservedState
+				reconciler.nmstatectlShow = func(context.Context) (string, error) {
+					return observedState, nil
+				}
+				_, err = reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				expectConditions(getNNS(), corev1.ConditionTrue, corev1.ConditionFalse,
+					shared.NodeNetworkStateConditionQuerySucceeded)
+			})
+		})
+		Context("and nodenetworkstate is not there", func() {
+			BeforeEach(func() {
+				Expect(cl.Delete(context.TODO(), &nodenetworkstate)).To(Succeed())
+			})
+			It("should create it with the failure conditions", func() {
+				_, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				expectConditions(getNNS(), corev1.ConditionFalse, corev1.ConditionTrue,
+					shared.NodeNetworkStateConditionNetworkManagerUnresponsive)
+			})
+		})
+		Context("and node is not found", func() {
+			BeforeEach(func() {
+				request.Name = "not-present-node"
+			})
+			It("should return empty result", func() {
+				result, err := reconciler.Reconcile(context.Background(), request)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(reconcile.Result{}))
+			})
 		})
 	})
 	Context("and network state didn't change", func() {
@@ -185,7 +277,7 @@ routes:
 				reconciler.lastState = filteredOutObservedState
 
 				By("Mock nmstate show so we return different value from last state")
-				reconciler.nmstatectlShow = func() (string, error) {
+				reconciler.nmstatectlShow = func(context.Context) (string, error) {
 					return expectedStateRaw, nil
 				}
 
@@ -200,6 +292,10 @@ routes:
 				filteredOutExpectedState, err := state.FilterOut(shared.NewState(expectedStateRaw))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(obtainedNNS.Status.CurrentState.String()).To(Equal(filteredOutExpectedState.String()))
+				available := obtainedNNS.Status.Conditions.Find(shared.NodeNetworkStateConditionAvailable)
+				Expect(available).ToNot(BeNil())
+				Expect(available.Status).To(Equal(corev1.ConditionTrue))
+				Expect(available.Reason).To(Equal(shared.NodeNetworkStateConditionQuerySucceeded))
 			})
 		})
 		Context("and nodenetworkstate is not there", func() {
